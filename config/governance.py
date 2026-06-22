@@ -54,10 +54,11 @@ REGISTER_FIELDS = (
 
 # Ordered scalar field specifications. type is one of: text | choice | date | tier.
 MODEL_FIELD_SPECS = {
-    # --- Organisation ---
-    "company": {"label": "Company", "type": "text", "group": "Organisation"},
-    "division": {"label": "Division", "type": "text", "group": "Organisation"},
-    "department": {"label": "Department", "type": "text", "group": "Organisation"},
+    # --- Organisation (company/division/department are backed by admin-managed
+    #     reference lists; they render as dropdowns once the lists are populated) ---
+    "company": {"label": "Company", "type": "text", "group": "Organisation", "reference": "company"},
+    "division": {"label": "Division", "type": "text", "group": "Organisation", "reference": "division"},
+    "department": {"label": "Department", "type": "text", "group": "Organisation", "reference": "department"},
     "repo_location": {"label": "Repository location", "type": "text", "group": "Organisation"},
     "codebase": {"label": "Codebase", "type": "text", "group": "Organisation"},
     # --- Classification ---
@@ -170,6 +171,21 @@ COLLECTION_SPECS = {
         {"key": "note", "label": "Note", "type": "text"},
     ]},
 }
+
+# --- Reference data: admin-managed menu lists for organisation fields ---
+REFERENCE_LISTS = ("company", "division", "department")
+REFERENCE_SPECS = {
+    "company": {"label": "Company", "id_prefix": "CO", "fields": [
+        {"key": "value", "label": "Value", "type": "text", "required": True},
+    ]},
+    "division": {"label": "Division", "id_prefix": "DV", "fields": [
+        {"key": "value", "label": "Value", "type": "text", "required": True},
+    ]},
+    "department": {"label": "Department", "id_prefix": "DP", "fields": [
+        {"key": "value", "label": "Value", "type": "text", "required": True},
+    ]},
+}
+
 
 # --- Model Risk Committee (MRC) meetings ---
 VALID_MEETING_STATUSES = ("Scheduled", "In Progress", "Held", "Cancelled")

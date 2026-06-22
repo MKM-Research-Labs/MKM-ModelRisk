@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-const TABS = { inventory: Inventory, mrc: MRC, audit: Audit };
+const TABS = { inventory: Inventory, mrc: MRC, audit: Audit, reference: Reference };
 
 async function showTab(name) {
   document.querySelectorAll(".tab").forEach(function (b) {

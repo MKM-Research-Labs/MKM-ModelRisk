@@ -28,6 +28,7 @@ from src.governance.errors import DomainError
 from src.web.api_audit import audit_bp
 from src.web.api_models import models_bp
 from src.web.api_mrc import mrc_bp
+from src.web.api_reference import reference_bp
 from src.web.views import views_bp
 
 
@@ -49,6 +50,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(views_bp)
     app.register_blueprint(models_bp)
     app.register_blueprint(mrc_bp)
+    app.register_blueprint(reference_bp)
     app.register_blueprint(audit_bp)
     _register_error_handlers(app)
     return app

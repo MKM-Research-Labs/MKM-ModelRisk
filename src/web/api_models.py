@@ -35,13 +35,18 @@ from src.governance.model_inventory import (
     update_collection_item,
     update_model_field,
 )
+from src.governance.reference import get_reference_lists
 from src.web._helpers import context_from_request, json_body
 
 models_bp = Blueprint("models", __name__, url_prefix="/api/models")
 
 
-def _grouped_specs():
-    """Field specs grouped (in order) for the grouped detail view."""
+def _grouped_specs(reference_options: dict[str, list]):
+    """Field specs grouped for the detail view.
+
+    Fields backed by a reference list become dropdowns (type ``choice``) once
+    that admin-managed list has values; otherwise they stay free text.
+    """
     groups: list[dict] = []
     by_name: dict[str, dict] = {}
     for key, spec in MODEL_FIELD_SPECS.items():
@@ -50,13 +55,14 @@ def _grouped_specs():
             group = {"group": spec["group"], "fields": []}
             by_name[spec["group"]] = group
             groups.append(group)
+        field_type = spec["type"]
+        options = list(spec.get("options", []))
+        reference = spec.get("reference")
+        if reference and reference_options.get(reference):
+            field_type = "choice"
+            options = reference_options[reference]
         group["fields"].append(
-            {
-                "key": key,
-                "label": spec["label"],
-                "type": spec["type"],
-                "options": list(spec.get("options", [])),
-            }
+            {"key": key, "label": spec["label"], "type": field_type, "options": options}
         )
     return groups
 
@@ -86,8 +92,10 @@ def _collection_specs():
 @models_bp.get("/fields")
 def field_specs():
     """Field metadata so the UI can render the form and editors generically."""
+    lists = get_reference_lists()
+    reference_options = {name: [item["value"] for item in items] for name, items in lists.items()}
     return jsonify({
-        "groups": _grouped_specs(),
+        "groups": _grouped_specs(reference_options),
         "register": list(REGISTER_FIELDS),
         "collections": _collection_specs(),
     })

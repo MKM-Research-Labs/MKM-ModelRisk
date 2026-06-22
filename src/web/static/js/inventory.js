@@ -36,7 +36,8 @@ const Inventory = {
   _specs: null,
 
   async specs() {
-    if (!this._specs) this._specs = await App.get("/api/models/fields");
+    // Always re-fetch so admin changes to the reference menus show up promptly.
+    this._specs = await App.get("/api/models/fields");
     return this._specs;
   },
 
