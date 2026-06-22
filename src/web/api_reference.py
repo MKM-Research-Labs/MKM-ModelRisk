@@ -55,7 +55,7 @@ def add(list_name: str):
     body = json_body()
     dispatch(
         "add_option", add_option, context=context_from_request(body),
-        list_name=list_name, value=(body.get("fields") or {}).get("value"),
+        list_name=list_name, fields=body.get("fields") or {},
     )
     return jsonify(get_reference_lists()), 201
 

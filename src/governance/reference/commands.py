@@ -17,8 +17,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Commands to maintain the admin-managed reference (menu) lists."""
+"""Commands to maintain the admin-managed reference lists (people + menus)."""
 from __future__ import annotations
+
+from typing import Any
 
 from config.governance import REFERENCE_SPECS
 from src.database import Event, append_event
@@ -36,12 +38,13 @@ def _record(decision, version, actor, reason, config) -> Event:
 
 
 def add_option(
-    *, list_name: str, value: str, actor: str, reason: str | None = None, config=None,
+    *, list_name: str, fields: dict[str, Any], actor: str,
+    reason: str | None = None, config=None,
 ) -> Event:
-    """Add a value to a menu list (e.g. a new Company)."""
+    """Add an entry to a reference list (a menu value or a person record)."""
     collections, version = load(config)
     decision = coll.decide_add(
-        collections, REFERENCE_SPECS, collection=list_name, fields={"value": value}
+        collections, REFERENCE_SPECS, collection=list_name, fields=fields
     )
     return _record(decision, version, actor, reason, config)
 
