@@ -1,0 +1,57 @@
+<!-- Copyright (c) 2022-2026 MKM Research Labs. All rights reserved. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MKM ModelRisk — Governance Console</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>MKM&nbsp;ModelRisk</h1>
+      <span class="tagline">Model Risk Governance Console</span>
+    </div>
+    <div class="actor">
+      <label for="actor-input">Acting as</label>
+      <input id="actor-input" value="dev@localhost" spellcheck="false" />
+      <span class="hint" title="In production this is set by the client's SSO. Here you can change it to see attribution in the audit trail.">simulated SSO identity</span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="inventory">Model Inventory</button>
+    <button class="tab" data-tab="mrc">MRC Meetings</button>
+    <button class="tab" data-tab="audit">Audit Trail</button>
+  </nav>
+
+  <main>
+    <section id="tab-inventory" class="panel active"></section>
+    <section id="tab-mrc" class="panel"></section>
+    <section id="tab-audit" class="panel"></section>
+  </main>
+
+  <!-- Confirm-to-amend modal: every mutation passes through here. -->
+  <div id="confirm-overlay" class="overlay hidden">
+    <div class="modal">
+      <h2>Confirm change</h2>
+      <p id="confirm-summary"></p>
+      <label for="confirm-reason">Reason (optional, recorded in the audit trail)</label>
+      <textarea id="confirm-reason" rows="2"></textarea>
+      <div class="modal-actions">
+        <button id="confirm-cancel" class="btn ghost">Cancel</button>
+        <button id="confirm-ok" class="btn primary">Confirm &amp; record</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/inventory.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/mrc.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/audit.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

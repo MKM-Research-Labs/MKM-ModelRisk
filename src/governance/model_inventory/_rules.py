@@ -28,6 +28,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import EDITABLE_FIELDS, FIELD_CHOICES, TIER_MAX, TIER_MIN
+from src.governance.errors import DomainError
 from src.governance.model_inventory._state import (
     EVENT_FIELD_UPDATED,
     EVENT_REGISTERED,
@@ -35,9 +36,12 @@ from src.governance.model_inventory._state import (
     ModelState,
 )
 
-
-class DomainError(ValueError):
-    """Raised when a command would violate a governance rule."""
+__all__ = [
+    "DomainError",
+    "decide_register",
+    "decide_update_field",
+    "decide_retire",
+]
 
 
 def _validate_field(field: str, value: Any) -> None:
