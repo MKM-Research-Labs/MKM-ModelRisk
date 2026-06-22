@@ -54,4 +54,5 @@ def _clean_event_log():
         with conn.cursor() as cur:
             cur.execute("TRUNCATE events RESTART IDENTITY")
             cur.execute("UPDATE projection_checkpoints SET last_global_seq = 0")
+            cur.execute("DELETE FROM model_inventory_view")
     yield
