@@ -28,7 +28,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance import DEFAULT_VQ_STATUS, SR117_QUESTIONS
 from src.database import Event, append_event, read_stream
+from src.governance import collections as coll
 from src.governance.model_inventory._rules import (
     decide_add_item,
     decide_register,
@@ -40,6 +42,26 @@ from src.governance.model_inventory._rules import (
 from src.governance.model_inventory._state import ModelState, apply, initial_state
 
 AGGREGATE_TYPE = "ModelInventoryEntry"
+
+
+def _seed_validation_questions(model_id, after_version, actor, config) -> None:
+    """Append the nine SR 11-7 questions immediately after registration."""
+    version = after_version
+    for index, question in enumerate(SR117_QUESTIONS, start=1):
+        payload = {
+            "collection": "validation_questions",
+            "item_id": f"VQ-{index:03d}",
+            "short_label": question["short_label"],
+            "question": question["question"],
+            "status": DEFAULT_VQ_STATUS,
+        }
+        append_event(
+            aggregate_type=AGGREGATE_TYPE, aggregate_id=model_id,
+            event_type=coll.EVENT_ITEM_ADDED, payload=payload, actor=actor,
+            reason="Seed SR 11-7 validation questions", expected_version=version,
+            config=config,
+        )
+        version += 1
 
 
 def _load(model_id: str, config) -> tuple[ModelState, int]:
@@ -73,10 +95,12 @@ def register_model(
     *, model_id: str, name: str, actor: str,
     fields: dict[str, Any] | None = None, reason: str | None = None, config=None,
 ) -> Event:
-    """Register a new model in the inventory."""
+    """Register a new model, then seed its SR 11-7 validation questions."""
     state, version = _load(model_id, config)
     decision = decide_register(state, model_id=model_id, name=name, fields=fields or {})
-    return _record(model_id, decision, version, actor, reason, config)
+    event = _record(model_id, decision, version, actor, reason, config)
+    _seed_validation_questions(model_id, event.stream_seq, actor, config)
+    return event
 
 
 def update_model_field(

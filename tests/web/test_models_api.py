@@ -48,6 +48,26 @@ def test_get_unknown_model_is_404(client):
     assert client.get("/api/models/none").status_code == 404
 
 
+def test_register_seeds_sr117_validation_questions(client):
+    _register(client)
+    data = client.get("/api/models/M1").get_json()["data"]
+    questions = data["validation_questions"]
+    assert len(questions) == 9
+    assert questions[0]["short_label"] == "Ronseal Test"
+    assert all(q["status"] == "Not Addressed" for q in questions)
+
+
+def test_risk_rating_endpoint(client):
+    _register(client)
+    rating = client.get("/api/models/M1/risk-rating").get_json()
+    assert rating["rating"] in ("Acceptable", "Conditional", "Unacceptable")
+    assert len(rating["components"]) == 5
+
+
+def test_risk_rating_unknown_model_is_404(client):
+    assert client.get("/api/models/none/risk-rating").status_code == 404
+
+
 def test_field_specs_endpoint(client):
     specs = client.get("/api/models/fields").get_json()
     group_names = [g["group"] for g in specs["groups"]]

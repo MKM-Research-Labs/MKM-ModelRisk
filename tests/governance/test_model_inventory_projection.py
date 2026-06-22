@@ -39,10 +39,12 @@ def test_rebuild_reflects_current_state():
     model = get_model("M1")
     assert model["model_id"] == "M1"
     assert model["retired"] is False
-    assert model["version"] == 2
+    # 1 register + 9 seeded validation questions + 1 field update.
+    assert model["version"] == 11
     assert model["data"]["owner"] == "bob"
     assert model["data"]["tier"] == 3
     assert model["data"]["name"] == "Alpha"
+    assert len(model["data"]["validation_questions"]) == 9
 
 
 def test_rebuild_marks_retired_models():
