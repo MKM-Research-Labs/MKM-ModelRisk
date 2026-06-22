@@ -55,4 +55,5 @@ def _clean_event_log():
             cur.execute("TRUNCATE events RESTART IDENTITY")
             cur.execute("UPDATE projection_checkpoints SET last_global_seq = 0")
             cur.execute("DELETE FROM model_inventory_view")
+            cur.execute("DELETE FROM mrc_meeting_view")
     yield

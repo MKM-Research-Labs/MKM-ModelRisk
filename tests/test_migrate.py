@@ -30,6 +30,7 @@ def _drop_everything() -> None:
             cur.execute("DROP TABLE IF EXISTS events CASCADE")
             cur.execute("DROP TABLE IF EXISTS projection_checkpoints CASCADE")
             cur.execute("DROP TABLE IF EXISTS model_inventory_view CASCADE")
+            cur.execute("DROP TABLE IF EXISTS mrc_meeting_view CASCADE")
             cur.execute("DROP TABLE IF EXISTS schema_migrations CASCADE")
 
 
@@ -39,6 +40,7 @@ def test_migration_files_are_ordered():
         "0001_event_store.sql",
         "0002_roles_grants.sql",
         "0003_model_inventory_view.sql",
+        "0004_mrc_meeting_view.sql",
     ]
 
 
@@ -49,6 +51,7 @@ def test_run_migrations_applies_then_skips():
         "0001_event_store",
         "0002_roles_grants",
         "0003_model_inventory_view",
+        "0004_mrc_meeting_view",
     ]
     # Re-running is a no-op: every version already recorded.
     assert run_migrations() == []
