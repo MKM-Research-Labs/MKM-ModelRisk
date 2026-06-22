@@ -48,7 +48,7 @@ def test_get_unknown_model_is_404(client):
     assert client.get("/api/models/none").status_code == 404
 
 
-def test_register_seeds_sr117_validation_questions(client):
+def test_register_seeds_sr262_validation_questions(client):
     _register(client)
     data = client.get("/api/models/M1").get_json()["data"]
     questions = data["validation_questions"]
