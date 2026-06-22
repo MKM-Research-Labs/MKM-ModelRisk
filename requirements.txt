@@ -1,0 +1,18 @@
+# MKM-ModelRisk dependencies (Python 3.13).
+# Pinned to the versions the test suite passes on.
+#
+# Setup:
+#   python3.13 -m venv .venv
+#   source .venv/bin/activate
+#   pip install -r requirements.txt
+#
+# (The same dependencies are declared in pyproject.toml; this file is provided
+#  for a quick `pip install -r` venv setup.)
+
+# --- Runtime ---
+psycopg[binary]==3.3.4
+
+# --- Development / test ---
+pytest==9.1.1
+pytest-cov==7.1.0
+coverage==7.14.2
