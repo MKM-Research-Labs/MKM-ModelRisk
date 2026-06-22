@@ -27,21 +27,23 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import EDITABLE_FIELDS, FIELD_CHOICES, TIER_MAX, TIER_MIN
+from config.governance import (
+    COLLECTION_SPECS,
+    EDITABLE_FIELDS,
+    FIELD_CHOICES,
+    TIER_MAX,
+    TIER_MIN,
+)
 from src.governance.errors import DomainError
 from src.governance.model_inventory._state import (
     EVENT_FIELD_UPDATED,
+    EVENT_ITEM_ADDED,
+    EVENT_ITEM_REMOVED,
+    EVENT_ITEM_UPDATED,
     EVENT_REGISTERED,
     EVENT_RETIRED,
     ModelState,
 )
-
-__all__ = [
-    "DomainError",
-    "decide_register",
-    "decide_update_field",
-    "decide_retire",
-]
 
 
 def _validate_field(field: str, value: Any) -> None:
@@ -91,3 +93,78 @@ def decide_retire(state: ModelState) -> tuple[str, dict[str, Any]]:
     if state.retired:
         raise DomainError("model is already retired")
     return EVENT_RETIRED, {}
+
+
+# --- Structured collections (assumptions, limitations, validation questions, …) ---
+
+
+def _require_editable(state: ModelState) -> None:
+    if not state.exists:
+        raise DomainError("model does not exist")
+    if state.retired:
+        raise DomainError("cannot edit a retired model")
+
+
+def _require_collection(collection: str) -> dict:
+    spec = COLLECTION_SPECS.get(collection)
+    if spec is None:
+        raise DomainError(f"unknown collection: {collection}")
+    return spec
+
+
+def _find_item(state: ModelState, collection: str, item_id: str) -> dict | None:
+    for item in state.collections.get(collection, ()):
+        if item["item_id"] == item_id:
+            return item
+    return None
+
+
+def _validate_item(spec: dict, fields: dict[str, Any], *, require_required: bool) -> None:
+    by_key = {f["key"]: f for f in spec["fields"]}
+    for key, value in fields.items():
+        field_spec = by_key.get(key)
+        if field_spec is None:
+            raise DomainError(f"unknown field: {key}")
+        if field_spec["type"] == "choice" and value not in field_spec["options"]:
+            allowed = ", ".join(field_spec["options"])
+            raise DomainError(f"{field_spec['label']} must be one of: {allowed}")
+    if require_required:
+        for field_spec in spec["fields"]:
+            if field_spec.get("required") and not fields.get(field_spec["key"]):
+                raise DomainError(f"{field_spec['label']} is required")
+
+
+def decide_add_item(
+    state: ModelState, *, collection: str, fields: dict[str, Any]
+) -> tuple[str, dict[str, Any]]:
+    _require_editable(state)
+    spec = _require_collection(collection)
+    _validate_item(spec, fields, require_required=True)
+    count = len(state.collections.get(collection, ()))
+    item_id = f"{spec['id_prefix']}-{count + 1:03d}"
+    payload: dict[str, Any] = {"collection": collection, "item_id": item_id}
+    payload.update(fields)
+    return EVENT_ITEM_ADDED, payload
+
+
+def decide_update_item(
+    state: ModelState, *, collection: str, item_id: str, fields: dict[str, Any]
+) -> tuple[str, dict[str, Any]]:
+    _require_editable(state)
+    spec = _require_collection(collection)
+    if _find_item(state, collection, item_id) is None:
+        raise DomainError(f"unknown item: {item_id}")
+    _validate_item(spec, fields, require_required=False)
+    payload: dict[str, Any] = {"collection": collection, "item_id": item_id}
+    payload.update(fields)
+    return EVENT_ITEM_UPDATED, payload
+
+
+def decide_remove_item(
+    state: ModelState, *, collection: str, item_id: str
+) -> tuple[str, dict[str, Any]]:
+    _require_editable(state)
+    _require_collection(collection)
+    if _find_item(state, collection, item_id) is None:
+        raise DomainError(f"unknown item: {item_id}")
+    return EVENT_ITEM_REMOVED, {"collection": collection, "item_id": item_id}

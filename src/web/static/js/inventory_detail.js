@@ -36,9 +36,11 @@ const Detail = {
       : '<button class="btn danger small" id="d-retire">Retire model…</button>';
     document.getElementById("m-detail").innerHTML =
       '<div class="card">' + this._header(m, d) + sections +
+      Collections.render(d, specs, m.retired) +
       '<div style="margin-top:14px">' + retire + "</div></div>";
 
     this._bind(modelId, m, d);
+    Collections.bind(modelId, specs, m.retired);
     document.getElementById("m-detail").scrollIntoView({ behavior: "smooth", block: "start" });
   },
 

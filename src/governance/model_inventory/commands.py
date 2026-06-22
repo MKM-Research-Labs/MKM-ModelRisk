@@ -30,9 +30,12 @@ from typing import Any
 
 from src.database import Event, append_event, read_stream
 from src.governance.model_inventory._rules import (
+    decide_add_item,
     decide_register,
+    decide_remove_item,
     decide_retire,
     decide_update_field,
+    decide_update_item,
 )
 from src.governance.model_inventory._state import ModelState, apply, initial_state
 
@@ -92,4 +95,36 @@ def retire_model(
     """Retire a model (it can no longer be edited)."""
     state, version = _load(model_id, config)
     decision = decide_retire(state)
+    return _record(model_id, decision, version, actor, reason, config)
+
+
+def add_collection_item(
+    *, model_id: str, collection: str, fields: dict[str, Any], actor: str,
+    reason: str | None = None, config=None,
+) -> Event:
+    """Add an item to a structured collection (assumptions, limitations, …)."""
+    state, version = _load(model_id, config)
+    decision = decide_add_item(state, collection=collection, fields=fields)
+    return _record(model_id, decision, version, actor, reason, config)
+
+
+def update_collection_item(
+    *, model_id: str, collection: str, item_id: str, fields: dict[str, Any],
+    actor: str, reason: str | None = None, config=None,
+) -> Event:
+    """Update fields of an existing collection item."""
+    state, version = _load(model_id, config)
+    decision = decide_update_item(
+        state, collection=collection, item_id=item_id, fields=fields
+    )
+    return _record(model_id, decision, version, actor, reason, config)
+
+
+def remove_collection_item(
+    *, model_id: str, collection: str, item_id: str, actor: str,
+    reason: str | None = None, config=None,
+) -> Event:
+    """Remove an item from a structured collection."""
+    state, version = _load(model_id, config)
+    decision = decide_remove_item(state, collection=collection, item_id=item_id)
     return _record(model_id, decision, version, actor, reason, config)

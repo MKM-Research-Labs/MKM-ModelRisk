@@ -34,6 +34,14 @@ from src.governance.model_inventory._state import apply, initial_state
 from src.governance.model_inventory.commands import AGGREGATE_TYPE
 
 
+def _document(state) -> dict[str, Any]:
+    """Scalar fields plus each non-empty collection, as one JSONB document."""
+    data = dict(state.fields)
+    for collection, items in state.collections.items():
+        data[collection] = list(items)
+    return data
+
+
 def rebuild_inventory_view(config=None) -> int:
     """Rebuild the read model from the event log; return the model count."""
     states: dict[str, tuple] = {}
@@ -50,7 +58,7 @@ def rebuild_inventory_view(config=None) -> int:
                 cur.execute(
                     "INSERT INTO model_inventory_view "
                     "(model_id, data, retired, version) VALUES (%s, %s, %s, %s)",
-                    (model_id, Jsonb(state.fields), state.retired, version),
+                    (model_id, Jsonb(_document(state)), state.retired, version),
                 )
     return len(states)
 

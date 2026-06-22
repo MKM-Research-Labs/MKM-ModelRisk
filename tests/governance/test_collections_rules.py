@@ -1,0 +1,145 @@
+# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+#
+# This software is licensed by MKM Research Labs for non-commercial
+# research and educational use only. Any commercial use, including
+# but not limited to use in or for products or services offered for sale,
+# internal business operations intended for commercial advantage, or
+# research and development conducted for a commercial entity, is expressly
+# prohibited unless separately authorized in writing by MKM Research Labs.
+#
+# Use, reproduction, distribution, or modification of this code is subject to the
+# terms and conditions of the license agreement provided with this software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Unit tests for structured-collection decision logic and folds (no I/O)."""
+from __future__ import annotations
+
+import pytest
+
+from src.governance.model_inventory._rules import (
+    DomainError,
+    decide_add_item,
+    decide_remove_item,
+    decide_update_item,
+)
+from src.governance.model_inventory._state import (
+    EVENT_REGISTERED,
+    EVENT_RETIRED,
+    apply,
+    initial_state,
+)
+
+
+def _registered():
+    return apply(initial_state(), EVENT_REGISTERED, {"model_id": "M1", "name": "Alpha"})
+
+
+def _add(state, collection, fields):
+    event_type, payload = decide_add_item(state, collection=collection, fields=fields)
+    return apply(state, event_type, payload), payload
+
+
+def test_add_generates_sequential_ids_and_stores_fields():
+    state = _registered()
+    state, first = _add(state, "assumptions", {"description": "Rates stable"})
+    assert first["item_id"] == "AS-001"
+    state, second = _add(state, "assumptions", {"description": "Liquidity", "impact": "High"})
+    assert second["item_id"] == "AS-002"
+    assert state.collections["assumptions"][1]["impact"] == "High"
+
+
+def test_add_requires_existing_model():
+    with pytest.raises(DomainError):
+        decide_add_item(initial_state(), collection="assumptions", fields={"description": "x"})
+
+
+def test_add_rejects_retired_model():
+    retired = apply(_registered(), EVENT_RETIRED, {})
+    with pytest.raises(DomainError):
+        decide_add_item(retired, collection="assumptions", fields={"description": "x"})
+
+
+def test_add_rejects_unknown_collection():
+    with pytest.raises(DomainError):
+        decide_add_item(_registered(), collection="nope", fields={"description": "x"})
+
+
+def test_add_rejects_missing_required_field():
+    with pytest.raises(DomainError):
+        decide_add_item(_registered(), collection="assumptions", fields={"impact": "High"})
+
+
+def test_add_rejects_unknown_field():
+    with pytest.raises(DomainError):
+        decide_add_item(
+            _registered(), collection="assumptions",
+            fields={"description": "x", "bogus": 1},
+        )
+
+
+def test_add_rejects_invalid_choice():
+    with pytest.raises(DomainError):
+        decide_add_item(
+            _registered(), collection="assumptions",
+            fields={"description": "x", "impact": "Massive"},
+        )
+
+
+def test_update_item_changes_fields():
+    state, _ = _add(_registered(), "validation_questions", {"question": "Is it documented?"})
+    event_type, payload = decide_update_item(
+        state, collection="validation_questions", item_id="VQ-001",
+        fields={"status": "Addressed"},
+    )
+    state = apply(state, event_type, payload)
+    assert state.collections["validation_questions"][0]["status"] == "Addressed"
+
+
+def test_update_unknown_item_raises():
+    state, _ = _add(_registered(), "assumptions", {"description": "x"})
+    with pytest.raises(DomainError):
+        decide_update_item(state, collection="assumptions", item_id="AS-999", fields={})
+
+
+def test_update_rejects_invalid_choice():
+    state, _ = _add(_registered(), "assumptions", {"description": "x"})
+    with pytest.raises(DomainError):
+        decide_update_item(
+            state, collection="assumptions", item_id="AS-001",
+            fields={"impact": "Massive"},
+        )
+
+
+def test_update_requires_editable_model():
+    with pytest.raises(DomainError):
+        decide_update_item(initial_state(), collection="assumptions", item_id="AS-001", fields={})
+
+
+def test_remove_item():
+    state, _ = _add(_registered(), "assumptions", {"description": "x"})
+    event_type, payload = decide_remove_item(state, collection="assumptions", item_id="AS-001")
+    state = apply(state, event_type, payload)
+    assert state.collections["assumptions"] == ()
+
+
+def test_remove_unknown_item_raises():
+    with pytest.raises(DomainError):
+        decide_remove_item(_registered(), collection="assumptions", item_id="AS-001")
+
+
+def test_update_only_touches_matching_item():
+    state, _ = _add(_registered(), "assumptions", {"description": "first"})
+    state, _ = _add(state, "assumptions", {"description": "second"})
+    event_type, payload = decide_update_item(
+        state, collection="assumptions", item_id="AS-002", fields={"impact": "Low"},
+    )
+    state = apply(state, event_type, payload)
+    items = state.collections["assumptions"]
+    assert "impact" not in items[0]
+    assert items[1]["impact"] == "Low"
