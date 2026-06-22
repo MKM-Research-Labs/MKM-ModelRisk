@@ -22,14 +22,17 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify
 
-from config.governance import MODEL_FIELD_SPECS, REGISTER_FIELDS
+from config.governance import COLLECTION_SPECS, MODEL_FIELD_SPECS, REGISTER_FIELDS
 from src.command import dispatch
 from src.governance.model_inventory import (
+    add_collection_item,
     get_model,
     list_models,
     rebuild_inventory_view,
     register_model,
+    remove_collection_item,
     retire_model,
+    update_collection_item,
     update_model_field,
 )
 from src.web._helpers import context_from_request, json_body
@@ -58,10 +61,36 @@ def _grouped_specs():
     return groups
 
 
+def _collection_specs():
+    """Collection metadata (label, id prefix, item fields) for the UI."""
+    return [
+        {
+            "key": key,
+            "label": spec["label"],
+            "id_prefix": spec["id_prefix"],
+            "fields": [
+                {
+                    "key": f["key"],
+                    "label": f["label"],
+                    "type": f["type"],
+                    "options": list(f.get("options", [])),
+                    "required": bool(f.get("required")),
+                }
+                for f in spec["fields"]
+            ],
+        }
+        for key, spec in COLLECTION_SPECS.items()
+    ]
+
+
 @models_bp.get("/fields")
 def field_specs():
     """Field metadata so the UI can render the form and editors generically."""
-    return jsonify({"groups": _grouped_specs(), "register": list(REGISTER_FIELDS)})
+    return jsonify({
+        "groups": _grouped_specs(),
+        "register": list(REGISTER_FIELDS),
+        "collections": _collection_specs(),
+    })
 
 
 @models_bp.get("")
@@ -106,6 +135,40 @@ def retire(model_id: str):
     dispatch(
         "retire_model", retire_model, context=context_from_request(body),
         model_id=model_id,
+    )
+    rebuild_inventory_view()
+    return jsonify(get_model(model_id))
+
+
+@models_bp.post("/<model_id>/collections/<collection>")
+def add_item(model_id: str, collection: str):
+    body = json_body()
+    dispatch(
+        "add_collection_item", add_collection_item, context=context_from_request(body),
+        model_id=model_id, collection=collection, fields=body.get("fields") or {},
+    )
+    rebuild_inventory_view()
+    return jsonify(get_model(model_id)), 201
+
+
+@models_bp.post("/<model_id>/collections/<collection>/<item_id>")
+def update_item(model_id: str, collection: str, item_id: str):
+    body = json_body()
+    dispatch(
+        "update_collection_item", update_collection_item, context=context_from_request(body),
+        model_id=model_id, collection=collection, item_id=item_id,
+        fields=body.get("fields") or {},
+    )
+    rebuild_inventory_view()
+    return jsonify(get_model(model_id))
+
+
+@models_bp.post("/<model_id>/collections/<collection>/<item_id>/delete")
+def delete_item(model_id: str, collection: str, item_id: str):
+    body = json_body()
+    dispatch(
+        "remove_collection_item", remove_collection_item, context=context_from_request(body),
+        model_id=model_id, collection=collection, item_id=item_id,
     )
     rebuild_inventory_view()
     return jsonify(get_model(model_id))

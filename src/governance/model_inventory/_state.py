@@ -31,6 +31,9 @@ from typing import Any
 EVENT_REGISTERED = "ModelRegistered"
 EVENT_FIELD_UPDATED = "ModelFieldUpdated"
 EVENT_RETIRED = "ModelRetired"
+EVENT_ITEM_ADDED = "CollectionItemAdded"
+EVENT_ITEM_UPDATED = "CollectionItemUpdated"
+EVENT_ITEM_REMOVED = "CollectionItemRemoved"
 
 
 @dataclass(frozen=True)
@@ -40,11 +43,23 @@ class ModelState:
     exists: bool = False
     retired: bool = False
     fields: dict[str, Any] = field(default_factory=dict)
+    # collection name -> tuple of item dicts (each carrying its item_id)
+    collections: dict[str, tuple] = field(default_factory=dict)
 
 
 def initial_state() -> ModelState:
     """The empty state of a model that has no events yet."""
     return ModelState()
+
+
+def _items(state: ModelState, collection: str) -> tuple:
+    return state.collections.get(collection, ())
+
+
+def _with_collection(state: ModelState, collection: str, items: tuple) -> ModelState:
+    merged = dict(state.collections)
+    merged[collection] = items
+    return replace(state, collections=merged)
 
 
 def apply(state: ModelState, event_type: str, payload: dict[str, Any]) -> ModelState:
@@ -57,4 +72,23 @@ def apply(state: ModelState, event_type: str, payload: dict[str, Any]) -> ModelS
         return replace(state, fields=updated)
     if event_type == EVENT_RETIRED:
         return replace(state, retired=True)
+    if event_type == EVENT_ITEM_ADDED:
+        collection = payload["collection"]
+        item = {k: v for k, v in payload.items() if k != "collection"}
+        return _with_collection(state, collection, _items(state, collection) + (item,))
+    if event_type == EVENT_ITEM_UPDATED:
+        collection = payload["collection"]
+        item_id = payload["item_id"]
+        changes = {k: v for k, v in payload.items() if k not in ("collection", "item_id")}
+        items = tuple(
+            {**it, **changes} if it["item_id"] == item_id else it
+            for it in _items(state, collection)
+        )
+        return _with_collection(state, collection, items)
+    if event_type == EVENT_ITEM_REMOVED:
+        collection = payload["collection"]
+        items = tuple(
+            it for it in _items(state, collection) if it["item_id"] != payload["item_id"]
+        )
+        return _with_collection(state, collection, items)
     return state

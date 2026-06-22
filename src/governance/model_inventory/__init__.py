@@ -21,8 +21,11 @@
 from src.governance.model_inventory._rules import DomainError
 from src.governance.model_inventory.commands import (
     AGGREGATE_TYPE,
+    add_collection_item,
     register_model,
+    remove_collection_item,
     retire_model,
+    update_collection_item,
     update_model_field,
 )
 from src.governance.model_inventory.projection import (
@@ -37,6 +40,9 @@ __all__ = [
     "register_model",
     "retire_model",
     "update_model_field",
+    "add_collection_item",
+    "update_collection_item",
+    "remove_collection_item",
     "get_model",
     "list_models",
     "rebuild_inventory_view",
