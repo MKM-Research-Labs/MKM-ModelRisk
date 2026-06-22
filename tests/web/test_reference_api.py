@@ -23,15 +23,49 @@ from __future__ import annotations
 from tests.web.conftest import HEADERS
 
 
-def _company_field(client):
+def _model_field(client, key):
     specs = client.get("/api/models/fields").get_json()
-    return next(f for g in specs["groups"] for f in g["fields"] if f["key"] == "company")
+    return next(f for g in specs["groups"] for f in g["fields"] if f["key"] == key)
+
+
+def _meeting_field(client, key):
+    specs = client.get("/api/meetings/fields").get_json()
+    return next(f for f in specs["fields"] if f["key"] == key)
+
+
+def _add_person(client, name):
+    return client.post(
+        "/api/reference/collections/people",
+        json={"fields": {"name": name, "role": "Owner"}, "confirmed": True}, headers=HEADERS,
+    )
 
 
 def test_get_reference_empty(client):
     res = client.get("/api/reference").get_json()
-    assert res["data"] == {"company": [], "division": [], "department": []}
-    assert [c["key"] for c in res["collections"]] == ["company", "division", "department"]
+    assert res["data"] == {"people": [], "company": [], "division": [], "department": []}
+    assert [c["key"] for c in res["collections"]] == ["people", "company", "division", "department"]
+
+
+def test_add_and_remove_person(client):
+    added = _add_person(client, "Jane Doe")
+    assert added.status_code == 201
+    person = added.get_json()["people"][0]
+    assert person["name"] == "Jane Doe"
+    removed = client.post(
+        "/api/reference/collections/people/" + person["item_id"] + "/delete",
+        json={"confirmed": True}, headers=HEADERS,
+    )
+    assert removed.get_json()["people"] == []
+
+
+def test_owner_and_chair_become_people_dropdowns(client):
+    assert _model_field(client, "owner")["type"] == "text"
+    assert _meeting_field(client, "chair")["type"] == "text"
+    _add_person(client, "Jane Doe")
+    owner = _model_field(client, "owner")
+    chair = _meeting_field(client, "chair")
+    assert owner["type"] == "choice" and owner["options"] == ["Jane Doe"]
+    assert chair["type"] == "choice" and chair["options"] == ["Jane Doe"]
 
 
 def test_add_and_remove_option(client):
@@ -75,11 +109,11 @@ def test_add_without_confirmation_is_409(client):
 
 
 def test_model_company_field_becomes_dropdown_after_adding(client):
-    assert _company_field(client)["type"] == "text"
+    assert _model_field(client, "company")["type"] == "text"
     client.post(
         "/api/reference/collections/company",
         json={"fields": {"value": "MKM Bank"}, "confirmed": True}, headers=HEADERS,
     )
-    enriched = _company_field(client)
+    enriched = _model_field(client, "company")
     assert enriched["type"] == "choice"
     assert enriched["options"] == ["MKM Bank"]

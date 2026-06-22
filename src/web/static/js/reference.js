@@ -26,9 +26,10 @@ const Reference = {
     const specs = { collections: res.collections };
     const el = document.getElementById("tab-reference");
     el.innerHTML =
-      '<div class="card"><h3>Reference data — menu lists</h3>' +
-      '<p class="muted">Values added here populate the Company / Division / Department ' +
-      "dropdowns on the model register and detail screens.</p>" +
+      '<div class="card"><h3>Administration — people &amp; menu lists</h3>' +
+      '<p class="muted">Manage the people directory and the Company / Division / Department ' +
+      "menus. People populate the Owner, Peer reviewer and Chair dropdowns; the menus populate " +
+      "the organisation dropdowns. Everyone may amend; every change is recorded in the audit trail.</p>" +
       Collections.render(res.data, specs, false) + "</div>";
     Collections.bind("/api/reference/collections/", specs, false, () => this.render());
   },

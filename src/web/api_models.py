@@ -35,8 +35,7 @@ from src.governance.model_inventory import (
     update_collection_item,
     update_model_field,
 )
-from src.governance.reference import get_reference_lists
-from src.web._helpers import context_from_request, json_body
+from src.web._helpers import context_from_request, json_body, reference_options
 
 models_bp = Blueprint("models", __name__, url_prefix="/api/models")
 
@@ -92,10 +91,8 @@ def _collection_specs():
 @models_bp.get("/fields")
 def field_specs():
     """Field metadata so the UI can render the form and editors generically."""
-    lists = get_reference_lists()
-    reference_options = {name: [item["value"] for item in items] for name, items in lists.items()}
     return jsonify({
-        "groups": _grouped_specs(reference_options),
+        "groups": _grouped_specs(reference_options()),
         "register": list(REGISTER_FIELDS),
         "collections": _collection_specs(),
     })

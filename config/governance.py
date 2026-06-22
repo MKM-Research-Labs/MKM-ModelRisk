@@ -83,9 +83,11 @@ MODEL_FIELD_SPECS = {
     },
     "source_module": {"label": "Source module", "type": "text", "group": "Methodology"},
     # --- Governance ---
-    "owner": {"label": "Owner", "type": "text", "group": "Governance"},
+    "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
     "model_owner_role": {"label": "Owner role", "type": "text", "group": "Governance"},
-    "peer_reviewer": {"label": "Peer reviewer", "type": "text", "group": "Governance"},
+    "peer_reviewer": {
+        "label": "Peer reviewer", "type": "text", "group": "Governance", "reference": "people",
+    },
     "status": {"label": "Status", "type": "text", "group": "Governance"},
     "lifecycle_stage": {
         "label": "Lifecycle stage", "type": "choice",
@@ -172,16 +174,23 @@ COLLECTION_SPECS = {
     ]},
 }
 
-# --- Reference data: admin-managed menu lists for organisation fields ---
-REFERENCE_LISTS = ("company", "division", "department")
+# --- Admin-managed reference data: people directory + menu lists ---
+# Each spec's "display" field is the value shown in dropdowns that reference it.
+REFERENCE_LISTS = ("people", "company", "division", "department")
 REFERENCE_SPECS = {
-    "company": {"label": "Company", "id_prefix": "CO", "fields": [
+    "people": {"label": "People", "id_prefix": "PE", "display": "name", "fields": [
+        {"key": "name", "label": "Name", "type": "text", "required": True},
+        {"key": "email", "label": "Email", "type": "text"},
+        {"key": "role", "label": "Role", "type": "text"},
+        {"key": "organisation", "label": "Organisation", "type": "text"},
+    ]},
+    "company": {"label": "Company", "id_prefix": "CO", "display": "value", "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
-    "division": {"label": "Division", "id_prefix": "DV", "fields": [
+    "division": {"label": "Division", "id_prefix": "DV", "display": "value", "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
-    "department": {"label": "Department", "id_prefix": "DP", "fields": [
+    "department": {"label": "Department", "id_prefix": "DP", "display": "value", "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
 }
@@ -199,7 +208,7 @@ MEETING_FIELD_SPECS = {
     "date": {"label": "Date", "type": "date"},
     "time": {"label": "Time", "type": "text"},
     "location": {"label": "Location", "type": "text"},
-    "chair": {"label": "Chair", "type": "text"},
+    "chair": {"label": "Chair", "type": "text", "reference": "people"},
     "status": {"label": "Status", "type": "choice", "options": VALID_MEETING_STATUSES},
 }
 MEETING_FIELDS = tuple(MEETING_FIELD_SPECS.keys())

@@ -34,16 +34,23 @@ from src.governance.mrc import (
     update_collection_item,
     update_meeting_field,
 )
-from src.web._helpers import context_from_request, json_body
+from src.web._helpers import context_from_request, json_body, reference_options
 
 mrc_bp = Blueprint("mrc", __name__, url_prefix="/api/meetings")
 
 
 def _field_specs():
-    return [
-        {"key": k, "label": s["label"], "type": s["type"], "options": list(s.get("options", []))}
-        for k, s in MEETING_FIELD_SPECS.items()
-    ]
+    options_by_list = reference_options()
+    specs = []
+    for key, spec in MEETING_FIELD_SPECS.items():
+        field_type = spec["type"]
+        options = list(spec.get("options", []))
+        reference = spec.get("reference")
+        if reference and options_by_list.get(reference):
+            field_type = "choice"
+            options = options_by_list[reference]
+        specs.append({"key": key, "label": spec["label"], "type": field_type, "options": options})
+    return specs
 
 
 def _collection_specs():

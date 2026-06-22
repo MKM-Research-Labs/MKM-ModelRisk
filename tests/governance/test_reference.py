@@ -27,37 +27,51 @@ from src.governance.reference import add_option, get_reference_lists, remove_opt
 
 
 def test_lists_empty_initially():
-    assert get_reference_lists() == {"company": [], "division": [], "department": []}
+    assert get_reference_lists() == {
+        "people": [], "company": [], "division": [], "department": [],
+    }
 
 
-def test_add_option_generates_id_and_appears():
-    add_option(list_name="company", value="MKM Bank", actor="admin")
+def test_add_menu_value_generates_id_and_appears():
+    add_option(list_name="company", fields={"value": "MKM Bank"}, actor="admin")
     lists = get_reference_lists()
     assert lists["company"][0]["item_id"] == "CO-001"
     assert lists["company"][0]["value"] == "MKM Bank"
 
 
+def test_add_person_record():
+    add_option(
+        list_name="people",
+        fields={"name": "Jane Doe", "email": "jane@firm", "role": "Owner"},
+        actor="admin",
+    )
+    person = get_reference_lists()["people"][0]
+    assert person["item_id"] == "PE-001"
+    assert person["name"] == "Jane Doe"
+    assert person["role"] == "Owner"
+
+
 def test_add_multiple_options_increment_ids():
-    add_option(list_name="division", value="Group Risk", actor="admin")
-    add_option(list_name="division", value="Markets", actor="admin")
+    add_option(list_name="division", fields={"value": "Group Risk"}, actor="admin")
+    add_option(list_name="division", fields={"value": "Markets"}, actor="admin")
     ids = [item["item_id"] for item in get_reference_lists()["division"]]
     assert ids == ["DV-001", "DV-002"]
 
 
 def test_remove_option():
-    add_option(list_name="company", value="MKM Bank", actor="admin")
+    add_option(list_name="company", fields={"value": "MKM Bank"}, actor="admin")
     remove_option(list_name="company", item_id="CO-001", actor="admin")
     assert get_reference_lists()["company"] == []
 
 
-def test_add_requires_value():
+def test_add_requires_required_field():
     with pytest.raises(DomainError):
-        add_option(list_name="company", value="", actor="admin")
+        add_option(list_name="people", fields={"email": "x@y"}, actor="admin")
 
 
 def test_add_unknown_list_raises():
     with pytest.raises(DomainError):
-        add_option(list_name="nope", value="x", actor="admin")
+        add_option(list_name="nope", fields={"value": "x"}, actor="admin")
 
 
 def test_remove_unknown_item_raises():
