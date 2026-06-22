@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "framework": "MKM Model Risk Governance",
+    "version": "0.1.0",
+    "last_updated": "2026-06-22",
+    "tiering_methodology": "Placeholder. Define per client materiality x complexity scoring."
+  },
+  "models": [
+    {
+      "model_id": "EXAMPLE-001",
+      "name": "Example Model",
+      "short_name": "Example",
+      "description": "Generic placeholder record demonstrating the model-inventory schema. Replace with a real model owned by the client. Contains no engagement-specific content.",
+      "category": "Example",
+      "tier": 3,
+      "materiality": "Medium",
+      "complexity": "Medium",
+      "status": "Active",
+      "lifecycle_stage": "Development",
+      "version": "0.1.0",
+      "owner": "TBD",
+      "peer_reviewer": "TBD",
+      "validation_status": "Pending",
+      "rag_rating": "Amber",
+      "last_review_date": null,
+      "next_review_date": null,
+      "review_frequency": "Annual",
+      "assumptions": [
+        {
+          "id": "A-1",
+          "description": "Placeholder assumption.",
+          "impact": "Document the impact if this assumption fails.",
+          "monitoring": "Describe how the assumption is monitored."
+        }
+      ],
+      "limitations": [
+        {
+          "id": "L-1",
+          "description": "Placeholder limitation.",
+          "impact": "Document the consequence of this limitation.",
+          "compensating_control": "Describe the control that mitigates it."
+        }
+      ],
+      "validation_questions": [
+        {
+          "question_id": "VQ-1",
+          "short_label": "Is the methodology documented and approved?",
+          "status": "open"
+        }
+      ],
+      "overall_risk_rating": {
+        "calculated_rating": "Amber",
+        "effective_rating": "Amber",
+        "mrc_override": null
+      },
+      "change_history": [
+        {
+          "version": "0.1.0",
+          "date": "2026-06-22",
+          "author": "TBD",
+          "type": "created",
+          "description": "Initial placeholder record."
+        }
+      ]
+    }
+  ]
+}
