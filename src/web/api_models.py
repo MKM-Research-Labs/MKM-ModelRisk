@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify
 
+from config.governance import MODEL_FIELD_SPECS, REGISTER_FIELDS
 from src.command import dispatch
 from src.governance.model_inventory import (
     get_model,
@@ -34,6 +35,33 @@ from src.governance.model_inventory import (
 from src.web._helpers import context_from_request, json_body
 
 models_bp = Blueprint("models", __name__, url_prefix="/api/models")
+
+
+def _grouped_specs():
+    """Field specs grouped (in order) for the grouped detail view."""
+    groups: list[dict] = []
+    by_name: dict[str, dict] = {}
+    for key, spec in MODEL_FIELD_SPECS.items():
+        group = by_name.get(spec["group"])
+        if group is None:
+            group = {"group": spec["group"], "fields": []}
+            by_name[spec["group"]] = group
+            groups.append(group)
+        group["fields"].append(
+            {
+                "key": key,
+                "label": spec["label"],
+                "type": spec["type"],
+                "options": list(spec.get("options", [])),
+            }
+        )
+    return groups
+
+
+@models_bp.get("/fields")
+def field_specs():
+    """Field metadata so the UI can render the form and editors generically."""
+    return jsonify({"groups": _grouped_specs(), "register": list(REGISTER_FIELDS)})
 
 
 @models_bp.get("")

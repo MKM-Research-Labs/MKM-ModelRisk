@@ -48,6 +48,47 @@ def test_get_unknown_model_is_404(client):
     assert client.get("/api/models/none").status_code == 404
 
 
+def test_field_specs_endpoint(client):
+    specs = client.get("/api/models/fields").get_json()
+    group_names = [g["group"] for g in specs["groups"]]
+    assert "Organisation" in group_names
+    org = next(g for g in specs["groups"] if g["group"] == "Organisation")
+    org_keys = [f["key"] for f in org["fields"]]
+    assert org_keys == ["company", "division", "department", "repo_location", "codebase"]
+    # A choice field carries its options for the UI to render a dropdown.
+    rag = next(f for g in specs["groups"] for f in g["fields"] if f["key"] == "rag_rating")
+    assert rag["type"] == "choice"
+    assert "Amber" in rag["options"]
+    assert "company" in specs["register"]
+
+
+def test_register_with_organisation_fields(client):
+    response = client.post(
+        "/api/models",
+        json={
+            "model_id": "MKM-CR-001",
+            "name": "Retail Credit Scoring",
+            "fields": {
+                "company": "MKM Bank",
+                "division": "Risk",
+                "department": "Model Risk",
+                "repo_location": "git@github.com:mkm/credit.git",
+                "codebase": "credit-scoring",
+                "tier": 2,
+                "owner": "jane@firm",
+            },
+            "confirmed": True,
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 201
+    data = client.get("/api/models/MKM-CR-001").get_json()["data"]
+    assert data["company"] == "MKM Bank"
+    assert data["division"] == "Risk"
+    assert data["repo_location"] == "git@github.com:mkm/credit.git"
+    assert data["codebase"] == "credit-scoring"
+
+
 def test_update_field_records_actor(client):
     _register(client)
     response = client.post(
