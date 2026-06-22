@@ -46,7 +46,7 @@ const DetailTabs = {
       return "<tr><td>" + (i + 1) + "</td><td><b>" + fieldDisplay(q.short_label) +
         '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" + cell + "</td></tr>";
     }).join("");
-    return '<p class="muted">The nine SR 11-7 questions every model owner should be able to answer.</p>' +
+    return '<p class="muted">The nine SR 26-2 questions every model owner should be able to answer.</p>' +
       '<div class="summary">' + card("Addressed", counts.Addressed, "#388e3c") +
       card("Partially", counts["Partially Addressed"], "#f57c00") +
       card("Not Addressed", counts["Not Addressed"], "#d32f2f") +

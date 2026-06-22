@@ -127,8 +127,9 @@ MODEL_FIELD_SPECS = {
 # Human-readable tier descriptors (shown next to the tier badge).
 TIER_LABELS = {1: "Maximum", 2: "Substantial", 3: "Moderate", 4: "Minimal", 5: "Negligible"}
 
-# The nine SR 11-7 / Handbook validation questions seeded on registration.
-SR117_QUESTIONS = (
+# The nine SR 26-2 / Handbook validation questions seeded on registration.
+# (SR 26-2 supersedes SR 11-7; the questions are unchanged.)
+SR262_QUESTIONS = (
     {"short_label": "Ronseal Test", "question": "Does the model do what it says on the tin?"},
     {"short_label": "Accuracy & Stability",
      "question": "Does the model provide timely, accurate and stable results?"},
