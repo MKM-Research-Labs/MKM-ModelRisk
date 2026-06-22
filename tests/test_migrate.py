@@ -29,18 +29,27 @@ def _drop_everything() -> None:
         with conn.cursor() as cur:
             cur.execute("DROP TABLE IF EXISTS events CASCADE")
             cur.execute("DROP TABLE IF EXISTS projection_checkpoints CASCADE")
+            cur.execute("DROP TABLE IF EXISTS model_inventory_view CASCADE")
             cur.execute("DROP TABLE IF EXISTS schema_migrations CASCADE")
 
 
 def test_migration_files_are_ordered():
     names = [path.name for path in migration_files()]
-    assert names == ["0001_event_store.sql", "0002_roles_grants.sql"]
+    assert names == [
+        "0001_event_store.sql",
+        "0002_roles_grants.sql",
+        "0003_model_inventory_view.sql",
+    ]
 
 
 def test_run_migrations_applies_then_skips():
     _drop_everything()
     applied = run_migrations()
-    assert applied == ["0001_event_store", "0002_roles_grants"]
+    assert applied == [
+        "0001_event_store",
+        "0002_roles_grants",
+        "0003_model_inventory_view",
+    ]
     # Re-running is a no-op: every version already recorded.
     assert run_migrations() == []
 
