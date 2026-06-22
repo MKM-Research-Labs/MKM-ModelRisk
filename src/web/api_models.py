@@ -20,9 +20,12 @@
 """HTTP API for the model-inventory aggregate."""
 from __future__ import annotations
 
+from datetime import date
+
 from flask import Blueprint, jsonify
 
 from config.governance import COLLECTION_SPECS, MODEL_FIELD_SPECS, REGISTER_FIELDS
+from src.governance.model_inventory.risk import compute_risk_rating
 from src.command import dispatch
 from src.governance.model_inventory import (
     add_collection_item,
@@ -109,6 +112,14 @@ def get_one(model_id: str):
     if model is None:
         return jsonify({"error": "model not found"}), 404
     return jsonify(model)
+
+
+@models_bp.get("/<model_id>/risk-rating")
+def risk_rating(model_id: str):
+    model = get_model(model_id)
+    if model is None:
+        return jsonify({"error": "model not found"}), 404
+    return jsonify(compute_risk_rating(model["data"], as_of=date.today().isoformat()))
 
 
 @models_bp.post("")

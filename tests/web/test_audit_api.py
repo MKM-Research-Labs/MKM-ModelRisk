@@ -39,8 +39,10 @@ def test_audit_records_actor_reason_and_newest_first(client):
         headers={"X-Auth-Request-User": "carol@corp"},
     )
     events = client.get("/api/audit").get_json()
-    assert [e["event_type"] for e in events] == ["ModelFieldUpdated", "ModelRegistered"]
+    # Newest first: the field update, then nine seeded questions, then registration.
+    assert events[0]["event_type"] == "ModelFieldUpdated"
     assert events[0]["actor"] == "carol@corp"
     assert events[0]["reason"] == "assigned"
-    assert events[1]["payload"]["name"] == "Alpha"
+    assert events[-1]["event_type"] == "ModelRegistered"
+    assert events[-1]["payload"]["name"] == "Alpha"
     assert "T" in events[0]["recorded_at"]

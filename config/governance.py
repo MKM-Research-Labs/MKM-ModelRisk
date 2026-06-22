@@ -112,7 +112,52 @@ MODEL_FIELD_SPECS = {
     "mrc_signoff_date": {"label": "MRC sign-off", "type": "date", "group": "Review dates"},
     "recertification_date": {"label": "Recertification", "type": "date", "group": "Review dates"},
     "validation_date": {"label": "Validation date", "type": "date", "group": "Review dates"},
+    # --- Testing ---
+    "unit_tests": {
+        "label": "Unit tests", "type": "choice", "options": ("Yes", "No"), "group": "Testing",
+    },
+    "integration_tests": {
+        "label": "Integration tests", "type": "choice", "options": ("Yes", "No"), "group": "Testing",
+    },
+    "benchmark_tests": {
+        "label": "Benchmark tests", "type": "choice", "options": ("Yes", "No"), "group": "Testing",
+    },
 }
+
+# Human-readable tier descriptors (shown next to the tier badge).
+TIER_LABELS = {1: "Maximum", 2: "Substantial", 3: "Moderate", 4: "Minimal", 5: "Negligible"}
+
+# The nine SR 11-7 / Handbook validation questions seeded on registration.
+SR117_QUESTIONS = (
+    {"short_label": "Ronseal Test", "question": "Does the model do what it says on the tin?"},
+    {"short_label": "Accuracy & Stability",
+     "question": "Does the model provide timely, accurate and stable results?"},
+    {"short_label": "Resource Usage",
+     "question": "Does the model consume excessive computational resources?"},
+    {"short_label": "Override Controls", "question": "Are there controls over manual overrides?"},
+    {"short_label": "Data Quality",
+     "question": "Is the input data accurate, complete and appropriate?"},
+    {"short_label": "Assumptions",
+     "question": "Are the model's assumptions documented and justified?"},
+    {"short_label": "Limitations",
+     "question": "Are the model's limitations understood and monitored?"},
+    {"short_label": "Benchmarking",
+     "question": "Has the model been benchmarked against credible alternatives?"},
+    {"short_label": "Independent Validation",
+     "question": "Has the model been independently validated?"},
+)
+DEFAULT_VQ_STATUS = "Not Addressed"
+
+# Overall risk-rating composite: (component key, label, weight). Weights sum to 1.
+RISK_WEIGHTS = (
+    ("validation_coverage", "Validation Coverage", 0.30),
+    ("remediation_health", "Remediation Health", 0.25),
+    ("review_currency", "Review Currency", 0.20),
+    ("assumption_risk", "Assumption Risk", 0.15),
+    ("limitation_risk", "Limitation Risk", 0.10),
+)
+RISK_ACCEPTABLE_AT = 0.75
+RISK_CONDITIONAL_AT = 0.50
 
 # Derived — keep validation and the UI in lockstep with the specs above.
 EDITABLE_FIELDS = tuple(MODEL_FIELD_SPECS.keys())
@@ -148,9 +193,17 @@ COLLECTION_SPECS = {
         {"key": "compensating_control", "label": "Compensating control", "type": "text"},
     ]},
     "validation_questions": {"label": "Validation questions", "id_prefix": "VQ", "fields": [
+        {"key": "short_label", "label": "Topic", "type": "text"},
         {"key": "question", "label": "Question", "type": "text", "required": True},
         {"key": "status", "label": "Status", "type": "choice", "options": VALID_VQ_STATUSES},
         {"key": "evidence", "label": "Evidence", "type": "text"},
+    ]},
+    "version_history": {"label": "Versions", "id_prefix": "V", "fields": [
+        {"key": "version", "label": "Version", "type": "text", "required": True},
+        {"key": "date", "label": "Date", "type": "date"},
+        {"key": "description", "label": "Description", "type": "text"},
+        {"key": "author", "label": "Author", "type": "text"},
+        {"key": "ref_document", "label": "Reference document", "type": "text"},
     ]},
     "remediation_steps": {"label": "Remediation", "id_prefix": "RM", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
