@@ -65,3 +65,14 @@ FIELD_CHOICES = {
     "complexity": VALID_COMPLEXITY,
     "lifecycle_stage": VALID_LIFECYCLE_STAGES,
 }
+
+# --- Model Risk Committee (MRC) meetings ---
+
+# Editable scalar fields of a meeting.
+MEETING_FIELDS = ("title", "date", "time", "location", "chair", "status")
+
+VALID_MEETING_STATUSES = ("Scheduled", "In Progress", "Held", "Cancelled")
+DEFAULT_MEETING_STATUS = "Scheduled"
+
+VALID_ACTION_STATUSES = ("Open", "In Progress", "Closed")
+DEFAULT_ACTION_STATUS = "Open"
