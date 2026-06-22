@@ -1,0 +1,316 @@
+[
+  {
+    "id": "mrc-0001",
+    "title": "Inaugural MRC Meeting",
+    "date": "2026-02-16",
+    "time": "10:00",
+    "location": "Virtual (Teams)",
+    "status": "Completed",
+    "chair": "Johnny Mattimore",
+    "attendees": [
+      {
+        "name": "Johnny Mattimore",
+        "role": "Chair"
+      },
+      {
+        "name": "David K Kelly",
+        "role": "Model Owner / CSO"
+      }
+    ],
+    "participants": [
+      {
+        "id": "P-001",
+        "name": "Johnny Mattimore",
+        "role": "Chair",
+        "organisation": "MKM Research Labs",
+        "status": "Attended"
+      },
+      {
+        "id": "P-002",
+        "name": "David K Kelly",
+        "role": "Model Owner / CSO",
+        "organisation": "MKM Research Labs",
+        "status": "Attended"
+      }
+    ],
+    "models_in_scope": [
+      "MKM-SI-001",
+      "MKM-SG-001",
+      "MKM-GH-001",
+      "MKM-PR-001",
+      "MKM-DD-001",
+      "MKM-PV-001",
+      "MKM-MP-001",
+      "MKM-RA-001"
+    ],
+    "agenda": [
+      {
+        "item": 1,
+        "title": "Welcome and Adoption of Terms of Reference",
+        "description": "Chair to formally open the inaugural MRC meeting and present the Terms of Reference for adoption.",
+        "presenter": "Johnny Mattimore",
+        "status": "Completed"
+      },
+      {
+        "item": 2,
+        "title": "Model Inventory Overview",
+        "description": "Present the full model inventory (8 models) including tiering assignments, lifecycle stages, and ownership. Review the tiering matrix methodology (Materiality \u00d7 Complexity) from Chapter 8 of the Handbook.",
+        "presenter": "David K Kelly",
+        "status": "Completed"
+      },
+      {
+        "item": 3,
+        "title": "Model Chain and Data Handoffs",
+        "description": "Review the end-to-end model chain from Storm Intensity through to Risk Assessment. Present data handoff field specifications between models.",
+        "presenter": "David K Kelly",
+        "status": "Completed"
+      },
+      {
+        "item": 4,
+        "title": "Validation Status and Test Results",
+        "description": "Review current validation status across all models. Present automated test coverage and test results for each model. Identify models requiring independent validation.",
+        "presenter": "David K Kelly",
+        "status": "Completed"
+      },
+      {
+        "item": 5,
+        "title": "Parameter Inventory Review",
+        "description": "Present the hard-coded parameter inventory document covering ~150+ parameters across all models. Discuss calibration sources and review cycle.",
+        "presenter": "David K Kelly",
+        "status": "Completed"
+      },
+      {
+        "item": 6,
+        "title": "RAG Rating Assignment",
+        "description": "Initial RAG rating assignment for all models based on current maturity, documentation completeness, and validation status.",
+        "presenter": "Johnny Mattimore",
+        "status": "Completed"
+      },
+      {
+        "item": 7,
+        "title": "Remediation Actions and Next Steps",
+        "description": "Identify open remediation items, assign owners, and set target dates. Agree on review frequency and next meeting date.",
+        "presenter": "Johnny Mattimore",
+        "status": "Completed"
+      },
+      {
+        "item": 8,
+        "title": "AOB",
+        "description": "Any other business.",
+        "presenter": "Johnny Mattimore",
+        "status": "Completed"
+      }
+    ],
+    "minutes": [
+      {
+        "item": 1,
+        "title": "Welcome and Adoption of Terms of Reference",
+        "text": "The Chair opened the inaugural meeting of the Model Risk Committee and welcomed attendees. The Terms of Reference document was presented and formally adopted without amendment. The ToR establishes the MRC as the principal governance body for model risk oversight, meeting quarterly with authority to approve or reject models for production.",
+        "presenter": "Johnny Mattimore"
+      },
+      {
+        "item": 2,
+        "title": "Model Inventory Overview",
+        "text": "DKK presented the model inventory comprising 8 models across 6 categories (Hazard, Pricing, Loss, Spatial, Valuation, Risk). The tiering methodology follows the Handbook Chapter 8 Materiality \u00d7 Complexity matrix:\n\n- Tier 1 (Maximum): GEV Hazard Curve (MKM-GH-001), PRS Pricing (MKM-PR-001)\n- Tier 2 (Substantial): Storm Intensity (MKM-SI-001), Storm-Gauge Response (MKM-SG-001), Depth-Damage (MKM-DD-001)\n- Tier 3 (Moderate): Property Valuation (MKM-PV-001), Mortgage Pricer (MKM-MP-001), Risk Assessor (MKM-RA-001)\n\nAll models are currently in Development lifecycle stage with David K Kelly as model owner.",
+        "presenter": "David K Kelly"
+      },
+      {
+        "item": 3,
+        "title": "Model Chain and Data Handoffs",
+        "text": "The end-to-end model chain was reviewed, from Storm Intensity \u2192 Storm-Gauge \u2192 GEV Hazard \u2192 PRS Pricing, with parallel paths through Depth-Damage \u2192 Property Valuation \u2192 Mortgage Pricer \u2192 Risk Assessor. Data handoff field specifications were presented showing the specific fields, types, and descriptions that connect each model pair.\n\nThe committee noted the importance of maintaining field-level documentation for audit purposes.",
+        "presenter": "David K Kelly"
+      },
+      {
+        "item": 4,
+        "title": "Validation Status and Test Results",
+        "text": "Automated test coverage was presented: 464 Python tests (6 skipped) and 51 JavaScript tests, all passing. Per-model test results PDFs are generated and accessible via the governance dashboard. All models currently have 'Initial' validation status pending independent validation.\n\nAction: Independent validation to be commissioned for Tier 1 models as priority.",
+        "presenter": "David K Kelly"
+      },
+      {
+        "item": 5,
+        "title": "Parameter Inventory Review",
+        "text": "The parameter inventory document was presented, cataloguing ~150+ hard-coded parameters across all model modules. Parameters are grouped by model with source file and line number references. The committee agreed this provides a solid baseline for parameter governance.\n\nAction: Establish a parameter change control process requiring MRC approval for Tier 1 model parameters.",
+        "presenter": "David K Kelly"
+      },
+      {
+        "item": 6,
+        "title": "RAG Rating Assignment",
+        "text": "Initial RAG ratings were assigned based on documentation completeness, validation status, and maturity:\n\n- Amber: All models currently rated Amber, reflecting Development lifecycle stage and pending independent validation.\n\nThe committee agreed that models may progress to Green upon completion of independent validation and production sign-off.",
+        "presenter": "Johnny Mattimore"
+      },
+      {
+        "item": 7,
+        "title": "Remediation Actions and Next Steps",
+        "text": "The following remediation priorities were agreed:\n\n1. Commission independent validation for Tier 1 models (GEV Hazard, PRS Pricing) \u2014 Target: Q2 2026\n2. Assign peer reviewers for all models \u2014 Target: March 2026\n3. Establish parameter change control process \u2014 Target: March 2026\n4. Complete sensitivity analysis documentation \u2014 Target: Q2 2026\n5. Schedule recertification dates for all models\n\nNext MRC Meeting: May 2026 (Quarterly cycle)",
+        "presenter": "Johnny Mattimore"
+      },
+      {
+        "item": 8,
+        "title": "AOB",
+        "text": "No other business raised. The Chair thanked attendees and closed the meeting at 11:30.",
+        "presenter": "Johnny Mattimore"
+      }
+    ],
+    "decisions": [
+      {
+        "id": "D-001",
+        "description": "Terms of Reference formally adopted without amendment.",
+        "date": "2026-02-16"
+      },
+      {
+        "id": "D-002",
+        "description": "Model tiering assignments confirmed as presented (2\u00d7 Tier 1, 3\u00d7 Tier 2, 3\u00d7 Tier 3).",
+        "date": "2026-02-16"
+      },
+      {
+        "id": "D-003",
+        "description": "All models assigned initial RAG rating of Amber pending independent validation.",
+        "date": "2026-02-16"
+      },
+      {
+        "id": "D-004",
+        "description": "Quarterly MRC meeting cycle adopted, next meeting May 2026.",
+        "date": "2026-02-16"
+      }
+    ],
+    "actions": [
+      {
+        "id": "A-001",
+        "description": "Commission independent validation for Tier 1 models (MKM-GH-001, MKM-PR-001).",
+        "owner": "David K Kelly",
+        "target_date": "2026-06-30",
+        "status": "Open"
+      },
+      {
+        "id": "A-002",
+        "description": "Assign peer reviewers for all models.",
+        "owner": "David K Kelly",
+        "target_date": "2026-03-31",
+        "status": "Open"
+      },
+      {
+        "id": "A-003",
+        "description": "Establish parameter change control process requiring MRC approval for Tier 1 parameters.",
+        "owner": "Johnny Mattimore",
+        "target_date": "2026-03-31",
+        "status": "Open"
+      },
+      {
+        "id": "A-004",
+        "description": "Complete sensitivity analysis documentation for all models.",
+        "owner": "David K Kelly",
+        "target_date": "2026-06-30",
+        "status": "Open"
+      },
+      {
+        "id": "A-005",
+        "description": "Schedule recertification dates for all models in the inventory.",
+        "owner": "David K Kelly",
+        "target_date": "2026-03-15",
+        "status": "Open"
+      }
+    ],
+    "documents": [],
+    "created_at": "2026-02-16T10:00:00",
+    "updated_at": "2026-04-17T14:32:32.884496"
+  },
+  {
+    "id": "77f48c23",
+    "title": "MRC Meeting",
+    "date": "2026-02-16",
+    "time": "10:00",
+    "location": "Virtual (Teams)",
+    "status": "Scheduled",
+    "chair": "Johnny Mattimore",
+    "attendees": [
+      {
+        "name": "Johnny Mattimore",
+        "role": "Chair"
+      },
+      {
+        "name": "David K Kelly",
+        "role": "Model Owner"
+      }
+    ],
+    "participants": [
+      {
+        "id": "P-001",
+        "name": "Johnny Mattimore",
+        "role": "Chair",
+        "organisation": "MKM Research Labs",
+        "status": "Invited"
+      },
+      {
+        "id": "P-002",
+        "name": "David K Kelly",
+        "role": "Model Owner",
+        "organisation": "MKM Research Labs",
+        "status": "Invited"
+      }
+    ],
+    "models_in_scope": [
+      "MKM-SI-001",
+      "MKM-SG-001",
+      "MKM-GH-001",
+      "MKM-PR-001",
+      "MKM-DD-001",
+      "MKM-SP-001",
+      "MKM-PV-001",
+      "MKM-IP-001",
+      "MKM-MP-001",
+      "MKM-RA-001"
+    ],
+    "agenda": [
+      {
+        "item": 1,
+        "title": "General Update",
+        "description": "General update on model landscape, testing",
+        "presenter": "David Kelly",
+        "duration": "20 mins",
+        "status": "Pending"
+      }
+    ],
+    "minutes": [
+      {
+        "item": 1,
+        "title": "BCBS",
+        "text": "Agrement that alongside model governance BCBS for data governance should be showcased",
+        "presenter": "David Kelly"
+      }
+    ],
+    "decisions": [
+      {
+        "id": "D-001",
+        "description": "Agreement to add BCBS 239 compliance",
+        "date": "2026-02-16"
+      }
+    ],
+    "actions": [
+      {
+        "id": "A-001",
+        "description": "BCBS 239 compliance outstanding.  This was completed with basic information around production, given this is a development platform.",
+        "owner": "David Kelly",
+        "target_date": "",
+        "status": "Closed"
+      }
+    ],
+    "documents": [
+      {
+        "filename": "parameter_inventory.pdf",
+        "original_name": "parameter_inventory.pdf",
+        "uploaded_at": "2026-02-16T10:40:16.914733",
+        "uploaded_by": "David K Kelly",
+        "description": ""
+      },
+      {
+        "filename": "bcbs239_self_assessment.pdf",
+        "original_name": "bcbs239_self_assessment.pdf",
+        "uploaded_at": "2026-02-17T13:52:35.356684",
+        "uploaded_by": "David K Kelly",
+        "description": "BCBS self assessment draft"
+      }
+    ],
+    "created_at": "2026-02-16T10:39:52.903533",
+    "updated_at": "2026-02-19T14:33:01.160600"
+  }
+]
