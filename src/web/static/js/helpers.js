@@ -53,3 +53,38 @@ function statusBadge(status) {
   if (!color) return fieldDisplay(status);
   return '<span class="badge" style="background:' + color + '">' + esc(status) + "</span>";
 }
+
+const TIER_DESCRIPTORS = { 1: "Maximum", 2: "Substantial", 3: "Moderate", 4: "Minimal", 5: "Negligible" };
+
+// "Tier 2 - Substantial" descriptor.
+function tierFullLabel(tier) {
+  const d = TIER_DESCRIPTORS[tier];
+  return d ? "Tier " + tier + " - " + d : "";
+}
+
+const RISK_COLORS = { Acceptable: "#388e3c", Conditional: "#f57c00", Unacceptable: "#d32f2f" };
+
+// Overall risk rating badge.
+function riskBadge(rating) {
+  const color = RISK_COLORS[rating];
+  if (!color) return '<span class="muted">—</span>';
+  return '<span class="badge" style="background:' + color + '">' + esc(rating) + "</span>";
+}
+
+const VQ_COLORS = {
+  "Addressed": "#388e3c", "Partially Addressed": "#f57c00",
+  "Not Addressed": "#d32f2f", "Not Applicable": "#9e9e9e",
+};
+
+// Validation-question status badge.
+function vqBadge(status) {
+  const color = VQ_COLORS[status] || "#9e9e9e";
+  return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
+}
+
+// Yes/No test flag as a tick or cross.
+function yesNo(value) {
+  if (value === "Yes") return '<span style="color:#388e3c">&#10004; Yes</span>';
+  if (value === "No") return '<span style="color:#d32f2f">&#10008; No</span>';
+  return '<span class="muted">—</span>';
+}
