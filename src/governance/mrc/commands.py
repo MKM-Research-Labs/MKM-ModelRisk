@@ -17,12 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Command handlers for the MRC-meeting aggregate.
-
-Each loads the meeting's event stream, rebuilds state, validates via the pure
-decision functions, and appends the resulting event with optimistic
-concurrency, recording the acting ``actor`` and change ``reason``.
-"""
+"""Command handlers for the MRC-meeting aggregate."""
 from __future__ import annotations
 
 from typing import Any
@@ -50,14 +45,9 @@ def _record(
 ) -> Event:
     event_type, payload = decision
     return append_event(
-        aggregate_type=AGGREGATE_TYPE,
-        aggregate_id=meeting_id,
-        event_type=event_type,
-        payload=payload,
-        actor=actor,
-        reason=reason,
-        expected_version=version,
-        config=config,
+        aggregate_type=AGGREGATE_TYPE, aggregate_id=meeting_id,
+        event_type=event_type, payload=payload, actor=actor, reason=reason,
+        expected_version=version, config=config,
     )
 
 
@@ -83,44 +73,33 @@ def update_meeting_field(
     return _record(meeting_id, decision, version, actor, reason, config)
 
 
-def add_agenda_item(
-    *, meeting_id: str, title: str, actor: str, presenter: str | None = None,
+def add_collection_item(
+    *, meeting_id: str, collection: str, fields: dict[str, Any], actor: str,
     reason: str | None = None, config=None,
 ) -> Event:
-    """Add an agenda item to a meeting."""
+    """Add an item to a meeting collection (agenda, decisions, actions, …)."""
     state, version = _load(meeting_id, config)
-    decision = _rules.decide_add_agenda_item(state, title=title, presenter=presenter)
+    decision = _rules.decide_add_item(state, collection=collection, fields=fields)
     return _record(meeting_id, decision, version, actor, reason, config)
 
 
-def log_decision(
-    *, meeting_id: str, text: str, actor: str, reason: str | None = None, config=None,
+def update_collection_item(
+    *, meeting_id: str, collection: str, item_id: str, fields: dict[str, Any],
+    actor: str, reason: str | None = None, config=None,
 ) -> Event:
-    """Record a decision taken at a meeting."""
+    """Update fields of an existing meeting collection item."""
     state, version = _load(meeting_id, config)
-    decision = _rules.decide_log_decision(state, text=text)
-    return _record(meeting_id, decision, version, actor, reason, config)
-
-
-def raise_action(
-    *, meeting_id: str, description: str, owner: str, actor: str,
-    due_date: str | None = None, reason: str | None = None, config=None,
-) -> Event:
-    """Raise an action item from a meeting."""
-    state, version = _load(meeting_id, config)
-    decision = _rules.decide_raise_action(
-        state, description=description, owner=owner, due_date=due_date
+    decision = _rules.decide_update_item(
+        state, collection=collection, item_id=item_id, fields=fields
     )
     return _record(meeting_id, decision, version, actor, reason, config)
 
 
-def set_action_status(
-    *, meeting_id: str, action_id: str, status: str, actor: str,
+def remove_collection_item(
+    *, meeting_id: str, collection: str, item_id: str, actor: str,
     reason: str | None = None, config=None,
 ) -> Event:
-    """Update the status of an existing action item."""
+    """Remove an item from a meeting collection."""
     state, version = _load(meeting_id, config)
-    decision = _rules.decide_set_action_status(
-        state, action_id=action_id, status=status
-    )
+    decision = _rules.decide_remove_item(state, collection=collection, item_id=item_id)
     return _record(meeting_id, decision, version, actor, reason, config)

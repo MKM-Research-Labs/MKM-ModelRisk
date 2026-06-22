@@ -172,8 +172,49 @@ COLLECTION_SPECS = {
 }
 
 # --- Model Risk Committee (MRC) meetings ---
-MEETING_FIELDS = ("title", "date", "time", "location", "chair", "status")
 VALID_MEETING_STATUSES = ("Scheduled", "In Progress", "Held", "Cancelled")
 DEFAULT_MEETING_STATUS = "Scheduled"
 VALID_ACTION_STATUSES = ("Open", "In Progress", "Closed")
-DEFAULT_ACTION_STATUS = "Open"
+VALID_ATTENDANCE = ("Present", "Apologies", "Absent")
+
+# Scalar meeting fields (title/date are mandatory at scheduling time).
+MEETING_FIELD_SPECS = {
+    "title": {"label": "Title", "type": "text"},
+    "date": {"label": "Date", "type": "date"},
+    "time": {"label": "Time", "type": "text"},
+    "location": {"label": "Location", "type": "text"},
+    "chair": {"label": "Chair", "type": "text"},
+    "status": {"label": "Status", "type": "choice", "options": VALID_MEETING_STATUSES},
+}
+MEETING_FIELDS = tuple(MEETING_FIELD_SPECS.keys())
+
+# Structured collections on a meeting — same generic engine as the inventory.
+MRC_COLLECTION_SPECS = {
+    "agenda": {"label": "Agenda", "id_prefix": "AG", "fields": [
+        {"key": "title", "label": "Item", "type": "text", "required": True},
+        {"key": "presenter", "label": "Presenter", "type": "text"},
+    ]},
+    "decisions": {"label": "Decisions", "id_prefix": "D", "fields": [
+        {"key": "text", "label": "Decision", "type": "text", "required": True},
+    ]},
+    "actions": {"label": "Actions", "id_prefix": "A", "fields": [
+        {"key": "description", "label": "Description", "type": "text", "required": True},
+        {"key": "owner", "label": "Owner", "type": "text"},
+        {"key": "due_date", "label": "Due date", "type": "date"},
+        {"key": "status", "label": "Status", "type": "choice", "options": VALID_ACTION_STATUSES},
+    ]},
+    "participants": {"label": "Participants", "id_prefix": "P", "fields": [
+        {"key": "name", "label": "Name", "type": "text", "required": True},
+        {"key": "role", "label": "Role", "type": "text"},
+        {"key": "organisation", "label": "Organisation", "type": "text"},
+        {"key": "attendance", "label": "Attendance", "type": "choice", "options": VALID_ATTENDANCE},
+    ]},
+    "minutes": {"label": "Minutes", "id_prefix": "MIN", "fields": [
+        {"key": "topic", "label": "Topic", "type": "text", "required": True},
+        {"key": "note", "label": "Note", "type": "text"},
+    ]},
+    "models_in_scope": {"label": "Models in scope", "id_prefix": "MS", "fields": [
+        {"key": "model_id", "label": "Model", "type": "text", "required": True},
+        {"key": "note", "label": "Note", "type": "text"},
+    ]},
+}

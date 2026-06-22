@@ -63,10 +63,8 @@ const Collections = {
       '<button class="btn small" data-add="' + c.key + '">Add…</button></div>';
   },
 
-  bind(modelId, specs, retired) {
+  bind(base, specs, retired, refresh) {
     if (retired) return;
-    const base = "/api/models/" + modelId + "/collections/";
-    const refresh = () => { Detail.show(modelId); Inventory.loadList(); };
     const byKey = {};
     specs.collections.forEach((c) => { byKey[c.key] = c; });
 
@@ -78,7 +76,7 @@ const Collections = {
           const v = val("add-" + c.key + "-" + f.key);
           if (v !== "") fields[f.key] = v;
         });
-        App.amend("Add a " + c.label + " item to " + modelId + ".", "POST",
+        App.amend("Add an item to " + c.label + ".", "POST",
           base + c.key, { fields: fields }, refresh);
       };
     });
@@ -86,7 +84,7 @@ const Collections = {
     document.querySelectorAll("[data-rm]").forEach(function (el) {
       const parts = el.getAttribute("data-rm").split("|");
       el.onclick = function () {
-        App.amend("Remove " + parts[1] + " from " + modelId + ".", "POST",
+        App.amend("Remove " + parts[1] + ".", "POST",
           base + parts[0] + "/" + parts[1] + "/delete", {}, refresh);
       };
     });

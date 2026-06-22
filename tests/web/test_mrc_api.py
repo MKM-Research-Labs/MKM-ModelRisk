@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Tests for the MRC-meeting HTTP API."""
+"""Tests for the MRC-meeting HTTP API (fields, scheduling, collections)."""
 from __future__ import annotations
 
 from tests.web.conftest import HEADERS
@@ -31,13 +31,22 @@ def _schedule(client, meeting_id="MTG1"):
     )
 
 
-def _post(client, path, body):
-    body = dict(body)
-    body["confirmed"] = True
-    return client.post(path, json=body, headers=HEADERS)
+def _add(client, collection, fields):
+    return client.post(
+        "/api/meetings/MTG1/collections/" + collection,
+        json={"fields": fields, "confirmed": True}, headers=HEADERS,
+    )
 
 
-def test_schedule_then_get_and_list(client):
+def test_field_specs_endpoint(client):
+    specs = client.get("/api/meetings/fields").get_json()
+    field_keys = [f["key"] for f in specs["fields"]]
+    assert "chair" in field_keys and "location" in field_keys
+    collection_keys = [c["key"] for c in specs["collections"]]
+    assert "agenda" in collection_keys and "participants" in collection_keys
+
+
+def test_schedule_get_and_list(client):
     assert _schedule(client).status_code == 201
     assert [m["meeting_id"] for m in client.get("/api/meetings").get_json()] == ["MTG1"]
     assert client.get("/api/meetings/MTG1").get_json()["status"] == "Scheduled"
@@ -47,31 +56,52 @@ def test_get_unknown_meeting_is_404(client):
     assert client.get("/api/meetings/none").status_code == 404
 
 
-def test_full_agenda_decision_action_flow(client):
+def test_update_meeting_field(client):
     _schedule(client)
-    _post(client, "/api/meetings/MTG1/field", {"field": "status", "value": "Held"})
-    _post(client, "/api/meetings/MTG1/agenda", {"title": "Review", "presenter": "bob"})
-    _post(client, "/api/meetings/MTG1/decisions", {"text": "Approved"})
-    _post(client, "/api/meetings/MTG1/actions", {"description": "Follow up", "owner": "bob"})
-    _post(client, "/api/meetings/MTG1/actions/A-001/status", {"status": "Closed"})
-
-    meeting = client.get("/api/meetings/MTG1").get_json()
-    assert meeting["status"] == "Held"
-    assert meeting["data"]["agenda"][0]["item_id"] == "AG-001"
-    assert meeting["data"]["decisions"][0]["text"] == "Approved"
-    assert meeting["data"]["actions"][0]["status"] == "Closed"
-
-
-def test_schedule_without_confirmation_is_409(client):
     response = client.post(
-        "/api/meetings",
-        json={"meeting_id": "MTG1", "title": "t", "date": "2026-06-30"},
-        headers=HEADERS,
+        "/api/meetings/MTG1/field",
+        json={"field": "chair", "value": "Dr Patel", "confirmed": True}, headers=HEADERS,
     )
-    assert response.status_code == 409
+    assert response.get_json()["data"]["chair"] == "Dr Patel"
+
+
+def test_collection_add_update_remove(client):
+    _schedule(client)
+    added = _add(client, "actions", {"description": "Follow up", "owner": "bob"})
+    assert added.status_code == 201
+    assert added.get_json()["data"]["actions"][0]["item_id"] == "A-001"
+
+    updated = client.post(
+        "/api/meetings/MTG1/collections/actions/A-001",
+        json={"fields": {"status": "Closed"}, "confirmed": True}, headers=HEADERS,
+    )
+    assert updated.get_json()["data"]["actions"][0]["status"] == "Closed"
+
+    removed = client.post(
+        "/api/meetings/MTG1/collections/actions/A-001/delete",
+        json={"confirmed": True}, headers=HEADERS,
+    )
+    assert removed.get_json()["data"]["actions"] == []
+
+
+def test_add_missing_required_is_400(client):
+    _schedule(client)
+    assert _add(client, "agenda", {"presenter": "Alice"}).status_code == 400
 
 
 def test_invalid_meeting_status_is_400(client):
     _schedule(client)
-    response = _post(client, "/api/meetings/MTG1/field", {"field": "status", "value": "Bogus"})
+    response = client.post(
+        "/api/meetings/MTG1/field",
+        json={"field": "status", "value": "Bogus", "confirmed": True}, headers=HEADERS,
+    )
     assert response.status_code == 400
+
+
+def test_add_without_confirmation_is_409(client):
+    _schedule(client)
+    response = client.post(
+        "/api/meetings/MTG1/collections/agenda",
+        json={"fields": {"title": "x"}}, headers=HEADERS,
+    )
+    assert response.status_code == 409

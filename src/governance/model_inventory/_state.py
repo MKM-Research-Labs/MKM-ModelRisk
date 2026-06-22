@@ -28,12 +28,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from src.governance import collections as coll
+
 EVENT_REGISTERED = "ModelRegistered"
 EVENT_FIELD_UPDATED = "ModelFieldUpdated"
 EVENT_RETIRED = "ModelRetired"
-EVENT_ITEM_ADDED = "CollectionItemAdded"
-EVENT_ITEM_UPDATED = "CollectionItemUpdated"
-EVENT_ITEM_REMOVED = "CollectionItemRemoved"
 
 
 @dataclass(frozen=True)
@@ -52,16 +51,6 @@ def initial_state() -> ModelState:
     return ModelState()
 
 
-def _items(state: ModelState, collection: str) -> tuple:
-    return state.collections.get(collection, ())
-
-
-def _with_collection(state: ModelState, collection: str, items: tuple) -> ModelState:
-    merged = dict(state.collections)
-    merged[collection] = items
-    return replace(state, collections=merged)
-
-
 def apply(state: ModelState, event_type: str, payload: dict[str, Any]) -> ModelState:
     """Fold one event into ``state``. Unknown event types are ignored."""
     if event_type == EVENT_REGISTERED:
@@ -72,23 +61,7 @@ def apply(state: ModelState, event_type: str, payload: dict[str, Any]) -> ModelS
         return replace(state, fields=updated)
     if event_type == EVENT_RETIRED:
         return replace(state, retired=True)
-    if event_type == EVENT_ITEM_ADDED:
-        collection = payload["collection"]
-        item = {k: v for k, v in payload.items() if k != "collection"}
-        return _with_collection(state, collection, _items(state, collection) + (item,))
-    if event_type == EVENT_ITEM_UPDATED:
-        collection = payload["collection"]
-        item_id = payload["item_id"]
-        changes = {k: v for k, v in payload.items() if k not in ("collection", "item_id")}
-        items = tuple(
-            {**it, **changes} if it["item_id"] == item_id else it
-            for it in _items(state, collection)
-        )
-        return _with_collection(state, collection, items)
-    if event_type == EVENT_ITEM_REMOVED:
-        collection = payload["collection"]
-        items = tuple(
-            it for it in _items(state, collection) if it["item_id"] != payload["item_id"]
-        )
-        return _with_collection(state, collection, items)
+    folded = coll.fold(state.collections, event_type, payload)
+    if folded is not None:
+        return replace(state, collections=folded)
     return state

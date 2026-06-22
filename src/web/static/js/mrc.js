@@ -18,26 +18,75 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-const ACTION_STATUSES = ["Open", "In Progress", "Closed"];
-
 const MRC = {
+  _specs: null,
+
+  async specs() {
+    if (!this._specs) this._specs = await App.get("/api/meetings/fields");
+    return this._specs;
+  },
+
+  specFieldByKey(key) {
+    return this._specs.fields.find((f) => f.key === key);
+  },
+
   async render() {
+    const specs = await this.specs();
     const el = document.getElementById("tab-mrc");
     el.innerHTML =
-      '<div class="card"><h3>Schedule a meeting</h3><div class="row">' +
-      '<div class="field"><label>Meeting ID</label><input id="mt-id" placeholder="MRC-2026-Q2"></div>' +
-      '<div class="field"><label>Title</label><input id="mt-title" placeholder="Q2 Model Risk Committee"></div>' +
-      '<div class="field"><label>Date</label><input id="mt-date" placeholder="2026-06-30"></div>' +
-      '<button class="btn primary" id="mt-schedule">Schedule…</button>' +
-      "</div></div>" +
+      this._scheduleCard(specs) +
+      '<div id="mt-summary"></div>' +
       '<div class="card"><h3>Meetings</h3><div id="mt-list"></div></div>' +
       '<div id="mt-detail"></div>';
     document.getElementById("mt-schedule").onclick = () => this._schedule();
-    await this._loadList();
+    await this.loadList();
   },
 
-  async _loadList() {
+  _scheduleCard(specs) {
+    let inputs =
+      '<div class="field"><label>Meeting ID *</label><input id="sc-meeting_id" placeholder="MRC-2026-Q2"></div>';
+    specs.fields.forEach(function (f) {
+      if (f.key === "status") return; // status defaults at scheduling time
+      const req = f.key === "title" || f.key === "date" ? " *" : "";
+      inputs += '<div class="field"><label>' + esc(f.label) + req + "</label>" +
+        inputControl("sc-" + f.key, f) + "</div>";
+    });
+    return '<div class="card"><h3>Schedule a meeting</h3><div class="row">' + inputs +
+      '<button class="btn primary" id="mt-schedule">Schedule…</button></div></div>';
+  },
+
+  _schedule() {
+    const id = val("sc-meeting_id"), title = val("sc-title"), date = val("sc-date");
+    if (!id || !title || !date) {
+      App.toast("Meeting ID, title and date are required", "error");
+      return;
+    }
+    const fields = {};
+    this._specs.fields.forEach(function (f) {
+      if (f.key === "title" || f.key === "date" || f.key === "status") return;
+      const v = val("sc-" + f.key);
+      if (v !== "") fields[f.key] = v;
+    });
+    App.amend('Schedule meeting "' + id + '".', "POST", "/api/meetings",
+      { meeting_id: id, title: title, date: date, fields: fields }, () => this.render());
+  },
+
+  _summary(meetings) {
+    const c = (s) => meetings.filter((m) => m.status === s).length;
+    const card = (lbl, v, color) =>
+      '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
+      lbl + '</div><div class="val">' + v + "</div></div>";
+    return '<div class="summary">' +
+      card("Total", meetings.length, "#1976d2") +
+      card("Scheduled", c("Scheduled"), "#1976d2") +
+      card("In Progress", c("In Progress"), "#f57c00") +
+      card("Held", c("Held"), "#388e3c") +
+      card("Cancelled", c("Cancelled"), "#9e9e9e") + "</div>";
+  },
+
+  async loadList() {
     const meetings = await App.get("/api/meetings");
+    document.getElementById("mt-summary").innerHTML = this._summary(meetings);
     const box = document.getElementById("mt-list");
     if (!meetings.length) {
       box.innerHTML = '<div class="empty">No meetings yet. Schedule one above.</div>';
@@ -46,107 +95,17 @@ const MRC = {
     let rows = "";
     meetings.forEach(function (m) {
       const d = m.data || {};
-      rows +=
-        '<tr class="clickable" data-id="' + esc(m.meeting_id) + '">' +
-        "<td>" + esc(m.meeting_id) + "</td><td>" + esc(d.title || "") + "</td>" +
-        "<td>" + esc(d.date || "") + "</td><td>" + esc(m.status || "—") + "</td></tr>";
+      rows += '<tr class="clickable" data-id="' + esc(m.meeting_id) + '">' +
+        '<td class="modelid">' + esc(m.meeting_id) + "</td>" +
+        "<td>" + fieldDisplay(d.title) + "</td>" +
+        "<td>" + fieldDisplay(d.date) + "</td>" +
+        "<td>" + statusBadge(m.status) + "</td></tr>";
     });
     box.innerHTML =
       "<table><thead><tr><th>ID</th><th>Title</th><th>Date</th><th>Status</th></tr></thead><tbody>" +
       rows + "</tbody></table>";
-    const self = this;
     box.querySelectorAll("tr.clickable").forEach(function (tr) {
-      tr.onclick = function () { self._detail(tr.getAttribute("data-id")); };
-    });
-  },
-
-  _schedule() {
-    const id = val("mt-id"), title = val("mt-title"), date = val("mt-date");
-    if (!id || !title || !date) { App.toast("Meeting ID, title and date are required", "error"); return; }
-    App.amend('Schedule meeting "' + id + '".', "POST", "/api/meetings",
-      { meeting_id: id, title: title, date: date }, () => this.render());
-  },
-
-  _list(items, render) {
-    if (!items || !items.length) return '<div class="empty">None.</div>';
-    return items.map(render).join("");
-  },
-
-  async _detail(id) {
-    const m = await App.get("/api/meetings/" + id);
-    const d = m.data || {};
-    const agenda = this._list(d.agenda, function (a) {
-      return "<tr><td>" + esc(a.item_id) + "</td><td>" + esc(a.title) +
-        "</td><td>" + esc(a.presenter || "—") + "</td></tr>";
-    });
-    const decisions = this._list(d.decisions, function (x) {
-      return "<tr><td>" + esc(x.decision_id) + "</td><td>" + esc(x.text) + "</td></tr>";
-    });
-    const self = this;
-    const actions = (d.actions || []).map(function (a) {
-      let opts = "";
-      ACTION_STATUSES.forEach(function (s) {
-        opts += '<option' + (s === a.status ? " selected" : "") + ">" + s + "</option>";
-      });
-      return "<tr><td>" + esc(a.action_id) + "</td><td>" + esc(a.description) +
-        "</td><td>" + esc(a.owner) + '</td><td><select data-action="' + esc(a.action_id) +
-        '">' + opts + "</select></td></tr>";
-    }).join("") || '<tr><td colspan="4" class="empty">None.</td></tr>';
-
-    document.getElementById("mt-detail").innerHTML =
-      '<div class="card"><h3>' + esc(id) + " — " + esc(d.title || "") + "</h3>" +
-      '<div class="kv"><div class="k">Date</div><div>' + esc(d.date || "") +
-      '</div><div class="k">Status</div><div>' + esc(m.status || "") + "</div></div>" +
-      this._statusRow(id) +
-      '<div class="subhead">Agenda</div><table><tbody>' + agenda + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px"><input id="ag-title" placeholder="Agenda item title">' +
-      '<input id="ag-presenter" placeholder="Presenter (optional)">' +
-      '<button class="btn small" id="ag-add">Add item…</button></div>' +
-      '<div class="subhead">Decisions</div><table><tbody>' + decisions + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px"><input id="dec-text" placeholder="Decision text" style="flex:1">' +
-      '<button class="btn small" id="dec-add">Log decision…</button></div>' +
-      '<div class="subhead">Actions</div><table><thead><tr><th>ID</th><th>Description</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
-      actions + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px"><input id="act-desc" placeholder="Action description">' +
-      '<input id="act-owner" placeholder="Owner"><button class="btn small" id="act-add">Raise action…</button></div></div>';
-
-    this._bindDetail(id, self);
-  },
-
-  _statusRow(id) {
-    return '<div class="row"><div class="field"><label>Set meeting status</label>' +
-      '<select id="mt-status"><option>Scheduled</option><option>In Progress</option>' +
-      "<option>Held</option><option>Cancelled</option></select></div>" +
-      '<button class="btn small" id="mt-status-apply">Update…</button></div>';
-  },
-
-  _bindDetail(id, self) {
-    document.getElementById("mt-status-apply").onclick = function () {
-      App.amend("Set status of " + id + ' to "' + val("mt-status") + '".', "POST",
-        "/api/meetings/" + id + "/field", { field: "status", value: val("mt-status") },
-        function () { self._detail(id); self._loadList(); });
-    };
-    document.getElementById("ag-add").onclick = function () {
-      App.amend("Add agenda item to " + id + ".", "POST", "/api/meetings/" + id + "/agenda",
-        { title: val("ag-title"), presenter: val("ag-presenter") || null },
-        function () { self._detail(id); });
-    };
-    document.getElementById("dec-add").onclick = function () {
-      App.amend("Log a decision for " + id + ".", "POST", "/api/meetings/" + id + "/decisions",
-        { text: val("dec-text") }, function () { self._detail(id); });
-    };
-    document.getElementById("act-add").onclick = function () {
-      App.amend("Raise an action for " + id + ".", "POST", "/api/meetings/" + id + "/actions",
-        { description: val("act-desc"), owner: val("act-owner") },
-        function () { self._detail(id); });
-    };
-    document.querySelectorAll("select[data-action]").forEach(function (sel) {
-      sel.onchange = function () {
-        const aid = sel.getAttribute("data-action");
-        App.amend("Set " + aid + ' to "' + sel.value + '" on ' + id + ".", "POST",
-          "/api/meetings/" + id + "/actions/" + aid + "/status", { status: sel.value },
-          function () { self._detail(id); });
-      };
+      tr.onclick = function () { MeetingDetail.show(tr.getAttribute("data-id")); };
     });
   },
 };

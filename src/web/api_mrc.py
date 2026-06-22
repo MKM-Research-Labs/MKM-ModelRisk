@@ -22,16 +22,16 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify
 
+from config.governance import MEETING_FIELD_SPECS, MRC_COLLECTION_SPECS
 from src.command import dispatch
 from src.governance.mrc import (
-    add_agenda_item,
+    add_collection_item,
     get_meeting,
     list_meetings,
-    log_decision,
-    raise_action,
     rebuild_meeting_view,
+    remove_collection_item,
     schedule_meeting,
-    set_action_status,
+    update_collection_item,
     update_meeting_field,
 )
 from src.web._helpers import context_from_request, json_body
@@ -39,13 +39,30 @@ from src.web._helpers import context_from_request, json_body
 mrc_bp = Blueprint("mrc", __name__, url_prefix="/api/meetings")
 
 
-def _run(command_name, handler, meeting_id, body, **kwargs):
-    dispatch(
-        command_name, handler, context=context_from_request(body),
-        meeting_id=meeting_id, **kwargs,
-    )
-    rebuild_meeting_view()
-    return jsonify(get_meeting(meeting_id))
+def _field_specs():
+    return [
+        {"key": k, "label": s["label"], "type": s["type"], "options": list(s.get("options", []))}
+        for k, s in MEETING_FIELD_SPECS.items()
+    ]
+
+
+def _collection_specs():
+    return [
+        {
+            "key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
+            "fields": [
+                {"key": f["key"], "label": f["label"], "type": f["type"],
+                 "options": list(f.get("options", [])), "required": bool(f.get("required"))}
+                for f in spec["fields"]
+            ],
+        }
+        for key, spec in MRC_COLLECTION_SPECS.items()
+    ]
+
+
+@mrc_bp.get("/fields")
+def field_specs():
+    return jsonify({"fields": _field_specs(), "collections": _collection_specs()})
 
 
 @mrc_bp.get("")
@@ -77,41 +94,44 @@ def schedule():
 @mrc_bp.post("/<meeting_id>/field")
 def update_field(meeting_id: str):
     body = json_body()
-    return _run(
-        "update_meeting_field", update_meeting_field, meeting_id, body,
-        field=body.get("field"), value=body.get("value"),
+    dispatch(
+        "update_meeting_field", update_meeting_field, context=context_from_request(body),
+        meeting_id=meeting_id, field=body.get("field"), value=body.get("value"),
     )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id))
 
 
-@mrc_bp.post("/<meeting_id>/agenda")
-def add_agenda(meeting_id: str):
+@mrc_bp.post("/<meeting_id>/collections/<collection>")
+def add_item(meeting_id: str, collection: str):
     body = json_body()
-    return _run(
-        "add_agenda_item", add_agenda_item, meeting_id, body,
-        title=body.get("title"), presenter=body.get("presenter"),
+    dispatch(
+        "add_collection_item", add_collection_item, context=context_from_request(body),
+        meeting_id=meeting_id, collection=collection, fields=body.get("fields") or {},
     )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id)), 201
 
 
-@mrc_bp.post("/<meeting_id>/decisions")
-def add_decision(meeting_id: str):
+@mrc_bp.post("/<meeting_id>/collections/<collection>/<item_id>")
+def update_item(meeting_id: str, collection: str, item_id: str):
     body = json_body()
-    return _run("log_decision", log_decision, meeting_id, body, text=body.get("text"))
-
-
-@mrc_bp.post("/<meeting_id>/actions")
-def add_action(meeting_id: str):
-    body = json_body()
-    return _run(
-        "raise_action", raise_action, meeting_id, body,
-        description=body.get("description"), owner=body.get("owner"),
-        due_date=body.get("due_date"),
+    dispatch(
+        "update_collection_item", update_collection_item, context=context_from_request(body),
+        meeting_id=meeting_id, collection=collection, item_id=item_id,
+        fields=body.get("fields") or {},
     )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id))
 
 
-@mrc_bp.post("/<meeting_id>/actions/<action_id>/status")
-def set_status(meeting_id: str, action_id: str):
+@mrc_bp.post("/<meeting_id>/collections/<collection>/<item_id>/delete")
+def delete_item(meeting_id: str, collection: str, item_id: str):
     body = json_body()
-    return _run(
-        "set_action_status", set_action_status, meeting_id, body,
-        action_id=action_id, status=body.get("status"),
+    dispatch(
+        "remove_collection_item", remove_collection_item, context=context_from_request(body),
+        meeting_id=meeting_id, collection=collection, item_id=item_id,
     )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id))
+

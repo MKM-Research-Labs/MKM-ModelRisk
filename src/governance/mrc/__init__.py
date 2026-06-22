@@ -17,15 +17,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""MRC-meeting aggregate: schedule meetings, manage agenda/decisions/actions."""
+"""MRC-meeting aggregate: schedule meetings and manage their collections."""
 from src.governance.mrc._rules import DomainError
 from src.governance.mrc.commands import (
     AGGREGATE_TYPE,
-    add_agenda_item,
-    log_decision,
-    raise_action,
+    add_collection_item,
+    remove_collection_item,
     schedule_meeting,
-    set_action_status,
+    update_collection_item,
     update_meeting_field,
 )
 from src.governance.mrc.projection import (
@@ -37,12 +36,11 @@ from src.governance.mrc.projection import (
 __all__ = [
     "AGGREGATE_TYPE",
     "DomainError",
-    "add_agenda_item",
-    "log_decision",
-    "raise_action",
     "schedule_meeting",
-    "set_action_status",
     "update_meeting_field",
+    "add_collection_item",
+    "update_collection_item",
+    "remove_collection_item",
     "get_meeting",
     "list_meetings",
     "rebuild_meeting_view",

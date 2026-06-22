@@ -42,3 +42,14 @@ function tierBadge(tier) {
   if (!color) return '<span class="muted">—</span>';
   return '<span class="badge" style="background:' + color + '">Tier ' + esc(tier) + "</span>";
 }
+
+const MEETING_STATUS_COLORS = {
+  Scheduled: "#1976d2", "In Progress": "#f57c00", Held: "#388e3c", Cancelled: "#9e9e9e",
+};
+
+// MRC meeting status as a coloured pill.
+function statusBadge(status) {
+  const color = MEETING_STATUS_COLORS[status];
+  if (!color) return fieldDisplay(status);
+  return '<span class="badge" style="background:' + color + '">' + esc(status) + "</span>";
+}
