@@ -40,7 +40,10 @@ const Detail = {
       '<div style="margin-top:14px">' + retire + "</div></div>";
 
     this._bind(modelId, m, d);
-    Collections.bind(modelId, specs, m.retired);
+    Collections.bind(
+      "/api/models/" + modelId + "/collections/", specs, m.retired,
+      () => { this.show(modelId); Inventory.loadList(); },
+    );
     document.getElementById("m-detail").scrollIntoView({ behavior: "smooth", block: "start" });
   },
 

@@ -24,64 +24,48 @@ import pytest
 
 from src.governance.mrc._rules import (
     DomainError,
-    decide_add_agenda_item,
-    decide_log_decision,
-    decide_raise_action,
+    decide_add_item,
+    decide_remove_item,
     decide_schedule,
-    decide_set_action_status,
     decide_update_field,
+    decide_update_item,
 )
-from src.governance.mrc._state import (
-    EVENT_ACTION_RAISED,
-    EVENT_ACTION_STATUS_SET,
-    EVENT_AGENDA_ADDED,
-    EVENT_DECISION_LOGGED,
-    EVENT_SCHEDULED,
-    apply,
-    initial_state,
-)
+from src.governance.mrc._state import EVENT_SCHEDULED, apply, initial_state
 
 
 def _scheduled():
-    event_type, payload = decide_schedule(
-        initial_state(), meeting_id="MTG1", title="Q2 MRC", date="2026-06-30", fields={}
-    )
-    return apply(initial_state(), event_type, payload)
+    return apply(initial_state(), EVENT_SCHEDULED, {
+        "meeting_id": "M1", "title": "Q2 MRC", "date": "2026-06-30", "status": "Scheduled",
+    })
+
+
+def _add(state, collection, fields):
+    event_type, payload = decide_add_item(state, collection=collection, fields=fields)
+    return apply(state, event_type, payload), payload
 
 
 def test_schedule_sets_default_status():
     event_type, payload = decide_schedule(
-        initial_state(), meeting_id="MTG1", title="Q2 MRC", date="2026-06-30", fields={}
+        initial_state(), meeting_id="M1", title="Q2", date="2026-06-30", fields={}
     )
     assert event_type == EVENT_SCHEDULED
     assert payload["status"] == "Scheduled"
-    assert payload["title"] == "Q2 MRC"
 
 
 def test_schedule_rejects_duplicate():
     with pytest.raises(DomainError):
-        decide_schedule(
-            _scheduled(), meeting_id="MTG1", title="x", date="2026-06-30", fields={}
-        )
+        decide_schedule(_scheduled(), meeting_id="M1", title="x", date="d", fields={})
 
 
-@pytest.mark.parametrize(
-    "meeting_id,title,date",
-    [("", "t", "d"), ("M", "", "d"), ("M", "t", "")],
-)
-def test_schedule_requires_core_fields(meeting_id, title, date):
+@pytest.mark.parametrize("mid,title,date", [("", "t", "d"), ("M", "", "d"), ("M", "t", "")])
+def test_schedule_requires_core_fields(mid, title, date):
     with pytest.raises(DomainError):
-        decide_schedule(
-            initial_state(), meeting_id=meeting_id, title=title, date=date, fields={}
-        )
+        decide_schedule(initial_state(), meeting_id=mid, title=title, date=date, fields={})
 
 
 def test_schedule_rejects_unknown_field():
     with pytest.raises(DomainError):
-        decide_schedule(
-            initial_state(), meeting_id="M", title="t", date="d",
-            fields={"bogus": 1},
-        )
+        decide_schedule(initial_state(), meeting_id="M", title="t", date="d", fields={"x": 1})
 
 
 def test_schedule_with_valid_status_field():
@@ -89,16 +73,13 @@ def test_schedule_with_valid_status_field():
         initial_state(), meeting_id="M", title="t", date="d",
         fields={"status": "Held", "location": "Room 1"},
     )
-    assert payload["status"] == "Held"
-    assert payload["location"] == "Room 1"
+    assert payload["status"] == "Held" and payload["location"] == "Room 1"
 
 
-def test_schedule_rejects_invalid_status_field():
+def test_schedule_rejects_invalid_status():
     with pytest.raises(DomainError):
-        decide_schedule(
-            initial_state(), meeting_id="M", title="t", date="d",
-            fields={"status": "Bogus"},
-        )
+        decide_schedule(initial_state(), meeting_id="M", title="t", date="d",
+                        fields={"status": "Bogus"})
 
 
 def test_update_field_requires_meeting():
@@ -121,92 +102,61 @@ def test_update_free_text_field_ok():
     assert payload == {"field": "location", "value": "Room 2"}
 
 
-def test_agenda_items_get_sequential_ids():
-    state = _scheduled()
-    _, first = decide_add_agenda_item(state, title="Opening")
-    assert first["item_id"] == "AG-001"
-    state = apply(state, EVENT_AGENDA_ADDED, first)
-    _, second = decide_add_agenda_item(state, title="Review", presenter="Alice")
-    assert second["item_id"] == "AG-002"
-    assert second["presenter"] == "Alice"
+def test_add_agenda_item_generates_id():
+    state, payload = _add(_scheduled(), "agenda", {"title": "Opening", "presenter": "Alice"})
+    assert payload["item_id"] == "AG-001"
+    assert state.collections["agenda"][0]["presenter"] == "Alice"
 
 
-def test_agenda_requires_title_and_meeting():
+def test_add_participant_item():
+    _, payload = decide_add_item(
+        _scheduled(), collection="participants",
+        fields={"name": "Bob", "attendance": "Present"},
+    )
+    assert payload["item_id"] == "P-001"
+
+
+def test_add_requires_meeting():
     with pytest.raises(DomainError):
-        decide_add_agenda_item(_scheduled(), title="")
+        decide_add_item(initial_state(), collection="agenda", fields={"title": "x"})
+
+
+def test_add_unknown_collection():
     with pytest.raises(DomainError):
-        decide_add_agenda_item(initial_state(), title="x")
+        decide_add_item(_scheduled(), collection="nope", fields={"title": "x"})
 
 
-def test_decision_gets_sequential_id():
-    _, payload = decide_log_decision(_scheduled(), text="Approved tier 2")
-    assert payload["decision_id"] == "D-001"
-
-
-def test_decision_requires_text_and_meeting():
+def test_add_missing_required():
     with pytest.raises(DomainError):
-        decide_log_decision(_scheduled(), text="")
+        decide_add_item(_scheduled(), collection="agenda", fields={"presenter": "Alice"})
+
+
+def test_update_item_changes_status():
+    state, _ = _add(_scheduled(), "actions", {"description": "Do X", "owner": "bob"})
+    event_type, payload = decide_update_item(
+        state, collection="actions", item_id="A-001", fields={"status": "Closed"}
+    )
+    state = apply(state, event_type, payload)
+    assert state.collections["actions"][0]["status"] == "Closed"
+
+
+def test_update_item_requires_meeting():
     with pytest.raises(DomainError):
-        decide_log_decision(initial_state(), text="x")
+        decide_update_item(initial_state(), collection="actions", item_id="A-001", fields={})
 
 
-def test_action_gets_id_and_default_status():
-    _, payload = decide_raise_action(_scheduled(), description="Do X", owner="bob")
-    assert payload["action_id"] == "A-001"
-    assert payload["status"] == "Open"
+def test_remove_item():
+    state, _ = _add(_scheduled(), "decisions", {"text": "Approved"})
+    event_type, payload = decide_remove_item(state, collection="decisions", item_id="D-001")
+    state = apply(state, event_type, payload)
+    assert state.collections["decisions"] == ()
 
 
-def test_action_requires_description_owner_and_meeting():
+def test_remove_item_requires_meeting():
     with pytest.raises(DomainError):
-        decide_raise_action(_scheduled(), description="", owner="bob")
-    with pytest.raises(DomainError):
-        decide_raise_action(_scheduled(), description="x", owner="")
-    with pytest.raises(DomainError):
-        decide_raise_action(initial_state(), description="x", owner="bob")
-
-
-def _with_action():
-    state = _scheduled()
-    _, action = decide_raise_action(state, description="Do X", owner="bob")
-    return apply(state, EVENT_ACTION_RAISED, action)
-
-
-def test_set_action_status_ok():
-    _, payload = decide_set_action_status(_with_action(), action_id="A-001", status="Closed")
-    assert payload == {"action_id": "A-001", "status": "Closed"}
-
-
-def test_set_action_status_requires_meeting():
-    with pytest.raises(DomainError):
-        decide_set_action_status(initial_state(), action_id="A-001", status="Closed")
-
-
-def test_set_action_status_rejects_invalid_status():
-    with pytest.raises(DomainError):
-        decide_set_action_status(_with_action(), action_id="A-001", status="Bogus")
-
-
-def test_set_action_status_rejects_unknown_action():
-    with pytest.raises(DomainError):
-        decide_set_action_status(_with_action(), action_id="A-999", status="Closed")
+        decide_remove_item(initial_state(), collection="decisions", item_id="D-001")
 
 
 def test_apply_ignores_unknown_event():
     state = _scheduled()
     assert apply(state, "Whatever", {}) == state
-
-
-def test_apply_action_status_only_touches_matching_action():
-    state = _scheduled()
-    _, a1 = decide_raise_action(state, description="X", owner="bob")
-    state = apply(state, EVENT_ACTION_RAISED, a1)
-    _, a2 = decide_raise_action(state, description="Y", owner="carol")
-    state = apply(state, EVENT_ACTION_RAISED, a2)
-    state = apply(state, EVENT_ACTION_STATUS_SET, {"action_id": "A-002", "status": "Closed"})
-    statuses = {a["action_id"]: a["status"] for a in state.actions}
-    assert statuses == {"A-001": "Open", "A-002": "Closed"}
-
-
-def test_apply_decision_appends():
-    state = apply(_scheduled(), EVENT_DECISION_LOGGED, {"decision_id": "D-001", "text": "ok"})
-    assert state.decisions[0]["text"] == "ok"

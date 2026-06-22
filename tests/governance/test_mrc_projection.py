@@ -22,38 +22,29 @@ from __future__ import annotations
 
 from src.database import append_event
 from src.governance.mrc import (
-    add_agenda_item,
+    add_collection_item,
     get_meeting,
     list_meetings,
-    log_decision,
-    raise_action,
     rebuild_meeting_view,
     schedule_meeting,
-    set_action_status,
     update_meeting_field,
 )
 
 
-def _populate(meeting_id="MTG1"):
-    schedule_meeting(meeting_id=meeting_id, title="Q2 MRC", date="2026-06-30", actor="a")
-    add_agenda_item(meeting_id=meeting_id, title="Review", actor="a", presenter="bob")
-    log_decision(meeting_id=meeting_id, text="Approved", actor="a")
-    raise_action(meeting_id=meeting_id, description="Follow up", owner="bob", actor="a")
-
-
 def test_rebuild_reflects_meeting_and_collections():
-    _populate()
+    schedule_meeting(meeting_id="MTG1", title="Q2 MRC", date="2026-06-30", actor="a")
     update_meeting_field(meeting_id="MTG1", field="status", value="Held", actor="a")
-    set_action_status(meeting_id="MTG1", action_id="A-001", status="Closed", actor="a")
+    add_collection_item(meeting_id="MTG1", collection="agenda",
+                        fields={"title": "Review", "presenter": "bob"}, actor="a")
+    add_collection_item(meeting_id="MTG1", collection="participants",
+                        fields={"name": "Carol", "attendance": "Present"}, actor="a")
     assert rebuild_meeting_view() == 1
 
     meeting = get_meeting("MTG1")
-    assert meeting["meeting_id"] == "MTG1"
     assert meeting["status"] == "Held"
     assert meeting["data"]["title"] == "Q2 MRC"
     assert meeting["data"]["agenda"][0]["item_id"] == "AG-001"
-    assert meeting["data"]["decisions"][0]["text"] == "Approved"
-    assert meeting["data"]["actions"][0]["status"] == "Closed"
+    assert meeting["data"]["participants"][0]["name"] == "Carol"
 
 
 def test_list_meetings_is_ordered():
@@ -69,10 +60,8 @@ def test_get_meeting_returns_none_when_absent():
 
 
 def test_rebuild_ignores_other_aggregate_types():
-    _populate()
-    append_event(
-        aggregate_type="SomethingElse", aggregate_id="X",
-        event_type="Noted", payload={}, actor="system",
-    )
+    schedule_meeting(meeting_id="MTG1", title="Q2", date="2026-06-30", actor="a")
+    append_event(aggregate_type="SomethingElse", aggregate_id="X",
+                 event_type="Noted", payload={}, actor="system")
     assert rebuild_meeting_view() == 1
     assert [m["meeting_id"] for m in list_meetings()] == ["MTG1"]

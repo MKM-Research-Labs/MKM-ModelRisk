@@ -23,31 +23,19 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (
-    DEFAULT_ACTION_STATUS,
     DEFAULT_MEETING_STATUS,
     MEETING_FIELDS,
-    VALID_ACTION_STATUSES,
+    MRC_COLLECTION_SPECS,
     VALID_MEETING_STATUSES,
 )
+from src.governance import collections as coll
 from src.governance.errors import DomainError
-from src.governance.mrc._state import (
-    EVENT_ACTION_RAISED,
-    EVENT_ACTION_STATUS_SET,
-    EVENT_AGENDA_ADDED,
-    EVENT_DECISION_LOGGED,
-    EVENT_FIELD_UPDATED,
-    EVENT_SCHEDULED,
-    MeetingState,
-)
+from src.governance.mrc._state import EVENT_FIELD_UPDATED, EVENT_SCHEDULED, MeetingState
 
 
 def _require_exists(state: MeetingState) -> None:
     if not state.exists:
         raise DomainError("meeting does not exist")
-
-
-def _next_id(prefix: str, count: int) -> str:
-    return f"{prefix}-{count + 1:03d}"
 
 
 def _validate_field(field: str, value: Any) -> None:
@@ -57,8 +45,7 @@ def _validate_field(field: str, value: Any) -> None:
 
 
 def decide_schedule(
-    state: MeetingState, *, meeting_id: str, title: str, date: str,
-    fields: dict[str, Any],
+    state: MeetingState, *, meeting_id: str, title: str, date: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     if state.exists:
         raise DomainError(f"meeting {meeting_id} is already scheduled")
@@ -69,9 +56,7 @@ def decide_schedule(
             raise DomainError(f"unknown field: {field}")
         _validate_field(field, value)
     payload: dict[str, Any] = {
-        "meeting_id": meeting_id,
-        "title": title,
-        "date": date,
+        "meeting_id": meeting_id, "title": title, "date": date,
         "status": DEFAULT_MEETING_STATUS,
     }
     payload.update(fields)
@@ -88,49 +73,29 @@ def decide_update_field(
     return EVENT_FIELD_UPDATED, {"field": field, "value": value}
 
 
-def decide_add_agenda_item(
-    state: MeetingState, *, title: str, presenter: str | None = None
+def decide_add_item(
+    state: MeetingState, *, collection: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     _require_exists(state)
-    if not title:
-        raise DomainError("agenda item title is required")
-    item_id = _next_id("AG", len(state.agenda))
-    return EVENT_AGENDA_ADDED, {"item_id": item_id, "title": title, "presenter": presenter}
+    return coll.decide_add(
+        state.collections, MRC_COLLECTION_SPECS, collection=collection, fields=fields
+    )
 
 
-def decide_log_decision(
-    state: MeetingState, *, text: str
+def decide_update_item(
+    state: MeetingState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     _require_exists(state)
-    if not text:
-        raise DomainError("decision text is required")
-    decision_id = _next_id("D", len(state.decisions))
-    return EVENT_DECISION_LOGGED, {"decision_id": decision_id, "text": text}
+    return coll.decide_update(
+        state.collections, MRC_COLLECTION_SPECS,
+        collection=collection, item_id=item_id, fields=fields,
+    )
 
 
-def decide_raise_action(
-    state: MeetingState, *, description: str, owner: str, due_date: str | None = None
+def decide_remove_item(
+    state: MeetingState, *, collection: str, item_id: str
 ) -> tuple[str, dict[str, Any]]:
     _require_exists(state)
-    if not description or not owner:
-        raise DomainError("action description and owner are required")
-    action_id = _next_id("A", len(state.actions))
-    return EVENT_ACTION_RAISED, {
-        "action_id": action_id,
-        "description": description,
-        "owner": owner,
-        "due_date": due_date,
-        "status": DEFAULT_ACTION_STATUS,
-    }
-
-
-def decide_set_action_status(
-    state: MeetingState, *, action_id: str, status: str
-) -> tuple[str, dict[str, Any]]:
-    _require_exists(state)
-    if status not in VALID_ACTION_STATUSES:
-        allowed = ", ".join(VALID_ACTION_STATUSES)
-        raise DomainError(f"status must be one of: {allowed}")
-    if not any(action["action_id"] == action_id for action in state.actions):
-        raise DomainError(f"unknown action: {action_id}")
-    return EVENT_ACTION_STATUS_SET, {"action_id": action_id, "status": status}
+    return coll.decide_remove(
+        state.collections, MRC_COLLECTION_SPECS, collection=collection, item_id=item_id
+    )

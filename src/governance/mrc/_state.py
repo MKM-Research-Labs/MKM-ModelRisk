@@ -17,18 +17,20 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Current-state fold for the MRC-meeting aggregate (pure, no I/O)."""
+"""Current-state fold for the MRC-meeting aggregate (pure, no I/O).
+
+Scalar meeting fields plus structured collections (agenda, decisions, actions,
+participants, minutes, models in scope) folded via the shared collection engine.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from src.governance import collections as coll
+
 EVENT_SCHEDULED = "MeetingScheduled"
 EVENT_FIELD_UPDATED = "MeetingFieldUpdated"
-EVENT_AGENDA_ADDED = "AgendaItemAdded"
-EVENT_DECISION_LOGGED = "DecisionLogged"
-EVENT_ACTION_RAISED = "ActionRaised"
-EVENT_ACTION_STATUS_SET = "ActionStatusSet"
 
 
 @dataclass(frozen=True)
@@ -37,9 +39,7 @@ class MeetingState:
 
     exists: bool = False
     fields: dict[str, Any] = field(default_factory=dict)
-    agenda: tuple = ()
-    decisions: tuple = ()
-    actions: tuple = ()
+    collections: dict[str, tuple] = field(default_factory=dict)
 
 
 def initial_state() -> MeetingState:
@@ -54,18 +54,7 @@ def apply(state: MeetingState, event_type: str, payload: dict[str, Any]) -> Meet
         fields = dict(state.fields)
         fields[payload["field"]] = payload["value"]
         return replace(state, fields=fields)
-    if event_type == EVENT_AGENDA_ADDED:
-        return replace(state, agenda=state.agenda + (payload,))
-    if event_type == EVENT_DECISION_LOGGED:
-        return replace(state, decisions=state.decisions + (payload,))
-    if event_type == EVENT_ACTION_RAISED:
-        return replace(state, actions=state.actions + (payload,))
-    if event_type == EVENT_ACTION_STATUS_SET:
-        actions = tuple(
-            {**a, "status": payload["status"]}
-            if a["action_id"] == payload["action_id"]
-            else a
-            for a in state.actions
-        )
-        return replace(state, actions=actions)
+    folded = coll.fold(state.collections, event_type, payload)
+    if folded is not None:
+        return replace(state, collections=folded)
     return state

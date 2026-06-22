@@ -31,9 +31,8 @@ from src.governance.mrc.commands import AGGREGATE_TYPE
 
 def _to_document(state) -> dict[str, Any]:
     data = dict(state.fields)
-    data["agenda"] = list(state.agenda)
-    data["decisions"] = list(state.decisions)
-    data["actions"] = list(state.actions)
+    for collection, items in state.collections.items():
+        data[collection] = list(items)
     return data
 
 
