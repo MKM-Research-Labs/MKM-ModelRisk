@@ -1,0 +1,23 @@
+# Local development PostgreSQL for MKM-ModelRisk.
+# Runs on host port 5433 to avoid colliding with other local Postgres
+# instances (e.g. the sibling PhysicalRisk migration DB on 5432).
+services:
+  postgres:
+    image: postgres:16
+    container_name: mkm-modelrisk-pg
+    environment:
+      POSTGRES_USER: mkm_owner
+      POSTGRES_PASSWORD: mkm_dev_pw
+      POSTGRES_DB: mkm_modelrisk
+    ports:
+      - "5433:5432"
+    volumes:
+      - mkm_modelrisk_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mkm_owner -d mkm_modelrisk"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mkm_modelrisk_pgdata:

@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Virtualenv
+.venv/
+
+# Local environment
+.env
+
+# OS
+.DS_Store
