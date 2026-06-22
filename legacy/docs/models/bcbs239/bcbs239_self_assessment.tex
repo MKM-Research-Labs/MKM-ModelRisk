@@ -1,0 +1,559 @@
+\documentclass[11pt]{article}
+
+\newcommand{\doctitle}{BCBS 239 Self-Assessment}
+\newcommand{\docsubtitle}{Risk Data Aggregation and Reporting Compliance}
+\newcommand{\docversion}{1.0}
+\newcommand{\docdate}{17-February-2026}
+\newcommand{\docauthor}{David K Kelly}
+
+\input{../shared/mkm_header}
+
+\begin{document}
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+% ================================================================
+\section{Executive Summary}
+% ================================================================
+
+This document presents the self-assessment of MKM Research Labs against the
+14 principles of BCBS~239 (\textit{Principles for effective risk data aggregation
+and risk reporting}, Basel Committee on Banking Supervision, January 2013).
+
+The assessment was conducted on \textbf{2026-02-17} by
+\textbf{David K Kelly}.
+
+\subsection{Overall Compliance Score}
+
+\begin{table}[H]
+    \centering
+    \caption{Overall Assessment Summary}
+    \begin{tabular}{lr}
+        \toprule
+        Total Score & 39 / 56 \\
+        Compliance Percentage & \textbf{70\%} \\
+        Principles Assessed & 14 \\
+        Assessment Date & 2026-02-17 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Score by Category}
+
+\begin{table}[H]
+    \centering
+    \caption{Compliance by BCBS 239 Category}
+    \label{tab:category_scores}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Category} & \textbf{Principles} & \textbf{Score} & \textbf{Max} & \textbf{\%} \\
+        \midrule
+        Governance and Infrastructure & P1--P2 & 6 & 8 & 75\% \\
+        Risk Data Aggregation & P3--P6 & 11 & 16 & 69\% \\
+        Risk Reporting Practices & P7--P11 & 14 & 20 & 70\% \\
+        Supervisory Review & P12--P14 & 8 & 12 & 67\% \\
+        \midrule
+        \textbf{Total} & P1--P14 & \textbf{39} & 56 & \textbf{70\%} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Score Distribution}
+
+\begin{table}[H]
+    \centering
+    \caption{Distribution of Scores Across Principles}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Rating} & \textbf{Score} & \textbf{Count} \\
+        \midrule
+        \textcolor{green!60!black}{Fully Compliant} & 4 & 0 \\
+        \textcolor{blue}{Largely Compliant} & 3 & 11 \\
+        \textcolor{orange}{Materially Non-compliant} & 2 & 3 \\
+        \textcolor{red}{Non-compliant} & 1 & 0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\clearpage
+
+% ================================================================
+\section{Assessment Methodology}
+% ================================================================
+
+This self-assessment follows the methodology established by the Basel Committee
+in its progress reports on adoption of BCBS~239 (2013, 2014). Each of the 14
+principles is scored on a four-point scale:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{cl}
+        \toprule
+        \textbf{Score} & \textbf{Rating} \\
+        \midrule
+        4 & \textcolor{green!60!black}{Fully Compliant} --- All requirements met \\
+        3 & \textcolor{blue}{Largely Compliant} --- Most requirements met, minor gaps \\
+        2 & \textcolor{orange}{Materially Non-compliant} --- Significant gaps remain \\
+        1 & \textcolor{red}{Non-compliant} --- Requirements not addressed \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+The 14 principles are organised into four categories as defined by BCBS~239:
+
+\begin{enumerate}
+    \item \textbf{Governance and Infrastructure} (Principles 1--2): Overarching
+          governance arrangements and data architecture.
+    \item \textbf{Risk Data Aggregation} (Principles 3--6): Capabilities for
+          accurate, complete, timely, and adaptable data aggregation.
+    \item \textbf{Risk Reporting Practices} (Principles 7--11): Quality,
+          comprehensiveness, clarity, frequency, and distribution of reports.
+    \item \textbf{Supervisory Review} (Principles 12--14): Supervisory
+          expectations for review, remediation, and cross-border cooperation.
+\end{enumerate}
+
+\clearpage
+
+% ================================================================
+\section{Governance and Infrastructure}
+% ================================================================
+
+\subsection{Principle 1: Governance}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-06-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+A bank's risk data aggregation capabilities and risk reporting practices should be subject to strong governance arrangements consistent with other principles and guidance established by the Committee.
+
+\paragraph{Evidence of Compliance}
+Model Risk Committee (MRC) established with formal Terms of Reference. Quarterly meeting cycle adopted. Tiering matrix (Materiality x Complexity) applied per Handbook Chapter 8. RAG ratings assigned to all models. Audit trail tracks all governance decisions with timestamps.
+
+\paragraph{Identified Gaps}
+Data governance policy not yet formalised as a standalone document. Board-level reporting on risk data quality not yet established.
+
+\paragraph{Remediation Plan}
+Draft standalone data governance policy. Establish quarterly board reporting on risk data quality metrics. (Target: 2026-06-30)
+
+\subsection{Principle 2: Data Architecture and IT Infrastructure}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-06-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+A bank should design, build and maintain data architecture and IT infrastructure which fully supports its risk data aggregation capabilities and risk reporting practices not only in normal times but also during times of stress or crisis.
+
+\paragraph{Evidence of Compliance}
+Centralised model architecture in src/models/ with clear separation of concerns. JSON data store with structured schemas (CDM layer). Model chain documented with field-level data handoffs between all 8 models. Configurable catchment-based data organisation.
+
+\paragraph{Identified Gaps}
+No formal data dictionary or metadata catalogue. Single-node architecture without high-availability or disaster recovery provisions.
+
+\paragraph{Remediation Plan}
+Create formal data dictionary covering all model inputs/outputs. Document data flow diagrams. Assess HA/DR requirements. (Target: 2026-06-30)
+
+\clearpage
+
+% ================================================================
+\section{Risk Data Aggregation}
+% ================================================================
+
+\subsection{Principle 3: Accuracy and Integrity}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-09-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+A bank should be able to generate accurate and reliable risk data to meet normal and stress/crisis reporting accuracy requirements. Data should be aggregated on a largely automated basis so as to minimise the probability of errors.
+
+\paragraph{Evidence of Compliance}
+518 automated tests (464 Python + 51 JavaScript) all passing. GEV statistical fitting with validated return periods. Depth-damage curves calibrated against EA data. Monte Carlo simulations with VaR/ES calculations. Automated parameter inventory tracking \textasciitilde{}150+ parameters with source references.
+
+\paragraph{Identified Gaps}
+No formal data reconciliation process between model outputs. Limited stress testing of data aggregation under extreme scenarios.
+
+\paragraph{Remediation Plan}
+Implement automated reconciliation checks between model chain outputs. Design stress test scenarios for data aggregation pipeline. (Target: 2026-09-30)
+
+\subsection{Principle 4: Completeness}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-09-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+A bank should be able to capture and aggregate all material risk data across the bank. Data should be available by business line, legal entity, asset type, industry, region and other groupings that permit identifying and reporting risk exposures, concentrations and emerging risks.
+
+\paragraph{Evidence of Compliance}
+8 models covering the complete risk chain: Storm Intensity, Storm-Gauge Response, GEV Hazard Curves, PRS Pricing, Depth-Damage, Property Valuation, Mortgage Pricer, Risk Assessor. Data aggregated by catchment, gauge, property, and mortgage portfolio dimensions. Property hazard curves link spatial flood risk to individual assets.
+
+\paragraph{Identified Gaps}
+Limited to physical flood risk; does not yet cover other risk types (market, credit, operational). Geographic coverage limited to configured catchments.
+
+\paragraph{Remediation Plan}
+Document scope limitations clearly. Assess extensibility to additional risk types and geographic regions. (Target: 2026-09-30)
+
+\subsection{Principle 5: Timeliness}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{orange}{\textbf{2/4 --- Materially Non-compliant}} \\
+        Target Date & 2026-09-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+A bank should be able to generate aggregate and up-to-date risk data in a timely manner while also meeting the principles relating to accuracy and integrity, completeness and adaptability.
+
+\paragraph{Evidence of Compliance}
+Batch portfolio generation with configurable parameters. On-demand report generation via CLI and dashboard. Historical daily gauge data processing pipeline.
+
+\paragraph{Identified Gaps}
+No real-time data feeds or streaming aggregation. No intraday risk reporting capability. Batch processing latency not formally measured or monitored.
+
+\paragraph{Remediation Plan}
+Establish SLAs for data aggregation timeliness. Implement processing time monitoring. Assess real-time data feed requirements. (Target: 2026-09-30)
+
+\subsection{Principle 6: Adaptability}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-09-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+A bank should be able to generate aggregate risk data to meet a broad range of on-demand, ad hoc risk management reporting requests, including requests during stress/crisis situations.
+
+\paragraph{Evidence of Compliance}
+Configurable catchment system allows adding new geographic areas. Modular generator architecture (src/port/src/) enables new data products. Interactive dashboard supports ad-hoc queries with drill-down. CLI subcommands (server, port, visual, check, config) provide flexible execution modes.
+
+\paragraph{Identified Gaps}
+No formal stress scenario framework for ad-hoc reporting. Limited ability to rapidly reconfigure model parameters under crisis conditions.
+
+\paragraph{Remediation Plan}
+Design pre-defined stress scenarios with rapid activation capability. Document ad-hoc reporting procedures. (Target: 2026-09-30)
+
+\clearpage
+
+% ================================================================
+\section{Risk Reporting Practices}
+% ================================================================
+
+\subsection{Principle 7: Accuracy (Reporting)}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-06-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+Risk management reports should accurately and precisely convey aggregated risk data and reflect risk in an exact manner. Reports should be reconciled and validated.
+
+\paragraph{Evidence of Compliance}
+Automated PDF generation for meeting packs, parameter inventories, test results, and model documentation. ReportLab-based report generation with structured tables and formatted output. LaTeX document generation for formal governance documents (ToR, parameter inventory, test reports).
+
+\paragraph{Identified Gaps}
+No formal report validation or sign-off process. No automated reconciliation between dashboard displays and PDF reports.
+
+\paragraph{Remediation Plan}
+Implement report validation checksums. Establish formal report sign-off workflow in MRC process. (Target: 2026-06-30)
+
+\subsection{Principle 8: Comprehensiveness}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-09-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+Risk management reports should cover all material risk areas within the organisation. The depth and scope of these reports should be consistent with the size and complexity of the bank's operations and risk profile.
+
+\paragraph{Evidence of Compliance}
+Risk reporting covers flood hazard, property damage, mortgage credit risk, insurance pricing, and portfolio risk dimensions. Model chain provides end-to-end coverage from natural hazard through to financial impact. VaR, Expected Shortfall, and HHI concentration metrics calculated.
+
+\paragraph{Identified Gaps}
+Reporting scope limited to physical flood risk vertical. No cross-risk aggregation with other risk types.
+
+\paragraph{Remediation Plan}
+Document reporting scope and materiality assessment. Plan for extension to additional risk dimensions as platform grows. (Target: 2026-09-30)
+
+\subsection{Principle 9: Clarity and Usefulness}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-06-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+Risk management reports should communicate information in a clear and concise manner. Reports should be easy to understand yet comprehensive enough to facilitate informed decision-making.
+
+\paragraph{Evidence of Compliance}
+Interactive Leaflet map dashboard with colour-coded markers, tooltips, and context menus. Tabbed governance panel with inventory, model chain visualisation, and MRC management. PDF meeting packs with structured agenda, minutes, decisions, and actions. Notification system for user feedback.
+
+\paragraph{Identified Gaps}
+No formal user feedback mechanism for report usefulness. Dashboard does not include executive summary views.
+
+\paragraph{Remediation Plan}
+Add executive summary dashboard view. Implement user satisfaction tracking for reports. (Target: 2026-06-30)
+
+\subsection{Principle 10: Frequency}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{orange}{\textbf{2/4 --- Materially Non-compliant}} \\
+        Target Date & 2026-09-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+The board should set the frequency of risk management report production and distribution. Frequency requirements should reflect the needs of the recipients.
+
+\paragraph{Evidence of Compliance}
+Quarterly MRC meeting cycle established. Reports generated on demand via CLI and dashboard. Test results can be regenerated at any time.
+
+\paragraph{Identified Gaps}
+No automated scheduled report generation. No formal frequency policy for different report types. No monitoring of report distribution timeliness.
+
+\paragraph{Remediation Plan}
+Establish formal report frequency policy. Implement scheduled report generation capability. Track report distribution and acknowledgement. (Target: 2026-09-30)
+
+\subsection{Principle 11: Distribution}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-09-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+Risk management reports should be distributed to the relevant parties while ensuring confidentiality.
+
+\paragraph{Evidence of Compliance}
+PDF export capability for all governance documents. Meeting document upload and download functionality. Dashboard accessible via web browser. Documents marked CONFIDENTIAL in LaTeX headers.
+
+\paragraph{Identified Gaps}
+No role-based access controls on dashboard or documents. No formal distribution list management. No audit trail of document access.
+
+\paragraph{Remediation Plan}
+Implement role-based access controls. Create formal distribution lists for report types. Add document access logging. (Target: 2026-09-30)
+
+\clearpage
+
+% ================================================================
+\section{Supervisory Review}
+% ================================================================
+
+\subsection{Principle 12: Review}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-06-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+Supervisors should periodically review and evaluate a bank's compliance with the eleven Principles.
+
+\paragraph{Evidence of Compliance}
+MRC quarterly review cycle with documented agenda, minutes, decisions, and actions. Audit trail captures all governance changes with timestamps. RAG ratings reviewed at each MRC meeting. Model validation status tracked in inventory.
+
+\paragraph{Identified Gaps}
+No independent external review of BCBS 239 compliance. Self-assessment not yet formalised as a regular process.
+
+\paragraph{Remediation Plan}
+Formalise BCBS 239 self-assessment as annual MRC agenda item. Consider commissioning independent compliance review. (Target: 2026-06-30)
+
+\subsection{Principle 13: Remedial Actions and Supervisory Measures}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{blue}{\textbf{3/4 --- Largely Compliant}} \\
+        Target Date & 2026-06-30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+Supervisors should have and use the appropriate tools and resources to require effective and timely remedial action by a bank to address deficiencies in its risk data aggregation capabilities and risk reporting practices.
+
+\paragraph{Evidence of Compliance}
+MRC action tracking with owners, target dates, and status (Open/In Progress/Closed). Decisions formally recorded with IDs and dates. Remediation priorities agreed at inaugural MRC meeting with 5 specific actions.
+
+\paragraph{Identified Gaps}
+No escalation workflow for overdue actions. No automated alerts for approaching deadlines.
+
+\paragraph{Remediation Plan}
+Implement overdue action alerting. Define escalation procedures for missed remediation deadlines. (Target: 2026-06-30)
+
+\subsection{Principle 14: Home/Host Cooperation}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        Score & \textcolor{orange}{\textbf{2/4 --- Materially Non-compliant}} \\
+        Target Date & 2026-12-31 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Principle Description}
+Supervisors should cooperate with relevant supervisors in other jurisdictions regarding the supervision and review of the Principles, and the implementation of any remedial action if necessary.
+
+\paragraph{Evidence of Compliance}
+Single-jurisdiction operation currently. Governance framework designed to be extensible to multi-jurisdictional requirements.
+
+\paragraph{Identified Gaps}
+No cross-jurisdictional supervisory coordination framework. Not yet applicable given current single-jurisdiction scope.
+
+\paragraph{Remediation Plan}
+Document jurisdictional scope. Prepare framework for multi-jurisdictional coordination when required. (Target: 2026-12-31)
+
+\clearpage
+
+% ================================================================
+\section{Remediation Roadmap}
+% ================================================================
+
+The following table summarises all identified gaps and their remediation plans,
+ordered by target date.
+
+\begin{longtable}{p{0.5cm}p{3cm}p{5.5cm}p{2.5cm}p{1.5cm}p{2cm}}
+    \toprule
+    \textbf{\#} & \textbf{Principle} & \textbf{Remediation Action} & \textbf{Gap Summary} & \textbf{Score} & \textbf{Target} \\
+    \midrule
+    \endhead
+    1 & Governance & Draft standalone data governance policy. Establish quarterly board reporting on risk data quality metrics. & Data governance policy not yet formalised as a standalone document. Board-level  & \textcolor{blue}{3/4} & 2026-06-30 \\
+    2 & Data Architecture and IT Infrastructure & Create formal data dictionary covering all model inputs/outputs. Document data flow diagrams. Assess HA/DR requirements. & No formal data dictionary or metadata catalogue. Single-node architecture withou & \textcolor{blue}{3/4} & 2026-06-30 \\
+    7 & Accuracy (Reporting) & Implement report validation checksums. Establish formal report sign-off workflow in MRC process. & No formal report validation or sign-off process. No automated reconciliation bet & \textcolor{blue}{3/4} & 2026-06-30 \\
+    9 & Clarity and Usefulness & Add executive summary dashboard view. Implement user satisfaction tracking for reports. & No formal user feedback mechanism for report usefulness. Dashboard does not incl & \textcolor{blue}{3/4} & 2026-06-30 \\
+    12 & Review & Formalise BCBS 239 self-assessment as annual MRC agenda item. Consider commissioning independent compliance review. & No independent external review of BCBS 239 compliance. Self-assessment not yet f & \textcolor{blue}{3/4} & 2026-06-30 \\
+    13 & Remedial Actions and Supervisory Measures & Implement overdue action alerting. Define escalation procedures for missed remediation deadlines. & No escalation workflow for overdue actions. No automated alerts for approaching  & \textcolor{blue}{3/4} & 2026-06-30 \\
+    3 & Accuracy and Integrity & Implement automated reconciliation checks between model chain outputs. Design stress test scenarios for data aggregation pipeline. & No formal data reconciliation process between model outputs. Limited stress test & \textcolor{blue}{3/4} & 2026-09-30 \\
+    4 & Completeness & Document scope limitations clearly. Assess extensibility to additional risk types and geographic regions. & Limited to physical flood risk; does not yet cover other risk types (market, cre & \textcolor{blue}{3/4} & 2026-09-30 \\
+    5 & Timeliness & Establish SLAs for data aggregation timeliness. Implement processing time monitoring. Assess real-time data feed requirements. & No real-time data feeds or streaming aggregation. No intraday risk reporting cap & \textcolor{orange}{2/4} & 2026-09-30 \\
+    6 & Adaptability & Design pre-defined stress scenarios with rapid activation capability. Document ad-hoc reporting procedures. & No formal stress scenario framework for ad-hoc reporting. Limited ability to rap & \textcolor{blue}{3/4} & 2026-09-30 \\
+    8 & Comprehensiveness & Document reporting scope and materiality assessment. Plan for extension to additional risk dimensions as platform grows. & Reporting scope limited to physical flood risk vertical. No cross-risk aggregati & \textcolor{blue}{3/4} & 2026-09-30 \\
+    10 & Frequency & Establish formal report frequency policy. Implement scheduled report generation capability. Track report distribution and acknowledgement. & No automated scheduled report generation. No formal frequency policy for differe & \textcolor{orange}{2/4} & 2026-09-30 \\
+    11 & Distribution & Implement role-based access controls. Create formal distribution lists for report types. Add document access logging. & No role-based access controls on dashboard or documents. No formal distribution  & \textcolor{blue}{3/4} & 2026-09-30 \\
+    14 & Home/Host Cooperation & Document jurisdictional scope. Prepare framework for multi-jurisdictional coordination when required. & No cross-jurisdictional supervisory coordination framework. Not yet applicable g & \textcolor{orange}{2/4} & 2026-12-31 \\
+    \bottomrule
+\end{longtable}
+
+\clearpage
+
+% ================================================================
+\section{Appendix: BCBS 239 Principles}
+% ================================================================
+
+For reference, the complete list of the 14 principles as defined by the Basel
+Committee on Banking Supervision in January 2013 (\textit{Principles for
+effective risk data aggregation and risk reporting}, BCBS 2013).
+
+\begin{longtable}{cp{3cm}p{10.5cm}}
+    \toprule
+    \textbf{\#} & \textbf{Principle} & \textbf{Description} \\
+    \midrule
+    \endhead
+    1 & Governance & A bank's risk data aggregation capabilities and risk reporting practices should be subject to strong governance arrangements consistent with other principles and guidance established by the Committee. \\
+    \addlinespace
+    2 & Data Architecture and IT Infrastructure & A bank should design, build and maintain data architecture and IT infrastructure which fully supports its risk data aggregation capabilities and risk reporting practices not only in normal times but also during times of stress or crisis. \\
+    \addlinespace
+    3 & Accuracy and Integrity & A bank should be able to generate accurate and reliable risk data to meet normal and stress/crisis reporting accuracy requirements. Data should be aggregated on a largely automated basis so as to minimise the probability of errors. \\
+    \addlinespace
+    4 & Completeness & A bank should be able to capture and aggregate all material risk data across the bank. Data should be available by business line, legal entity, asset type, industry, region and other groupings that permit identifying and reporting risk exposures, concentrations and emerging risks. \\
+    \addlinespace
+    5 & Timeliness & A bank should be able to generate aggregate and up-to-date risk data in a timely manner while also meeting the principles relating to accuracy and integrity, completeness and adaptability. \\
+    \addlinespace
+    6 & Adaptability & A bank should be able to generate aggregate risk data to meet a broad range of on-demand, ad hoc risk management reporting requests, including requests during stress/crisis situations. \\
+    \addlinespace
+    7 & Accuracy (Reporting) & Risk management reports should accurately and precisely convey aggregated risk data and reflect risk in an exact manner. Reports should be reconciled and validated. \\
+    \addlinespace
+    8 & Comprehensiveness & Risk management reports should cover all material risk areas within the organisation. The depth and scope of these reports should be consistent with the size and complexity of the bank's operations and risk profile. \\
+    \addlinespace
+    9 & Clarity and Usefulness & Risk management reports should communicate information in a clear and concise manner. Reports should be easy to understand yet comprehensive enough to facilitate informed decision-making. \\
+    \addlinespace
+    10 & Frequency & The board should set the frequency of risk management report production and distribution. Frequency requirements should reflect the needs of the recipients. \\
+    \addlinespace
+    11 & Distribution & Risk management reports should be distributed to the relevant parties while ensuring confidentiality. \\
+    \addlinespace
+    12 & Review & Supervisors should periodically review and evaluate a bank's compliance with the eleven Principles. \\
+    \addlinespace
+    13 & Remedial Actions and Supervisory Measures & Supervisors should have and use the appropriate tools and resources to require effective and timely remedial action by a bank to address deficiencies in its risk data aggregation capabilities and risk reporting practices. \\
+    \addlinespace
+    14 & Home/Host Cooperation & Supervisors should cooperate with relevant supervisors in other jurisdictions regarding the supervision and review of the Principles, and the implementation of any remedial action if necessary. \\
+    \addlinespace
+    \bottomrule
+\end{longtable}
+
+% ================================================================
+\mkmhistorypage{
+17-February-2026 & 1.0 & Initial BCBS 239 Self-Assessment & David K Kelly \\
+}
+
+\end{document}

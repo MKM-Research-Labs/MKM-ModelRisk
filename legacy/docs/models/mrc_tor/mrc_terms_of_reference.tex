@@ -1,0 +1,302 @@
+\documentclass[11pt]{article}
+
+\newcommand{\doctitle}{Model Risk Committee}
+\newcommand{\docsubtitle}{Terms of Reference}
+\newcommand{\docversion}{1.0}
+\newcommand{\docdate}{16-February-2026}
+\newcommand{\docauthor}{David K Kelly, Johnny Mattimore}
+
+\input{../shared/mkm_header}
+
+\begin{document}
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+% ================================================================
+\section{Introduction}
+% ================================================================
+
+This document defines the Terms of Reference (ToR) for the Model Risk Committee
+(MRC) of MKM Research Labs. The MRC is the principal governance body
+responsible for overseeing the model risk management framework as described in
+the \textit{Handbook of Model Risk Management for Vendors} (Kelly, Mattimore 2025).
+
+The Terms of Reference establish the committee's authority, responsibilities,
+membership, and operating procedures. They are reviewed annually and updated as
+required to reflect changes in the regulatory environment, organisational
+structure, or model landscape.
+
+% ================================================================
+\section{Purpose and Mandate}
+% ================================================================
+
+The Model Risk Committee is established to:
+
+\begin{enumerate}[label=\arabic*.]
+    \item Provide independent oversight of all models used across the platform,
+          from development through to retirement.
+    \item Ensure that model risk is identified, assessed, monitored, and
+          mitigated in accordance with the governance framework.
+    \item Approve the deployment of new models and material changes to existing
+          models into production.
+    \item Set and enforce model risk appetite, tiering standards, and validation
+          requirements.
+    \item Review model performance, limitations, and remediation actions on a
+          regular cycle.
+    \item Ensure compliance with regulatory expectations, including SS1/23 (PRA),
+          SR~11-7 (Federal Reserve), and the EBA Guidelines on model risk
+          management.
+\end{enumerate}
+
+% ================================================================
+\section{Authority}
+% ================================================================
+
+The MRC derives its authority from the Board of Directors and the Chief Risk
+Officer. The committee has the authority to:
+
+\begin{itemize}
+    \item Approve or reject models for production deployment.
+    \item Impose conditions, limitations, or restrictions on model usage.
+    \item Require remediation actions and set deadlines for completion.
+    \item Escalate material model risk issues to the Board or relevant
+          regulatory bodies.
+    \item Commission independent model validation reviews.
+    \item Approve changes to model risk policies, standards, and procedures.
+    \item Request any information, documentation, or analysis from model owners
+          and development teams.
+\end{itemize}
+
+% ================================================================
+\section{Membership}
+% ================================================================
+
+\subsection{Standing Members}
+
+\begin{longtable}{p{4cm}p{5cm}p{4cm}}
+\toprule
+\textbf{Name} & \textbf{Role} & \textbf{Committee Role} \\
+\midrule
+\endhead
+Johnny Mattimore & Managing Director & Chair \\
+David K Kelly & Chief Science Officer & Model Owner \\
+\bottomrule
+\end{longtable}
+
+\subsection{Quorum}
+
+A quorum shall consist of the Chair (or Deputy Chair) and at least one
+additional standing member. Decisions require a simple majority of those
+present. Where the committee is split, the Chair holds the casting vote.
+
+\subsection{Attendees and Invitees}
+
+The following may attend MRC meetings by invitation:
+
+\begin{itemize}
+    \item Model developers and quantitative analysts (for model presentations)
+    \item Independent validators (internal or external)
+    \item Internal audit representatives
+    \item External regulators or auditors (as observers)
+    \item Technology and infrastructure leads (for implementation matters)
+\end{itemize}
+
+% ================================================================
+\section{Responsibilities}
+% ================================================================
+
+\subsection{Model Lifecycle Oversight}
+
+The MRC is responsible for governance at each stage of the model lifecycle:
+
+\begin{longtable}{p{3.5cm}p{10cm}}
+\toprule
+\textbf{Stage} & \textbf{MRC Responsibility} \\
+\midrule
+\endhead
+Development & Review model design, methodology selection, and development
+              standards. Approve progression to validation. \\[6pt]
+Validation & Commission independent validation. Review validation findings
+             and determine whether conditions are required for approval. \\[6pt]
+Production & Grant production approval (with or without conditions). Monitor
+             ongoing performance and trigger periodic reviews. \\[6pt]
+Retirement & Approve model decommissioning. Ensure replacement models are
+             validated before transition. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Model Risk Assessment}
+
+\begin{itemize}
+    \item Maintain the model inventory, ensuring all models are registered,
+          tiered, and assigned owners.
+    \item Apply the tiering matrix (Materiality $\times$ Complexity) as defined
+          in Chapter~8 of the Handbook to determine governance intensity.
+    \item Assign and review RAG ratings for each model.
+    \item Monitor remediation actions and track open items to closure.
+\end{itemize}
+
+\subsection{Validation Standards}
+
+\begin{itemize}
+    \item Define validation scope and depth requirements by model tier.
+    \item Review and approve validation reports.
+    \item Ensure validators are independent from model development.
+    \item Set standards for backtesting, benchmarking, and sensitivity analysis.
+\end{itemize}
+
+\subsection{Documentation Standards}
+
+The MRC shall ensure that all models maintain documentation to the standard
+required by the Handbook, including:
+
+\begin{itemize}
+    \item Model purpose and scope
+    \item Mathematical framework and methodology
+    \item Input parameters and calibration (per the Parameter Inventory)
+    \item Implementation details and source code references
+    \item Sensitivity analysis results
+    \item Validation and backtesting results
+    \item Known limitations and assumptions
+    \item Change history and version control
+\end{itemize}
+
+% ================================================================
+\section{Meeting Frequency and Procedures}
+% ================================================================
+
+\subsection{Meeting Schedule}
+
+\begin{longtable}{p{4cm}p{9.5cm}}
+\toprule
+\textbf{Meeting Type} & \textbf{Frequency and Purpose} \\
+\midrule
+\endhead
+Regular Meeting & Quarterly. Full review of model inventory, risk dashboard,
+                  remediation tracker, and upcoming reviews. \\[6pt]
+Approval Meeting & As required. Convened to approve new models or material
+                   changes for production deployment. \\[6pt]
+Extraordinary Meeting & As required. Convened for urgent matters such as model
+                        failures, material findings, or regulatory requests. \\[6pt]
+Annual Review & Annual. Comprehensive review of the model risk framework,
+                policies, tiering matrix, and these Terms of Reference. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Agenda and Papers}
+
+\begin{itemize}
+    \item The agenda shall be circulated at least 5 business days before each
+          meeting.
+    \item Supporting papers (model documentation, validation reports, risk
+          dashboards) shall be circulated at least 3 business days before.
+    \item The Model Risk Dashboard (as implemented in the governance platform)
+          shall be presented at each regular meeting.
+\end{itemize}
+
+\subsection{Minutes and Records}
+
+\begin{itemize}
+    \item Minutes shall be recorded for all meetings and approved at the
+          following meeting.
+    \item Decisions, action items, and conditions shall be logged in the
+          governance audit trail.
+    \item All MRC decisions are recorded with full audit trail (timestamp, user,
+          rationale) in the platform's governance module.
+\end{itemize}
+
+% ================================================================
+\section{Model Tiering Framework}
+% ================================================================
+
+The MRC applies the tiering matrix from Chapter~8 (Proportionality) of the
+Handbook. Governance intensity is proportional to model tier:
+
+\begin{longtable}{p{2cm}p{3cm}p{8.5cm}}
+\toprule
+\textbf{Tier} & \textbf{Risk Level} & \textbf{Governance Requirements} \\
+\midrule
+\endhead
+Tier~1 & Maximum & Full independent validation, quarterly MRC review,
+         annual recertification, mandatory benchmarking. \\[6pt]
+Tier~2 & Substantial & Independent validation, semi-annual MRC review,
+         annual recertification. \\[6pt]
+Tier~3 & Moderate & Peer review, annual MRC review, biennial
+         recertification. \\[6pt]
+Tier~4 & Minimal & Self-assessment, annual MRC notification, triennial
+         recertification. \\
+\bottomrule
+\end{longtable}
+
+\noindent The current model inventory contains models tiered as follows:
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+& \textbf{Tier 1} & \textbf{Tier 2} & \textbf{Tier 3} & \textbf{Tier 4} \\
+\midrule
+Count & 2 & 3 & 3 & 0 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ================================================================
+\section{Escalation and Reporting}
+% ================================================================
+
+\subsection{Escalation Triggers}
+
+The following events require immediate escalation to the Chair:
+
+\begin{itemize}
+    \item A Tier~1 or Tier~2 model fails validation or backtesting.
+    \item A model produces outputs that materially differ from expectations
+          or benchmarks.
+    \item A regulatory inquiry or finding relates to model risk.
+    \item A material limitation or assumption is found to be violated.
+    \item A remediation action exceeds its deadline by more than 30 days.
+\end{itemize}
+
+\subsection{Board Reporting}
+
+The MRC Chair shall provide a quarterly summary to the Board covering:
+
+\begin{itemize}
+    \item Overall model risk posture (aggregate RAG distribution).
+    \item Key model approvals, rejections, and conditional approvals.
+    \item Open remediation items and overdue reviews.
+    \item Regulatory developments affecting model governance.
+\end{itemize}
+
+% ================================================================
+\section{Review of Terms of Reference}
+% ================================================================
+
+These Terms of Reference shall be reviewed annually by the MRC and approved
+by the Board. Material changes to the ToR require Board approval. Minor
+administrative updates may be approved by the MRC Chair.
+
+\vspace{1em}
+\noindent\textbf{Next scheduled review:} February 2027
+
+% ================================================================
+\section{Approval}
+% ================================================================
+
+\vspace{1cm}
+\begin{longtable}{p{6cm}p{7.5cm}}
+\textbf{Approved by:} & \\[1.5cm]
+\dotfill & \dotfill \\
+Johnny Mattimore & David K Kelly \\
+Chair, Model Risk Committee & Model Owner, Chief Science Officer \\[1cm]
+\textbf{Date:} & \docdate \\
+\end{longtable}
+
+% ================================================================
+\mkmhistorypage{
+\docdate & 1.0 & Initial Terms of Reference & David K Kelly \\
+}
+
+\end{document}

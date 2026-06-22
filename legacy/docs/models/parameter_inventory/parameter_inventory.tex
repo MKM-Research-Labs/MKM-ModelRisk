@@ -1,0 +1,977 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\doctitle}{Model Parameter Inventory}
+\newcommand{\docsubtitle}{Hard-Coded Input Parameters for Model Governance}
+\newcommand{\docversion}{1.0}
+\newcommand{\docdate}{16-February-2026}
+\newcommand{\docauthor}{David K Kelly}
+\input{../shared/mkm_header}
+
+\begin{document}
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+\section{Executive Summary}
+
+This document provides a complete inventory of all hard-coded input parameters used by the MKM Physical Risk analytical models. It is maintained as part of the Model Risk Governance framework and should be reviewed alongside each model\textquotesingle s documentation.
+
+\subsection{Purpose}
+Hard-coded parameters include physical constants, default function arguments, calibration values, threshold tables, and factor look-ups. Documenting these centrally enables:
+\begin{itemize}
+    \item Audit trail for model validation and MRC review
+    \item Impact assessment when parameters are recalibrated
+    \item Identification of cross-model dependencies on shared constants
+\end{itemize}
+
+\subsection{Scope}
+This inventory covers \textbf{13} model modules containing the parameters listed below. Each entry provides the parameter name, current value, description, and source file with line number for traceability.
+
+Generated on \textbf{16 February 2026}.
+\clearpage
+
+\section{PRS Pricing --- Analytical Model (MKM-PR-001)}
+
+Source: \texttt{models/hazard/prs\_analytical.py}
+
+\subsection{Basis Waterfall Components}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{MODEL\_UNCERTAINTY\_BPS} & 2.0 & Fixed model uncertainty spread (basis points) & {\scriptsize \texttt{hazard/prs\_analytical.py:20}} \\
+    \texttt{DISTANCE\_RATE\_BPS\_PER\_KM} & 0.5 & Distance basis rate per km & {\scriptsize \texttt{hazard/prs\_analytical.py:46}} \\
+    \texttt{DISTANCE\_MAX\_BPS} & 6.0 & Distance basis cap (bps) & {\scriptsize \texttt{hazard/prs\_analytical.py:47}} \\
+    \texttt{DISTANCE\_CAP\_KM} & 12.0 & Maximum distance for basis & {\scriptsize \texttt{hazard/prs\_analytical.py:48}} \\
+    \texttt{ELEVATION\_RATE\_BPS\_PER\_M} & 0.2 & Elevation benefit rate per metre & {\scriptsize \texttt{hazard/prs\_analytical.py:51}} \\
+    \texttt{ELEVATION\_MAX\_BENEFIT\_BPS} & 3.0 & Maximum elevation benefit cap (bps) & {\scriptsize \texttt{hazard/prs\_analytical.py:52}} \\
+    \texttt{MIN\_PRS\_SPREAD\_BPS} & 2.0 & Minimum PRS spread floor (bps) & {\scriptsize \texttt{hazard/prs\_analytical.py:62}} \\
+    \texttt{CONSTRUCTION\_YEAR\_CUTOFF} & 2000 & Pre-cutoff adds 1.0 bps penalty & {\scriptsize \texttt{hazard/prs\_analytical.py:43}} \\
+\end{longtable}
+
+\subsection{Terrain Basis by EA Flood Zone (bps)}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Zone 3b / 3a / 3} & 3.0 & High flood risk zones & {\scriptsize \texttt{hazard/prs\_analytical.py:23-30}} \\
+    \texttt{Zone 2} & 2.0 & Medium flood risk zone & {\scriptsize \texttt{hazard/prs\_analytical.py:23-30}} \\
+    \texttt{Zone 1} & 0.0 & Low flood risk zone & {\scriptsize \texttt{hazard/prs\_analytical.py:23-30}} \\
+    \texttt{Enhanced Defence} & -1.0 & Protected area benefit & {\scriptsize \texttt{hazard/prs\_analytical.py:23-30}} \\
+\end{longtable}
+
+\subsection{Composition Basis by Property Type (bps)}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Flat} & 2.0 & Higher risk construction type & {\scriptsize \texttt{hazard/prs\_analytical.py:33-40}} \\
+    \texttt{Bungalow} & 1.0 & Ground-floor exposure & {\scriptsize \texttt{hazard/prs\_analytical.py:33-40}} \\
+    \texttt{Terraces} & 0.5 & Moderate exposure & {\scriptsize \texttt{hazard/prs\_analytical.py:33-40}} \\
+    \texttt{Semi-detached / Detached} & 0.0 & Base case & {\scriptsize \texttt{hazard/prs\_analytical.py:33-40}} \\
+\end{longtable}
+
+\subsection{Recovery Rates by Trigger}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{any\_flood (> 0m)} & 0.85 & Recovery rate for any flood trigger & {\scriptsize \texttt{hazard/prs\_analytical.py:55-59}} \\
+    \texttt{moderate (> 0.5m)} & 0.70 & Recovery rate for moderate flood & {\scriptsize \texttt{hazard/prs\_analytical.py:55-59}} \\
+    \texttt{severe (> 1.0m)} & 0.50 & Recovery rate for severe flood & {\scriptsize \texttt{hazard/prs\_analytical.py:55-59}} \\
+\end{longtable}
+
+\subsection{CDS Pricing}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{dt} & 0.25 & Quarterly period length (years) & {\scriptsize \texttt{hazard/prs\_analytical.py:97}} \\
+    \texttt{max\_annual\_hazard\_rate} & 0.999 & Cap for continuous hazard rate & {\scriptsize \texttt{hazard/prs\_analytical.py:95}} \\
+\end{longtable}
+
+\clearpage
+
+\section{PRS Pricing --- QuantLib CDS (MKM-PR-001)}
+
+Source: \texttt{models/prs\_with\_hazard\_curve.py}
+
+\subsection{Default Trade Parameters}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{notional} & 10,000,000 & Default notional (GBP) & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:131}} \\
+    \texttt{tenor\_years} & 5 & Default swap tenor & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:132}} \\
+    \texttt{running\_spread} & 0.01 & Default running spread (100 bps) & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:133}} \\
+    \texttt{recovery\_rate} & 0.0 & Default recovery (no recovery for flood) & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:134}} \\
+    \texttt{risk\_free\_rate} & 0.03 & Default risk-free rate (3\textbackslash\{\}\%) & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:135}} \\
+    \texttt{implied\_hazard\_rate fallback} & 0.05 & Fallback hazard rate (5\textbackslash\{\}\%) & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:83}} \\
+\end{longtable}
+
+\subsection{QuantLib Conventions}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Schedule frequency} & Quarterly & CDS payment frequency & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:194}} \\
+    \texttt{Calendar} & TARGET() & TARGET settlement calendar & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:182}} \\
+    \texttt{Day counter} & Actual/360 & Accrual day count convention & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:184}} \\
+    \texttt{Business day convention} & Following & Roll convention & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:183}} \\
+    \texttt{Date generation rule} & TwentiethIMM & IMM date schedule & {\scriptsize \texttt{prs\_with\_hazard\_curve.py:198}} \\
+\end{longtable}
+
+\clearpage
+
+\section{GEV Hazard Curve Model (MKM-GH-001)}
+
+Source: \texttt{models/hazard/gev.py, models/hazard/builder.py}
+
+\subsection{Hazard Curve Construction}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{STANDARD\_THRESHOLDS} & [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0] & Flood depth thresholds (m) & {\scriptsize \texttt{hazard/builder.py:24}} \\
+    \texttt{RETURN\_PERIODS} & [2, 5, 10, 20, 50, 100] & Standard return periods (years) & {\scriptsize \texttt{hazard/builder.py:25}} \\
+    \texttt{exceedance\_prob floor} & 0.01 & Floor at 1\textbackslash\{\}\% (100-yr return period) & {\scriptsize \texttt{hazard/builder.py:69-70}} \\
+\end{longtable}
+
+\subsection{Term Structure}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{max\_years} & 5 & Maximum years for term structure & {\scriptsize \texttt{hazard/gev.py:48}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Storm-Gauge Response Model (MKM-SG-001)}
+
+Source: \texttt{models/hazard/response\_model.py, models/stormgauge/forward\_model.py}
+
+\subsection{Gauge Alert Thresholds (defaults)}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{flood\_alert} & 3.0 & Flood alert level (m) & {\scriptsize \texttt{hazard/response\_model.py:42}} \\
+    \texttt{flood\_warning} & 4.0 & Flood warning level (m) & {\scriptsize \texttt{hazard/response\_model.py:43}} \\
+    \texttt{severe\_flood\_warning} & 5.0 & Severe warning level (m) & {\scriptsize \texttt{hazard/response\_model.py:44}} \\
+\end{longtable}
+
+\subsection{Response Calibration}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{base\_response} & level\_range * 0.015 & Base gauge response coefficient & {\scriptsize \texttt{hazard/response\_model.py:59}} \\
+    \texttt{response\_coef variation} & U(0.8, 1.2) & Uniform multiplier on response & {\scriptsize \texttt{hazard/response\_model.py:60}} \\
+    \texttt{precip\_factor divisor} & 35.0 & Precipitation normalisation (mm) & {\scriptsize \texttt{hazard/response\_model.py:78}} \\
+    \texttt{duration\_factor cap} & 2.0 & Maximum duration amplification & {\scriptsize \texttt{hazard/response\_model.py:79}} \\
+    \texttt{noise factor} & U(0.85, 1.15) & Random noise multiplier & {\scriptsize \texttt{hazard/response\_model.py:89}} \\
+\end{longtable}
+
+\subsection{Forward Model --- Spatial Decay}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{intensity\_to\_level\_scale} & 0.1 & Intensity-to-level conversion scale & {\scriptsize \texttt{stormgauge/forward\_model.py:42}} \\
+    \texttt{time\_resolution\_hours} & 0.5 & Temporal resolution (hours) & {\scriptsize \texttt{stormgauge/forward\_model.py:43}} \\
+    \texttt{response\_lag\_hours} & 2.0 & Lag before gauge response & {\scriptsize \texttt{stormgauge/forward\_model.py:44}} \\
+    \texttt{response\_decay\_hours} & 12.0 & Exponential decay time & {\scriptsize \texttt{stormgauge/forward\_model.py:45}} \\
+    \texttt{gamma (intensity mapping)} & 0.8 & Non-linear intensity exponent & {\scriptsize \texttt{stormgauge/forward\_model.py:195}} \\
+    \texttt{rise limb multiplier} & 3.0 & Faster rising limb vs decay & {\scriptsize \texttt{stormgauge/forward\_model.py:244}} \\
+    \texttt{Earth radius} & 6,371 km & Haversine distance calculation & {\scriptsize \texttt{stormgauge/forward\_model.py:54}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Storm Intensity Distribution (MKM-SI-001)}
+
+Source: \texttt{models/intensity/distribution.py, models/intensity/parameters.py}
+
+\subsection{Distribution Defaults}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{base\_mean} & 45.0 & Mean storm intensity & {\scriptsize \texttt{intensity/distribution.py:33}} \\
+    \texttt{base\_std} & 15.0 & Standard deviation & {\scriptsize \texttt{intensity/distribution.py:34}} \\
+    \texttt{tail\_threshold} & 60.0 & Pareto tail crossover point & {\scriptsize \texttt{intensity/distribution.py:35}} \\
+    \texttt{tail\_index} & 2.5 & Pareto tail index (heavier = lower) & {\scriptsize \texttt{intensity/distribution.py:36}} \\
+    \texttt{min\_intensity} & 10.0 & Minimum storm intensity & {\scriptsize \texttt{intensity/distribution.py:37}} \\
+    \texttt{max\_intensity} & 100.0 & Maximum storm intensity & {\scriptsize \texttt{intensity/distribution.py:38}} \\
+\end{longtable}
+
+\subsection{Scenario Families}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{historical} & mean=40, std=12, thresh=60, idx=3.0 & Historical baseline scenario & {\scriptsize \texttt{intensity/parameters.py:43-50}} \\
+    \texttt{baseline} & mean=45, std=15, thresh=60, idx=2.5 & Current climate scenario & {\scriptsize \texttt{intensity/parameters.py:51-58}} \\
+    \texttt{moderate\_stress} & mean=50, std=15, thresh=55, idx=2.0 & Moderate climate stress & {\scriptsize \texttt{intensity/parameters.py:59-66}} \\
+    \texttt{severe\_stress} & mean=55, std=18, thresh=50, idx=1.5 & Severe climate stress & {\scriptsize \texttt{intensity/parameters.py:67-74}} \\
+    \texttt{extreme} & mean=60, std=20, thresh=45, idx=1.2 & Extreme tail scenario & {\scriptsize \texttt{intensity/parameters.py:75-79}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Flood Risk --- Depth-Damage and Velocity (MKM-DD-001)}
+
+Source: \texttt{models/floodrisk/depth\_damage.py, models/floodrisk/velocity.py}
+
+\subsection{UK Depth-Damage Curve}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{DEPTH\_POINTS} & [0, 0.05, 0.5, 1, 1.5, 2, 3, 4, 5, 6] & Flood depth breakpoints (m) & {\scriptsize \texttt{floodrisk/depth\_damage.py:80}} \\
+    \texttt{DAMAGE\_POINTS} & [0, 0.05, 0.25, 0.4, 0.5, 0.6, 0.75, 0.85, 0.95, 1.0] & Damage fraction at each depth & {\scriptsize \texttt{floodrisk/depth\_damage.py:81}} \\
+    \texttt{max flood depth} & 5.0 & Maximum modelled depth (m) & {\scriptsize \texttt{floodrisk/depth\_damage.py:74}} \\
+    \texttt{max distance} & 25,000 & Maximum distance for damage (m) & {\scriptsize \texttt{floodrisk/depth\_damage.py:67}} \\
+\end{longtable}
+
+\subsection{Property Type Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{residential} & 1.0 & Base case damage factor & {\scriptsize \texttt{floodrisk/depth\_damage.py:130-134}} \\
+    \texttt{commercial} & 1.2 & Higher damage for commercial & {\scriptsize \texttt{floodrisk/depth\_damage.py:130-134}} \\
+    \texttt{industrial} & 0.9 & Lower damage for industrial & {\scriptsize \texttt{floodrisk/depth\_damage.py:130-134}} \\
+\end{longtable}
+
+\subsection{Manning Velocity Model}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{DEFAULT\_ROUGHNESS} & 0.04 & Manning n for urban floodplain & {\scriptsize \texttt{floodrisk/velocity.py:15}} \\
+    \texttt{MIN\_SLOPE} & 0.001 & Minimum slope clamp & {\scriptsize \texttt{floodrisk/velocity.py:21}} \\
+    \texttt{DEFAULT\_ATTENUATION\_LENGTH} & 2,000 & Exponential decay length (m) & {\scriptsize \texttt{floodrisk/velocity.py:18}} \\
+    \texttt{DEFAULT\_RECESSION\_FACTOR} & 1.5 & Recession limb multiplier & {\scriptsize \texttt{floodrisk/velocity.py:24}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Spatial Interpolation (MKM-SP-001)}
+
+Source: \texttt{models/floodrisk/spatial.py}
+
+\subsection{Spatial Parameters}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Earth radius} & 6,371,000 & Haversine radius (m) & {\scriptsize \texttt{floodrisk/spatial.py:53}} \\
+    \texttt{IDW power} & 2.0 & Inverse distance weighting exponent & {\scriptsize \texttt{floodrisk/spatial.py:114}} \\
+    \texttt{IDW min\_distance} & 1.0 & Minimum distance floor (m) & {\scriptsize \texttt{floodrisk/spatial.py:115}} \\
+    \texttt{distance\_km to degrees} & 111.0 & km per degree latitude & {\scriptsize \texttt{floodrisk/spatial.py:40}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Risk Analytics (MKM-RA-001)}
+
+Source: \texttt{models/floodrisk/risk\_analytics.py}
+
+\subsection{Monte Carlo Settings}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{n\_simulations} & 1,000 & Default simulation count & {\scriptsize \texttt{floodrisk/risk\_analytics.py:22}} \\
+    \texttt{shock\_multiplier} & 0.2 & Stress shock (20\textbackslash\{\}\%) & {\scriptsize \texttt{floodrisk/risk\_analytics.py:54}} \\
+    \texttt{random\_seed} & 42 & Reproducibility seed & {\scriptsize \texttt{floodrisk/risk\_analytics.py:38}} \\
+    \texttt{grid\_size} & 1,000 & Spatial grid cell size (m) & {\scriptsize \texttt{floodrisk/risk\_analytics.py:78}} \\
+\end{longtable}
+
+\subsection{Risk Classification Thresholds}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{high\_risk} & > 0.6 & Damage ratio for high risk & {\scriptsize \texttt{floodrisk/risk\_analytics.py:157}} \\
+    \texttt{medium\_risk} & 0.3--0.6 & Damage ratio for medium risk & {\scriptsize \texttt{floodrisk/risk\_analytics.py:158}} \\
+    \texttt{low\_risk} & 0.1--0.3 & Damage ratio for low risk & {\scriptsize \texttt{floodrisk/risk\_analytics.py:159}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Risk Assessment Model (MKM-RA-001)}
+
+Source: \texttt{models/risk/risk\_assessor.py}
+
+\subsection{Flood Depth Thresholds}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{very\_low} & 0.0 m & No flood exposure & {\scriptsize \texttt{risk/risk\_assessor.py:23-29}} \\
+    \texttt{low} & 0.1 m & Minor flooding & {\scriptsize \texttt{risk/risk\_assessor.py:23-29}} \\
+    \texttt{medium} & 0.5 m & Moderate flooding & {\scriptsize \texttt{risk/risk\_assessor.py:23-29}} \\
+    \texttt{high} & 1.0 m & Significant flooding & {\scriptsize \texttt{risk/risk\_assessor.py:23-29}} \\
+    \texttt{very\_high} & 2.0 m & Severe flooding & {\scriptsize \texttt{risk/risk\_assessor.py:23-29}} \\
+\end{longtable}
+
+\subsection{LTV Risk Thresholds}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{low} & 0.6 & Low LTV boundary & {\scriptsize \texttt{risk/risk\_assessor.py:31-36}} \\
+    \texttt{moderate} & 0.8 & Moderate LTV boundary & {\scriptsize \texttt{risk/risk\_assessor.py:31-36}} \\
+    \texttt{high} & 0.95 & High LTV boundary & {\scriptsize \texttt{risk/risk\_assessor.py:31-36}} \\
+    \texttt{critical} & 1.0 & Negative equity threshold & {\scriptsize \texttt{risk/risk\_assessor.py:31-36}} \\
+\end{longtable}
+
+\subsection{Flood Risk Scores}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Very Low} & 1 & Base risk score & {\scriptsize \texttt{risk/risk\_assessor.py:154-161}} \\
+    \texttt{Low} & 2 &  & {\scriptsize \texttt{risk/risk\_assessor.py:154-161}} \\
+    \texttt{Medium} & 4 &  & {\scriptsize \texttt{risk/risk\_assessor.py:154-161}} \\
+    \texttt{High} & 7 &  & {\scriptsize \texttt{risk/risk\_assessor.py:154-161}} \\
+    \texttt{Very High} & 9 &  & {\scriptsize \texttt{risk/risk\_assessor.py:154-161}} \\
+    \texttt{Unknown} & 3 & Default when unknown & {\scriptsize \texttt{risk/risk\_assessor.py:154-161}} \\
+\end{longtable}
+
+\subsection{LTV Multipliers}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{> 0.95} & 2.0x & Near negative equity & {\scriptsize \texttt{risk/risk\_assessor.py:171-176}} \\
+    \texttt{> 0.8} & 1.5x & High LTV & {\scriptsize \texttt{risk/risk\_assessor.py:171-176}} \\
+    \texttt{> 0.6} & 1.2x & Moderate LTV & {\scriptsize \texttt{risk/risk\_assessor.py:171-176}} \\
+    \texttt{else} & 1.0x & Low LTV (base) & {\scriptsize \texttt{risk/risk\_assessor.py:171-176}} \\
+\end{longtable}
+
+\subsection{Construction Type Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{timber / wood} & 1.3 & Highest vulnerability & {\scriptsize \texttt{risk/risk\_assessor.py:189-197}} \\
+    \texttt{brick} & 1.0 & Standard & {\scriptsize \texttt{risk/risk\_assessor.py:189-197}} \\
+    \texttt{concrete} & 0.9 & More resilient & {\scriptsize \texttt{risk/risk\_assessor.py:189-197}} \\
+    \texttt{steel} & 0.8 & Most resilient & {\scriptsize \texttt{risk/risk\_assessor.py:189-197}} \\
+\end{longtable}
+
+\subsection{Age Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{> 100 years} & 1.3 & Heritage property risk & {\scriptsize \texttt{risk/risk\_assessor.py:181-184}} \\
+    \texttt{> 50 years} & 1.1 & Older property risk & {\scriptsize \texttt{risk/risk\_assessor.py:181-184}} \\
+\end{longtable}
+
+\subsection{Insurance Premium Base Rates}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Very Low} & 0.001 & 0.1\textbackslash\{\}\% of property value & {\scriptsize \texttt{risk/risk\_assessor.py:391-398}} \\
+    \texttt{Low} & 0.002 & 0.2\textbackslash\{\}\% & {\scriptsize \texttt{risk/risk\_assessor.py:391-398}} \\
+    \texttt{Medium} & 0.005 & 0.5\textbackslash\{\}\% & {\scriptsize \texttt{risk/risk\_assessor.py:391-398}} \\
+    \texttt{High} & 0.015 & 1.5\textbackslash\{\}\% & {\scriptsize \texttt{risk/risk\_assessor.py:391-398}} \\
+    \texttt{Very High} & 0.035 & 3.5\textbackslash\{\}\% & {\scriptsize \texttt{risk/risk\_assessor.py:391-398}} \\
+    \texttt{Premium cap} & 0.10 & Max 10\textbackslash\{\}\% of property value & {\scriptsize \texttt{risk/risk\_assessor.py:406}} \\
+\end{longtable}
+
+\subsection{Distance Risk Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{<= 0.1 km} & 1.0 & Immediate proximity & {\scriptsize \texttt{risk/risk\_assessor.py:361-372}} \\
+    \texttt{<= 0.5 km} & 0.8 &  & {\scriptsize \texttt{risk/risk\_assessor.py:361-372}} \\
+    \texttt{<= 1.0 km} & 0.6 &  & {\scriptsize \texttt{risk/risk\_assessor.py:361-372}} \\
+    \texttt{<= 2.0 km} & 0.4 &  & {\scriptsize \texttt{risk/risk\_assessor.py:361-372}} \\
+    \texttt{<= 5.0 km} & 0.2 &  & {\scriptsize \texttt{risk/risk\_assessor.py:361-372}} \\
+    \texttt{> 5.0 km} & 0.1 & Minimal proximity risk & {\scriptsize \texttt{risk/risk\_assessor.py:361-372}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Property Valuation Model (MKM-PV-001)}
+
+Source: \texttt{models/valuation/property\_value.py}
+
+\subsection{Floor Area Ranges (sq m)}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Flat} & 35--120 & Typical flat range & {\scriptsize \texttt{valuation/property\_value.py:19-26}} \\
+    \texttt{Mid-terrace} & 60--180 &  & {\scriptsize \texttt{valuation/property\_value.py:19-26}} \\
+    \texttt{End-terrace} & 70--200 &  & {\scriptsize \texttt{valuation/property\_value.py:19-26}} \\
+    \texttt{Semi-detached} & 80--250 &  & {\scriptsize \texttt{valuation/property\_value.py:19-26}} \\
+    \texttt{Detached} & 120--400 &  & {\scriptsize \texttt{valuation/property\_value.py:19-26}} \\
+    \texttt{Bungalow} & 80--200 &  & {\scriptsize \texttt{valuation/property\_value.py:19-26}} \\
+\end{longtable}
+
+\subsection{Base Price per sqm (GBP)}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Detached} & 8,000--15,000 & London market calibration & {\scriptsize \texttt{valuation/property\_value.py:29-36}} \\
+    \texttt{Semi-detached} & 6,500--12,000 &  & {\scriptsize \texttt{valuation/property\_value.py:29-36}} \\
+    \texttt{Mid-terrace} & 6,000--11,000 &  & {\scriptsize \texttt{valuation/property\_value.py:29-36}} \\
+    \texttt{End-terrace} & 6,200--11,500 &  & {\scriptsize \texttt{valuation/property\_value.py:29-36}} \\
+    \texttt{Bungalow} & 7,000--13,000 &  & {\scriptsize \texttt{valuation/property\_value.py:29-36}} \\
+    \texttt{Flat} & 5,500--10,000 &  & {\scriptsize \texttt{valuation/property\_value.py:29-36}} \\
+\end{longtable}
+
+\subsection{Age Band Factors (multiplier range)}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{New build (< 10y)} & 1.05--1.15 & Premium for new & {\scriptsize \texttt{valuation/property\_value.py:39-45}} \\
+    \texttt{Modern (10--24y)} & 0.95--1.05 & Near base & {\scriptsize \texttt{valuation/property\_value.py:39-45}} \\
+    \texttt{Established (25--49y)} & 0.90--1.00 & Minor discount & {\scriptsize \texttt{valuation/property\_value.py:39-45}} \\
+    \texttt{Period (50--99y)} & 0.85--0.95 &  & {\scriptsize \texttt{valuation/property\_value.py:39-45}} \\
+    \texttt{Heritage (100+y)} & 0.80--1.20 & Wide range (character premium) & {\scriptsize \texttt{valuation/property\_value.py:39-45}} \\
+\end{longtable}
+
+\subsection{Condition Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Excellent} & 1.10--1.20 &  & {\scriptsize \texttt{valuation/property\_value.py:48-54}} \\
+    \texttt{Good} & 1.00--1.10 &  & {\scriptsize \texttt{valuation/property\_value.py:48-54}} \\
+    \texttt{Fair} & 0.90--1.00 &  & {\scriptsize \texttt{valuation/property\_value.py:48-54}} \\
+    \texttt{Poor} & 0.70--0.90 &  & {\scriptsize \texttt{valuation/property\_value.py:48-54}} \\
+    \texttt{Very poor} & 0.50--0.70 &  & {\scriptsize \texttt{valuation/property\_value.py:48-54}} \\
+\end{longtable}
+
+\subsection{Flood Risk Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Very Low} & 1.00--1.02 & Near neutral impact & {\scriptsize \texttt{valuation/property\_value.py:57-63}} \\
+    \texttt{Low} & 0.98--1.00 &  & {\scriptsize \texttt{valuation/property\_value.py:57-63}} \\
+    \texttt{Medium} & 0.92--0.98 &  & {\scriptsize \texttt{valuation/property\_value.py:57-63}} \\
+    \texttt{High} & 0.85--0.92 &  & {\scriptsize \texttt{valuation/property\_value.py:57-63}} \\
+    \texttt{Very High} & 0.75--0.85 & Significant discount & {\scriptsize \texttt{valuation/property\_value.py:57-63}} \\
+\end{longtable}
+
+\subsection{EPC Rating Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{A} & 1.05--1.10 & Green premium & {\scriptsize \texttt{valuation/property\_value.py:66-74}} \\
+    \texttt{B} & 1.02--1.05 &  & {\scriptsize \texttt{valuation/property\_value.py:66-74}} \\
+    \texttt{C} & 1.00--1.02 &  & {\scriptsize \texttt{valuation/property\_value.py:66-74}} \\
+    \texttt{D} & 0.98--1.00 &  & {\scriptsize \texttt{valuation/property\_value.py:66-74}} \\
+    \texttt{E} & 0.95--0.98 &  & {\scriptsize \texttt{valuation/property\_value.py:66-74}} \\
+    \texttt{F} & 0.90--0.95 &  & {\scriptsize \texttt{valuation/property\_value.py:66-74}} \\
+    \texttt{G} & 0.85--0.90 & Energy penalty & {\scriptsize \texttt{valuation/property\_value.py:66-74}} \\
+\end{longtable}
+
+\subsection{Valuation Bounds}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{MIN\_PROPERTY\_VALUE} & 150,000 & Floor (GBP) & {\scriptsize \texttt{valuation/property\_value.py:105}} \\
+    \texttt{MAX\_PROPERTY\_VALUE} & 5,000,000 & Cap (GBP) & {\scriptsize \texttt{valuation/property\_value.py:106}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Insurance Premium Model (MKM-IP-001)}
+
+Source: \texttt{models/valuation/insurance.py}
+
+\subsection{Property Type Premium Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Flat} & 0.80--1.00 & Lower exposure & {\scriptsize \texttt{valuation/insurance.py:20-27}} \\
+    \texttt{Mid-terrace} & 0.90--1.10 &  & {\scriptsize \texttt{valuation/insurance.py:20-27}} \\
+    \texttt{End-terrace} & 1.00--1.20 &  & {\scriptsize \texttt{valuation/insurance.py:20-27}} \\
+    \texttt{Semi-detached} & 1.10--1.30 &  & {\scriptsize \texttt{valuation/insurance.py:20-27}} \\
+    \texttt{Detached} & 1.20--1.50 & Highest exposure & {\scriptsize \texttt{valuation/insurance.py:20-27}} \\
+    \texttt{Bungalow} & 1.00--1.20 & Ground-floor risk & {\scriptsize \texttt{valuation/insurance.py:20-27}} \\
+\end{longtable}
+
+\subsection{Flood Risk Premium Factors}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Very Low} & 0.90--1.00 &  & {\scriptsize \texttt{valuation/insurance.py:30-36}} \\
+    \texttt{Low} & 1.00--1.20 &  & {\scriptsize \texttt{valuation/insurance.py:30-36}} \\
+    \texttt{Medium} & 1.30--1.80 &  & {\scriptsize \texttt{valuation/insurance.py:30-36}} \\
+    \texttt{High} & 1.80--2.50 &  & {\scriptsize \texttt{valuation/insurance.py:30-36}} \\
+    \texttt{Very High} & 2.50--4.00 & Significant loading & {\scriptsize \texttt{valuation/insurance.py:30-36}} \\
+\end{longtable}
+
+\subsection{Premium Bounds}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{BASE\_RATE\_RANGE} & 1.5--4.0 & Per GBP 1,000 insured & {\scriptsize \texttt{valuation/insurance.py:64}} \\
+    \texttt{MIN\_PREMIUM} & 200 & Floor (GBP) & {\scriptsize \texttt{valuation/insurance.py:67}} \\
+    \texttt{MAX\_PREMIUM} & 20,000 & Cap (GBP) & {\scriptsize \texttt{valuation/insurance.py:68}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Mortgage Pricer (MKM-MP-001)}
+
+Source: \texttt{models/mortgage\_pricer.py}
+
+\subsection{Credit Spread Schedule}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Affordability ratio points} & [0.1, 0.2, ..., 1.0] & 10 interpolation points & {\scriptsize \texttt{mortgage\_pricer.py:55}} \\
+    \texttt{Credit spreads} & [50, 100, 200, 300, 500, 800, 1200, 1800, 2500, 3500] bps & Corresponding spread curve & {\scriptsize \texttt{mortgage\_pricer.py:58}} \\
+    \texttt{Default for zero income} & 0.15 & 15\textbackslash\{\}\% spread fallback & {\scriptsize \texttt{mortgage\_pricer.py:141}} \\
+    \texttt{Minimum spread} & 0.001 & 10 bps floor & {\scriptsize \texttt{mortgage\_pricer.py:175}} \\
+\end{longtable}
+
+\subsection{Flood Risk Multipliers}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{Very Low} & 1.00 & No adjustment & {\scriptsize \texttt{mortgage\_pricer.py:178-184}} \\
+    \texttt{Low} & 1.05 &  & {\scriptsize \texttt{mortgage\_pricer.py:178-184}} \\
+    \texttt{Medium} & 1.20 &  & {\scriptsize \texttt{mortgage\_pricer.py:178-184}} \\
+    \texttt{High} & 1.40 &  & {\scriptsize \texttt{mortgage\_pricer.py:178-184}} \\
+    \texttt{Very High} & 1.75 & Largest loading & {\scriptsize \texttt{mortgage\_pricer.py:178-184}} \\
+\end{longtable}
+
+\subsection{LTV Impact Thresholds}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{> 0.95} & 1.5x & Near negative equity & {\scriptsize \texttt{mortgage\_pricer.py:389-396}} \\
+    \texttt{> 0.9} & 1.3x &  & {\scriptsize \texttt{mortgage\_pricer.py:389-396}} \\
+    \texttt{> 0.8} & 1.1x &  & {\scriptsize \texttt{mortgage\_pricer.py:389-396}} \\
+    \texttt{else} & 1.0x & Low LTV (base) & {\scriptsize \texttt{mortgage\_pricer.py:389-396}} \\
+\end{longtable}
+
+\subsection{Default Assumptions}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{tax\_rate} & 0.20 & Corporation tax (20\textbackslash\{\}\%) & {\scriptsize \texttt{mortgage\_pricer.py:37}} \\
+    \texttt{gross\_annual\_income (batch)} & 50,000 & Batch pricing default & {\scriptsize \texttt{mortgage\_pricer.py:415}} \\
+    \texttt{interest\_rate (batch)} & 0.035 & 3.5\textbackslash\{\}\% default rate & {\scriptsize \texttt{mortgage\_pricer.py:417}} \\
+    \texttt{insurance\_rate (batch)} & 0.002 & 0.2\textbackslash\{\}\% insurance & {\scriptsize \texttt{mortgage\_pricer.py:418}} \\
+    \texttt{recovery\_haircut (batch)} & 0.2 & 20\textbackslash\{\}\% recovery haircut & {\scriptsize \texttt{mortgage\_pricer.py:420}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Timeseries Statistics (MKM-TS-001)}
+
+Source: \texttt{models/statistics/timeseries.py, models/statistics/synthetic.py}
+
+\subsection{Statistical Parameters}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{days\_per\_year} & 365.25 & Year length for annual maxima & {\scriptsize \texttt{statistics/timeseries.py:48}} \\
+    \texttt{percentile\_bands} & [5, 10, 25, 50, 75, 90, 95, 99] & Standard percentile breakpoints & {\scriptsize \texttt{statistics/timeseries.py:69-77}} \\
+\end{longtable}
+
+\subsection{Synthetic Water Level Generation}
+
+\begin{longtable}{p{4cm}p{4cm}p{5.5cm}p{3.5cm}}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Parameter} & \textbf{Value} & \textbf{Description} & \textbf{Source} \\
+    \midrule
+    \endhead
+    \bottomrule
+    \endfoot
+    \texttt{base\_level range} & U(0.3, 0.5) * flood\_alert & Normal water level & {\scriptsize \texttt{statistics/synthetic.py:62}} \\
+    \texttt{daily\_std} & base\_level * 0.15 & Daily standard deviation & {\scriptsize \texttt{statistics/synthetic.py:63}} \\
+    \texttt{seasonal\_amplitude} & base\_level * 0.25 & Winter/summer variation & {\scriptsize \texttt{statistics/synthetic.py:64}} \\
+    \texttt{seasonal\_peak} & Day 15 (January) & Winter peak offset & {\scriptsize \texttt{statistics/synthetic.py:98}} \\
+    \texttt{minor\_flood\_prob} & 5.0x severe\_prob & Minor flood frequency & {\scriptsize \texttt{statistics/synthetic.py:83}} \\
+\end{longtable}
+
+\clearpage
+
+\section{Document History}
+\begin{table}[ht]
+    \centering
+    \begin{tabular}{l|l|l|l}
+        \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+        \hline
+        16-Feb-2026 & 1.0 & Initial parameter inventory & D. Kelly \\
+    \end{tabular}
+\end{table}
+
+\end{document}
