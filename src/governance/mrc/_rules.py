@@ -29,6 +29,7 @@ from config.governance import (
     VALID_ACTION_STATUSES,
     VALID_MEETING_STATUSES,
 )
+from src.governance.errors import DomainError
 from src.governance.mrc._state import (
     EVENT_ACTION_RAISED,
     EVENT_ACTION_STATUS_SET,
@@ -38,10 +39,6 @@ from src.governance.mrc._state import (
     EVENT_SCHEDULED,
     MeetingState,
 )
-
-
-class DomainError(ValueError):
-    """Raised when a command would violate a governance rule."""
 
 
 def _require_exists(state: MeetingState) -> None:

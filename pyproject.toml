@@ -5,6 +5,7 @@ description = "MKM-ModelRisk — generic, model-agnostic model-risk-governance p
 requires-python = ">=3.13"
 dependencies = [
     "psycopg[binary]>=3.2",
+    "flask>=3.0",
 ]
 
 [project.optional-dependencies]
@@ -27,6 +28,8 @@ addopts = "-q"
 core = "ctrace"
 branch = true
 source = ["config", "src"]
+# The dev-server entry point just calls app.run(); it is exercised manually.
+omit = ["src/web/__main__.py"]
 
 [tool.coverage.report]
 # Coding rule R3: >=99% coverage, verified each stage.
