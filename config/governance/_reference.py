@@ -22,7 +22,14 @@
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 
-REFERENCE_LISTS = ("people", "company", "division")
+REFERENCE_LISTS = ("people", "company", "division", "department")
+
+# Org units carry an owner, so model ownership attaches to the org hierarchy
+# (Company / Division / Department) rather than to a single committee setting.
+_ORG_FIELDS = [
+    {"key": "value", "label": "Value", "type": "text", "required": True},
+    {"key": "owner", "label": "Owner", "type": "text", "reference": "people"},
+]
 REFERENCE_SPECS = {
     "people": {"label": "People", "id_prefix": "PE", "display": "name", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},
@@ -30,10 +37,7 @@ REFERENCE_SPECS = {
         {"key": "role", "label": "Role", "type": "text"},
         {"key": "organisation", "label": "Organisation", "type": "text"},
     ]},
-    "company": {"label": "Company", "id_prefix": "CO", "display": "value", "fields": [
-        {"key": "value", "label": "Value", "type": "text", "required": True},
-    ]},
-    "division": {"label": "Division", "id_prefix": "DV", "display": "value", "fields": [
-        {"key": "value", "label": "Value", "type": "text", "required": True},
-    ]},
+    "company": {"label": "Company", "id_prefix": "CO", "display": "value", "fields": list(_ORG_FIELDS)},
+    "division": {"label": "Division", "id_prefix": "DV", "display": "value", "fields": list(_ORG_FIELDS)},
+    "department": {"label": "Department", "id_prefix": "DP", "display": "value", "fields": list(_ORG_FIELDS)},
 }

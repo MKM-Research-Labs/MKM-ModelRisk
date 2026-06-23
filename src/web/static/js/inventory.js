@@ -115,7 +115,7 @@ const Inventory = {
     const box = document.getElementById("m-list");
     if (!models.length) {
       box.innerHTML = '<div class="empty">' +
-        (all.length ? "No models in the selected Company / Division."
+        (all.length ? "No models in the selected Company."
           : "No models yet. Register one above.") + "</div>";
       return;
     }

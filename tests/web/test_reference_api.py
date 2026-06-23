@@ -42,8 +42,8 @@ def _add_person(client, name):
 
 def test_get_reference_empty(client):
     res = client.get("/api/reference").get_json()
-    assert res["data"] == {"people": [], "company": [], "division": []}
-    assert [c["key"] for c in res["collections"]] == ["people", "company", "division"]
+    assert res["data"] == {"people": [], "company": [], "division": [], "department": []}
+    assert [c["key"] for c in res["collections"]] == ["people", "company", "division", "department"]
 
 
 def test_add_and_remove_person(client):

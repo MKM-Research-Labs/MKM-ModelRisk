@@ -25,7 +25,6 @@ MRC_SETTINGS_SPECS = (
     {"key": "org_name", "label": "Organisation name", "type": "text"},
     {"key": "org_address", "label": "Address", "type": "text"},
     {"key": "chair", "label": "Chair", "type": "text"},
-    {"key": "model_owner", "label": "Model owner", "type": "text"},
     {"key": "frequency", "label": "Frequency", "type": "choice", "options": VALID_FREQUENCY},
     {"key": "handbook_reference", "label": "Handbook reference", "type": "text"},
     {"key": "framework", "label": "Framework", "type": "text"},
