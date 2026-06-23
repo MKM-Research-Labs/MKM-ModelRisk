@@ -37,6 +37,7 @@ EXCLUDE_DIRS = frozenset({
 # Duplicate-code detection (jscpd).
 JSCPD_MIN_LINES = 8
 JSCPD_MIN_TOKENS = 50
+DUPLICATION_MAX_PERCENT = 5.0
 
 # Coverage gate (mirrors pyproject's fail_under).
 COVERAGE_MINIMUM = 99
