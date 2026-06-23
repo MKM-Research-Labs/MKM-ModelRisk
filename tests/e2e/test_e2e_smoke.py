@@ -32,7 +32,7 @@ TABS = ["inventory", "mrc", "documents", "bibliography", "audit", "reference"]
 
 def test_app_loads(page: Page, base_url: str):
     open_app(page, base_url)
-    expect(page.locator("header")).to_contain_text("MKM ModelRisk")
+    expect(page.locator("header")).to_contain_text("Model Risk Governance")
     for tab in TABS:
         expect(page.locator(f".tab[data-tab='{tab}']")).to_be_visible()
 
