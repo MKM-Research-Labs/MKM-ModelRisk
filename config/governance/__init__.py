@@ -1,0 +1,89 @@
+# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+#
+# This software is licensed by MKM Research Labs for non-commercial
+# research and educational use only. Any commercial use, including
+# but not limited to use in or for products or services offered for sale,
+# internal business operations intended for commercial advantage, or
+# research and development conducted for a commercial entity, is expressly
+# prohibited unless separately authorized in writing by MKM Research Labs.
+#
+# Use, reproduction, distribution, or modification of this code is subject to the
+# terms and conditions of the license agreement provided with this software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Model-governance domain vocabulary (coding rule R1).
+
+Generic and model-agnostic configuration, split into focused modules and
+re-exported here so callers keep using ``from config.governance import X``.
+"""
+from config.governance._collections import (
+    COLLECTION_SPECS,
+    VALID_DEPENDENCY_DIRECTIONS,
+    VALID_IMPACT,
+    VALID_PRIORITY,
+    VALID_REMEDIATION_STATUS,
+    VALID_VQ_STATUSES,
+)
+from config.governance._documents import (
+    BIBLIOGRAPHY_SPEC,
+    BIBLIOGRAPHY_SPECS,
+    DOC_CATEGORIES,
+)
+from config.governance._inventory import (
+    DEFAULT_VQ_STATUS,
+    EDITABLE_FIELDS,
+    FIELD_CHOICES,
+    MODEL_FIELD_SPECS,
+    REGISTER_FIELDS,
+    RISK_ACCEPTABLE_AT,
+    RISK_CONDITIONAL_AT,
+    RISK_WEIGHTS,
+    SR262_QUESTIONS,
+    TIER_LABELS,
+    TIER_MAX,
+    TIER_MIN,
+    VALID_COMPLEXITY,
+    VALID_LIFECYCLE_STAGES,
+    VALID_MATERIALITY,
+    VALID_RAG_RATINGS,
+    VALID_REVIEW_FREQUENCIES,
+    VALID_VALIDATION_STATUSES,
+)
+from config.governance._mrc import (
+    DEFAULT_MEETING_STATUS,
+    MEETING_FIELD_SPECS,
+    MEETING_FIELDS,
+    MRC_COLLECTION_SPECS,
+    MRC_SETTINGS_DEFAULTS,
+    MRC_SETTINGS_KEYS,
+    MRC_SETTINGS_SPECS,
+    REVIEW_DUE_SOON_DAYS,
+    REVIEW_UPCOMING_DAYS,
+    VALID_ACTION_STATUSES,
+    VALID_AGENDA_STATUS,
+    VALID_FREQUENCY,
+    VALID_MEETING_STATUSES,
+    VALID_PARTICIPANT_STATUS,
+)
+from config.governance._reference import REFERENCE_LISTS, REFERENCE_SPECS
+
+__all__ = [
+    "BIBLIOGRAPHY_SPEC", "BIBLIOGRAPHY_SPECS", "COLLECTION_SPECS", "DEFAULT_MEETING_STATUS",
+    "DEFAULT_VQ_STATUS", "DOC_CATEGORIES", "EDITABLE_FIELDS", "FIELD_CHOICES",
+    "MEETING_FIELDS", "MEETING_FIELD_SPECS", "MODEL_FIELD_SPECS", "MRC_COLLECTION_SPECS",
+    "MRC_SETTINGS_DEFAULTS", "MRC_SETTINGS_KEYS", "MRC_SETTINGS_SPECS", "REFERENCE_LISTS",
+    "REFERENCE_SPECS", "REGISTER_FIELDS", "REVIEW_DUE_SOON_DAYS", "REVIEW_UPCOMING_DAYS",
+    "RISK_ACCEPTABLE_AT", "RISK_CONDITIONAL_AT", "RISK_WEIGHTS", "SR262_QUESTIONS",
+    "TIER_LABELS", "TIER_MAX", "TIER_MIN", "VALID_ACTION_STATUSES", "VALID_AGENDA_STATUS",
+    "VALID_COMPLEXITY", "VALID_DEPENDENCY_DIRECTIONS", "VALID_FREQUENCY", "VALID_IMPACT",
+    "VALID_LIFECYCLE_STAGES", "VALID_MATERIALITY", "VALID_MEETING_STATUSES",
+    "VALID_PARTICIPANT_STATUS", "VALID_PRIORITY", "VALID_RAG_RATINGS",
+    "VALID_REMEDIATION_STATUS", "VALID_REVIEW_FREQUENCIES", "VALID_VALIDATION_STATUSES",
+    "VALID_VQ_STATUSES",
+]

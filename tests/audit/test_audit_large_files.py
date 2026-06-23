@@ -33,11 +33,9 @@ def test_scan_orders_by_line_count_descending():
     assert found == sorted(found, key=lambda f: f["lines"], reverse=True)
 
 
-def test_large_source_files_reports_known_offender():
-    # config/governance.py is the one file currently over 300 lines; the
-    # large-files audit is report-only, so this documents the backlog item.
-    offenders = {f["path"] for f in large_source_files()}
-    assert "config/governance.py" in offenders
+def test_source_tree_within_limit():
+    # Coding rule R2 hard gate: no source file exceeds 300 lines.
+    assert large_source_files() == []
 
 
 def test_test_suite_stays_within_limit():
