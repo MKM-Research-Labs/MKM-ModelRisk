@@ -71,9 +71,9 @@ def test_schedule_rejects_unknown_field():
 def test_schedule_with_valid_status_field():
     _, payload = decide_schedule(
         initial_state(), meeting_id="M", title="t", date="d",
-        fields={"status": "Held", "location": "Room 1"},
+        fields={"status": "Completed", "location": "Room 1"},
     )
-    assert payload["status"] == "Held" and payload["location"] == "Room 1"
+    assert payload["status"] == "Completed" and payload["location"] == "Room 1"
 
 
 def test_schedule_rejects_invalid_status():
@@ -111,7 +111,7 @@ def test_add_agenda_item_generates_id():
 def test_add_participant_item():
     _, payload = decide_add_item(
         _scheduled(), collection="participants",
-        fields={"name": "Bob", "attendance": "Present"},
+        fields={"name": "Bob", "status": "Attended"},
     )
     assert payload["item_id"] == "P-001"
 
@@ -146,7 +146,7 @@ def test_update_item_requires_meeting():
 
 
 def test_remove_item():
-    state, _ = _add(_scheduled(), "decisions", {"text": "Approved"})
+    state, _ = _add(_scheduled(), "decisions", {"description": "Approved"})
     event_type, payload = decide_remove_item(state, collection="decisions", item_id="D-001")
     state = apply(state, event_type, payload)
     assert state.collections["decisions"] == ()

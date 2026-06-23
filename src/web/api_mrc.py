@@ -20,10 +20,14 @@
 """HTTP API for the MRC-meeting aggregate."""
 from __future__ import annotations
 
+from datetime import date
+
 from flask import Blueprint, jsonify
 
 from config.governance import MEETING_FIELD_SPECS, MRC_COLLECTION_SPECS
 from src.command import dispatch
+from src.governance.model_inventory import get_model
+from src.governance.model_inventory.review import compute_review_status
 from src.governance.mrc import (
     add_collection_item,
     get_meeting,
@@ -83,6 +87,28 @@ def get_one(meeting_id: str):
     if meeting is None:
         return jsonify({"error": "meeting not found"}), 404
     return jsonify(meeting)
+
+
+@mrc_bp.get("/<meeting_id>/models")
+def models_in_scope(meeting_id: str):
+    """In-scope models joined to the inventory, with derived review status."""
+    meeting = get_meeting(meeting_id)
+    if meeting is None:
+        return jsonify({"error": "meeting not found"}), 404
+    today = date.today().isoformat()
+    rows = []
+    for item in meeting["data"].get("models_in_scope") or []:
+        model = get_model(item.get("model_id"))
+        data = model["data"] if model else {}
+        rows.append({
+            "item_id": item.get("item_id"),
+            "model_id": item.get("model_id"),
+            "name": data.get("name"),
+            "tier": data.get("tier"),
+            "rag_rating": data.get("rag_rating"),
+            "review_status": compute_review_status(data.get("next_review_date"), today),
+        })
+    return jsonify(rows)
 
 
 @mrc_bp.post("")

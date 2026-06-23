@@ -109,7 +109,7 @@ const Detail = {
 
   _bindCollection(key) {
     Collections.bind("/api/models/" + this._id + "/collections/", { collections: [this.collSpec(key)] },
-      this._model.retired, () => this.show(this._id, this._tab));
+      this._model.retired, () => this.show(this._id, this._tab), this._model.data);
   },
 
   _overview(d) {

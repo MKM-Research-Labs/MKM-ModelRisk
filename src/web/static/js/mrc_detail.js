@@ -18,67 +18,138 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// MRC meeting detail: header card + editable meeting fields + collections
-// (agenda, decisions, actions, participants, minutes, models in scope).
-const MeetingDetail = {
-  async show(meetingId) {
-    const specs = await MRC.specs();
-    const m = await App.get("/api/meetings/" + meetingId);
-    const d = m.data || {};
-    let fieldRows = "";
-    specs.fields.forEach(function (f) { fieldRows += MeetingDetail._row(f, d[f.key]); });
-    document.getElementById("mt-detail").innerHTML =
-      '<div class="card">' + this._header(m, d) +
-      '<div class="section-header">Meeting details</div>' + fieldRows +
-      Collections.render(d, specs, false) + "</div>";
+// Tabbed MRC meeting detail: Agenda / Minutes / Participants / Models /
+// Decisions / Actions / Documents. The collection tabs reuse the shared
+// Collections renderer (add/edit/remove); Models joins the inventory.
+const MEETING_FIELD_KEYS = ["date", "time", "location", "chair", "status"];
 
-    this._bindFields(meetingId, d);
-    Collections.bind(
-      "/api/meetings/" + meetingId + "/collections/", specs, false,
-      () => this.show(meetingId),
-    );
-    document.getElementById("mt-detail").scrollIntoView({ behavior: "smooth", block: "start" });
+const MeetingDetail = {
+  _id: null, _meeting: null, _specs: null, _models: [], _tab: "agenda",
+
+  async show(meetingId, tab) {
+    this._id = meetingId;
+    this._specs = await MRC.specs();
+    this._meeting = await App.get("/api/meetings/" + meetingId);
+    this._models = await App.get("/api/meetings/" + meetingId + "/models");
+    if (tab) this._tab = tab;
+    this._render();
+    document.getElementById("mt-detail").scrollIntoView({ block: "start" });
+  },
+
+  collSpec(key) { return this._specs.collections.find((c) => c.key === key); },
+
+  _render() {
+    const m = this._meeting, d = m.data || {};
+    document.getElementById("mt-detail").innerHTML =
+      '<div class="card">' + this._header(m, d) + this._info(d) + this._tabbar(d) +
+      '<div id="mtd-content"></div></div>';
+    document.querySelectorAll("[data-mtab]").forEach((b) => {
+      b.onclick = () => { this._tab = b.getAttribute("data-mtab"); this._render(); };
+    });
+    this._bindInfo(d);
+    this._renderContent();
   },
 
   _header(m, d) {
-    const sub = esc(m.meeting_id) + (d.date ? " · " + esc(d.date) : "");
     return '<div class="detail-header"><div>' +
-      '<div class="name">' + esc(d.title || m.meeting_id) + "</div>" +
-      '<div class="sub">' + sub + "</div>" +
-      '<div style="margin-top:8px">' + statusBadge(m.status) + "</div></div>" +
-      '<div class="right"><div class="olabel">Chair</div>' +
-      '<div class="oname">' + fieldDisplay(d.chair) + "</div></div></div>";
+      '<button class="btn small" id="mt-back">&larr; Back</button> ' +
+      '<span class="name" style="margin-left:8px">' + esc(d.title || m.meeting_id) + "</span> " +
+      statusBadge(m.status) + "</div>" +
+      '<div class="right"><button class="btn small" id="mt-pdf">&darr; Meeting Pack PDF</button></div></div>';
   },
 
-  _row(f, value) {
-    return '<div class="inforow" id="mrow-' + f.key + '">' +
-      '<div class="k">' + esc(f.label) + '</div>' +
-      '<div class="v">' + fieldDisplay(value) + "</div>" +
-      '<span class="edit-btn" data-medit="' + f.key + '">edit</span></div>';
+  _info(d) {
+    const chip = (label, key) => '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
+      label + ':</span> <b>' + fieldDisplay(d[key]) + "</b> " +
+      '<span class="edit-btn" data-minfo="' + key + '">edit</span></span>';
+    return '<div class="dh-dates">' + chip("Date", "date") + chip("Time", "time") +
+      chip("Location", "location") + chip("Chair", "chair") + chip("Status", "status") + "</div>";
   },
 
-  _bindFields(meetingId, d) {
+  _tabbar(d) {
+    const n = (k) => (d[k] || []).length;
+    const tabs = [
+      ["agenda", "Agenda"], ["minutes", "Minutes"], ["participants", "Participants"],
+      ["models_in_scope", "Models"], ["decisions", "Decisions"], ["actions", "Actions"],
+      ["documents", "Documents"],
+    ];
+    return '<div class="dtabs">' + tabs.map((t) =>
+      '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-mtab="' + t[0] + '">' +
+      esc(t[1]) + " (" + n(t[0]) + ")</button>").join("") + "</div>";
+  },
+
+  _renderContent() {
+    const d = this._meeting.data || {};
+    const box = document.getElementById("mtd-content");
+    if (this._tab === "models_in_scope") { box.innerHTML = this._modelsTab(); this._bindModels(); return; }
+    if (this._tab === "documents") {
+      box.innerHTML = '<div class="empty">Document uploads are coming next.</div>'; return;
+    }
+    const spec = this.collSpec(this._tab);
+    box.innerHTML = Collections.render(d, { collections: [spec] }, false);
+    Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
+      false, () => this.show(this._id, this._tab), d);
+  },
+
+  _modelsTab() {
+    const rows = this._models.length ? this._models.map((m) =>
+      '<tr><td class="modelid">' + esc(m.model_id) + "</td><td>" + fieldDisplay(m.name) + "</td><td>" +
+      tierBadge(m.tier) + "</td><td>" + ragBadge(m.rag_rating) + "</td><td>" + reviewBadge(m.review_status) +
+      '</td><td class="rowact"><span class="edit-btn" data-rmmodel="' + esc(m.item_id) +
+      '">remove</span></td></tr>').join("") :
+      '<tr><td colspan="6" class="empty">No models in scope.</td></tr>';
+    return "<table><thead><tr><th>Model ID</th><th>Name</th><th>Tier</th><th>RAG</th><th>Status</th><th></th></tr></thead><tbody>" +
+      rows + "</tbody></table>" +
+      '<div class="row" style="margin-top:8px"><div class="field"><label>Model ID</label>' +
+      '<input id="mt-add-model" placeholder="MKM-SI-001"></div>' +
+      '<button class="btn small" id="mt-add-model-btn">Add model…</button></div>';
+  },
+
+  _bindModels() {
     const self = this;
-    document.querySelectorAll("[data-medit]").forEach(function (btn) {
-      const key = btn.getAttribute("data-medit");
-      btn.onclick = function () { self._edit(meetingId, MRC.specFieldByKey(key), d[key]); };
+    const base = "/api/meetings/" + this._id + "/collections/models_in_scope";
+    document.getElementById("mt-add-model-btn").onclick = function () {
+      const mid = val("mt-add-model");
+      if (!mid) { App.toast("Model ID is required", "error"); return; }
+      App.amend("Add model " + mid + " to scope.", "POST", base, { fields: { model_id: mid } },
+        () => self.show(self._id, "models_in_scope"));
+    };
+    document.querySelectorAll("[data-rmmodel]").forEach(function (el) {
+      const iid = el.getAttribute("data-rmmodel");
+      el.onclick = function () {
+        App.amend("Remove " + iid + " from scope.", "POST", base + "/" + iid + "/delete", {},
+          () => self.show(self._id, "models_in_scope"));
+      };
     });
   },
 
-  _edit(meetingId, f, current) {
-    const row = document.getElementById("mrow-" + f.key);
-    row.innerHTML = '<div class="k">' + esc(f.label) + '</div>' +
-      '<div class="editor">' + inputControl("med-input", f) +
-      '<button class="btn small primary" id="med-save">Save…</button>' +
-      '<button class="btn small" id="med-cancel">Cancel</button></div>';
-    const input = document.getElementById("med-input");
+  _bindInfo(d) {
+    const self = this;
+    document.getElementById("mt-back").onclick = function () {
+      document.getElementById("mt-detail").innerHTML = ""; MRC.loadList();
+    };
+    document.getElementById("mt-pdf").onclick = function () {
+      window.open("/api/meetings/" + self._id + "/pack.pdf", "_blank");
+    };
+    document.querySelectorAll("[data-minfo]").forEach(function (btn) {
+      const key = btn.getAttribute("data-minfo");
+      btn.onclick = function () { self._editField(key, d[key]); };
+    });
+  },
+
+  _editField(key, current) {
+    const f = MRC.specFieldByKey(key);
+    const chip = document.getElementById("minfo-" + key);
+    chip.innerHTML = inputControl("mf-input", f) +
+      '<button class="btn small primary" id="mf-save">Save</button>' +
+      '<button class="btn small" id="mf-cancel">Cancel</button>';
+    const input = document.getElementById("mf-input");
     if (current !== null && current !== undefined) input.value = current;
-    document.getElementById("med-cancel").onclick = () => this.show(meetingId);
-    document.getElementById("med-save").onclick = () => {
-      App.amend("Set " + f.label + ' = "' + input.value + '" on ' + meetingId + ".",
-        "POST", "/api/meetings/" + meetingId + "/field",
-        { field: f.key, value: input.value.trim() },
-        () => { this.show(meetingId); MRC.loadList(); });
+    document.getElementById("mf-cancel").onclick = () => this.show(this._id, this._tab);
+    document.getElementById("mf-save").onclick = () => {
+      App.amend("Set " + f.label + ' = "' + input.value + '" on ' + this._id + ".", "POST",
+        "/api/meetings/" + this._id + "/field", { field: key, value: input.value.trim() },
+        () => { this.show(this._id, this._tab); MRC.loadList(); });
     };
   },
 };

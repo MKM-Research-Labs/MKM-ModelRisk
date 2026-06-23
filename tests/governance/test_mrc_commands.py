@@ -43,7 +43,7 @@ def test_schedule_appends_first_event():
 
 def test_full_meeting_lifecycle_stream():
     schedule_meeting(meeting_id="MTG1", title="Q2 MRC", date="2026-06-30", actor="a")
-    update_meeting_field(meeting_id="MTG1", field="status", value="Held", actor="a")
+    update_meeting_field(meeting_id="MTG1", field="status", value="Completed", actor="a")
     add_collection_item(meeting_id="MTG1", collection="agenda", fields={"title": "Review"}, actor="a")
     add_collection_item(meeting_id="MTG1", collection="actions",
                         fields={"description": "Follow up", "owner": "bob"}, actor="a")
