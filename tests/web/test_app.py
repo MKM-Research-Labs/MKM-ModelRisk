@@ -33,7 +33,7 @@ def test_index_serves_html(client):
     response = client.get("/")
     assert response.status_code == 200
     assert b"MKM" in response.data
-    assert b"Governance Console" in response.data
+    assert b"Model Risk Governance" in response.data
 
 
 def test_create_app_runs_migrations_by_default():
