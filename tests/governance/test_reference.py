@@ -28,7 +28,7 @@ from src.governance.reference import add_option, get_reference_lists, remove_opt
 
 def test_lists_empty_initially():
     assert get_reference_lists() == {
-        "people": [], "company": [], "division": [],
+        "people": [], "company": [], "division": [], "department": [],
     }
 
 

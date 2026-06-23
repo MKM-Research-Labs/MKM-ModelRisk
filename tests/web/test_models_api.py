@@ -83,7 +83,7 @@ def test_field_specs_endpoint(client):
     assert "Organisation" in group_names
     org = next(g for g in specs["groups"] if g["group"] == "Organisation")
     org_keys = [f["key"] for f in org["fields"]]
-    assert org_keys == ["company", "division", "repo_location", "codebase"]
+    assert org_keys == ["company", "division", "department", "repo_location", "codebase"]
     # A choice field carries its options for the UI to render a dropdown.
     rag = next(f for g in specs["groups"] for f in g["fields"] if f["key"] == "rag_rating")
     assert rag["type"] == "choice"

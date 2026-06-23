@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Header org-scope: the Company / Division a model lives under. The selection
-// filters the inventory and is applied to newly registered models.
+// Header org-scope: the Company a model lives under. The selection filters the
+// inventory and is applied to newly registered models.
 const OrgScope = {
   _onChange: null,
   _KEY: "mkm-org-scope",
@@ -27,13 +27,8 @@ const OrgScope = {
   async init() {
     const data = (await App.get("/api/reference")).data || {};
     this._fill("scope-company", data.company, "All companies");
-    this._fill("scope-division", data.division, "All divisions");
-    const saved = this._saved();
-    this._set("scope-company", saved.company);
-    this._set("scope-division", saved.division);
-    ["scope-company", "scope-division"].forEach((id) => {
-      document.getElementById(id).onchange = () => this._changed();
-    });
+    this._set("scope-company", this._saved().company);
+    document.getElementById("scope-company").onchange = () => this._changed();
   },
 
   _fill(id, items, allLabel) {
@@ -63,13 +58,11 @@ const OrgScope = {
     if (this._onChange) this._onChange();
   },
 
-  // {company, division} — only keys with a selected value are included.
+  // {company} — only included when a company is selected.
   get() {
     const scope = {};
     const company = document.getElementById("scope-company").value;
-    const division = document.getElementById("scope-division").value;
     if (company) scope.company = company;
-    if (division) scope.division = division;
     return scope;
   },
 
