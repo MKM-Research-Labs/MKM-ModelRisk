@@ -20,12 +20,35 @@
 """Shared test fixtures: ensure the schema is migrated and reset the log."""
 from __future__ import annotations
 
-import time
+import os
 
-import psycopg
-import pytest
+# Run tests against a dedicated database so they never touch dev/demo data.
+os.environ.setdefault("MKM_DB_NAME", "mkm_modelrisk_test")
 
-from src.database import owner_connection, run_migrations
+import time  # noqa: E402
+
+import psycopg  # noqa: E402
+import pytest  # noqa: E402
+
+from config import DatabaseConfig  # noqa: E402
+from src.database import owner_connection, run_migrations  # noqa: E402
+
+
+def _ensure_test_database() -> None:
+    cfg = DatabaseConfig.from_env()
+    if cfg.name == "mkm_modelrisk":  # never auto-create the dev database
+        return
+    admin = psycopg.connect(
+        host=cfg.host, port=cfg.port, dbname="mkm_modelrisk",
+        user=cfg.owner_user, password=cfg.owner_password, autocommit=True,
+    )
+    try:
+        with admin.cursor() as cur:
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (cfg.name,))
+            if cur.fetchone() is None:
+                cur.execute(f'CREATE DATABASE "{cfg.name}" OWNER {cfg.owner_user}')
+    finally:
+        admin.close()
 
 
 def _wait_for_db(attempts: int = 30, delay: float = 1.0) -> None:
@@ -43,6 +66,7 @@ def _wait_for_db(attempts: int = 30, delay: float = 1.0) -> None:
 
 @pytest.fixture(scope="session", autouse=True)
 def _database_ready():
+    _ensure_test_database()
     _wait_for_db()
     run_migrations()
 

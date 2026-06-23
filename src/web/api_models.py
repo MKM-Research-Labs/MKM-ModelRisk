@@ -22,9 +22,12 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request, send_file
 
-from config.governance import COLLECTION_SPECS, MODEL_FIELD_SPECS, REGISTER_FIELDS
+from config.governance import COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPECS, REGISTER_FIELDS
+from src.files import UploadError, upload_path
+from src.governance.documents import add_document, find_document, remove_document
+from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.command import dispatch
 from src.governance.model_inventory import (
@@ -38,7 +41,11 @@ from src.governance.model_inventory import (
     update_collection_item,
     update_model_field,
 )
-from src.web._helpers import context_from_request, json_body, reference_options
+from src.web._helpers import context_from_request, json_body, reference_options, request_actor
+
+
+def _model_scope(model_id: str) -> str:
+    return f"model/{model_id}"
 
 models_bp = Blueprint("models", __name__, url_prefix="/api/models")
 
@@ -98,7 +105,50 @@ def field_specs():
         "groups": _grouped_specs(reference_options()),
         "register": list(REGISTER_FIELDS),
         "collections": _collection_specs(),
+        "doc_categories": list(DOC_CATEGORIES),
     })
+
+
+@models_bp.post("/<model_id>/documents")
+def upload_document(model_id: str):
+    if get_model(model_id) is None:
+        return jsonify({"error": "model not found"}), 404
+    category = request.form.get("category")
+    if category not in DOC_CATEGORIES:
+        return jsonify({"error": "invalid category"}), 400
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        add_document(
+            aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id, scope=_model_scope(model_id),
+            category=category, filename=file.filename, data=file.read(),
+            description=request.form.get("description", ""), actor=request_actor(),
+        )
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    rebuild_inventory_view()
+    return jsonify(get_model(model_id)), 201
+
+
+@models_bp.get("/<model_id>/documents/<item_id>/download")
+def download_document(model_id: str, item_id: str):
+    doc = find_document(MODEL_AGGREGATE, model_id, item_id)
+    if doc is None:
+        return jsonify({"error": "document not found"}), 404
+    path = upload_path(_model_scope(model_id), doc["filename"])
+    if not path.exists():
+        return jsonify({"error": "file missing"}), 404
+    return send_file(str(path), as_attachment=True, download_name=doc["original_name"])
+
+
+@models_bp.post("/<model_id>/documents/<item_id>/delete")
+def delete_document(model_id: str, item_id: str):
+    remove_document(
+        aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id, item_id=item_id, actor=request_actor(),
+    )
+    rebuild_inventory_view()
+    return jsonify(get_model(model_id))
 
 
 @models_bp.get("")

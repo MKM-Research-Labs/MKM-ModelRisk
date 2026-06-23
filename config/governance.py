@@ -250,6 +250,11 @@ REFERENCE_SPECS = {
 }
 
 
+# --- Documents ---
+# Per-model document categories (each a sub-tab on the model Docs tab).
+DOC_CATEGORIES = ("Core Documentation", "Test Results", "Analysis", "Monitoring")
+
+
 # --- MRC settings & branding (header for the console and Meeting Pack PDF) ---
 VALID_FREQUENCY = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 MRC_SETTINGS_SPECS = (
