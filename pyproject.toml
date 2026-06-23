@@ -28,8 +28,6 @@ addopts = "-q"
 core = "ctrace"
 branch = true
 source = ["config", "src"]
-# The dev-server entry point just calls app.run(); it is exercised manually.
-omit = ["src/web/__main__.py"]
 
 [tool.coverage.report]
 # Coding rule R3: >=99% coverage, verified each stage.

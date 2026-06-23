@@ -30,10 +30,15 @@ pip install -e ".[dev]"
 
 # 3. Run the test suite (applies migrations automatically)
 pytest --cov
+
+# 4. Run the governance console (applies migrations on startup)
+python app.py            # serves http://127.0.0.1:5015
 ```
 
 Copy `.env.example` to `.env` to override any connection settings; defaults
-match `docker-compose.yml`.
+match `docker-compose.yml`. The web host/port are configurable via
+`MKM_WEB_HOST` / `MKM_WEB_PORT` (default `127.0.0.1:5015`). A WSGI server can
+serve the app object directly, e.g. `gunicorn app:app`.
 
 ## Architecture notes
 
