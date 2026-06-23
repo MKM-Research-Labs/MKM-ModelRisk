@@ -84,7 +84,7 @@ const Bibliography = {
         : fieldDisplay(r.title)) + "</td><td>" + fieldDisplay(r.journal) + "</td><td>" +
       (r.category ? '<span class="badge" style="background:#1976d2">' + esc(r.category) + "</span>" : "—") +
       '</td><td class="rowact"><span class="edit-btn" data-bibed="' + esc(r.item_id) + '">Edit</span>' +
-      '<span class="edit-btn" data-bibrm="' + esc(r.item_id) + '">Del</span></td></tr>").join("") :
+      '<span class="edit-btn" data-bibrm="' + esc(r.item_id) + '">Del</span></td></tr>').join("") :
       '<tr><td colspan="6" class="empty">No references.</td></tr>';
     document.getElementById("bib-rows").innerHTML = rows;
     const self = this;
