@@ -53,7 +53,10 @@ const Inventory = {
     el.innerHTML =
       this._registerCard(specs) +
       '<div id="m-summary"></div>' +
-      '<div class="card"><h3>Inventory</h3><div id="m-list"></div></div>' +
+      '<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Inventory</h3>' +
+      '<span style="flex:1"></span>' +
+      '<a class="btn small primary" href="/api/models/risk-report.pdf" target="_blank">&darr; Model Risk Report</a>' +
+      '</div><div id="m-list" style="margin-top:12px"></div></div>' +
       '<div id="m-detail"></div>';
     document.getElementById("m-register").onclick = () => this._register();
     await this.loadList();

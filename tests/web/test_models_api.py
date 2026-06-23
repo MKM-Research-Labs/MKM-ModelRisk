@@ -68,6 +68,15 @@ def test_risk_rating_unknown_model_is_404(client):
     assert client.get("/api/models/none/risk-rating").status_code == 404
 
 
+def test_risk_report_pdf(client, monkeypatch):
+    monkeypatch.setattr("src.governance.mrc.pack.compile_tex", lambda tex, assets=None: b"%PDF-stub")
+    _register(client)
+    response = client.get("/api/models/risk-report.pdf")
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert response.data.startswith(b"%PDF")
+
+
 def test_field_specs_endpoint(client):
     specs = client.get("/api/models/fields").get_json()
     group_names = [g["group"] for g in specs["groups"]]

@@ -61,8 +61,8 @@ def find_document(aggregate_type: str, aggregate_id: str, item_id: str, config=N
 
 
 def add_document(
-    *, aggregate_type: str, aggregate_id: str, scope: str, category: str,
-    filename: str, data: bytes, description: str, actor: str, config=None,
+    *, aggregate_type: str, aggregate_id: str, scope: str, filename: str, data: bytes,
+    description: str, actor: str, category: str = "", config=None,
 ) -> dict:
     """Store the file on disk and record its metadata against the aggregate."""
     meta = save_upload(scope, filename, data)
