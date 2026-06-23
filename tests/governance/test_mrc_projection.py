@@ -33,15 +33,15 @@ from src.governance.mrc import (
 
 def test_rebuild_reflects_meeting_and_collections():
     schedule_meeting(meeting_id="MTG1", title="Q2 MRC", date="2026-06-30", actor="a")
-    update_meeting_field(meeting_id="MTG1", field="status", value="Held", actor="a")
+    update_meeting_field(meeting_id="MTG1", field="status", value="Completed", actor="a")
     add_collection_item(meeting_id="MTG1", collection="agenda",
                         fields={"title": "Review", "presenter": "bob"}, actor="a")
     add_collection_item(meeting_id="MTG1", collection="participants",
-                        fields={"name": "Carol", "attendance": "Present"}, actor="a")
+                        fields={"name": "Carol", "status": "Attended"}, actor="a")
     assert rebuild_meeting_view() == 1
 
     meeting = get_meeting("MTG1")
-    assert meeting["status"] == "Held"
+    assert meeting["status"] == "Completed"
     assert meeting["data"]["title"] == "Q2 MRC"
     assert meeting["data"]["agenda"][0]["item_id"] == "AG-001"
     assert meeting["data"]["participants"][0]["name"] == "Carol"

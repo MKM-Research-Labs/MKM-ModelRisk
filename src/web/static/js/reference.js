@@ -31,6 +31,6 @@ const Reference = {
       "menus. People populate the Owner, Peer reviewer and Chair dropdowns; the menus populate " +
       "the organisation dropdowns. Everyone may amend; every change is recorded in the audit trail.</p>" +
       Collections.render(res.data, specs, false) + "</div>";
-    Collections.bind("/api/reference/collections/", specs, false, () => this.render());
+    Collections.bind("/api/reference/collections/", specs, false, () => this.render(), res.data);
   },
 };

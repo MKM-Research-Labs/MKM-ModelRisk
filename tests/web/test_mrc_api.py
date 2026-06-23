@@ -56,6 +56,36 @@ def test_get_unknown_meeting_is_404(client):
     assert client.get("/api/meetings/none").status_code == 404
 
 
+def test_models_in_scope_joins_inventory(client):
+    client.post(
+        "/api/models",
+        json={"model_id": "MKM-X", "name": "Example X", "confirmed": True,
+              "fields": {"tier": 2, "rag_rating": "Green", "next_review_date": "2020-01-01"}},
+        headers=HEADERS,
+    )
+    _schedule(client)
+    _add(client, "models_in_scope", {"model_id": "MKM-X"})
+    rows = client.get("/api/meetings/MTG1/models").get_json()
+    assert rows[0]["model_id"] == "MKM-X"
+    assert rows[0]["name"] == "Example X"
+    assert rows[0]["tier"] == 2
+    assert rows[0]["rag_rating"] == "Green"
+    assert rows[0]["review_status"] == "Overdue"
+
+
+def test_models_in_scope_handles_unknown_model(client):
+    _schedule(client)
+    _add(client, "models_in_scope", {"model_id": "GHOST"})
+    rows = client.get("/api/meetings/MTG1/models").get_json()
+    assert rows[0]["model_id"] == "GHOST"
+    assert rows[0]["name"] is None
+    assert rows[0]["review_status"] == "Not Scheduled"
+
+
+def test_models_endpoint_unknown_meeting_is_404(client):
+    assert client.get("/api/meetings/none/models").status_code == 404
+
+
 def test_update_meeting_field(client):
     _schedule(client)
     response = client.post(

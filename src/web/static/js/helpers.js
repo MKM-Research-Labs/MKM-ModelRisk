@@ -82,6 +82,17 @@ function vqBadge(status) {
   return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
 }
 
+const REVIEW_COLORS = {
+  "Overdue": "#d32f2f", "Due Soon": "#f57c00", "Upcoming": "#1976d2",
+  "On Track": "#388e3c", "Not Scheduled": "#9e9e9e",
+};
+
+// Model review-status badge (Overdue / Due Soon / Upcoming / On Track).
+function reviewBadge(status) {
+  const color = REVIEW_COLORS[status] || "#9e9e9e";
+  return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
+}
+
 // Yes/No test flag as a tick or cross.
 function yesNo(value) {
   if (value === "Yes") return '<span style="color:#388e3c">&#10004; Yes</span>';

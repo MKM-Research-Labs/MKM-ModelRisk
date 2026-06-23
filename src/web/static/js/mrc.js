@@ -79,9 +79,7 @@ const MRC = {
     return '<div class="summary">' +
       card("Total", meetings.length, "#1976d2") +
       card("Scheduled", c("Scheduled"), "#1976d2") +
-      card("In Progress", c("In Progress"), "#f57c00") +
-      card("Held", c("Held"), "#388e3c") +
-      card("Cancelled", c("Cancelled"), "#9e9e9e") + "</div>";
+      card("Completed", c("Completed"), "#388e3c") + "</div>";
   },
 
   async loadList() {
@@ -95,14 +93,18 @@ const MRC = {
     let rows = "";
     meetings.forEach(function (m) {
       const d = m.data || {};
+      const n = (k) => (d[k] || []).length;
       rows += '<tr class="clickable" data-id="' + esc(m.meeting_id) + '">' +
         '<td class="modelid">' + esc(m.meeting_id) + "</td>" +
         "<td>" + fieldDisplay(d.title) + "</td>" +
         "<td>" + fieldDisplay(d.date) + "</td>" +
-        "<td>" + statusBadge(m.status) + "</td></tr>";
+        "<td>" + statusBadge(m.status) + "</td>" +
+        '<td class="num">' + n("models_in_scope") + '</td><td class="num">' + n("agenda") + "</td>" +
+        '<td class="num">' + n("minutes") + '</td><td class="num">' + n("documents") + "</td></tr>";
     });
     box.innerHTML =
-      "<table><thead><tr><th>ID</th><th>Title</th><th>Date</th><th>Status</th></tr></thead><tbody>" +
+      "<table><thead><tr><th>ID</th><th>Title</th><th>Date</th><th>Status</th>" +
+      "<th>Models</th><th>Agenda</th><th>Minutes</th><th>Docs</th></tr></thead><tbody>" +
       rows + "</tbody></table>";
     box.querySelectorAll("tr.clickable").forEach(function (tr) {
       tr.onclick = function () { MeetingDetail.show(tr.getAttribute("data-id")); };

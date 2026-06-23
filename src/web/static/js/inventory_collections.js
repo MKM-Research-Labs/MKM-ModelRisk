@@ -38,9 +38,11 @@ const Collections = {
 
   _row(c, item, retired) {
     const cells = c.fields.map((f) => this._cell(c, item, f, retired)).join("");
-    const remove = retired ? "" :
-      '<td><span class="edit-btn" data-rm="' + c.key + "|" + esc(item.item_id) + '">remove</span></td>';
-    return "<tr>" + cells + remove + "</tr>";
+    const actions = retired ? "" :
+      '<td class="rowact"><span class="edit-btn" data-ed="' + c.key + "|" + esc(item.item_id) +
+      '">edit</span><span class="edit-btn" data-rm="' + c.key + "|" + esc(item.item_id) +
+      '">remove</span></td>';
+    return "<tr>" + cells + actions + "</tr>";
   },
 
   _section(c, items, retired) {
@@ -63,10 +65,19 @@ const Collections = {
       '<button class="btn small" data-add="' + c.key + '">Add…</button></div>';
   },
 
-  bind(base, specs, retired, refresh) {
+  bind(base, specs, retired, refresh, data) {
     if (retired) return;
     const byKey = {};
     specs.collections.forEach((c) => { byKey[c.key] = c; });
+    const self = this;
+
+    document.querySelectorAll("[data-ed]").forEach(function (el) {
+      const parts = el.getAttribute("data-ed").split("|");
+      el.onclick = function () {
+        const items = (data || {})[parts[0]] || [];
+        self._editItem(base, byKey[parts[0]], parts[1], items, refresh);
+      };
+    });
 
     document.querySelectorAll("[data-add]").forEach(function (btn) {
       const c = byKey[btn.getAttribute("data-add")];
@@ -98,5 +109,31 @@ const Collections = {
           "POST", base + parts[0] + "/" + parts[1], { fields: fields }, refresh);
       };
     });
+  },
+
+  // Replace a row in place with an editor for all of the item's fields.
+  _editItem(base, c, itemId, items, refresh) {
+    const item = items.find((i) => i.item_id === itemId) || {};
+    const row = document.querySelector('[data-ed="' + c.key + "|" + itemId + '"]').closest("tr");
+    const inputs = c.fields.map((f) =>
+      '<div class="field"><label>' + esc(f.label) + "</label>" +
+      inputControl("ce-" + f.key, f) + "</div>").join("");
+    row.innerHTML = '<td colspan="' + (c.fields.length + 1) + '"><div class="row">' + inputs +
+      '<button class="btn small primary" id="ce-save">Save…</button>' +
+      '<button class="btn small" id="ce-cancel">Cancel</button></div></td>';
+    c.fields.forEach(function (f) {
+      const el = document.getElementById("ce-" + f.key);
+      if (item[f.key] !== null && item[f.key] !== undefined) el.value = item[f.key];
+    });
+    document.getElementById("ce-cancel").onclick = refresh;
+    document.getElementById("ce-save").onclick = function () {
+      const fields = {};
+      c.fields.forEach(function (f) {
+        const v = val("ce-" + f.key);
+        if (v !== "") fields[f.key] = v;
+      });
+      App.amend("Update " + itemId + ".", "POST", base + c.key + "/" + itemId,
+        { fields: fields }, refresh);
+    };
   },
 };
