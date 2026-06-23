@@ -48,4 +48,7 @@ def test_double_click_opens_meeting_detail(page: Page, base_url: str):
     open_tab(page, "mrc")
     _schedule(page, "MRC-2026-Q4", "Q4 Model Risk Committee")
     page.dblclick("tr.clickable[data-id='MRC-2026-Q4']")
-    expect(page.locator("#mt-detail")).to_contain_text("MRC-2026-Q4")
+    detail = page.locator("#mt-detail")
+    expect(detail).to_contain_text("Q4 Model Risk Committee")
+    expect(detail).to_contain_text("Agenda")
+    expect(detail).to_contain_text("Meeting Pack PDF")

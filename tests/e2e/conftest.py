@@ -108,7 +108,7 @@ def live_server(tmp_path_factory) -> str:
                 proc.kill()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def base_url(live_server: str) -> str:
     return live_server
 
