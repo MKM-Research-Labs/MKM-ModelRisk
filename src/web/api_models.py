@@ -22,13 +22,15 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, Response, jsonify, request, send_file
 
 from config.governance import COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPECS, REGISTER_FIELDS
 from src.files import UploadError, upload_path
 from src.governance.documents import add_document, find_document, remove_document
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
+from src.governance.model_inventory.report import render_report_pdf
 from src.governance.model_inventory.risk import compute_risk_rating
+from src.governance.mrc_settings import get_settings
 from src.command import dispatch
 from src.governance.model_inventory import (
     add_collection_item,
@@ -154,6 +156,15 @@ def delete_document(model_id: str, item_id: str):
 @models_bp.get("")
 def list_all():
     return jsonify(list_models())
+
+
+@models_bp.get("/risk-report.pdf")
+def risk_report():
+    """The Model Risk Report (MRC status) as a LaTeX-generated PDF."""
+    pdf = render_report_pdf(list_models(), get_settings(), date.today().isoformat())
+    return Response(pdf, mimetype="application/pdf", headers={
+        "Content-Disposition": 'inline; filename="model_risk_report.pdf"',
+    })
 
 
 @models_bp.get("/<model_id>")

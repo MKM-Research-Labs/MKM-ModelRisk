@@ -1,0 +1,75 @@
+# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+#
+# This software is licensed by MKM Research Labs for non-commercial
+# research and educational use only. Any commercial use, including
+# but not limited to use in or for products or services offered for sale,
+# internal business operations intended for commercial advantage, or
+# research and development conducted for a commercial entity, is expressly
+# prohibited unless separately authorized in writing by MKM Research Labs.
+#
+# Use, reproduction, distribution, or modification of this code is subject to the
+# terms and conditions of the license agreement provided with this software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""HTTP API for governance-wide documents (the top-level Documents tab)."""
+from __future__ import annotations
+
+from flask import Blueprint, jsonify, request, send_file
+
+from src.files import UploadError, upload_path
+from src.governance.documents import (
+    add_document,
+    find_document,
+    list_documents,
+    remove_document,
+)
+from src.web._helpers import request_actor
+
+documents_bp = Blueprint("documents", __name__, url_prefix="/api/documents")
+
+_AGG = "GovernanceDocuments"
+_ID = "global"
+_SCOPE = "governance"
+
+
+@documents_bp.get("")
+def list_all():
+    return jsonify(list_documents(_AGG, _ID))
+
+
+@documents_bp.post("")
+def upload():
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        add_document(
+            aggregate_type=_AGG, aggregate_id=_ID, scope=_SCOPE, filename=file.filename,
+            data=file.read(), description=request.form.get("description", ""), actor=request_actor(),
+        )
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(list_documents(_AGG, _ID)), 201
+
+
+@documents_bp.get("/<item_id>/download")
+def download(item_id: str):
+    doc = find_document(_AGG, _ID, item_id)
+    if doc is None:
+        return jsonify({"error": "document not found"}), 404
+    path = upload_path(_SCOPE, doc["filename"])
+    if not path.exists():
+        return jsonify({"error": "file missing"}), 404
+    return send_file(str(path), as_attachment=True, download_name=doc["original_name"])
+
+
+@documents_bp.post("/<item_id>/delete")
+def delete(item_id: str):
+    remove_document(aggregate_type=_AGG, aggregate_id=_ID, item_id=item_id, actor=request_actor())
+    return jsonify(list_documents(_AGG, _ID))

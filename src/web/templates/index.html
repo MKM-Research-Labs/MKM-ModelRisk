@@ -23,6 +23,8 @@
   <nav class="tabs">
     <button class="tab active" data-tab="inventory">Model Inventory</button>
     <button class="tab" data-tab="mrc">MRC Meetings</button>
+    <button class="tab" data-tab="documents">Documents</button>
+    <button class="tab" data-tab="bibliography">Bibliography</button>
     <button class="tab" data-tab="audit">Audit Trail</button>
     <button class="tab" data-tab="reference">Admin</button>
   </nav>
@@ -30,6 +32,8 @@
   <main>
     <section id="tab-inventory" class="panel active"></section>
     <section id="tab-mrc" class="panel"></section>
+    <section id="tab-documents" class="panel"></section>
+    <section id="tab-bibliography" class="panel"></section>
     <section id="tab-audit" class="panel"></section>
     <section id="tab-reference" class="panel"></section>
   </main>
@@ -64,6 +68,8 @@
   <script src="{{ url_for('static', filename='js/mrc.js') }}"></script>
   <script src="{{ url_for('static', filename='js/mrc_detail.js') }}"></script>
   <script src="{{ url_for('static', filename='js/audit.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/gov_docs.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/bibliography.js') }}"></script>
   <script src="{{ url_for('static', filename='js/settings.js') }}"></script>
   <script src="{{ url_for('static', filename='js/reference.js') }}"></script>
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>

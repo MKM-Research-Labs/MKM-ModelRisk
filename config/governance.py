@@ -254,6 +254,17 @@ REFERENCE_SPECS = {
 # Per-model document categories (each a sub-tab on the model Docs tab).
 DOC_CATEGORIES = ("Core Documentation", "Test Results", "Analysis", "Monitoring")
 
+# --- Bibliography ---
+BIBLIOGRAPHY_SPEC = {"label": "References", "id_prefix": "REF", "fields": [
+    {"key": "authors", "label": "Author(s)", "type": "text", "required": True},
+    {"key": "year", "label": "Year", "type": "text"},
+    {"key": "title", "label": "Title", "type": "text", "required": True},
+    {"key": "journal", "label": "Journal / Publisher", "type": "text"},
+    {"key": "category", "label": "Category", "type": "text"},
+    {"key": "url", "label": "URL", "type": "text"},
+]}
+BIBLIOGRAPHY_SPECS = {"references": BIBLIOGRAPHY_SPEC}
+
 
 # --- MRC settings & branding (header for the console and Meeting Pack PDF) ---
 VALID_FREQUENCY = ("Monthly", "Quarterly", "Semi-annual", "Annual")
