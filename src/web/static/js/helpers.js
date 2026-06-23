@@ -93,6 +93,13 @@ function reviewBadge(status) {
   return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
 }
 
+// Human-readable file size.
+function fmtSize(bytes) {
+  if (bytes === null || bytes === undefined) return "—";
+  const kb = bytes / 1024;
+  return kb < 1024 ? kb.toFixed(1) + " KB" : (kb / 1024).toFixed(1) + " MB";
+}
+
 // Yes/No test flag as a tick or cross.
 function yesNo(value) {
   if (value === "Yes") return '<span style="color:#388e3c">&#10004; Yes</span>';

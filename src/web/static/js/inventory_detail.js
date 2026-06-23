@@ -81,7 +81,7 @@ const Detail = {
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
       ["assumptions", "Assumptions", n("assumptions")], ["change_history", "Changes", null],
       ["validation_questions", "Validation", cov], ["risk", "Risk Rating", null],
-      ["audit", "Audit", this._audit.length],
+      ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
     ];
     return '<div class="dtabs">' + tabs.map((t) =>
       '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-dtab="' + t[0] + '">' +
@@ -94,6 +94,10 @@ const Detail = {
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
     if (this._tab === "risk") { box.innerHTML = DetailTabs.risk(this._risk); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
+    if (this._tab === "docs") {
+      ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [], this._model.retired);
+      return;
+    }
     if (this._tab === "validation_questions") {
       box.innerHTML = DetailTabs.validation(d, this._model.retired);
       this._bindCollection("validation_questions"); return;
