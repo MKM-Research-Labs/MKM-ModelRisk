@@ -17,7 +17,9 @@ database-grant immutability, projection replay. Next: governance domains on top.
 
 ## Development quickstart
 
-Requires Docker and Python 3.13.
+Requires Docker and Python 3.13. The Meeting Pack PDF additionally needs a LaTeX
+engine — install [tectonic](https://tectonic-typesetting.github.io/)
+(`brew install tectonic`).
 
 ```bash
 # 1. Start PostgreSQL (host port 5433, to avoid colliding with other local DBs)

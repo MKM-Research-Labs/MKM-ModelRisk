@@ -22,11 +22,17 @@
 // shared Collections renderer — each menu list is just a collection of values.
 const Reference = {
   async render() {
+    const el = document.getElementById("tab-reference");
+    el.innerHTML = '<div id="admin-settings"></div><div id="admin-menus"></div>';
+    await Settings.render(document.getElementById("admin-settings"));
+    await this._renderMenus(document.getElementById("admin-menus"));
+  },
+
+  async _renderMenus(container) {
     const res = await App.get("/api/reference");
     const specs = { collections: res.collections };
-    const el = document.getElementById("tab-reference");
-    el.innerHTML =
-      '<div class="card"><h3>Administration — people &amp; menu lists</h3>' +
+    container.innerHTML =
+      '<div class="card"><h3>People &amp; menu lists</h3>' +
       '<p class="muted">Manage the people directory and the Company / Division / Department ' +
       "menus. People populate the Owner, Peer reviewer and Chair dropdowns; the menus populate " +
       "the organisation dropdowns. Everyone may amend; every change is recorded in the audit trail.</p>" +
