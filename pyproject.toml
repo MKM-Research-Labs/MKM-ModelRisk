@@ -13,6 +13,10 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
 ]
+e2e = [
+    "playwright>=1.49",
+    "pytest-playwright>=0.6",
+]
 
 [tool.setuptools.packages.find]
 include = ["config*", "src*"]
@@ -20,7 +24,10 @@ include = ["config*", "src*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q"
+addopts = "-q -m 'not e2e'"
+markers = [
+    "e2e: end-to-end browser tests against a live server (run with: pytest tests/e2e -m e2e)",
+]
 
 [tool.coverage.run]
 # ctrace avoids the Python 3.13.x sys.monitoring tracer deflation bug that
