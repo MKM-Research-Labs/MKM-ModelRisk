@@ -86,6 +86,19 @@ def test_models_endpoint_unknown_meeting_is_404(client):
     assert client.get("/api/meetings/none/models").status_code == 404
 
 
+def test_pack_pdf_endpoint(client, monkeypatch):
+    monkeypatch.setattr("src.governance.mrc.pack.compile_tex", lambda tex, assets=None: b"%PDF-stub")
+    _schedule(client)
+    response = client.get("/api/meetings/MTG1/pack.pdf")
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert response.data.startswith(b"%PDF")
+
+
+def test_pack_pdf_unknown_meeting_is_404(client):
+    assert client.get("/api/meetings/none/pack.pdf").status_code == 404
+
+
 def test_update_meeting_field(client):
     _schedule(client)
     response = client.post(

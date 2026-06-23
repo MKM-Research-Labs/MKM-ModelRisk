@@ -43,6 +43,12 @@ def reference_options() -> dict[str, list]:
     }
 
 
+def request_actor() -> str:
+    """The SSO actor for a non-JSON (e.g. multipart upload) request."""
+    from src.identity import resolve_principal
+    return resolve_principal(request.headers).actor
+
+
 def context_from_request(body: dict[str, Any]) -> CommandContext:
     """Build the command context from SSO headers and the confirm flag."""
     return context_from_headers(

@@ -48,6 +48,12 @@ def _database_ready():
 
 
 @pytest.fixture(autouse=True)
+def _isolate_uploads(tmp_path, monkeypatch):
+    # Keep uploaded test files out of the real uploads directory.
+    monkeypatch.setattr("src.files.store.UPLOAD_DIR", tmp_path / "uploads")
+
+
+@pytest.fixture(autouse=True)
 def _clean_event_log():
     # Reset as the owner role; the app role is forbidden from truncating.
     with owner_connection() as conn:
