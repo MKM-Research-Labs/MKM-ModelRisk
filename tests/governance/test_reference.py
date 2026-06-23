@@ -52,10 +52,15 @@ def test_add_person_record():
 
 
 def test_add_multiple_options_increment_ids():
-    add_option(list_name="division", fields={"value": "Group Risk"}, actor="admin")
-    add_option(list_name="division", fields={"value": "Markets"}, actor="admin")
+    add_option(list_name="division", fields={"value": "Group Risk", "company": "MKM Bank"}, actor="admin")
+    add_option(list_name="division", fields={"value": "Markets", "company": "MKM Bank"}, actor="admin")
     ids = [item["item_id"] for item in get_reference_lists()["division"]]
     assert ids == ["DV-001", "DV-002"]
+
+
+def test_division_requires_its_company():
+    with pytest.raises(DomainError):
+        add_option(list_name="division", fields={"value": "Orphan"}, actor="admin")
 
 
 def test_remove_option():
