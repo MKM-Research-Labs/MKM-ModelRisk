@@ -36,6 +36,9 @@ body {
 .actor label { color: var(--text-2); font-size: 12px; }
 .actor input { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; width: 200px; font: inherit; }
 .actor .hint { color: var(--muted); font-size: 11px; font-style: italic; }
+.org-scope { display: flex; align-items: center; gap: 8px; }
+.org-scope label { color: var(--text-2); font-size: 12px; }
+.org-scope select { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font: inherit; background: #fff; }
 .tabs { display: flex; gap: 4px; padding: 0 24px; background: var(--panel); border-bottom: 1px solid var(--line); }
 .tab { background: none; border: none; color: var(--muted); padding: 12px 16px; cursor: pointer; font: inherit; border-bottom: 2px solid transparent; }
 .tab:hover { color: var(--text); }

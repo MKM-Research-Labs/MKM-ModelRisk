@@ -88,6 +88,8 @@ const Inventory = {
       if (f.type === "tier") v = parseInt(v, 10);
       fields[key] = v;
     });
+    // Company / Division come from the header org-scope selector.
+    Object.assign(fields, OrgScope.get());
     App.amend('Register model "' + id + '" (' + name + ").", "POST", "/api/models",
       { model_id: id, name: name, fields: fields }, () => this.render());
   },
@@ -107,11 +109,14 @@ const Inventory = {
   },
 
   async loadList() {
-    const models = await App.get("/api/models");
+    const all = await App.get("/api/models");
+    const models = all.filter((m) => OrgScope.matches(m.data));
     document.getElementById("m-summary").innerHTML = this._summary(models);
     const box = document.getElementById("m-list");
     if (!models.length) {
-      box.innerHTML = '<div class="empty">No models yet. Register one above.</div>';
+      box.innerHTML = '<div class="empty">' +
+        (all.length ? "No models in the selected Company / Division."
+          : "No models yet. Register one above.") + "</div>";
       return;
     }
     let rows = "";

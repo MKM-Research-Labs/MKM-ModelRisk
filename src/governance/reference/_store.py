@@ -19,8 +19,8 @@
 # SOFTWARE.
 """Reference-data store: admin-managed menu lists, event-sourced.
 
-A single global aggregate whose collections are the menu lists (company,
-division, department). State is folded from the event log via the shared
+A single global aggregate whose collections are the menu lists (people,
+company, division). State is folded from the event log via the shared
 collection engine; no projection table is needed at this scale.
 """
 from __future__ import annotations
