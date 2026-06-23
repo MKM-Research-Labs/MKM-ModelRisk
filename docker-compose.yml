@@ -5,6 +5,8 @@ services:
   postgres:
     image: postgres:16
     container_name: mkm-modelrisk-pg
+    # Auto-start with the Docker engine (e.g. after a restart or a disk-image move).
+    restart: unless-stopped
     environment:
       POSTGRES_USER: mkm_owner
       POSTGRES_PASSWORD: mkm_dev_pw
