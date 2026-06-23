@@ -12,7 +12,10 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - mkm_modelrisk_pgdata:/var/lib/postgresql/data
+      # Defaults to a portable named volume (stored inside Docker Desktop's disk
+      # image). Set MKM_PG_DATA_DIR in .env to an absolute host path to keep the
+      # database off the internal disk — e.g. an external SSD.
+      - "${MKM_PG_DATA_DIR:-mkm_modelrisk_pgdata}:/var/lib/postgresql/data"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mkm_owner -d mkm_modelrisk"]
       interval: 3s
