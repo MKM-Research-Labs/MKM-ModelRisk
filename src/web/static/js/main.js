@@ -37,11 +37,16 @@ async function showTab(name) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
   document.querySelectorAll(".tab").forEach(function (btn) {
     btn.onclick = function () { showTab(btn.getAttribute("data-tab")); };
   });
   document.getElementById("confirm-ok").onclick = function () { App.confirmPending(); };
   document.getElementById("confirm-cancel").onclick = function () { App.closeConfirm(); };
+  // Changing the org scope re-filters the inventory if it's on screen.
+  OrgScope.onChange(function () {
+    if (document.getElementById("m-list")) Inventory.loadList();
+  });
+  await OrgScope.init();
   showTab("inventory");
 });

@@ -22,7 +22,7 @@
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 
-REFERENCE_LISTS = ("people", "company", "division", "department")
+REFERENCE_LISTS = ("people", "company", "division")
 REFERENCE_SPECS = {
     "people": {"label": "People", "id_prefix": "PE", "display": "name", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},
@@ -34,9 +34,6 @@ REFERENCE_SPECS = {
         {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
     "division": {"label": "Division", "id_prefix": "DV", "display": "value", "fields": [
-        {"key": "value", "label": "Value", "type": "text", "required": True},
-    ]},
-    "department": {"label": "Department", "id_prefix": "DP", "display": "value", "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
 }

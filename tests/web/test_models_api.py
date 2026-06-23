@@ -83,12 +83,14 @@ def test_field_specs_endpoint(client):
     assert "Organisation" in group_names
     org = next(g for g in specs["groups"] if g["group"] == "Organisation")
     org_keys = [f["key"] for f in org["fields"]]
-    assert org_keys == ["company", "division", "department", "repo_location", "codebase"]
+    assert org_keys == ["company", "division", "repo_location", "codebase"]
     # A choice field carries its options for the UI to render a dropdown.
     rag = next(f for g in specs["groups"] for f in g["fields"] if f["key"] == "rag_rating")
     assert rag["type"] == "choice"
     assert "Amber" in rag["options"]
-    assert "company" in specs["register"]
+    # Company/Division are set via the header org-scope selector, not the register form.
+    assert "company" not in specs["register"]
+    assert "tier" in specs["register"]
 
 
 def test_register_with_organisation_fields(client):
@@ -100,7 +102,6 @@ def test_register_with_organisation_fields(client):
             "fields": {
                 "company": "MKM Bank",
                 "division": "Risk",
-                "department": "Model Risk",
                 "repo_location": "git@github.com:mkm/credit.git",
                 "codebase": "credit-scoring",
                 "tier": 2,

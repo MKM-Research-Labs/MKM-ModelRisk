@@ -42,18 +42,18 @@ TIER_MIN = 1
 TIER_MAX = 5
 
 # Fields captured on the registration form (besides the mandatory id + name).
+# Company and Division are NOT here — they come from the org-scope selector in
+# the header, so a model is defined by its ID within the selected Company/Division.
 REGISTER_FIELDS = (
-    "company", "division", "department", "repo_location", "codebase",
-    "category", "tier", "owner",
+    "repo_location", "codebase", "category", "tier", "owner",
 )
 
 # Ordered scalar field specifications. type is one of: text | choice | date | tier.
 MODEL_FIELD_SPECS = {
-    # --- Organisation (company/division/department are backed by admin-managed
-    #     reference lists; they render as dropdowns once the lists are populated) ---
+    # --- Organisation (company/division are backed by admin-managed reference
+    #     lists and set via the header org-scope selector) ---
     "company": {"label": "Company", "type": "text", "group": "Organisation", "reference": "company"},
     "division": {"label": "Division", "type": "text", "group": "Organisation", "reference": "division"},
-    "department": {"label": "Department", "type": "text", "group": "Organisation", "reference": "department"},
     "repo_location": {"label": "Repository location", "type": "text", "group": "Organisation"},
     "codebase": {"label": "Codebase", "type": "text", "group": "Organisation"},
     # --- Classification ---
