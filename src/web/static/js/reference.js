@@ -18,25 +18,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Admin tab: maintain the Company / Division / Department menu lists. Reuses the
-// shared Collections renderer — each menu list is just a collection of values.
+// Admin tab: sub-tabs for each section (left to right) — Company, Division,
+// Department, MRC settings, People. The org lists reuse the shared Collections
+// renderer; a Division picks its Company and a Department its Division.
 const Reference = {
+  _tab: "company",
+  _TABS: [
+    ["company", "Company"], ["division", "Division"], ["department", "Department"],
+    ["mrc", "MRC"], ["people", "People"],
+  ],
+
   async render() {
     const el = document.getElementById("tab-reference");
-    el.innerHTML = '<div id="admin-settings"></div><div id="admin-menus"></div>';
-    await Settings.render(document.getElementById("admin-settings"));
-    await this._renderMenus(document.getElementById("admin-menus"));
+    const bar = this._TABS.map(([k, label]) =>
+      '<button class="dtab' + (k === this._tab ? " active" : "") + '" data-atab="' + k + '">' +
+      label + "</button>").join("");
+    el.innerHTML = '<div class="card"><div class="dtabs">' + bar + '</div><div id="admin-body"></div></div>';
+    el.querySelectorAll("[data-atab]").forEach((btn) => {
+      btn.onclick = () => { this._tab = btn.getAttribute("data-atab"); this.render(); };
+    });
+    await this._renderBody(document.getElementById("admin-body"));
   },
 
-  async _renderMenus(container) {
+  async _renderBody(container) {
+    if (this._tab === "mrc") {
+      await Settings.render(container);
+      return;
+    }
     const res = await App.get("/api/reference");
-    const specs = { collections: res.collections };
-    container.innerHTML =
-      '<div class="card"><h3>People &amp; menu lists</h3>' +
-      '<p class="muted">Manage the people directory and the Company / Division / Department ' +
-      "menus. People populate the Owner, Peer reviewer and Chair dropdowns; the menus populate " +
-      "the organisation dropdowns. Everyone may amend; every change is recorded in the audit trail.</p>" +
-      Collections.render(res.data, specs, false) + "</div>";
-    Collections.bind("/api/reference/collections/", specs, false, () => this.render(), res.data);
+    const spec = res.collections.find((c) => c.key === this._tab);
+    const specs = { collections: [spec] };
+    const data = {};
+    data[this._tab] = res.data[this._tab] || [];
+    container.innerHTML = Collections.render(data, specs, false);
+    Collections.bind("/api/reference/collections/", specs, false, () => this.render(), data);
   },
 };

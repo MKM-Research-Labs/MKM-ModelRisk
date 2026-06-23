@@ -42,8 +42,19 @@ def _add_person(client, name):
 
 def test_get_reference_empty(client):
     res = client.get("/api/reference").get_json()
-    assert res["data"] == {"people": [], "company": [], "division": [], "department": []}
-    assert [c["key"] for c in res["collections"]] == ["people", "company", "division", "department"]
+    assert res["data"] == {"company": [], "division": [], "department": [], "people": []}
+    assert [c["key"] for c in res["collections"]] == ["company", "division", "department", "people"]
+
+
+def test_division_company_field_becomes_dropdown(client):
+    # Once a company exists, the Division form's Company field is a dropdown.
+    client.post("/api/reference/collections/company",
+                json={"fields": {"value": "MKM Bank"}, "confirmed": True}, headers=HEADERS)
+    res = client.get("/api/reference").get_json()
+    division = next(c for c in res["collections"] if c["key"] == "division")
+    company_field = next(f for f in division["fields"] if f["key"] == "company")
+    assert company_field["type"] == "choice"
+    assert "MKM Bank" in company_field["options"]
 
 
 def test_add_and_remove_person(client):
