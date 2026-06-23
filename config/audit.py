@@ -30,7 +30,7 @@ CONFIG_DIR = "config"
 
 # Directories never walked by any audit.
 EXCLUDE_DIRS = frozenset({
-    "__pycache__", ".git", ".venv", "node_modules", "uploads", "legacy",
+    "__pycache__", ".git", ".venv", "node_modules", "uploads",
     ".pytest_cache", "htmlcov", "build", "dist", ".claude",
 })
 
