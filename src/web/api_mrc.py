@@ -22,12 +22,14 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, Response, jsonify
 
 from config.governance import MEETING_FIELD_SPECS, MRC_COLLECTION_SPECS
 from src.command import dispatch
 from src.governance.model_inventory import get_model
 from src.governance.model_inventory.review import compute_review_status
+from src.governance.mrc.pack import render_pack_pdf
+from src.governance.mrc_settings import get_settings
 from src.governance.mrc import (
     add_collection_item,
     get_meeting,
@@ -87,6 +89,17 @@ def get_one(meeting_id: str):
     if meeting is None:
         return jsonify({"error": "meeting not found"}), 404
     return jsonify(meeting)
+
+
+@mrc_bp.get("/<meeting_id>/pack.pdf")
+def pack_pdf(meeting_id: str):
+    meeting = get_meeting(meeting_id)
+    if meeting is None:
+        return jsonify({"error": "meeting not found"}), 404
+    pdf = render_pack_pdf(meeting, get_settings())
+    return Response(pdf, mimetype="application/pdf", headers={
+        "Content-Disposition": f'inline; filename="mrc_{meeting_id}.pdf"',
+    })
 
 
 @mrc_bp.get("/<meeting_id>/models")
