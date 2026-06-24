@@ -21,8 +21,6 @@
 // Tabbed MRC meeting detail: Agenda / Minutes / Participants / Models /
 // Decisions / Actions / Documents. The collection tabs reuse the shared
 // Collections renderer (add/edit/remove); Models joins the inventory.
-const MEETING_FIELD_KEYS = ["date", "time", "location", "chair", "status"];
-
 const MeetingDetail = {
   _id: null, _meeting: null, _specs: null, _models: [], _tab: "agenda",
 
@@ -62,7 +60,9 @@ const MeetingDetail = {
     const chip = (label, key) => '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
       label + ':</span> <b>' + fieldDisplay(d[key]) + "</b> " +
       '<span class="edit-btn" data-minfo="' + key + '">edit</span></span>';
-    return '<div class="dh-dates">' + chip("Date", "date") + chip("Time", "time") +
+    return '<div class="dh-dates">' + chip("Company", "company") + chip("Division", "division") +
+      chip("Department", "department") + "</div>" +
+      '<div class="dh-dates">' + chip("Date", "date") + chip("Time", "time") +
       chip("Location", "location") + chip("Chair", "chair") + chip("Status", "status") + "</div>";
   },
 
