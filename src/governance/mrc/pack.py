@@ -73,9 +73,9 @@ def build_tex(meeting: dict, settings: dict, logo_filename: str | None = None) -
 
     info = " \\quad ".join(
         "\\textbf{" + label + ":} " + _esc(data.get(key))
-        for label, key in (("Date", "date"), ("Time", "time"),
-                            ("Location", "location"), ("Chair", "chair"),
-                            ("Status", "status"))
+        for label, key in (("Company", "company"), ("Division", "division"),
+                            ("Department", "department"), ("Date", "date"), ("Time", "time"),
+                            ("Location", "location"), ("Chair", "chair"), ("Status", "status"))
     )
 
     participants = _section("Participants", _table(

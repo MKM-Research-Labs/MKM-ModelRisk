@@ -49,7 +49,7 @@ const MRC = {
       '<div class="scard" style="border-left-color:' + color + ';flex:1"><div class="lbl">' +
       label + '</div><div class="val" style="font-size:15px">' + fieldDisplay(value) + "</div></div>";
     return '<div class="summary" style="margin-bottom:14px">' +
-      card("CHAIR", f.chair, "#1976d2") + card("MODEL OWNER", f.model_owner, "#388e3c") +
+      card("CHAIR", f.chair, "#1976d2") +
       card("FREQUENCY", f.frequency, "#f57c00") + "</div>";
   },
 

@@ -46,10 +46,15 @@ VALID_PARTICIPANT_STATUS = ("Invited", "Attended", "Apologies", "Declined")
 REVIEW_DUE_SOON_DAYS = 30
 REVIEW_UPCOMING_DAYS = 90
 
-# Scalar meeting fields (title/date are mandatory at scheduling time).
+# Scalar meeting fields (title/date are mandatory at scheduling time). An MRC is
+# assigned to a Company, optionally narrowed to a Division and then a Department
+# (each a dropdown from the cascading org hierarchy).
 MEETING_FIELD_SPECS = {
     "title": {"label": "Title", "type": "text"},
     "date": {"label": "Date", "type": "date"},
+    "company": {"label": "Company", "type": "text", "reference": "company"},
+    "division": {"label": "Division", "type": "text", "reference": "division"},
+    "department": {"label": "Department", "type": "text", "reference": "department"},
     "time": {"label": "Time", "type": "text"},
     "location": {"label": "Location", "type": "text"},
     "chair": {"label": "Chair", "type": "text", "reference": "people"},
