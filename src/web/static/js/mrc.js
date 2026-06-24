@@ -57,7 +57,8 @@ const MRC = {
     let inputs =
       '<div class="field"><label>Meeting ID *</label><input id="sc-meeting_id" placeholder="MRC-2026-Q2"></div>';
     specs.fields.forEach(function (f) {
-      if (f.key === "status") return; // status defaults at scheduling time
+      // status defaults at scheduling time; company comes from the header scope.
+      if (f.key === "status" || f.key === "company") return;
       const req = f.key === "title" || f.key === "date" ? " *" : "";
       inputs += '<div class="field"><label>' + esc(f.label) + req + "</label>" +
         inputControl("sc-" + f.key, f) + "</div>";
@@ -74,10 +75,12 @@ const MRC = {
     }
     const fields = {};
     this._specs.fields.forEach(function (f) {
-      if (f.key === "title" || f.key === "date" || f.key === "status") return;
+      if (f.key === "title" || f.key === "date" || f.key === "status" || f.key === "company") return;
       const v = val("sc-" + f.key);
       if (v !== "") fields[f.key] = v;
     });
+    // Company comes from the header org-scope selector, like model registration.
+    Object.assign(fields, OrgScope.get());
     App.amend('Schedule meeting "' + id + '".', "POST", "/api/meetings",
       { meeting_id: id, title: title, date: date, fields: fields }, () => this.render());
   },
