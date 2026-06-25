@@ -107,6 +107,18 @@ Set the **Acting as** field (top right) to your name/email — that identity is
 recorded on every change you make. From there, follow the
 [**User Guide**](docs/user_guide.md).
 
+### Client demo
+
+```bash
+python app.py demo
+```
+
+Serves a separate, pre-seeded **`mkm_modelrisk_demo`** database (created, migrated
+and seeded on first run; never touches your dev data). It loads a worked
+"Sterling Bank" scenario — a branded company logo, divisions/departments, people,
+six vendor models, Market Data Models, Calculating Agents, PVMs, an MRC meeting,
+and a bibliography. The company logo is read from `docs/shared/model_risk_front.png`.
+
 > **Tip:** the database is the only stateful piece. It lives in the cluster's data
 > directory (`./.pgdata` by default, gitignored). Manage it with
 > `scripts/pg.sh start|stop|status`; the data persists across stop/start.
