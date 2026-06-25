@@ -42,8 +42,10 @@ def _add_person(client, name):
 
 def test_get_reference_empty(client):
     res = client.get("/api/reference").get_json()
-    assert res["data"] == {"company": [], "division": [], "department": [], "people": []}
-    assert [c["key"] for c in res["collections"]] == ["company", "division", "department", "people"]
+    assert res["data"] == {"company": [], "division": [], "department": [],
+                           "market_data_model": [], "calculating_agent": [], "people": []}
+    assert [c["key"] for c in res["collections"]] == [
+        "company", "division", "department", "market_data_model", "calculating_agent", "people"]
 
 
 def test_update_company_via_api(client):
@@ -53,6 +55,14 @@ def test_update_company_via_api(client):
                       json={"fields": {"owner": "jane@firm"}, "confirmed": True}, headers=HEADERS)
     assert res.status_code == 200
     assert res.get_json()["company"][0]["owner"] == "jane@firm"
+
+
+def test_mdm_update_frequency_carries_choice_options(client):
+    # A static choice field (not a reference) must keep its options for the form.
+    res = client.get("/api/reference").get_json()
+    mdm = next(c for c in res["collections"] if c["key"] == "market_data_model")
+    freq = next(f for f in mdm["fields"] if f["key"] == "update_frequency")
+    assert freq["type"] == "choice" and "Daily" in freq["options"]
 
 
 def test_division_company_field_becomes_dropdown(client):
