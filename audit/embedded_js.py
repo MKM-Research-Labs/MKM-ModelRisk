@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Embedded-JavaScript audit (coding rule R5): no JS/CSS inside ``.py`` files."""
+"""Embedded-JavaScript audit (coding rule R7): no JS/CSS inside ``.py`` files."""
 from __future__ import annotations
 
 import re

@@ -117,9 +117,12 @@ Until then, reviewed by hand.
 templates under `src/templates/`. They do **not** sit beside the Flask app module
 (`src/web/`). The app factory points Flask at these folders explicitly
 (`Flask(__name__, static_folder="../static", template_folder="../templates")`).
+Embedding JavaScript or CSS **inside a `.py` file is forbidden** — it belongs in a
+dedicated `.js` / `.css` file under `src/static/`.
 
 **Why.** A single, predictable home for front-end assets — independent of which blueprint
 serves them — keeps the layout discoverable and matches the parent engagement's structure.
+JS/CSS buried in Python strings is unlintable, untestable, and easy to break silently.
 
 ```
 src/static/js/    *.js          # one file per UI module
@@ -127,13 +130,40 @@ src/static/css/   app.css
 src/templates/    index.html
 ```
 
-**Verified by.** Reviewed by hand (the directory layout); a misplaced asset shows up as a
-404 in the e2e smoke suite, which loads every script.
+**Verified by.** The embedded-JS/CSS audit (`python -m audit`) flags JavaScript or CSS
+inside `.py` files; the directory layout is reviewed by hand, and a misplaced asset shows
+up as a 404 in the e2e smoke suite, which loads every script.
+
+---
+
+## R8 — Avoid duplication; extract shared logic into a utility
+
+**Rule.** Where practical, do not duplicate logic — lift it into a named utility function
+and call that from both sites. There is **zero tolerance** for duplication that spans two
+models: shared model logic must live in exactly one place that both import.
+
+**Why.** Duplication multiplies technical debt and the cost of ownership: every copy is a
+place a fix can be missed and behaviour can silently diverge.
+
+**How to comply.** When you find yourself copying more than a few lines, stop and extract a
+helper into the nearest shared module (or a dedicated utility module). Across models, never
+copy — promote the logic to a common location.
+
+```python
+# ✗ bad — the same calculation pasted into two places
+# ✓ good
+from src.governance.shared import compute_thing   # one definition, many callers
+```
+
+**Verified by.** The duplicate-code audit (`python -m audit`, jscpd) reports the
+duplication percentage; cross-model duplication is treated as a hard fault in review.
 
 ---
 
 ## Change log
 
+- 2026-06-25 — Added R8 (avoid duplication / extract utilities; zero-tolerance across
+  models). Extended R7 to forbid embedding JS/CSS in `.py` files.
 - 2026-06-25 — Added R7 (front-end assets under `src/static` / `src/templates`).
 - 2026-06-22 — Created for MKM-ModelRisk, adapting R1–R6 from the parent engagement.
   R6 reframed around the `src/database/` event store. Mechanical audits (R1/R2/R4/R5/R6
