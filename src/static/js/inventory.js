@@ -48,50 +48,41 @@ const Inventory = {
   },
 
   async render() {
-    const specs = await this.specs();
+    await this.specs();
     const el = document.getElementById("tab-inventory");
     el.innerHTML =
-      this._registerCard(specs) +
       '<div id="m-summary"></div>' +
       '<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Inventory</h3>' +
       '<span style="flex:1"></span>' +
-      '<a class="btn small primary" href="/api/models/risk-report.pdf" target="_blank">&darr; Model Risk Report</a>' +
+      '<button class="btn small primary" id="m-register">+ Register model</button>' +
+      '<a class="btn small" href="/api/models/risk-report.pdf" target="_blank" ' +
+      'style="margin-left:8px">&darr; Model Risk Report</a>' +
       '</div><div id="m-list" style="margin-top:12px"></div></div>' +
       '<div id="m-detail"></div>';
-    document.getElementById("m-register").onclick = () => this._register();
+    document.getElementById("m-register").onclick = () => this.openRegister();
     await this.loadList();
   },
 
-  _registerCard(specs) {
-    const byKey = {};
-    specs.groups.forEach((g) => g.fields.forEach((f) => { byKey[f.key] = f; }));
-    let inputs =
-      '<div class="field"><label>Model ID *</label><input id="reg-model_id" placeholder="MKM-CR-001"></div>' +
-      '<div class="field"><label>Name *</label><input id="reg-name" placeholder="Retail Credit Scoring"></div>';
-    specs.register.forEach((key) => {
-      const f = byKey[key];
-      if (f) inputs += '<div class="field"><label>' + esc(f.label) + "</label>" +
-        inputControl("reg-" + key, f) + "</div>";
-    });
-    return '<div class="card"><h3>Register a model</h3><div class="row">' +
-      inputs + '<button class="btn primary" id="m-register">Register…</button></div></div>';
+  // Register with the minimum (ID + name); the rest is edited on the model after.
+  openRegister() {
+    document.getElementById("reg-model_id").value = "";
+    document.getElementById("reg-name").value = "";
+    document.getElementById("register-overlay").classList.remove("hidden");
+    document.getElementById("reg-model_id").focus();
   },
 
-  _register() {
+  closeRegister() {
+    document.getElementById("register-overlay").classList.add("hidden");
+  },
+
+  submitRegister() {
     const id = val("reg-model_id"), name = val("reg-name");
     if (!id || !name) { App.toast("Model ID and name are required", "error"); return; }
-    const fields = {};
-    this._specs.register.forEach((key) => {
-      const f = this.specByKey(key);
-      let v = val("reg-" + key);
-      if (v === "") return;
-      if (f.type === "tier") v = parseInt(v, 10);
-      fields[key] = v;
-    });
-    // Company / Division come from the header org-scope selector.
-    Object.assign(fields, OrgScope.get());
+    this.closeRegister();
+    // Company comes from the header org-scope selector; everything else is
+    // edited on the model once it exists.
     App.amend('Register model "' + id + '" (' + name + ").", "POST", "/api/models",
-      { model_id: id, name: name, fields: fields }, () => this.render());
+      { model_id: id, name: name, fields: OrgScope.get() }, () => this.render());
   },
 
   _summary(models) {
