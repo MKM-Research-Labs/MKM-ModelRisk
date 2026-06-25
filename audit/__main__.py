@@ -25,6 +25,7 @@ from config.audit import COVERAGE_MINIMUM
 from audit.duplication import duplication_report
 from audit.embedded_js import embedded_js_findings
 from audit.hardcoding import hardcoding_findings
+from audit.headers import header_findings
 from audit.init_files import init_file_findings
 from audit.large_files import large_source_files, large_test_files
 
@@ -45,6 +46,7 @@ def build_report() -> dict:
         "hardcoding": hardcoding_findings(),
         "embedded_js": embedded_js_findings(),
         "init_files": init_file_findings(),
+        "headers": header_findings(),
         "duplication": duplication_report(),
     }
 
@@ -54,23 +56,26 @@ def main() -> int:
     print("MKM-ModelRisk — coding-rule audit")
     print("=" * 50)
     total = 0
+    total += _print_section("R1 hardcoded parameters", report["hardcoding"],
+                            lambda f: f"{f['path']}:{f['line']}  {f['kind']} {f['name']}")
     total += _print_section("R2 large source files (>300)", report["large_source_files"],
                             lambda f: f"{f['lines']:>4}  {f['path']}")
     total += _print_section("R2 large test files (>400)", report["large_test_files"],
                             lambda f: f"{f['lines']:>4}  {f['path']}")
-    total += _print_section("R1 hardcoded parameters", report["hardcoding"],
-                            lambda f: f"{f['path']}:{f['line']}  {f['kind']} {f['name']}")
-    total += _print_section("R7 embedded JavaScript / CSS", report["embedded_js"],
-                            lambda f: f"{f['path']}:{f['line']}  {f['kind']} ({f['js_lines']} js lines)")
     total += _print_section("R4 substantive __init__.py", report["init_files"],
                             lambda f: f"{f['path']}  fns={f['functions']} classes={f['classes']}")
+    total += _print_section("R5 missing copyright header", report["headers"],
+                            lambda f: f["path"])
+    total += _print_section("R7 embedded JavaScript / CSS", report["embedded_js"],
+                            lambda f: f"{f['path']}:{f['line']}  {f['kind']} ({f['js_lines']} js lines)")
+    print(f"\n.. R3 — Coverage gate enforced at {COVERAGE_MINIMUM}% via pyproject fail_under")
+    print(".. R6 — Data-store access only via src/database (reviewed by hand)")
     dup = report["duplication"]
     if dup.get("available"):
-        print(f"\n.. Duplicate code — {dup['percentage']}% ({dup['clones']} clones, "
+        print(f".. R8 duplicate code — {dup['percentage']}% ({dup['clones']} clones, "
               f"{dup['duplicated_lines']} lines)")
     else:
-        print("\n.. Duplicate code — jscpd not installed, skipped")
-    print(f"\n.. Coverage gate — enforced at {COVERAGE_MINIMUM}% via pyproject fail_under")
+        print(".. R8 duplicate code — jscpd not installed, skipped")
     print("=" * 50)
     print(f"{'PASS' if total == 0 else 'FINDINGS'}: {total} gated finding(s)")
     return 1 if total else 0

@@ -31,40 +31,49 @@ def _findings_section(title: str, findings: list, headers: list[str], row_of) ->
     return _section(title, _table(headers, [row_of(f) for f in findings]))
 
 
+def _result(findings: list) -> str:
+    """A pass/fail cell for a mechanically-checked rule."""
+    return "Pass" if not findings else str(len(findings)) + " finding(s)"
+
+
 def build_audit_tex(report: dict, as_of: str) -> str:
     """Pure: render the LaTeX source for the coding-rule audit report."""
+    dup = report["duplication"]
+    dup_result = (str(dup["percentage"]) + "% (" + str(dup["clones"]) + " clones)"
+                  if dup.get("available") else "not measured")
+    oversize = report["large_source_files"] + report["large_test_files"]
     summary = _table(
-        ["Check", "Findings"],
+        ["Rule", "Requirement", "Result"],
         [
-            ["R2 Large source files (>300 lines)", len(report["large_source_files"])],
-            ["R2 Large test files (>400 lines)", len(report["large_test_files"])],
-            ["R1 Hardcoded parameters", len(report["hardcoding"])],
-            ["R7 Embedded JavaScript / CSS", len(report["embedded_js"])],
-            ["R4 Substantive __init__.py", len(report["init_files"])],
+            ["R1", "Parameters live only in the config package", _result(report["hardcoding"])],
+            ["R2", "No file over the size limit (300 source / 400 test lines)", _result(oversize)],
+            ["R3", "At least " + str(COVERAGE_MINIMUM) + "% test coverage, verified each stage",
+             "enforced via pyproject"],
+            ["R4", "No functions or logic in __init__.py", _result(report["init_files"])],
+            ["R5", "Canonical copyright header on every file", _result(report["headers"])],
+            ["R6", "Data store reached only through src/database", "by code review"],
+            ["R7", "No JavaScript or CSS embedded in .py files", _result(report["embedded_js"])],
+            ["R8", "No duplicated code; shared logic extracted", dup_result],
         ],
     )
-    dup = report["duplication"]
-    dup_line = (
-        "Duplicate code: " + str(dup["percentage"]) + "\\% (" + str(dup["clones"]) +
-        " clones).\\par\n" if dup.get("available") else "Duplicate code: not measured.\\par\n"
-    )
-    cov_line = "Test coverage: enforced at " + str(COVERAGE_MINIMUM) + "\\% via pyproject.\\par\n"
 
     sections = (
-        _section("Summary", summary + "\\medskip\n" + dup_line + cov_line)
-        + _findings_section("R2 — Large source files", report["large_source_files"],
-                            ["File", "Lines"], lambda f: [f["path"], f["lines"]])
-        + _findings_section("R2 — Large test files", report["large_test_files"],
-                            ["File", "Lines"], lambda f: [f["path"], f["lines"]])
+        _section("Summary", summary)
         + _findings_section("R1 — Hardcoded parameters", report["hardcoding"],
                             ["File", "Line", "Kind", "Name"],
                             lambda f: [f["path"], f["line"], f["kind"], f["name"]])
-        + _findings_section("R7 — Embedded JavaScript / CSS", report["embedded_js"],
-                            ["File", "Line", "Kind", "JS lines"],
-                            lambda f: [f["path"], f["line"], f["kind"], f["js_lines"]])
+        + _findings_section("R2 — Large source files (>300 lines)", report["large_source_files"],
+                            ["File", "Lines"], lambda f: [f["path"], f["lines"]])
+        + _findings_section("R2 — Large test files (>400 lines)", report["large_test_files"],
+                            ["File", "Lines"], lambda f: [f["path"], f["lines"]])
         + _findings_section("R4 — Substantive __init__.py", report["init_files"],
                             ["File", "Functions", "Classes"],
                             lambda f: [f["path"], ", ".join(f["functions"]), ", ".join(f["classes"])])
+        + _findings_section("R5 — Missing copyright header", report["headers"],
+                            ["File"], lambda f: [f["path"]])
+        + _findings_section("R7 — Embedded JavaScript / CSS", report["embedded_js"],
+                            ["File", "Line", "Kind", "JS lines"],
+                            lambda f: [f["path"], f["line"], f["kind"], f["js_lines"]])
     )
 
     return (
