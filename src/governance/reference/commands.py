@@ -25,6 +25,7 @@ from typing import Any
 from config.governance import REFERENCE_SPECS
 from src.database import Event, append_event
 from src.governance import collections as coll
+from src.governance.errors import DomainError
 from src.governance.reference._store import AGGREGATE_ID, AGGREGATE_TYPE, load
 
 
@@ -43,8 +44,23 @@ def add_option(
 ) -> Event:
     """Add an entry to a reference list (a menu value or a person record)."""
     collections, version = load(config)
+    # The institution is a single Company; everything links to it (strict hierarchy).
+    if list_name == "company" and collections.get("company"):
+        raise DomainError("Only one company may be defined; edit the existing one.")
     decision = coll.decide_add(
         collections, REFERENCE_SPECS, collection=list_name, fields=fields
+    )
+    return _record(decision, version, actor, reason, config)
+
+
+def update_option(
+    *, list_name: str, item_id: str, fields: dict[str, Any], actor: str,
+    reason: str | None = None, config=None,
+) -> Event:
+    """Edit an existing reference entry (e.g. a company's name or owner)."""
+    collections, version = load(config)
+    decision = coll.decide_update(
+        collections, REFERENCE_SPECS, collection=list_name, item_id=item_id, fields=fields
     )
     return _record(decision, version, actor, reason, config)
 

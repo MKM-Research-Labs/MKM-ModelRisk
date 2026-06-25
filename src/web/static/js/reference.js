@@ -50,7 +50,41 @@ const Reference = {
     const specs = { collections: [spec] };
     const data = {};
     data[this._tab] = res.data[this._tab] || [];
-    container.innerHTML = Collections.render(data, specs, false);
+    let html = Collections.render(data, specs, false);
+    if (this._tab === "company") html += await this._logoSection();
+    container.innerHTML = html;
     Collections.bind("/api/reference/collections/", specs, false, () => this.render(), data);
+    if (this._tab === "company") {
+      document.getElementById("logo-upload").onclick = () => this._uploadLogo();
+    }
+  },
+
+  // The (single) company's logo — used in the Meeting Pack & Model Risk Report
+  // PDF headers. Stored as the institution branding logo.
+  async _logoSection() {
+    const s = await App.get("/api/mrc/settings");
+    const logo = s.logo
+      ? '<img src="/api/mrc/logo?ts=' + Date.now() + '" alt="logo" style="max-height:64px;' +
+        'border:1px solid var(--line);border-radius:6px;padding:4px;background:#fff">'
+      : '<span class="muted">No logo uploaded.</span>';
+    return '<div class="section-header">Company logo</div>' +
+      '<p class="muted">Used in the Meeting Pack and Model Risk Report PDF headers.</p>' +
+      '<div class="row" style="align-items:center">' + logo + "</div>" +
+      '<div class="row" style="margin-top:8px"><input type="file" id="logo-file" accept="image/png,image/jpeg">' +
+      '<button class="btn small" id="logo-upload">Upload logo</button></div>';
+  },
+
+  _uploadLogo() {
+    const fileInput = document.getElementById("logo-file");
+    if (!fileInput.files.length) { App.toast("Choose an image first", "error"); return; }
+    const form = new FormData();
+    form.append("file", fileInput.files[0]);
+    fetch("/api/mrc/settings/logo", {
+      method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
+    }).then(async (res) => {
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "upload failed"); }
+      App.toast("Logo uploaded", "ok");
+      this.render();
+    }).catch((e) => App.toast(e.message, "error"));
   },
 };
