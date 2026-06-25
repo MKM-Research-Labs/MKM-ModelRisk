@@ -37,8 +37,10 @@ def _field_spec(field: dict, options: dict[str, list]) -> dict:
     if reference and options.get(reference):
         return {"key": field["key"], "label": field["label"], "type": "choice",
                 "options": options[reference], "required": bool(field.get("required"))}
+    # Otherwise keep the field's own type and any static options (e.g. a choice
+    # field like the Market Data Model's update frequency).
     return {"key": field["key"], "label": field["label"], "type": field["type"],
-            "options": [], "required": bool(field.get("required"))}
+            "options": list(field.get("options", [])), "required": bool(field.get("required"))}
 
 
 def _specs():

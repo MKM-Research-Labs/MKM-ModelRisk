@@ -22,8 +22,14 @@
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 
-# Order: Company first (top of the hierarchy), then Division, Department, People.
-REFERENCE_LISTS = ("company", "division", "department", "people")
+# Order: the Company org hierarchy first, then the PVM engines/platform
+# (Market Data Model + Calculating Agent), then the People directory.
+REFERENCE_LISTS = (
+    "company", "division", "department", "market_data_model", "calculating_agent", "people",
+)
+
+# How often a Market Data Model refreshes its inputs (PVM spec §8).
+VALID_MDM_FREQUENCY = ("Real-time", "Intraday", "Daily", "Weekly", "Ad-hoc")
 
 # The org hierarchy cascades: a Division belongs to a Company, a Department to a
 # Division. Each unit carries an Owner (a person), so model ownership attaches to
@@ -43,6 +49,20 @@ REFERENCE_SPECS = {
         {"key": "value", "label": "Value", "type": "text", "required": True},
         {"key": "division", "label": "Division", "type": "text", "reference": "division", "required": True},
         dict(_OWNER),
+    ]},
+    # --- PVM reference data (engines + platform) ---
+    "market_data_model": {"label": "Market Data Model", "id_prefix": "MDM", "display": "name",
+                          "fields": [
+        {"key": "name", "label": "Name", "type": "text", "required": True},
+        {"key": "description", "label": "Description", "type": "text"},
+        {"key": "vendor", "label": "Vendor / source", "type": "text"},
+        {"key": "method", "label": "Construction method", "type": "text"},
+        {"key": "update_frequency", "label": "Update frequency", "type": "choice",
+         "options": VALID_MDM_FREQUENCY},
+    ]},
+    "calculating_agent": {"label": "Calculating Agent", "id_prefix": "CA", "display": "value",
+                          "fields": [
+        {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
     "people": {"label": "People", "id_prefix": "PE", "display": "name", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},
