@@ -20,13 +20,15 @@
 """HTTP API for generated audit report files (list, view/download, generate)."""
 from __future__ import annotations
 
+import shutil
+import subprocess
 from datetime import date, datetime
 
 from flask import Blueprint, abort, jsonify, send_from_directory
 
 from audit.__main__ import build_report
 from audit.pdf import render_audit_pdf
-from config.audit import AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS
+from config.audit import AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS, USER_GUIDE_MD
 from src.governance.model_inventory import list_models
 from src.governance.model_inventory.report import render_report_pdf
 from src.governance.mrc_settings import get_settings
@@ -65,6 +67,15 @@ def serve_report(filename: str):
     return send_from_directory(OUTPUT_DIR, filename, mimetype="application/pdf")
 
 
+def _render_user_guide(dest):
+    """Publish the user guide as a PDF (skipped if pandoc is not installed)."""
+    if shutil.which("pandoc") is None:
+        return
+    subprocess.run(
+        ["pandoc", str(USER_GUIDE_MD), "-o", str(dest), "--pdf-engine=tectonic"],
+        check=True, capture_output=True)
+
+
 @audit_reports_bp.post("/generate")
 def generate():
     """(Re)generate the audit report PDFs into the output directory."""
@@ -73,4 +84,5 @@ def generate():
     (OUTPUT_DIR / "coding_rule_audit.pdf").write_bytes(render_audit_pdf(build_report(), as_of))
     (OUTPUT_DIR / "model_risk_report.pdf").write_bytes(
         render_report_pdf(list_models(), get_settings(), as_of))
+    _render_user_guide(OUTPUT_DIR / "user_guide.pdf")
     return jsonify(_catalogue())

@@ -25,10 +25,14 @@ from pathlib import Path
 # Where generated audit report PDFs are written (under the gitignored uploads/).
 AUDIT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "uploads" / "audit"
 
+# The user guide (Markdown) — published as a PDF into the Audit Reports tab.
+USER_GUIDE_MD = Path(__file__).resolve().parents[1] / "docs" / "user_guide.md"
+
 # Human-readable titles for the generated report files (filename -> label).
 AUDIT_REPORT_LABELS = {
     "coding_rule_audit.pdf": "Coding-Rule Audit",
     "model_risk_report.pdf": "Model Risk Report",
+    "user_guide.pdf": "User Guide",
 }
 
 # Coding rule R2: source files should stay under this many lines.
