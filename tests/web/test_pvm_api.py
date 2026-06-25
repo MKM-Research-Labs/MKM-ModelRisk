@@ -1,0 +1,113 @@
+# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+#
+# This software is licensed by MKM Research Labs for non-commercial
+# research and educational use only. Any commercial use, including
+# but not limited to use in or for products or services offered for sale,
+# internal business operations intended for commercial advantage, or
+# research and development conducted for a commercial entity, is expressly
+# prohibited unless separately authorized in writing by MKM Research Labs.
+#
+# Use, reproduction, distribution, or modification of this code is subject to the
+# terms and conditions of the license agreement provided with this software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Tests for the PVM HTTP API."""
+from __future__ import annotations
+
+from tests.web.conftest import HEADERS
+
+_FIELDS = {"analytics_model": "MKM-AN-001", "market_data_model": "NSS bond curve",
+           "calculating_agent": "Murex"}
+
+
+def _live_model(client, model_id="MKM-AN-001"):
+    client.post("/api/models", json={"model_id": model_id, "name": "Analytics", "confirmed": True},
+                headers=HEADERS)
+
+
+def _register(client, pvm_id="PVM-0001", **overrides):
+    fields = {**_FIELDS, **overrides}
+    return client.post("/api/pvms", json={"pvm_id": pvm_id, "product": "Government Bond",
+                                          "fields": fields, "confirmed": True}, headers=HEADERS)
+
+
+def test_fields_endpoint(client):
+    _live_model(client)
+    client.post("/api/reference/collections/people",
+                json={"fields": {"name": "Jane"}, "confirmed": True}, headers=HEADERS)
+    specs = client.get("/api/pvms/fields").get_json()
+    assert "product" in specs["register"]
+    assert specs["bindings"] == ["analytics_model", "market_data_model", "calculating_agent"]
+    fields = {f["key"]: f for g in specs["groups"] for f in g["fields"]}
+    assert fields["analytics_model"]["type"] == "choice" and "MKM-AN-001" in fields["analytics_model"]["options"]
+    assert fields["owner"]["type"] == "choice" and "Jane" in fields["owner"]["options"]
+    assert fields["notes"]["type"] == "text"
+    assert any(c["key"] == "limitations" for c in specs["collections"])
+
+
+def test_register_get_and_list(client):
+    _live_model(client)
+    assert _register(client).status_code == 201
+    pvm = client.get("/api/pvms/PVM-0001").get_json()
+    assert pvm["data"]["identifier"] == "MKM-AN-001.NSS bond curve.Murex"
+    assert pvm["data"]["status"] == "Proposed"
+    assert [p["pvm_id"] for p in client.get("/api/pvms").get_json()] == ["PVM-0001"]
+
+
+def test_register_requires_confirmation(client):
+    _live_model(client)
+    res = client.post("/api/pvms", json={"pvm_id": "PVM-X", "product": "Bond", "fields": _FIELDS},
+                      headers=HEADERS)
+    assert res.status_code == 409
+
+
+def test_register_analytics_must_be_live(client):
+    assert _register(client, analytics_model="DOES-NOT-EXIST").status_code == 400
+
+
+def test_get_unknown_is_404(client):
+    assert client.get("/api/pvms/PVM-NONE").status_code == 404
+
+
+def test_edit_field_rebind_and_retire(client):
+    _live_model(client)
+    _register(client)
+    edited = client.post("/api/pvms/PVM-0001/field",
+                         json={"field": "status", "value": "Active", "confirmed": True}, headers=HEADERS)
+    assert edited.get_json()["data"]["status"] == "Active"
+    rebound = client.post("/api/pvms/PVM-0001/rebind",
+                          json={"component": "calculating_agent", "value": "Calypso", "confirmed": True},
+                          headers=HEADERS)
+    assert rebound.get_json()["data"]["identifier"] == "MKM-AN-001.NSS bond curve.Calypso"
+    retired = client.post("/api/pvms/PVM-0001/retire", json={"confirmed": True}, headers=HEADERS)
+    assert retired.get_json()["retired"] is True
+
+
+def test_collections(client):
+    _live_model(client)
+    _register(client)
+    added = client.post("/api/pvms/PVM-0001/collections/limitations",
+                        json={"fields": {"description": "Misses barrier risk", "impact": "High"},
+                              "confirmed": True}, headers=HEADERS)
+    assert added.status_code == 201
+    item = added.get_json()["data"]["limitations"][0]["item_id"]
+    updated = client.post("/api/pvms/PVM-0001/collections/limitations/" + item,
+                          json={"fields": {"impact": "Medium"}, "confirmed": True}, headers=HEADERS)
+    assert updated.get_json()["data"]["limitations"][0]["impact"] == "Medium"
+    removed = client.post("/api/pvms/PVM-0001/collections/limitations/" + item + "/delete",
+                          json={"confirmed": True}, headers=HEADERS)
+    assert removed.get_json()["data"].get("limitations", []) == []
+
+
+def test_used_by(client):
+    _live_model(client)
+    _register(client, pvm_id="PVM-0001")
+    used = client.get("/api/pvms/used-by/MKM-AN-001").get_json()
+    assert [p["pvm_id"] for p in used] == ["PVM-0001"]
+    assert client.get("/api/pvms/used-by/OTHER").get_json() == []

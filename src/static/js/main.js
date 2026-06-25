@@ -19,7 +19,7 @@
 // SOFTWARE.
 
 const TABS = {
-  inventory: Inventory, mrc: MRC, documents: GovDocs, bibliography: Bibliography,
+  inventory: Inventory, pvm: PVM, mrc: MRC, documents: GovDocs, bibliography: Bibliography,
   audit: Audit, reports: AuditReports, reference: Reference,
 };
 
@@ -45,6 +45,8 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("confirm-cancel").onclick = function () { App.closeConfirm(); };
   document.getElementById("reg-submit").onclick = function () { Inventory.submitRegister(); };
   document.getElementById("reg-cancel").onclick = function () { Inventory.closeRegister(); };
+  document.getElementById("pvm-reg-submit").onclick = function () { PVM.submitRegister(); };
+  document.getElementById("pvm-reg-cancel").onclick = function () { PVM.closeRegister(); };
   // Changing the org scope re-filters the inventory if it's on screen.
   const refreshInventory = function () {
     if (document.getElementById("m-list")) Inventory.loadList();
