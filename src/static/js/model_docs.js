@@ -22,20 +22,26 @@
 // Monitoring) uploadable document lists with download and delete.
 const ModelDocs = {
   _id: null, _docs: [], _categories: [], _retired: false, _cat: null,
+  _base: "/api/models/", _refresh: null, _host: "dt-content",
 
-  render(modelId, docs, categories, retired) {
+  // base / refresh / host let the same renderer serve any aggregate (models, PVMs).
+  render(modelId, docs, categories, retired, base, refresh, host) {
     this._id = modelId;
     this._docs = docs;
     this._categories = categories;
     this._retired = retired;
+    this._base = base || "/api/models/";
+    this._refresh = refresh || (() => Detail.show(this._id, "docs"));
+    this._host = host || "dt-content";
     if (!this._cat || categories.indexOf(this._cat) < 0) this._cat = categories[0];
-    document.getElementById("dt-content").innerHTML =
+    document.getElementById(this._host).innerHTML =
       this._subtabs() + '<div id="docs-cat"></div>';
     const self = this;
     document.querySelectorAll("[data-doctab]").forEach(function (b) {
       b.onclick = function () {
         self._cat = b.getAttribute("data-doctab");
-        self.render(self._id, self._docs, self._categories, self._retired);
+        self.render(self._id, self._docs, self._categories, self._retired,
+          self._base, self._refresh, self._host);
       };
     });
     this._renderCategory();
@@ -54,7 +60,7 @@ const ModelDocs = {
     const rows = items.length ? items.map((d) =>
       "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +
       esc((d.uploaded_at || "").slice(0, 10)) + "</td><td>" + fmtSize(d.size) +
-      '</td><td class="rowact"><a href="/api/models/' + this._id + "/documents/" + esc(d.item_id) +
+      '</td><td class="rowact"><a href="' + this._base + this._id + "/documents/" + esc(d.item_id) +
       '/download">Download</a>' +
       (this._retired ? "" : '<span class="edit-btn" data-rmdoc="' + esc(d.item_id) + '">Delete</span>') +
       "</td></tr>").join("") : '<tr><td colspan="5" class="empty">No documents.</td></tr>';
@@ -76,8 +82,7 @@ const ModelDocs = {
       const iid = el.getAttribute("data-rmdoc");
       el.onclick = function () {
         App.amend("Delete document " + iid + "?", "POST",
-          "/api/models/" + self._id + "/documents/" + iid + "/delete", {},
-          () => Detail.show(self._id, "docs"));
+          self._base + self._id + "/documents/" + iid + "/delete", {}, self._refresh);
       };
     });
   },
@@ -89,12 +94,12 @@ const ModelDocs = {
     form.append("file", fileInput.files[0]);
     form.append("category", this._cat);
     form.append("description", document.getElementById("doc-desc").value);
-    fetch("/api/models/" + this._id + "/documents", {
+    fetch(this._base + this._id + "/documents", {
       method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
     }).then(async (res) => {
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || "upload failed"); }
       App.toast("Document uploaded", "ok");
-      Detail.show(this._id, "docs");
+      this._refresh();
     }).catch((e) => App.toast(e.message, "error"));
   },
 };

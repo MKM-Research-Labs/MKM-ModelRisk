@@ -20,6 +20,9 @@
 """Tests for the PVM HTTP API."""
 from __future__ import annotations
 
+import io
+
+from src.files import upload_path
 from tests.web.conftest import HEADERS
 
 _FIELDS = {"analytics_model": "MKM-AN-001", "market_data_model": "NSS bond curve",
@@ -111,3 +114,82 @@ def test_used_by(client):
     used = client.get("/api/pvms/used-by/MKM-AN-001").get_json()
     assert [p["pvm_id"] for p in used] == ["PVM-0001"]
     assert client.get("/api/pvms/used-by/OTHER").get_json() == []
+
+
+def test_fields_includes_docs_remediation_and_rag(client):
+    _live_model(client)
+    specs = client.get("/api/pvms/fields").get_json()
+    assert "Core Documentation" in specs["doc_categories"]
+    assert any(c["key"] == "remediation_steps" for c in specs["collections"])
+    rag = {f["key"]: f for g in specs["groups"] for f in g["fields"]}["rag_rating"]
+    assert rag["type"] == "choice" and "Green" in rag["options"]
+
+
+def test_edit_rag_and_review_date(client):
+    _live_model(client)
+    _register(client)
+    rag = client.post("/api/pvms/PVM-0001/field",
+                      json={"field": "rag_rating", "value": "Green", "confirmed": True}, headers=HEADERS)
+    assert rag.get_json()["data"]["rag_rating"] == "Green"
+    bad = client.post("/api/pvms/PVM-0001/field",
+                      json={"field": "rag_rating", "value": "Purple", "confirmed": True}, headers=HEADERS)
+    assert bad.status_code == 400
+    dated = client.post("/api/pvms/PVM-0001/field",
+                        json={"field": "next_review_date", "value": "2026-09-30", "confirmed": True},
+                        headers=HEADERS)
+    assert dated.get_json()["data"]["next_review_date"] == "2026-09-30"
+
+
+def test_remediation_collection(client):
+    _live_model(client)
+    _register(client)
+    added = client.post("/api/pvms/PVM-0001/collections/remediation_steps",
+                        json={"fields": {"description": "Migrate instance", "status": "In Progress"},
+                              "confirmed": True}, headers=HEADERS)
+    assert added.status_code == 201
+    assert added.get_json()["data"]["remediation_steps"][0]["description"] == "Migrate instance"
+
+
+def _upload_doc(client, category="Core Documentation", name="dev.pdf"):
+    return client.post(
+        "/api/pvms/PVM-0001/documents",
+        data={"file": (io.BytesIO(b"PVMDOC"), name), "category": category, "description": "spec"},
+        content_type="multipart/form-data", headers=HEADERS)
+
+
+def test_pvm_documents_upload_download_delete(client):
+    _live_model(client)
+    _register(client)
+    up = _upload_doc(client)
+    assert up.status_code == 201
+    doc = up.get_json()["data"]["documents"][0]
+    assert doc["category"] == "Core Documentation"
+    dl = client.get("/api/pvms/PVM-0001/documents/" + doc["item_id"] + "/download")
+    assert dl.status_code == 200 and dl.data == b"PVMDOC"
+    rm = client.post("/api/pvms/PVM-0001/documents/" + doc["item_id"] + "/delete",
+                     json={}, headers=HEADERS)
+    assert rm.get_json()["data"].get("documents", []) == []
+
+
+def test_pvm_document_errors(client):
+    _live_model(client)
+    _register(client)
+    assert _upload_doc(client, category="Nope").status_code == 400
+    assert _upload_doc(client, name="evil.exe").status_code == 400
+    no_file = client.post("/api/pvms/PVM-0001/documents", data={"category": "Analysis"},
+                          content_type="multipart/form-data", headers=HEADERS)
+    assert no_file.status_code == 400
+    unknown = client.post("/api/pvms/PVM-NONE/documents", data={"category": "Analysis"},
+                          content_type="multipart/form-data", headers=HEADERS)
+    assert unknown.status_code == 404
+    assert client.get("/api/pvms/PVM-0001/documents/DOC-999/download").status_code == 404
+    assert client.post("/api/pvms/PVM-0001/documents/DOC-999/delete",
+                       json={}, headers=HEADERS).status_code == 400
+
+
+def test_pvm_document_missing_file_is_404(client):
+    _live_model(client)
+    _register(client)
+    doc = _upload_doc(client).get_json()["data"]["documents"][0]
+    upload_path("pvm/PVM-0001", doc["filename"]).unlink()
+    assert client.get("/api/pvms/PVM-0001/documents/" + doc["item_id"] + "/download").status_code == 404
