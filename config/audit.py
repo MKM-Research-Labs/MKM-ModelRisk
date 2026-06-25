@@ -22,8 +22,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-# Where generated audit report PDFs are written (gitignored: output/).
-AUDIT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output" / "audit"
+# Where generated audit report PDFs are written (under the gitignored uploads/).
+AUDIT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "uploads" / "audit"
 
 # Human-readable titles for the generated report files (filename -> label).
 AUDIT_REPORT_LABELS = {

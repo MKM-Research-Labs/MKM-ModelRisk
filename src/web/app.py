@@ -50,7 +50,8 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     """Build the Flask app. Applies DB migrations unless told not to."""
     if run_db_migrations:
         run_migrations()
-    app = Flask(__name__)
+    # Front-end assets live under src/static and src/templates (coding rule R7).
+    app = Flask(__name__, static_folder="../static", template_folder="../templates")
     app.register_blueprint(views_bp)
     app.register_blueprint(models_bp)
     app.register_blueprint(mrc_bp)

@@ -64,7 +64,7 @@ the single `src/database/` utility.
 
 | Requirement | Notes |
 |---|---|
-| **Docker** | Runs PostgreSQL via `docker-compose.yml` (host port `5433`). |
+| **PostgreSQL 16** | The database, run natively (no Docker). E.g. `brew install postgresql@16`. |
 | **Python 3.13** | The application runtime. |
 | **tectonic** *(optional)* | A LaTeX engine, required only for the Meeting Pack and Model Risk Report PDFs. Install with `brew install tectonic`. |
 | **Node + jscpd** *(optional)* | Only for the duplicate-code section of `python -m audit`. |
@@ -78,8 +78,10 @@ the single `src/database/` utility.
 git clone git@github.com:MKM-Research-Labs/MKM-ModelRisk.git
 cd MKM-ModelRisk
 
-# 2. Start PostgreSQL (host port 5433, to avoid colliding with other local DBs)
-docker compose up -d
+# 2. Create a local PostgreSQL cluster (port 5433) + the mkm_modelrisk database.
+#    Uses ./.pgdata by default; needs postgresql@16 on PATH.
+export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
+scripts/pg.sh init               # one-off; then scripts/pg.sh start|stop|status
 
 # 3. Create the virtualenv and install
 python3.13 -m venv .venv
@@ -102,9 +104,9 @@ Set the **Acting as** field (top right) to your name/email — that identity is
 recorded on every change you make. From there, follow the
 [**User Guide**](docs/user_guide.md).
 
-> **Tip:** the database is the only stateful piece. It lives in the Docker volume
-> `modelrisk_mkm_modelrisk_pgdata` and persists across `docker compose stop/start`.
-> Stopping the container doesn't lose data; only `docker compose down -v` would.
+> **Tip:** the database is the only stateful piece. It lives in the cluster's data
+> directory (`./.pgdata` by default, gitignored). Manage it with
+> `scripts/pg.sh start|stop|status`; the data persists across stop/start.
 
 ---
 
@@ -124,7 +126,7 @@ python -m audit
 ```
 
 The unit and e2e suites use **separate databases** (`mkm_modelrisk_test` and
-`mkm_modelrisk_e2e`), created automatically inside the same Docker container, so
+`mkm_modelrisk_e2e`), created automatically in the same PostgreSQL cluster, so
 they never touch your dev data in `mkm_modelrisk`.
 
 ### Quality gates
@@ -138,7 +140,7 @@ parameters, and over-long files.
 
 ## Configuration
 
-Defaults match `docker-compose.yml`; override via environment variables (copy
+Defaults match `scripts/pg.sh`; override via environment variables (copy
 `.env.example` to `.env`):
 
 | Variable | Default | Purpose |
@@ -148,7 +150,8 @@ Defaults match `docker-compose.yml`; override via environment variables (copy
 | `MKM_DB_OWNER_USER` / `MKM_DB_OWNER_PASSWORD` | `mkm_owner` / `mkm_dev_pw` | Owner role (migrations) |
 | `MKM_DB_APP_USER` / `MKM_DB_APP_PASSWORD` | `mkm_app` / `mkm_app_dev_pw` | Runtime role (insert-only) |
 | `MKM_WEB_HOST` / `MKM_WEB_PORT` | `127.0.0.1` / `5015` | Console host/port |
-| `MKM_UPLOAD_DIR` | `./uploads` | Where uploaded files are stored |
+| `MKM_PG_DATA_DIR` | `./.pgdata` | Cluster data directory (`scripts/pg.sh`) |
+| `MKM_UPLOAD_DIR` | `./uploads` | Where uploaded files (and audit PDFs) are stored |
 
 A WSGI server can serve the app object directly, e.g. `gunicorn app:app`.
 
@@ -164,9 +167,11 @@ src/
   identity/    Resolves the acting user from SSO headers (dev fallback)
   governance/  The domain: model_inventory, mrc, reference, documents, bibliography, collections
   files/       Upload storage
-  web/         Flask app factory, API blueprints, and the vanilla-JS console (static/, templates/)
+  web/         Flask app factory + API blueprints
+  static/      Front-end assets — js/ and css/ (rule R7)
+  templates/   Jinja templates (rule R7)
 audit/         Self-checking coding-rule audit suite (python -m audit)
-scripts/       Operational scripts (e.g. seed_demo.py)
+scripts/       Operational scripts (seed_demo.py, pg.sh)
 tests/         Unit/integration tests + tests/e2e (Playwright browser suite)
 docs/          User guide, architecture/build plan, coding rules
 ```

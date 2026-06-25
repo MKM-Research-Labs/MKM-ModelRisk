@@ -20,8 +20,8 @@
 """Database connection parameters.
 
 The single home for database configuration (coding rule R1). Values are read
-from the environment with defaults matching ``docker-compose.yml`` so local
-development and tests work out of the box.
+from the environment with sensible defaults (matching ``scripts/pg.sh``) so a
+local native PostgreSQL cluster and the tests work out of the box.
 """
 from __future__ import annotations
 

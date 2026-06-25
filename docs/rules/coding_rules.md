@@ -111,8 +111,30 @@ Until then, reviewed by hand.
 
 ---
 
+## R7 — Front-end assets live under `src/static` and `src/templates`
+
+**Rule.** JavaScript and CSS live under `src/static/js/` and `src/static/css/`; Jinja
+templates under `src/templates/`. They do **not** sit beside the Flask app module
+(`src/web/`). The app factory points Flask at these folders explicitly
+(`Flask(__name__, static_folder="../static", template_folder="../templates")`).
+
+**Why.** A single, predictable home for front-end assets — independent of which blueprint
+serves them — keeps the layout discoverable and matches the parent engagement's structure.
+
+```
+src/static/js/    *.js          # one file per UI module
+src/static/css/   app.css
+src/templates/    index.html
+```
+
+**Verified by.** Reviewed by hand (the directory layout); a misplaced asset shows up as a
+404 in the e2e smoke suite, which loads every script.
+
+---
+
 ## Change log
 
+- 2026-06-25 — Added R7 (front-end assets under `src/static` / `src/templates`).
 - 2026-06-22 — Created for MKM-ModelRisk, adapting R1–R6 from the parent engagement.
   R6 reframed around the `src/database/` event store. Mechanical audits (R1/R2/R4/R5/R6
   gates) to be ported in Phase 0.
