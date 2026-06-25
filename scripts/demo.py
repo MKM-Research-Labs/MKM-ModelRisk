@@ -26,6 +26,7 @@ touches the dev data.
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import psycopg
@@ -34,6 +35,7 @@ from config import DatabaseConfig
 from src.database import run_migrations
 from src.files import save_upload
 from src.governance.bibliography import add_reference
+from src.governance.documents import add_document
 from src.governance.model_inventory import add_collection_item as _model_add
 from src.governance.model_inventory import (
     list_models,
@@ -41,11 +43,14 @@ from src.governance.model_inventory import (
     register_model,
     update_collection_item as _model_update,
 )
+from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.mrc import add_collection_item as _meeting_add
 from src.governance.mrc import rebuild_meeting_view, schedule_meeting
+from src.governance.mrc.pack import compile_tex
 from src.governance.mrc_settings import set_field, set_logo
 from src.governance.pvm import add_collection_item as _pvm_add
-from src.governance.pvm import rebuild_pvm_view, register_pvm
+from src.governance.pvm import list_pvms, rebuild_pvm_view, register_pvm
+from src.governance.pvm.commands import AGGREGATE_TYPE as PVM_AGGREGATE
 from src.governance.reference import add_option
 
 DEMO_DB = "mkm_modelrisk_demo"
@@ -73,6 +78,40 @@ def _seed_logo() -> None:
         return
     meta = save_upload("mrc", _LOGO.name, _LOGO.read_bytes())
     set_logo(filename=meta["filename"], original_name=_LOGO.name, actor=_ACTOR)
+
+
+def _demo_pdf() -> bytes | None:
+    """A one-page placeholder document: the company logo over 'This is a demo'."""
+    assets, logo_tex = {}, ""
+    if _LOGO.exists():
+        assets["logo.png"] = _LOGO.read_bytes()
+        logo_tex = "\\includegraphics[height=3.5cm]{logo.png}\\\\[16pt]\n"
+    tex = (
+        "\\documentclass[12pt]{article}\n"
+        "\\usepackage[a4paper,margin=20mm]{geometry}\n"
+        "\\usepackage{graphicx}\\pagestyle{empty}\n"
+        "\\begin{document}\n\\vspace*{3cm}\\begin{center}\n"
+        + logo_tex + "{\\Large\\textbf{This is a demo}}\n"
+        "\\end{center}\n\\end{document}\n"
+    )
+    try:
+        return compile_tex(tex, assets)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None  # tectonic unavailable — skip the placeholder documents
+
+
+def _seed_documents() -> None:
+    """Attach the placeholder demo PDF to every model and PVM."""
+    pdf = _demo_pdf()
+    if pdf is None:
+        return
+    targets = [(MODEL_AGGREGATE, m["model_id"], "model") for m in list_models()]
+    targets += [(PVM_AGGREGATE, p["pvm_id"], "pvm") for p in list_pvms()]
+    for aggregate_type, aggregate_id, prefix in targets:
+        add_document(
+            aggregate_type=aggregate_type, aggregate_id=aggregate_id,
+            scope=f"{prefix}/{aggregate_id}", category="Core Documentation",
+            filename="demo.pdf", data=pdf, description="Demo placeholder", actor=_ACTOR)
 
 
 def seed() -> None:
@@ -108,6 +147,7 @@ def seed() -> None:
                 _meeting_add(meeting_id=meeting["meeting_id"], collection=collection, fields=item, actor=_ACTOR)
     for reference in data["bibliography"]:
         add_reference(fields=reference, actor=_ACTOR)
+    _seed_documents()
     rebuild_inventory_view()
     rebuild_pvm_view()
     rebuild_meeting_view()
