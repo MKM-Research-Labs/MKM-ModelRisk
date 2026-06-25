@@ -23,7 +23,20 @@ from __future__ import annotations
 import pytest
 
 from src.governance.errors import DomainError
-from src.governance.reference import add_option, get_reference_lists, remove_option
+from src.governance.reference import add_option, get_reference_lists, remove_option, update_option
+
+
+def test_update_option_edits_fields():
+    add_option(list_name="company", fields={"value": "MKM Bank"}, actor="admin")
+    update_option(list_name="company", item_id="CO-001", fields={"owner": "jane@firm"}, actor="admin")
+    company = get_reference_lists()["company"][0]
+    assert company["owner"] == "jane@firm"
+
+
+def test_only_one_company_allowed():
+    add_option(list_name="company", fields={"value": "MKM Bank"}, actor="admin")
+    with pytest.raises(DomainError):
+        add_option(list_name="company", fields={"value": "Second Co"}, actor="admin")
 
 
 def test_lists_empty_initially():

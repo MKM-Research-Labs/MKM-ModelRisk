@@ -46,6 +46,15 @@ def test_get_reference_empty(client):
     assert [c["key"] for c in res["collections"]] == ["company", "division", "department", "people"]
 
 
+def test_update_company_via_api(client):
+    client.post("/api/reference/collections/company",
+                json={"fields": {"value": "MKM Bank"}, "confirmed": True}, headers=HEADERS)
+    res = client.post("/api/reference/collections/company/CO-001",
+                      json={"fields": {"owner": "jane@firm"}, "confirmed": True}, headers=HEADERS)
+    assert res.status_code == 200
+    assert res.get_json()["company"][0]["owner"] == "jane@firm"
+
+
 def test_division_company_field_becomes_dropdown(client):
     # Once a company exists, the Division form's Company field is a dropdown.
     client.post("/api/reference/collections/company",

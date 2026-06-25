@@ -19,6 +19,6 @@
 # SOFTWARE.
 """Reference data: admin-managed menu lists for organisation fields."""
 from src.governance.reference._store import get_reference_lists
-from src.governance.reference.commands import add_option, remove_option
+from src.governance.reference.commands import add_option, remove_option, update_option
 
-__all__ = ["get_reference_lists", "add_option", "remove_option"]
+__all__ = ["get_reference_lists", "add_option", "remove_option", "update_option"]

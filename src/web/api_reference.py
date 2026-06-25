@@ -24,7 +24,7 @@ from flask import Blueprint, jsonify
 
 from config.governance import REFERENCE_SPECS
 from src.command import dispatch
-from src.governance.reference import add_option, get_reference_lists, remove_option
+from src.governance.reference import add_option, get_reference_lists, remove_option, update_option
 from src.web._helpers import context_from_request, json_body, reference_options
 
 reference_bp = Blueprint("reference", __name__, url_prefix="/api/reference")
@@ -66,6 +66,16 @@ def add(list_name: str):
         list_name=list_name, fields=body.get("fields") or {},
     )
     return jsonify(get_reference_lists()), 201
+
+
+@reference_bp.post("/collections/<list_name>/<item_id>")
+def update(list_name: str, item_id: str):
+    body = json_body()
+    dispatch(
+        "update_option", update_option, context=context_from_request(body),
+        list_name=list_name, item_id=item_id, fields=body.get("fields") or {},
+    )
+    return jsonify(get_reference_lists())
 
 
 @reference_bp.post("/collections/<list_name>/<item_id>/delete")
