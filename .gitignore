@@ -14,5 +14,9 @@ htmlcov/
 
 # OS
 .DS_Store
+
+# Local runtime / generated artifacts (uploads + any saved reports/PDFs)
 uploads/
+output/
+reports/
 pgctl.sh
