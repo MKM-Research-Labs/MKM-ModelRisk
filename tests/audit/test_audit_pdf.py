@@ -25,7 +25,7 @@ from src.governance.mrc import pack
 
 _CLEAN = {
     "large_source_files": [], "large_test_files": [], "hardcoding": [],
-    "embedded_js": [], "init_files": [],
+    "embedded_js": [], "init_files": [], "headers": [],
     "duplication": {"available": True, "percentage": 0.5, "clones": 3},
 }
 _FINDINGS = {
@@ -34,6 +34,7 @@ _FINDINGS = {
     "hardcoding": [{"path": "y.py", "line": 4, "kind": "allcaps", "name": "MAXN"}],
     "embedded_js": [{"path": "z.py", "line": 9, "kind": "script", "js_lines": 5}],
     "init_files": [{"path": "p.py", "functions": ["f"], "classes": ["C"]}],
+    "headers": [{"path": "h.py"}],
     "duplication": {"available": False},
 }
 
@@ -47,11 +48,23 @@ def test_build_audit_tex_clean():
     assert tex.strip().endswith("\\end{document}")
 
 
+def test_summary_table_lists_every_rule_in_order():
+    tex = build_audit_tex(_CLEAN, "2026-06-25")
+    # One row per rule, with a short requirement, in ascending order R1–R8.
+    markers = ["config package", "size limit", "test coverage", "init",
+               "copyright header", "src/database", "embedded in", "duplicated code"]
+    positions = [tex.index(m) for m in markers]
+    assert positions == sorted(positions)
+    assert "by code review" in tex          # R6 result
+    assert "Pass" in tex                     # mechanical-rule result
+
+
 def test_build_audit_tex_with_findings():
     tex = build_audit_tex(_FINDINGS, "2026-06-25")
     assert "x.py" in tex and "350" in tex
     assert "y.py" in tex
     assert "z.py" in tex and "script" in tex
+    assert "h.py" in tex                      # R5 missing-header finding
     assert "not measured" in tex
 
 
