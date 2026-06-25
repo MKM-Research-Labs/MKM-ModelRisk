@@ -20,7 +20,7 @@
 
 const TABS = {
   inventory: Inventory, mrc: MRC, documents: GovDocs, bibliography: Bibliography,
-  audit: Audit, reference: Reference,
+  audit: Audit, reports: AuditReports, reference: Reference,
 };
 
 async function showTab(name) {
