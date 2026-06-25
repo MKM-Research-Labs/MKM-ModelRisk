@@ -43,6 +43,8 @@ document.addEventListener("DOMContentLoaded", function () {
   });
   document.getElementById("confirm-ok").onclick = function () { App.confirmPending(); };
   document.getElementById("confirm-cancel").onclick = function () { App.closeConfirm(); };
+  document.getElementById("reg-submit").onclick = function () { Inventory.submitRegister(); };
+  document.getElementById("reg-cancel").onclick = function () { Inventory.closeRegister(); };
   // Changing the org scope re-filters the inventory if it's on screen.
   const refreshInventory = function () {
     if (document.getElementById("m-list")) Inventory.loadList();

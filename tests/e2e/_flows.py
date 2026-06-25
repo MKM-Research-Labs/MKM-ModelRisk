@@ -43,9 +43,10 @@ def confirm(page: Page) -> None:
 
 
 def register_model(page: Page, model_id: str, name: str) -> None:
+    page.click("#m-register")          # open the registration modal
     page.fill("#reg-model_id", model_id)
     page.fill("#reg-name", name)
-    page.click("#m-register")
+    page.click("#reg-submit")          # submit -> confirm-to-amend
     confirm(page)
     expect(page.locator(f"tr.clickable[data-id='{model_id}']")).to_be_visible()
 
