@@ -60,7 +60,7 @@ def main() -> int:
                             lambda f: f"{f['lines']:>4}  {f['path']}")
     total += _print_section("R1 hardcoded parameters", report["hardcoding"],
                             lambda f: f"{f['path']}:{f['line']}  {f['kind']} {f['name']}")
-    total += _print_section("R5 embedded JavaScript / CSS", report["embedded_js"],
+    total += _print_section("R7 embedded JavaScript / CSS", report["embedded_js"],
                             lambda f: f"{f['path']}:{f['line']}  {f['kind']} ({f['js_lines']} js lines)")
     total += _print_section("R4 substantive __init__.py", report["init_files"],
                             lambda f: f"{f['path']}  fns={f['functions']} classes={f['classes']}")
