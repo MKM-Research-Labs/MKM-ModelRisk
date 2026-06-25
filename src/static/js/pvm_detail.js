@@ -20,8 +20,10 @@
 
 // PVM detail: header + tabbed detail (Overview with component bindings/rebind,
 // Limitations, Assumptions, Audit). The identifier is derived from the bindings.
-const PVM_OVERVIEW_LEFT = ["product", "product_id", "monitoring_approach", "monitoring_results"];
-const PVM_OVERVIEW_RIGHT = ["status", "owner", "notes"];
+const PVM_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
+const PVM_OVERVIEW_MONITORING = ["monitoring_approach", "monitoring_results"];
+const PVM_OVERVIEW_GOV = ["status", "owner", "mrc_signoff_date", "next_review_date",
+  "last_review_date", "notes"];
 
 const PvmDetail = {
   _id: null, _pvm: null, _specs: null, _audit: [], _tab: "overview",
@@ -63,7 +65,9 @@ const PvmDetail = {
     const n = (k) => (d[k] || []).length;
     const tabs = [
       ["overview", "Overview", null], ["limitations", "Limitations", n("limitations")],
-      ["assumptions", "Assumptions", n("assumptions")], ["audit", "Audit", this._audit.length],
+      ["assumptions", "Assumptions", n("assumptions")],
+      ["remediation_steps", "Remediation", n("remediation_steps")],
+      ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
     ];
     return '<div class="dtabs">' + tabs.map((t) =>
       '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-ptab="' + t[0] + '">' +
@@ -75,22 +79,33 @@ const PvmDetail = {
     const box = document.getElementById("pt-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
+    if (this._tab === "docs") {
+      ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [],
+        this._pvm.retired, "/api/pvms/", () => this.show(this._id, "docs"), "pt-content");
+      return;
+    }
     const spec = this.collSpec(this._tab);
     box.innerHTML = Collections.render(d, { collections: [spec] }, this._pvm.retired);
     Collections.bind("/api/pvms/" + this._id + "/collections/", { collections: [spec] },
       this._pvm.retired, () => this.show(this._id, this._tab), d);
   },
 
+  _section(title, keys, d) {
+    return '<div class="section-header">' + title + "</div>" +
+      keys.map((k) => this._row(k, d)).join("");
+  },
+
   _overview(d) {
     const bindings = this._specs.bindings.map((k) => this._bindingRow(k, d)).join("");
-    const left = PVM_OVERVIEW_LEFT.map((k) => this._row(k, d)).join("");
-    const right = PVM_OVERVIEW_RIGHT.map((k) => this._row(k, d)).join("");
+    const left = '<div class="section-header">Components</div>' + bindings +
+      this._section("Product", PVM_OVERVIEW_PRODUCT, d) +
+      this._section("Monitoring", PVM_OVERVIEW_MONITORING, d);
+    const right = this._section("Risk rating", ["rag_rating"], d) +
+      this._section("Governance &amp; review", PVM_OVERVIEW_GOV, d);
     const retire = this._pvm.retired
       ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>'
       : '<div style="margin-top:14px"><button class="btn danger small" id="pvm-retire">Retire PVM…</button></div>';
-    return '<div class="grid2"><div><div class="section-header">Components</div>' + bindings +
-      '<div class="section-header">Product</div>' + left + "</div>" +
-      '<div><div class="section-header">Governance &amp; Monitoring</div>' + right + "</div></div>" + retire;
+    return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" + retire;
   },
 
   _editLink(key) {
@@ -108,6 +123,7 @@ const PvmDetail = {
     const f = this.fieldSpec(key);
     let value = fieldDisplay(d[key]);
     if (key === "status") value = pvmStatusBadge(d[key], this._pvm.retired);
+    else if (key === "rag_rating") value = ragBadge(d[key]);
     return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
       '</div><div class="v">' + value + "</div>" + this._editLink(key) + "</div>";
   },

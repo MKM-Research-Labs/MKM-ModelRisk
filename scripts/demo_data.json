@@ -120,7 +120,9 @@
       "pvm_id": "PVM-0001", "product": "Government Bond",
       "fields": {"product_id": "GILT-2034", "analytics_model": "STB-BND-001",
                  "market_data_model": "NSS bond curve", "calculating_agent": "Murex",
-                 "status": "Active", "owner": "Priya Anand",
+                 "status": "Active", "owner": "Priya Anand", "rag_rating": "Green",
+                 "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-06-30",
+                 "description": "Vanilla fixed-coupon gilt priced by discounting known cashflows off the fitted NSS curve.",
                  "monitoring_approach": "Daily P&L backtest vs Taylor approximation; notional outstanding and maturity profile reviewed weekly.",
                  "monitoring_results": "P&L explained within tolerance for Q1; no exceptions."}
     },
@@ -128,18 +130,23 @@
       "pvm_id": "PVM-0002", "product": "Interest Rate Swaption",
       "fields": {"product_id": "GBP-SWPTN", "analytics_model": "STB-SABR-001",
                  "market_data_model": "SABR swaption vol", "calculating_agent": "Murex",
-                 "status": "Active", "owner": "Priya Anand",
+                 "status": "Active", "owner": "Priya Anand", "rag_rating": "Amber",
+                 "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-05-31",
+                 "description": "European swaption priced on the SABR smile; sensitive to low-strike wing behaviour.",
                  "monitoring_approach": "Vega ladder and low-strike behaviour monitored intraday.",
                  "monitoring_results": "Low-strike instability observed on 12 Feb; escalated to validation."},
       "collections": {
-        "limitations": [{"description": "Pricing unreliable for deep-OTM low-strike swaptions", "impact": "High"}]
+        "limitations": [{"description": "Pricing unreliable for deep-OTM low-strike swaptions", "impact": "High"}],
+        "remediation_steps": [{"description": "Recalibrate the low-strike wing / cap Hagan expansion", "owner": "Priya Anand", "priority": "High", "due_date": "2026-05-31", "status": "In Progress"}]
       }
     },
     {
       "pvm_id": "PVM-0003", "product": "Equity Option",
       "fields": {"product_id": "FTSE-EUOPT", "analytics_model": "STB-BS-001",
                  "market_data_model": "Equity vol surface", "calculating_agent": "Murex",
-                 "status": "Active", "owner": "Sofia Castro",
+                 "status": "Active", "owner": "Sofia Castro", "rag_rating": "Green",
+                 "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-08-15",
+                 "description": "Plain European equity option priced on the SVI vol surface.",
                  "monitoring_approach": "Delta/vega behaviour and P&L backtest, daily.",
                  "monitoring_results": "Stable; within expectation."}
     },
@@ -147,11 +154,14 @@
       "pvm_id": "PVM-0004", "product": "Equity Barrier Option",
       "fields": {"product_id": "FTSE-BARR", "analytics_model": "STB-BS-001",
                  "market_data_model": "Equity vol surface", "calculating_agent": "Calypso",
-                 "status": "Suspended", "owner": "Sofia Castro",
+                 "status": "Suspended", "owner": "Sofia Castro", "rag_rating": "Red",
+                 "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-04-30",
+                 "description": "Knock-out barrier option currently shoehorned onto the plain Black-Scholes engine.",
                  "monitoring_approach": "Compare hedges vs a barrier-aware benchmark where available.",
                  "monitoring_results": "Barrier risk not captured by the Black-Scholes engine; PVM suspended pending a local-vol framework."},
       "collections": {
-        "limitations": [{"description": "Shoehorning: barrier valued on plain Black-Scholes, missing barrier risk that should drive hedging", "impact": "High"}]
+        "limitations": [{"description": "Shoehorning: barrier valued on plain Black-Scholes, missing barrier risk that should drive hedging", "impact": "High"}],
+        "remediation_steps": [{"description": "Deliver a barrier-aware local-volatility framework", "owner": "Sofia Castro", "priority": "High", "due_date": "2026-04-30", "status": "Open"}]
       }
     }
   ],

@@ -20,10 +20,18 @@
 """HTTP API for the PVM aggregate."""
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request, send_file
 
-from config.governance import PVM_BINDINGS, PVM_COLLECTION_SPECS, PVM_FIELD_SPECS, PVM_REGISTER_FIELDS
+from config.governance import (
+    DOC_CATEGORIES,
+    PVM_BINDINGS,
+    PVM_COLLECTION_SPECS,
+    PVM_FIELD_SPECS,
+    PVM_REGISTER_FIELDS,
+)
 from src.command import dispatch
+from src.files import UploadError, upload_path
+from src.governance.documents import add_document, find_document, remove_document
 from src.governance.model_inventory import list_models
 from src.governance.pvm import (
     add_collection_item,
@@ -37,9 +45,14 @@ from src.governance.pvm import (
     update_collection_item,
     update_pvm_field,
 )
-from src.web._helpers import context_from_request, json_body, reference_options
+from src.governance.pvm.commands import AGGREGATE_TYPE as PVM_AGGREGATE
+from src.web._helpers import context_from_request, json_body, reference_options, request_actor
 
 pvm_bp = Blueprint("pvm", __name__, url_prefix="/api/pvms")
+
+
+def _pvm_scope(pvm_id: str) -> str:
+    return f"pvm/{pvm_id}"
 
 
 def _grouped_specs(options: dict[str, list], model_ids: list[str]):
@@ -82,6 +95,7 @@ def field_specs():
         "register": list(PVM_REGISTER_FIELDS),
         "bindings": list(PVM_BINDINGS),
         "collections": _collection_specs(),
+        "doc_categories": list(DOC_CATEGORIES),
     })
 
 
@@ -168,5 +182,46 @@ def delete_item(pvm_id: str, collection: str, item_id: str):
     dispatch(
         "remove_collection_item", remove_collection_item, context=context_from_request(body),
         pvm_id=pvm_id, collection=collection, item_id=item_id)
+    rebuild_pvm_view()
+    return jsonify(get_pvm(pvm_id))
+
+
+@pvm_bp.post("/<pvm_id>/documents")
+def upload_document(pvm_id: str):
+    """Supporting Documentation: upload a categorised file against the PVM."""
+    if get_pvm(pvm_id) is None:
+        return jsonify({"error": "PVM not found"}), 404
+    category = request.form.get("category")
+    if category not in DOC_CATEGORIES:
+        return jsonify({"error": "invalid category"}), 400
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        add_document(
+            aggregate_type=PVM_AGGREGATE, aggregate_id=pvm_id, scope=_pvm_scope(pvm_id),
+            category=category, filename=file.filename, data=file.read(),
+            description=request.form.get("description", ""), actor=request_actor())
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    rebuild_pvm_view()
+    return jsonify(get_pvm(pvm_id)), 201
+
+
+@pvm_bp.get("/<pvm_id>/documents/<item_id>/download")
+def download_document(pvm_id: str, item_id: str):
+    doc = find_document(PVM_AGGREGATE, pvm_id, item_id)
+    if doc is None:
+        return jsonify({"error": "document not found"}), 404
+    path = upload_path(_pvm_scope(pvm_id), doc["filename"])
+    if not path.exists():
+        return jsonify({"error": "file missing"}), 404
+    return send_file(str(path), as_attachment=True, download_name=doc["original_name"])
+
+
+@pvm_bp.post("/<pvm_id>/documents/<item_id>/delete")
+def delete_document(pvm_id: str, item_id: str):
+    remove_document(
+        aggregate_type=PVM_AGGREGATE, aggregate_id=pvm_id, item_id=item_id, actor=request_actor())
     rebuild_pvm_view()
     return jsonify(get_pvm(pvm_id))

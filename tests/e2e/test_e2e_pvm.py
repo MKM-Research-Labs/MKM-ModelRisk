@@ -73,3 +73,17 @@ def test_pvm_edit_status_field(page: Page, base_url: str):
     page.click("#ped-save")
     confirm(page)
     expect(page.locator("#row-status")).to_contain_text("Active")
+
+
+def test_pvm_governance_tabs_and_rag(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-AN4", "Analytics Engine")
+    _register_pvm(page, "PVM-E2E-004", "Government Bond", "MKM-E2E-AN4")
+    page.click("tr.clickable[data-id='PVM-E2E-004']")
+    expect(page.locator(".dtabs")).to_contain_text("Remediation")
+    expect(page.locator(".dtabs")).to_contain_text("Docs")
+    page.click("[data-edit='rag_rating']")
+    page.select_option("#ped-input", "Green")
+    page.click("#ped-save")
+    confirm(page)
+    expect(page.locator("#row-rag_rating")).to_contain_text("Green")

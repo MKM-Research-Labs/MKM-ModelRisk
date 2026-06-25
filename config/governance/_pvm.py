@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 from config.governance._collections import COLLECTION_SPECS
+from config.governance._inventory import VALID_RAG_RATINGS
 
 VALID_PVM_STATUS = ("Proposed", "Active", "Suspended", "Retired")
 
@@ -35,31 +36,40 @@ PVM_BINDINGS = ("analytics_model", "market_data_model", "calculating_agent")
 PVM_FIELD_SPECS = {
     "product": {"label": "Product", "type": "text", "group": "Product"},
     "product_id": {"label": "Product ID", "type": "text", "group": "Product"},
+    "description": {"label": "Description", "type": "text", "group": "Product"},
     "analytics_model": {"label": "Analytics Model", "type": "text", "group": "Bindings"},
     "market_data_model": {"label": "Market Data Model", "type": "text", "group": "Bindings",
                           "reference": "market_data_model"},
     "calculating_agent": {"label": "Calculating Agent", "type": "text", "group": "Bindings",
                           "reference": "calculating_agent"},
+    "rag_rating": {"label": "RAG rating", "type": "choice", "options": VALID_RAG_RATINGS,
+                   "group": "Risk rating"},
     "status": {"label": "Status", "type": "choice", "options": VALID_PVM_STATUS, "group": "Governance"},
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
+    "notes": {"label": "Notes", "type": "text", "group": "Governance"},
+    "mrc_signoff_date": {"label": "MRC sign-off", "type": "date", "group": "Review dates"},
+    "next_review_date": {"label": "Next review", "type": "date", "group": "Review dates"},
+    "last_review_date": {"label": "Last review", "type": "date", "group": "Review dates"},
     "monitoring_approach": {"label": "Monitoring approach", "type": "text", "group": "Monitoring"},
     "monitoring_results": {"label": "Monitoring results", "type": "text", "group": "Monitoring"},
-    "notes": {"label": "Notes", "type": "text", "group": "Governance"},
 }
 
 # Fields editable through the generic field-edit command (the bindings are not —
 # they are changed via rebind; ``status`` Retired is reached via retire).
 PVM_EDITABLE_FIELDS = (
-    "product", "product_id", "status", "owner",
-    "monitoring_approach", "monitoring_results", "notes",
+    "product", "product_id", "description", "rag_rating", "status", "owner", "notes",
+    "mrc_signoff_date", "next_review_date", "last_review_date",
+    "monitoring_approach", "monitoring_results",
 )
-PVM_FIELD_CHOICES = {"status": VALID_PVM_STATUS}
+PVM_FIELD_CHOICES = {"status": VALID_PVM_STATUS, "rag_rating": VALID_RAG_RATINGS}
 
 # The register form's minimum (besides the mandatory PVM ID).
 PVM_REGISTER_FIELDS = ("product", "analytics_model", "market_data_model", "calculating_agent")
 
-# Production-level registers — reuse the inventory's Limitations / Assumptions shapes.
+# Production-level registers — reuse the inventory's Limitations / Assumptions /
+# Remediation shapes; Supporting Documentation reuses the per-aggregate Docs store.
 PVM_COLLECTION_SPECS = {
     "limitations": COLLECTION_SPECS["limitations"],
     "assumptions": COLLECTION_SPECS["assumptions"],
+    "remediation_steps": COLLECTION_SPECS["remediation_steps"],
 }
