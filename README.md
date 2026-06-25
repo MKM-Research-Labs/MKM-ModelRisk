@@ -86,10 +86,14 @@ python3.13 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"          # add ,e2e for the browser test suite
 
-# 4. (Optional) Seed a few example models so the inventory isn't empty
+# 4. Verify the checkout (recommended): coding-rule audit + test suite
+python -m audit                  # coding rules R1–R6 — exits non-zero on any finding
+pytest --cov                     # ~256 tests, 100% coverage
+
+# 5. (Optional) Seed a few example models so the inventory isn't empty
 PYTHONPATH=. python scripts/seed_demo.py
 
-# 5. Run the governance console (database migrations are applied on startup)
+# 6. Run the governance console (database migrations are applied on startup)
 python app.py                    # serves http://127.0.0.1:5015
 ```
 
