@@ -37,7 +37,8 @@ already has.
 
 1. The **PVM aggregate** itself (component bindings, derived identifier, lifecycle).
 2. **Cross-aggregate lineage** — the trickiest part:
-   - retiring/removing an inventory model that an **Active PVM** references is **blocked**;
+   - an inventory model **cannot be retired** while **any non-retired PVM** still
+     uses it — every dependent PVM must be retired first;
    - an inventory model gains a **"Used by N PVMs"** panel.
    This couples `model_inventory` to the PVM read model. It must be done through a
    single query function in the PVM domain that the inventory command calls — never
@@ -105,8 +106,9 @@ Derived identifier built in the domain (not stored as an editable field):
 - Analytics Model reference **must resolve** to a live (non-retired) inventory model.
 - `(product, analytics, mdm, agent)` combination should be **unique** — flagged at
   confirmation (a `DomainError` the confirm dialog surfaces).
-- A retire/remove of an inventory model referenced by an **Active** PVM is **blocked**
-  with a message naming the dependent PVMs.
+- An inventory model **cannot be retired** while **any non-retired PVM** references
+  it. All dependent PVMs must be **retired first**; the block message names them.
+  (A PVM that is itself Retired no longer blocks.)
 
 ---
 
@@ -158,10 +160,12 @@ clean (`python -m audit`), all coding rules R1–R8.
 ### Phase 5 — Cross-aggregate lineage
 - Inventory model detail gains a **"Used by N PVMs"** panel (calls the
   `used-by` query); the Analytics-Model binding deep-links to the inventory record.
-- Wire the **retire-block**: `model_inventory`'s retire/remove command calls a PVM
-  domain query (`active_pvms_for_model`) and raises `DomainError` listing dependents.
-- **Tests:** retire blocked when an Active PVM references the model; allowed once the
-  PVM is retired/rebound; the used-by panel count.
+- Wire the **retire-block**: `model_inventory`'s retire command calls a PVM domain
+  query (`dependent_pvms_for_model` — every non-retired PVM referencing the model)
+  and raises `DomainError` listing them. The model can only be retired once that
+  list is empty (i.e. all dependent PVMs are themselves retired).
+- **Tests:** retire blocked while any non-retired PVM references the model; allowed
+  once all such PVMs are retired (or rebound away); the used-by panel count.
 
 ### Phase 6 — MRC scope + reporting
 - Allow **PVMs in an MRC meeting's `models_in_scope`** (or a parallel `pvms_in_scope`)
