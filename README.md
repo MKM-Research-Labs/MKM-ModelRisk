@@ -36,6 +36,8 @@ and reason.
 - **Bibliography** — manage references and export **BibTeX**.
 - **Model Risk Report** — a committee-facing **PDF status report** across the
   whole inventory.
+- **Audit Reports** — an in-app tab that generates and serves PDF reports (the
+  R1–R8 coding-rule audit, the Model Risk Report, and the User Guide).
 - **Immutable audit trail** — every mutation recorded with actor, timestamp,
   reason, and a tamper-evident hash chain.
 
@@ -66,7 +68,8 @@ the single `src/database/` utility.
 |---|---|
 | **PostgreSQL 16** | The database, run natively (no Docker). E.g. `brew install postgresql@16`. |
 | **Python 3.13** | The application runtime. |
-| **tectonic** *(optional)* | A LaTeX engine, required only for the Meeting Pack and Model Risk Report PDFs. Install with `brew install tectonic`. |
+| **tectonic** *(optional)* | A LaTeX engine, required only for the Meeting Pack, Model Risk Report, and Audit Reports PDFs. Install with `brew install tectonic`. |
+| **pandoc** *(optional)* | Renders the User Guide PDF in the Audit Reports tab. Install with `brew install pandoc`. |
 | **Node + jscpd** *(optional)* | Only for the duplicate-code section of `python -m audit`. |
 
 ---

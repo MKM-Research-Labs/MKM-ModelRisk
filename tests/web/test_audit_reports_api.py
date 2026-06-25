@@ -39,18 +39,35 @@ def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "OUTPUT_DIR", tmp_path / "audit")
     monkeypatch.setattr(pack, "compile_tex", _stub_pdf)             # no tectonic
     monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})  # no jscpd
+    monkeypatch.setattr(mod, "_render_user_guide", lambda dest: dest.write_bytes(b"%PDF ug"))  # no pandoc
 
     generated = client.post("/api/audit-reports/generate", headers=HEADERS)
     assert generated.status_code == 200
     names = {r["filename"] for r in generated.get_json()}
-    assert {"coding_rule_audit.pdf", "model_risk_report.pdf"} <= names
+    assert {"coding_rule_audit.pdf", "model_risk_report.pdf", "user_guide.pdf"} <= names
 
     catalogue = client.get("/api/audit-reports").get_json()
-    assert any(r["label"] == "Coding-Rule Audit" for r in catalogue)
+    labels = {r["label"] for r in catalogue}
+    assert {"Coding-Rule Audit", "User Guide"} <= labels
     assert all(r["size"] > 0 and r["modified"] for r in catalogue)
 
     served = client.get("/api/audit-reports/coding_rule_audit.pdf")
     assert served.status_code == 200 and served.data.startswith(b"%PDF")
+
+
+def test_user_guide_skipped_without_pandoc(tmp_path, monkeypatch):
+    monkeypatch.setattr(mod.shutil, "which", lambda _name: None)
+    dest = tmp_path / "user_guide.pdf"
+    mod._render_user_guide(dest)
+    assert not dest.exists()
+
+
+def test_user_guide_runs_pandoc_when_available(tmp_path, monkeypatch):
+    monkeypatch.setattr(mod.shutil, "which", lambda _name: "/usr/bin/pandoc")
+    calls = []
+    monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: calls.append(cmd))
+    mod._render_user_guide(tmp_path / "user_guide.pdf")
+    assert calls and calls[0][0] == "pandoc" and "--pdf-engine=tectonic" in calls[0]
 
 
 def test_serve_missing_dir_is_404(client, tmp_path, monkeypatch):

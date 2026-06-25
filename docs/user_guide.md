@@ -15,7 +15,7 @@ governance console. For installation, see the [README](../README.md).
 6. [Bibliography](#6-bibliography)
 7. [Audit Trail](#7-audit-trail)
 8. [Admin](#8-admin)
-9. [Reporting (PDFs)](#9-reporting-pdfs)
+9. [Reporting & Audit Reports](#9-reporting--audit-reports)
 10. [Appendix: reference data](#10-appendix-reference-data)
 
 ---
@@ -48,11 +48,19 @@ Consequences you can rely on:
 - The **Audit Trail** tab is not a separate log that *describes* changes — it
   *is* the changes.
 
+**One company, a strict org hierarchy.** The institution is a single **Company**,
+defined once under Admin (the platform prevents adding a second). Everything —
+models and committees — belongs to that Company and sits within its
+**Company -> Division -> Department** hierarchy. The **Company** selector in the
+header is the working scope: new models and meetings are registered into it, and
+the inventory is filtered by it.
+
 ---
 
 ## 2. Getting around
 
-The top navigation has six tabs:
+The header carries the **Company** scope selector and the **Acting as** identity.
+The top navigation has seven tabs:
 
 | Tab | Purpose |
 |---|---|
@@ -60,8 +68,9 @@ The top navigation has six tabs:
 | **MRC Meetings** | Schedule and document Model Risk Committee meetings. |
 | **Documents** | Governance-wide document library. |
 | **Bibliography** | References and BibTeX export. |
-| **Audit Trail** | The immutable record of every change. |
-| **Admin** | Committee settings, branding, people directory, and menu lists. |
+| **Audit Trail** | The immutable record of every change (events). |
+| **Audit Reports** | Generated audit/governance PDFs — view & download. |
+| **Admin** | Company, Division, Department, MRC settings, and people. |
 
 ---
 
@@ -73,14 +82,16 @@ The landing tab shows summary cards (counts by status) and a table of all
 models — ID, name, company, tier, RAG rating, owner, and lifecycle stage.
 Click any row to open that model's detail. The **↓ Model Risk Report** button
 (top right of the list) produces a committee status PDF (see
-[Reporting](#9-reporting-pdfs)).
+[Reporting](#9-reporting--audit-reports)).
 
 ### 3.2 Registering a model
 
-The **Register a model** card at the top takes a mandatory **Model ID** (e.g.
-`MKM-CR-001`) and **Name**, plus a few headline fields (company, division,
-department, repository, codebase, category, tier, owner). Click **Register…**,
-confirm, and the model appears in the list.
+Click **+ Register model** (top of the inventory) to open a popup that asks for
+only the **Model ID** (e.g. `MKM-CR-001`) and **Name** — the minimum. The model
+is registered into the **Company** currently selected in the header; everything
+else (tier, owner, methodology, review dates, …) is filled in **on the model
+afterwards** via its detail tabs (see [Editing fields](#34-editing-fields)).
+Click **Register…**, confirm, and the model appears in the list.
 
 On registration the platform automatically seeds the **nine SR 26-2 validation
 questions** (see the [appendix](#10-appendix-reference-data)) against the model,
@@ -150,11 +161,12 @@ for audit. Retire it from the model detail (the action is confirm-to-amend).
 
 ### 4.1 Scheduling a meeting
 
-The **MRC Meetings** tab mirrors the inventory: a **Schedule a meeting** card,
-summary cards, and a list. Provide a **Meeting ID** (e.g. `MRC-2026-Q3`), a
-**title**, and a **date** (mandatory), plus optional time, location, and chair.
-Schedule and confirm, and the meeting appears in the list with count columns for
-its sub-collections.
+The **MRC Meetings** tab mirrors the inventory. Provide a **Meeting ID** (e.g.
+`MRC-2026-Q3`), a **title**, and a **date** (mandatory), plus optional time,
+location, and chair. Like a model, the meeting is anchored to the **Company**
+selected in the header; within it you choose the **Division** and/or
+**Department** the committee covers. Schedule and confirm, and the meeting
+appears in the list with count columns for its sub-collections.
 
 ### 4.2 The meeting detail view
 
@@ -213,36 +225,47 @@ truth; the other screens are simply current views built from it.
 
 ## 8. Admin
 
-The **Admin** tab maintains institution-level configuration. All of it is
-confirm-to-amend.
+The **Admin** tab maintains institution-level configuration across five sub-tabs
+(left to right): **Company**, **Division**, **Department**, **MRC**, **People**.
+All of it is confirm-to-amend.
 
-**MRC settings & branding.** Organisation name and address, committee chair,
-model owner, meeting frequency, handbook reference, and governance framework —
-plus an **organisation logo** upload. These details populate the console header
-and the headers of the Meeting Pack and Model Risk Report PDFs.
+**Company.** The institution is a **single Company** — defined once; the platform
+prevents adding a second. Set its name and **Owner** (a person), and upload the
+**company logo**, which appears in the Meeting Pack and Model Risk Report PDF
+headers. Everything in the platform links to this Company.
 
-**People directory.** A list of people (name, email, role, organisation). Fields
-across the app that reference people — a model's owner and peer reviewer, a
-meeting's chair — turn into dropdowns sourced from this directory.
+**Division / Department.** The org hierarchy cascades: each **Division** is created
+under the Company, and each **Department** under a Division — you pick the parent
+from a dropdown (populated once the parent list has entries). Each unit carries an
+**Owner**, so model ownership attaches to the org hierarchy.
 
-**Reference menus.** Editable lists for Company, Division, and Department. Once
-populated, the corresponding model fields render as dropdowns instead of free
-text, keeping organisational data consistent.
+**MRC.** Committee settings and branding — organisation name and address, chair,
+meeting frequency, handbook reference, and governance framework. These populate the
+console header cards and the PDF headers.
+
+**People.** A directory of people (name, email, role, organisation). Fields across
+the app that reference people — a model's owner and peer reviewer, a meeting's
+chair, an org unit's owner — become dropdowns sourced from this directory.
 
 ---
 
-## 9. Reporting (PDFs)
+## 9. Reporting & Audit Reports
 
-Two committee-facing PDFs are produced on demand (both require `tectonic`):
+Several PDFs are produced on demand (all require `tectonic`):
 
-- **Model Risk Report** — from the **Model Risk Report** button on the Model
-  Inventory tab. A status report across the whole inventory for the MRC: a
-  summary by risk acceptability, and per-model tier, RAG rating, validation
-  coverage, computed risk rating, and review status.
-- **Meeting Pack** — from the **Meeting Pack PDF** button inside a meeting. The
-  full pack for a single committee meeting (see [section 4.3](#43-meeting-pack-pdf)).
+- **Model Risk Report** — a status report across the whole inventory for the MRC:
+  a summary by risk acceptability, and per-model tier, RAG rating, validation
+  coverage, computed risk rating, and review status. Also available from the
+  **Model Risk Report** button on the Model Inventory tab.
+- **Meeting Pack** — the full pack for a single committee meeting, from the
+  **Meeting Pack PDF** button inside a meeting (see [section 4.3](#43-meeting-pack-pdf)).
+- **Coding-Rule Audit** — the R1–R8 coding-rule compliance report.
 
-Both carry the institution branding configured under [Admin](#8-admin).
+The **Audit Reports** tab is where the generated reports live. Click **Generate
+reports** to (re)build them, then **View** or **Download** each. The Model Risk
+Report, the Coding-Rule Audit, and this **User Guide** are published there; files
+are written to `uploads/audit/`. The committee PDFs carry the company branding
+configured under [Admin](#8-admin).
 
 ---
 
@@ -270,8 +293,8 @@ The overall rating is a weighted sum of five components (weights sum to 1.0):
 | Assumption risk | 0.15 |
 | Limitation risk | 0.10 |
 
-The resulting score maps to a rating: **Acceptable** at ≥ 0.75, **Conditional**
-at ≥ 0.50, otherwise **Unacceptable**.
+The resulting score maps to a rating: **Acceptable** at >= 0.75, **Conditional**
+at >= 0.50, otherwise **Unacceptable**.
 
 ### The nine SR 26-2 validation questions
 
