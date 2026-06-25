@@ -45,12 +45,13 @@ const PVM = {
 
   async render() {
     await this.specs();
+    // List and detail are siblings; opening a PVM hides the list view (master-detail).
     document.getElementById("tab-pvm").innerHTML =
-      '<div id="pvm-summary"></div>' +
+      '<div id="pvm-listview"><div id="pvm-summary"></div>' +
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Product Valuation Models</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="pvm-register">+ Register PVM</button></div>' +
-      '<div id="pvm-list" style="margin-top:12px"></div></div>' +
+      '<div id="pvm-list" style="margin-top:12px"></div></div></div>' +
       '<div id="pvm-detail"></div>';
     document.getElementById("pvm-register").onclick = () => this.openRegister();
     await this.loadList();

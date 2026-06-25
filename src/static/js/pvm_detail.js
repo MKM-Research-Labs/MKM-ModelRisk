@@ -43,12 +43,24 @@ const PvmDetail = {
 
   _render() {
     const d = this._pvm.data || {};
+    const listview = document.getElementById("pvm-listview");
+    if (listview) listview.style.display = "none";
     document.getElementById("pvm-detail").innerHTML =
+      '<div style="margin-bottom:12px"><button class="btn small" id="pvm-back">&lsaquo; All PVMs</button></div>' +
       '<div class="card">' + this._header(d) + this._tabbar(d) + '<div id="pt-content"></div></div>';
+    document.getElementById("pvm-back").onclick = () => PvmDetail.close();
     document.querySelectorAll("[data-ptab]").forEach((b) => {
       b.onclick = () => { this._tab = b.getAttribute("data-ptab"); this._render(); };
     });
     this._renderContent();
+  },
+
+  // Return to the list without a full refetch (the list is kept current on edits).
+  close() {
+    this._tab = "overview";
+    document.getElementById("pvm-detail").innerHTML = "";
+    const listview = document.getElementById("pvm-listview");
+    if (listview) listview.style.display = "";
   },
 
   _header(d) {
