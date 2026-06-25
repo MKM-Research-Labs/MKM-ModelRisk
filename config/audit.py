@@ -20,6 +20,17 @@
 """Coding-rule audit thresholds and scan scope (coding rule R1)."""
 from __future__ import annotations
 
+from pathlib import Path
+
+# Where generated audit report PDFs are written (gitignored: output/).
+AUDIT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "output" / "audit"
+
+# Human-readable titles for the generated report files (filename -> label).
+AUDIT_REPORT_LABELS = {
+    "coding_rule_audit.pdf": "Coding-Rule Audit",
+    "model_risk_report.pdf": "Model Risk Report",
+}
+
 # Coding rule R2: source files should stay under this many lines.
 MAX_SOURCE_FILE_LINES = 300
 MAX_TEST_FILE_LINES = 400
