@@ -92,9 +92,10 @@ const DetailTabs = {
       fieldDisplay(data.version) + "</b></div>";
     const timeline = items.length ? items.map(function (v) {
       const rm = retired ? "" : ' <span class="edit-btn" data-rm="version_history|' + esc(v.item_id) + '">remove</span>';
-      return '<div class="vitem"><div><b>' + fieldDisplay(v.version) + '</b><span class="muted" style="float:right">' +
-        fieldDisplay(v.date) + "</span></div><div>" + fieldDisplay(v.description) + '</div><div class="muted">Author: ' +
-        fieldDisplay(v.author) + (v.ref_document ? " · Ref: " + esc(v.ref_document) : "") + "</div>" + rm + "</div>";
+      return '<div class="vitem"><div><b>' + fieldDisplay(v.version) + "</b>" + lifecycleBadge(v.lifecycle) +
+        '<span class="muted" style="float:right">' + fieldDisplay(v.date) + "</span></div><div>" +
+        fieldDisplay(v.description) + '</div><div class="muted">Author: ' + fieldDisplay(v.author) +
+        (v.ref_document ? " · Ref: " + esc(v.ref_document) : "") + "</div>" + rm + "</div>";
     }).join("") : '<div class="empty">No version history yet.</div>';
     const add = retired ? "" : '<div class="row" style="margin-top:10px">' +
       spec.fields.map((f) => '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +

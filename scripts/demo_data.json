@@ -50,7 +50,12 @@
                  "methodology": "Deterministic cashflow discounting off a fitted yield curve."},
       "collections": {
         "assumptions": [{"description": "Cashflows are known and deterministic", "impact": "Low"}],
-        "limitations": [{"description": "No optionality (callable bonds unsupported)", "impact": "Medium"}]
+        "limitations": [{"description": "No optionality (callable bonds unsupported)", "impact": "Medium"}],
+        "version_history": [
+          {"version": "3.0.0", "date": "2024-11-04", "description": "Move to NSS-fitted curve discounting; deprecate flat-rate path.", "author": "Priya Anand", "lifecycle": "No New Development"},
+          {"version": "3.1.0", "date": "2025-04-15", "description": "Add corporate-bond OAS adjustment and credit spread overlay.", "author": "Priya Anand", "lifecycle": "No New Development"},
+          {"version": "3.2.0", "date": "2025-12-08", "description": "Current production version. Performance tuned; settlement-date handling cleaned up.", "author": "Priya Anand", "lifecycle": "Being Enhanced"}
+        ]
       },
       "validation": {"VQ-001": "Addressed", "VQ-002": "Addressed", "VQ-009": "Addressed"}
     },
@@ -91,7 +96,11 @@
                  "description": "Short-rate model for Bermudan and exotic rates products.",
                  "methodology": "Hull-White 1F calibrated to the swaption grid."},
       "collections": {
-        "limitations": [{"description": "Single-factor; cannot capture curve twists", "impact": "Medium"}]
+        "limitations": [{"description": "Single-factor; cannot capture curve twists", "impact": "Medium"}],
+        "version_history": [
+          {"version": "1.0.0", "date": "2022-09-12", "description": "Initial Hull-White 1F implementation for exotic rates.", "author": "Marcus Reid", "lifecycle": "New"},
+          {"version": "2.0.0", "date": "2024-06-30", "description": "Calibration overhaul against the swaption grid; speed-up.", "author": "Marcus Reid", "lifecycle": "Marked for Removal"}
+        ]
       }
     },
     {
