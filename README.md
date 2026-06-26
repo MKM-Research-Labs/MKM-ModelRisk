@@ -90,7 +90,8 @@ scripts/pg.sh init               # one-off; then scripts/pg.sh start|stop|status
 # 3. Create the virtualenv and install
 python3.13 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"          # add ,e2e for the browser test suite
+pip install -e ".[dev]"
+python -m playwright install chromium   # browser used by the e2e tests
 
 # 4. Verify the checkout (recommended): coding-rule audit + test suite
 python -m audit                  # coding rules R1–R6 — exits non-zero on any finding
@@ -130,12 +131,12 @@ and a bibliography. The company logo is read from `docs/shared/model_risk_front.
 
 ```bash
 # Unit + integration suite (applies migrations automatically), with coverage
-pytest --cov                                     # ~256 tests, 100% coverage
+pytest --cov                                     # ~317 tests, 100% coverage
 
-# End-to-end browser suite (Playwright; needs the [e2e] extra + a browser)
-pip install -e ".[dev,e2e]"
+# End-to-end browser suite (Playwright against a live server). The Python
+# packages are part of `[dev]`; only the browser binary is a separate step.
 python -m playwright install chromium
-pytest tests/e2e -m e2e                          # 19 tests against a live server
+pytest tests/e2e -m e2e
 
 # Coding-rule audit (large files, hardcoding, embedded JS, __init__, duplication)
 python -m audit
