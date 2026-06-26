@@ -88,11 +88,13 @@ MRC_COLLECTION_SPECS = {
     "decisions": {"label": "Decisions", "id_prefix": "D", "fields": [
         {"key": "description", "label": "Decision", "type": "text", "required": True},
         {"key": "date", "label": "Date", "type": "date"},
+        {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
     ]},
     "actions": {"label": "Actions", "id_prefix": "A", "fields": [
         {"key": "description", "label": "Action", "type": "text", "required": True},
         {"key": "owner", "label": "Owner", "type": "text"},
         {"key": "target_date", "label": "Target date", "type": "date"},
         {"key": "status", "label": "Status", "type": "choice", "options": VALID_ACTION_STATUSES},
+        {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
     ]},
 }

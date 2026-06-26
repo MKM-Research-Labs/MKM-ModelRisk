@@ -30,6 +30,7 @@ from src.governance.mrc.commands import (
 from src.governance.mrc.projection import (
     get_meeting,
     list_meetings,
+    meeting_items_for_model,
     rebuild_meeting_view,
 )
 
@@ -43,5 +44,6 @@ __all__ = [
     "remove_collection_item",
     "get_meeting",
     "list_meetings",
+    "meeting_items_for_model",
     "rebuild_meeting_view",
 ]

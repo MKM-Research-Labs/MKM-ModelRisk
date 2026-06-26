@@ -28,7 +28,8 @@ const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
 const HEADER_DATES = ["last_review_date", "mrc_signoff_date", "next_review_date", "recertification_date"];
 
 const Detail = {
-  _id: null, _model: null, _specs: null, _risk: null, _audit: [], _tab: "overview",
+  _id: null, _model: null, _specs: null, _risk: null, _audit: [],
+  _decisions: [], _actions: [], _tab: "overview",
 
   async show(modelId, tab) {
     this._id = modelId;
@@ -36,6 +37,8 @@ const Detail = {
     this._model = await App.get("/api/models/" + modelId);
     this._risk = await App.get("/api/models/" + modelId + "/risk-rating");
     this._audit = (await App.get("/api/audit")).filter((e) => e.aggregate_id === modelId);
+    this._decisions = await App.get("/api/models/" + modelId + "/decisions");
+    this._actions = await App.get("/api/models/" + modelId + "/actions");
     if (tab) this._tab = tab;
     this._render();
     document.getElementById("m-detail").scrollIntoView({ block: "start" });
@@ -81,6 +84,8 @@ const Detail = {
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
       ["assumptions", "Assumptions", n("assumptions")], ["change_history", "Changes", null],
       ["validation_questions", "Validation", cov], ["risk", "Risk Rating", null],
+      ["decisions", "Decisions", this._decisions.length],
+      ["actions", "Actions", this._actions.length],
       ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
     ];
     return '<div class="dtabs">' + tabs.map((t) =>
@@ -94,6 +99,8 @@ const Detail = {
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
     if (this._tab === "risk") { box.innerHTML = DetailTabs.risk(this._risk); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
+    if (this._tab === "decisions") { box.innerHTML = DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]); return; }
+    if (this._tab === "actions") { box.innerHTML = DetailTabs.linkedItems("Actions", this._actions, ["description", "owner", "target_date", "status"]); return; }
     if (this._tab === "docs") {
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [], this._model.retired);
       return;

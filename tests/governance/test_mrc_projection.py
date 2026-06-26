@@ -25,6 +25,7 @@ from src.governance.mrc import (
     add_collection_item,
     get_meeting,
     list_meetings,
+    meeting_items_for_model,
     rebuild_meeting_view,
     schedule_meeting,
     update_meeting_field,
@@ -65,3 +66,31 @@ def test_rebuild_ignores_other_aggregate_types():
                  event_type="Noted", payload={}, actor="system")
     assert rebuild_meeting_view() == 1
     assert [m["meeting_id"] for m in list_meetings()] == ["MTG1"]
+
+
+def test_meeting_items_for_model_finds_linked_decisions_and_actions():
+    schedule_meeting(meeting_id="MTG1", title="Q2 MRC", date="2026-06-30", actor="a")
+    add_collection_item(
+        meeting_id="MTG1", collection="decisions",
+        fields={"description": "Approve recal", "model_id": "MDL-A"}, actor="a",
+    )
+    add_collection_item(
+        meeting_id="MTG1", collection="decisions",
+        fields={"description": "General process update"}, actor="a",  # unlinked
+    )
+    add_collection_item(
+        meeting_id="MTG1", collection="actions",
+        fields={"description": "Backtest", "model_id": "MDL-A"}, actor="a",
+    )
+    rebuild_meeting_view()
+
+    decisions = meeting_items_for_model("decisions", "MDL-A")
+    assert [d["description"] for d in decisions] == ["Approve recal"]
+    assert decisions[0]["meeting_id"] == "MTG1"
+    assert decisions[0]["meeting_title"] == "Q2 MRC"
+
+    actions = meeting_items_for_model("actions", "MDL-A")
+    assert [a["description"] for a in actions] == ["Backtest"]
+
+    # A model with no linked items returns an empty list (not an error).
+    assert meeting_items_for_model("decisions", "MDL-Z") == []

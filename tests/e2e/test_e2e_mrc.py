@@ -17,13 +17,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""MRC e2e: schedule a meeting, bulk-add minutes, multi-select models in scope."""
+"""MRC e2e: schedule a meeting, bulk-add minutes, multi-select models in scope,
+project meeting decisions / actions onto the model detail."""
 from __future__ import annotations
 
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e._flows import confirm, open_app, open_tab, register_model
+from tests.e2e._flows import confirm, open_app, open_model, open_tab, register_model
 
 pytestmark = pytest.mark.e2e
 
@@ -107,3 +108,33 @@ def test_models_multi_select_saves_selection(page: Page, base_url: str):
     expect(page.locator("[data-mscope='MKM-MS-001']")).to_be_checked()
     expect(page.locator("[data-mscope='MKM-MS-003']")).to_be_checked()
     expect(page.locator("[data-mscope='MKM-MS-002']")).not_to_be_checked()
+
+
+def _bulk_add_decision(page: Page, description: str, model_id: str):
+    """Use the bulk-add form on the Decisions tab to add a single linked item."""
+    page.click("[data-mtab='decisions']")
+    page.fill("#badd-decisions-0-description", description)
+    page.select_option("#badd-decisions-0-model_id", model_id)
+    page.click("[data-bulk-add='decisions']")
+    confirm(page)
+
+
+def test_decision_linked_to_model_appears_on_model_detail(page: Page, base_url: str):
+    """A linked decision projects onto the model's read-only Decisions tab."""
+    open_app(page, base_url)
+    register_model(page, "MKM-LINK-001", "Linked Model")
+
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-LINK", "Linked Meeting")
+    page.dblclick("tr.clickable[data-id='MRC-LINK']")
+    _bulk_add_decision(page, "Approve recalibration", "MKM-LINK-001")
+
+    # Back to the inventory, open the model, switch to Decisions tab.
+    open_tab(page, "inventory")
+    open_model(page, "MKM-LINK-001")
+    page.click("[data-dtab='decisions']")
+    box = page.locator("#dt-content")
+    expect(box).to_contain_text("Approve recalibration")
+    expect(box).to_contain_text("Linked Meeting")
+    expect(box).to_contain_text("MRC-LINK")
+    expect(page.locator("[data-dtab='decisions']")).to_contain_text("(1)")
