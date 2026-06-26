@@ -50,11 +50,13 @@ const Detail = {
   _render() {
     const d = this._model.data || {};
     document.getElementById("m-detail").innerHTML =
-      '<div class="card">' + this._header(d) + this._tabbar(d) + '<div id="dt-content"></div></div>';
+      '<div class="card">' + this._header(d) + this._tabbar(d) + '<div id="dt-content"></div></div>' +
+      this._dangerZone();
     document.querySelectorAll("[data-dtab]").forEach((b) => {
       b.onclick = () => { this._tab = b.getAttribute("data-dtab"); this._render(); };
     });
     this._renderContent();
+    this._bindRetire();
   },
 
   _header(d) {
@@ -129,12 +131,23 @@ const Detail = {
     const testing = TESTING_FIELDS.map((k) =>
       '<div class="inforow" id="row-' + k + '"><div class="k">' + esc(this.specByKey(k).label) +
       '</div><div class="v">' + yesNo(d[k]) + "</div>" + this._editLink(k) + "</div>").join("");
-    const retire = this._model.retired
-      ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>'
-      : '<div style="margin-top:14px"><button class="btn danger small" id="d-retire">Retire model…</button></div>';
+    const status = this._model.retired
+      ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
     return '<div class="grid2"><div><div class="section-header">Model Details</div>' + left + "</div>" +
       '<div><div class="section-header">Governance Status</div>' + right +
-      '<div class="section-header">Testing</div>' + testing + "</div></div>" + retire;
+      '<div class="section-header">Testing</div>' + testing + "</div></div>" + status;
+  },
+
+  _dangerZone() {
+    if (this._model.retired) return "";
+    return '<div class="card danger-zone">' +
+      '<div class="dz-header">Danger Zone</div>' +
+      '<div class="dz-row">' +
+      '<div class="dz-text"><b>Retire this model</b>' +
+      '<p class="muted">Retired models become read-only — no further amendments are accepted. ' +
+      "Existing data and audit trail are preserved.</p></div>" +
+      '<div class="dz-action"><button class="btn danger small" id="d-retire">Retire model&hellip;</button></div>' +
+      "</div></div>";
   },
 
   _editLink(key) {
@@ -154,16 +167,21 @@ const Detail = {
   _bindEdits() {
     const self = this;
     if (!this._model.retired) {
-      const retire = document.getElementById("d-retire");
-      if (retire) retire.onclick = function () {
-        App.amend("Retire model " + self._id + " (it can no longer be edited).", "POST",
-          "/api/models/" + self._id + "/retire", {}, function () { Inventory.render(); });
-      };
       document.querySelectorAll("[data-edit]").forEach(function (btn) {
         const key = btn.getAttribute("data-edit");
         btn.onclick = function () { self._edit(self.specByKey(key), self._model.data[key]); };
       });
     }
+  },
+
+  _bindRetire() {
+    if (this._model.retired) return;
+    const self = this;
+    const retire = document.getElementById("d-retire");
+    if (retire) retire.onclick = function () {
+      App.amend("Retire model " + self._id + " (it can no longer be edited).", "POST",
+        "/api/models/" + self._id + "/retire", {}, function () { Inventory.render(); });
+    };
   },
 
   _edit(f, current) {

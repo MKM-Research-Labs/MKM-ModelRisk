@@ -99,6 +99,7 @@
       "fields": {"category": "Counterparty Risk", "tier": 1, "owner": "Johnny Mattimore", "rag_rating": "Amber",
                  "lifecycle_stage": "Validation", "materiality": "High", "complexity": "High",
                  "version": "1.0.0", "next_review_date": "2026-04-30",
+                 "company": "Sterling Bank plc",
                  "description": "Monte-Carlo PFE engine for counterparty credit exposure.",
                  "methodology": "Path simulation with netting and collateral."},
       "collections": {
@@ -111,6 +112,7 @@
       "fields": {"category": "Market Risk", "tier": 1, "owner": "Johnny Mattimore", "rag_rating": "Green",
                  "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
                  "version": "4.1.0", "next_review_date": "2026-07-01",
+                 "company": "Sterling Bank plc",
                  "description": "1-day 99% historical-simulation VaR.",
                  "methodology": "Full-revaluation historical simulation, 2-year window."},
       "collections": {

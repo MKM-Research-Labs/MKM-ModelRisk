@@ -123,3 +123,12 @@ tr.clickable:hover td { background: #f7fbff; }
 .rowact { white-space: nowrap; }
 .rowact .edit-btn + .edit-btn { margin-left: 10px; }
 td.num, th.num { text-align: center; }
+
+/* GitHub-style "Danger Zone" — red-bordered card holding destructive actions. */
+.danger-zone { border-color: var(--red); padding: 0; }
+.danger-zone .dz-header { background: var(--red); color: #fff; padding: 8px 16px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px 8px 0 0; }
+.danger-zone .dz-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; }
+.danger-zone .dz-row + .dz-row { border-top: 1px solid #f1c5c2; }
+.danger-zone .dz-text b { display: block; margin-bottom: 4px; }
+.danger-zone .dz-text p { margin: 0; font-size: 12px; }
+.danger-zone .dz-action { flex-shrink: 0; }
