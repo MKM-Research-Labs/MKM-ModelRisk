@@ -20,6 +20,8 @@
 """Reporting + audit e2e: the Model Risk Report PDF and the audit trail."""
 from __future__ import annotations
 
+import shutil
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -28,6 +30,7 @@ from tests.e2e._flows import open_app, open_tab, register_model
 pytestmark = pytest.mark.e2e
 
 
+@pytest.mark.skipif(shutil.which("tectonic") is None, reason="tectonic not installed (optional)")
 def test_model_risk_report_is_pdf(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-020", "Valuation Model")

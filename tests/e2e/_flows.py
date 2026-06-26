@@ -58,3 +58,57 @@ def open_model(page: Page, model_id: str) -> None:
 
 def open_detail_tab(page: Page, dtab: str) -> None:
     page.click(f"[data-dtab='{dtab}']")
+
+
+def open_admin_subtab(page: Page, atab: str) -> None:
+    """Open the Admin tab and switch to one of its sub-tabs."""
+    page.click(".tab[data-tab='reference']")
+    page.click(f"[data-atab='{atab}']")
+    expect(page.locator(".dtab.active")).to_have_attribute("data-atab", atab)
+
+
+def add_collection_item(page: Page, list_key: str, fields: dict[str, str]) -> str:
+    """Fill the add form for a reference list and submit through confirm-to-amend.
+
+    Returns the new item's id (read from the rendered row).
+    """
+    for key, value in fields.items():
+        selector = f"#add-{list_key}-{key}"
+        if page.locator(selector + " >> nth=0").evaluate("el => el.tagName") == "SELECT":
+            page.select_option(selector, value)
+        else:
+            page.fill(selector, value)
+    page.click(f"[data-add='{list_key}']")
+    confirm(page)
+    row = page.locator(f"[data-ed^='{list_key}|']").first
+    expect(row).to_be_visible()
+    return row.get_attribute("data-ed").split("|", 1)[1]
+
+
+def edit_collection_item(page: Page, list_key: str, item_id: str, fields: dict[str, str]) -> None:
+    page.click(f"[data-ed='{list_key}|{item_id}']")
+    for key, value in fields.items():
+        selector = f"#ce-{key}"
+        if page.locator(selector).evaluate("el => el.tagName") == "SELECT":
+            page.select_option(selector, value)
+        else:
+            page.fill(selector, value)
+    page.click("#ce-save")
+    confirm(page)
+
+
+def remove_collection_item(page: Page, list_key: str, item_id: str) -> None:
+    page.click(f"[data-rm='{list_key}|{item_id}']")
+    confirm(page)
+
+
+def set_mrc_setting(page: Page, key: str, value: str) -> None:
+    """Edit one MRC settings field on the Admin > MRC sub-tab."""
+    page.click(f"[data-sed='{key}']")
+    selector = "#set-input"
+    if page.locator(selector).evaluate("el => el.tagName") == "SELECT":
+        page.select_option(selector, value)
+    else:
+        page.fill(selector, value)
+    page.click("#set-save")
+    confirm(page)
