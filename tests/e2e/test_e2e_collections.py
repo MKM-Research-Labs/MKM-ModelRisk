@@ -81,6 +81,18 @@ def test_add_version_history(page: Page, base_url: str):
     expect(page.locator("#dt-content")).to_contain_text("Recalibration")
 
 
+def test_add_version_with_lifecycle_shows_badge(page: Page, base_url: str):
+    """A version's lifecycle renders as a coloured badge on the timeline (W4d)."""
+    _setup(page, base_url, "MKM-E2E-013L", "version_history")
+    add_collection_item(
+        page, "version_history",
+        {"version": "2.0.0", "date": "2026-06-01",
+         "description": "Major refresh", "lifecycle": "Being Enhanced"},
+    )
+    item = page.locator(".vitem", has_text="2.0.0")
+    expect(item).to_contain_text("Being Enhanced")
+
+
 def test_add_change_history(page: Page, base_url: str):
     _setup(page, base_url, "MKM-E2E-014", "change_history")
     add_collection_item(

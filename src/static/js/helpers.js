@@ -93,6 +93,18 @@ function reviewBadge(status) {
   return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
 }
 
+const LIFECYCLE_COLORS = {
+  "New": "#1976d2", "Being Enhanced": "#f57c00",
+  "No New Development": "#9e9e9e", "Marked for Removal": "#d32f2f",
+};
+
+// Version-lifecycle badge (W4d): where a model version sits in its development arc.
+function lifecycleBadge(lifecycle) {
+  if (!lifecycle) return "";
+  const color = LIFECYCLE_COLORS[lifecycle] || "#9e9e9e";
+  return ' <span class="badge" style="background:' + color + '">' + esc(lifecycle) + "</span>";
+}
+
 // Human-readable file size.
 function fmtSize(bytes) {
   if (bytes === null || bytes === undefined) return "—";

@@ -27,6 +27,12 @@ VALID_VQ_STATUSES = (
     "Addressed", "Partially Addressed", "Not Addressed", "Not Applicable",
 )
 VALID_DEPENDENCY_DIRECTIONS = ("upstream", "downstream")
+# A version's place in the development lifecycle. "New" = a fresh version just
+# cut; "Being Enhanced" = active development against it; "No New Development" =
+# stable, still in use but frozen; "Marked for Removal" = scheduled to retire.
+VALID_VERSION_LIFECYCLE = (
+    "New", "Being Enhanced", "No New Development", "Marked for Removal",
+)
 
 # Structured collections on a model: arrays of items. Each item is built from the
 # field specs below; ``id_prefix`` seeds generated item ids (e.g. AS-001). One
@@ -57,6 +63,8 @@ COLLECTION_SPECS = {
         {"key": "description", "label": "Description", "type": "text"},
         {"key": "author", "label": "Author", "type": "text"},
         {"key": "ref_document", "label": "Reference document", "type": "text"},
+        {"key": "lifecycle", "label": "Lifecycle", "type": "choice",
+         "options": VALID_VERSION_LIFECYCLE},
     ]},
     "remediation_steps": {"label": "Remediation", "id_prefix": "RM", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
