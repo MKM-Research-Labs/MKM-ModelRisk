@@ -46,7 +46,13 @@ from src.governance.pvm import (
     update_pvm_field,
 )
 from src.governance.pvm.commands import AGGREGATE_TYPE as PVM_AGGREGATE
-from src.web._helpers import context_from_request, json_body, reference_options, request_actor
+from src.web._helpers import (
+    context_from_request,
+    json_body,
+    reference_options,
+    request_actor,
+    resolve_field,
+)
 
 pvm_bp = Blueprint("pvm", __name__, url_prefix="/api/pvms")
 
@@ -78,11 +84,10 @@ def _grouped_specs(options: dict[str, list], model_ids: list[str]):
 
 
 def _collection_specs():
+    options_by_list = reference_options()
     return [
         {"key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
-         "fields": [{"key": f["key"], "label": f["label"], "type": f["type"],
-                     "options": list(f.get("options", [])), "required": bool(f.get("required"))}
-                    for f in spec["fields"]]}
+         "fields": [resolve_field(f, options_by_list) for f in spec["fields"]]}
         for key, spec in PVM_COLLECTION_SPECS.items()
     ]
 

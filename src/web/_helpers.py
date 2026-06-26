@@ -51,6 +51,26 @@ def reference_options() -> dict[str, list]:
     return options
 
 
+def resolve_field(field: dict, options_by_list: dict | None = None) -> dict:
+    """Promote a field's reference to a choice dropdown when the referenced list
+    has values; otherwise keep its native type and any static options.
+
+    Shared by every API that renders field specs to the front end, so a single
+    rule decides whether a field becomes a dropdown.
+    """
+    options_by_list = options_by_list if options_by_list is not None else reference_options()
+    field_type = field["type"]
+    options = list(field.get("options", []))
+    reference = field.get("reference")
+    if reference and options_by_list.get(reference):
+        field_type = "choice"
+        options = options_by_list[reference]
+    return {
+        "key": field["key"], "label": field["label"], "type": field_type,
+        "options": options, "required": bool(field.get("required")),
+    }
+
+
 def request_actor() -> str:
     """The SSO actor for a non-JSON (e.g. multipart upload) request."""
     from src.identity import resolve_principal

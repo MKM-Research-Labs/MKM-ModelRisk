@@ -90,13 +90,18 @@ def test_add_change_history(page: Page, base_url: str):
     expect(page.locator("#dt-content")).to_contain_text("Methodology refresh")
 
 
-def test_set_validation_question_status(page: Page, base_url: str):
+def test_set_validation_question_status_and_rationale(page: Page, base_url: str):
+    """Set status + rationale on the first SR 26-2 question; both commit in one save."""
     _setup(page, base_url, "MKM-E2E-016", "validation_questions")
-    # The nine SR 26-2 questions are seeded on registration; pick the first
-    # row's status <select> and mark it Addressed.
-    first = page.locator("select[data-upd^='validation_questions|']").first
-    first.select_option("Addressed")
+    save_btn = page.locator("[data-vq-save]").first
+    item_id = save_btn.get_attribute("data-vq-save")
+    page.select_option(f"#vq-{item_id}-status", "Addressed")
+    page.fill(f"#vq-{item_id}-rationale", "Owner walked through the assumptions in detail.")
+    save_btn.click()
     confirm(page)
-    expect(page.locator("#dt-content")).to_contain_text("Addressed")
-    # Tab badge reads "n/9" — the n is now 1.
+    # After re-render, the rationale persists in the input's value attribute.
+    expect(page.locator(f"#vq-{item_id}-rationale")).to_have_value(
+        "Owner walked through the assumptions in detail."
+    )
+    expect(page.locator(f"#vq-{item_id}-status")).to_have_value("Addressed")
     expect(page.locator("[data-dtab='validation_questions']")).to_contain_text("1/9")

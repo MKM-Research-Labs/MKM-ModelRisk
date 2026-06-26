@@ -36,17 +36,26 @@ const DetailTabs = {
       lbl + '</div><div class="val">' + v + "</div></div>";
     const statuses = ["Addressed", "Partially Addressed", "Not Addressed", "Not Applicable"];
     const rows = questions.map(function (q, i) {
-      let cell;
+      let statusCell, rationaleCell, actionCell;
       if (retired) {
-        cell = vqBadge(q.status);
+        statusCell = vqBadge(q.status);
+        rationaleCell = fieldDisplay(q.rationale);
+        actionCell = "";
       } else {
-        const opts = statuses.map((o) => "<option" + (o === q.status ? " selected" : "") + ">" + o + "</option>").join("");
-        cell = '<select data-upd="validation_questions|' + esc(q.item_id) + '|status">' + opts + "</select>";
+        const opts = statuses.map((o) =>
+          "<option" + (o === q.status ? " selected" : "") + ">" + o + "</option>").join("");
+        statusCell = '<select id="vq-' + esc(q.item_id) + '-status">' + opts + "</select>";
+        rationaleCell = '<input id="vq-' + esc(q.item_id) + '-rationale" value="' +
+          esc(q.rationale || "") + '">';
+        actionCell = '<button class="btn small primary" data-vq-save="' + esc(q.item_id) +
+          '">Save&hellip;</button>';
       }
       return "<tr><td>" + (i + 1) + "</td><td><b>" + fieldDisplay(q.short_label) +
-        '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" + cell + "</td></tr>";
+        '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" + statusCell +
+        "</td><td>" + rationaleCell + "</td><td>" + actionCell + "</td></tr>";
     }).join("");
-    return '<p class="muted">The nine SR 26-2 questions every model owner should be able to answer.</p>' +
+    return '<p class="muted">The nine SR 26-2 questions every model owner should be able to answer. ' +
+      "Set the status and add a rationale, then Save the row.</p>" +
       '<div class="summary">' + card("Addressed", counts.Addressed, "#388e3c") +
       card("Partially", counts["Partially Addressed"], "#f57c00") +
       card("Not Addressed", counts["Not Addressed"], "#d32f2f") +
@@ -54,7 +63,8 @@ const DetailTabs = {
       '<div class="muted" style="margin-bottom:6px">Coverage: ' + counts.Addressed + "/" + total +
       " (" + pct + "%)</div>" +
       '<div class="progress"><div class="bar" style="width:' + pct + "%;background:" + barColor(pct) + '"></div></div>' +
-      "<table><thead><tr><th>#</th><th>Question</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>";
+      "<table><thead><tr><th>#</th><th>Question</th><th>Status</th><th>Rationale</th><th></th></tr>" +
+      "</thead><tbody>" + rows + "</tbody></table>";
   },
 
   risk(rating) {

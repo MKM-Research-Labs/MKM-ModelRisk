@@ -57,7 +57,30 @@ def _section(title: str, body: str) -> str:
     return "\\section*{" + _esc(title) + "}\n" + body
 
 
-def build_tex(meeting: dict, settings: dict, logo_filename: str | None = None) -> str:
+def _model_remediation_section(
+    in_scope_items: list[dict], remediations_by_model: dict[str, list[dict]],
+) -> str:
+    """Per-model section listing each in-scope model's open remediation steps."""
+    body = ""
+    for item in in_scope_items:
+        model_id = item.get("model_id")
+        if not model_id:
+            continue
+        rows = remediations_by_model.get(model_id) or []
+        if not rows:
+            continue
+        body += "\\subsection*{" + _esc(model_id) + "}\n" + _table(
+            ["ID", "Description", "Owner", "Priority", "Due", "Status"],
+            [[r.get("item_id"), r.get("description"), r.get("owner"),
+              r.get("priority"), r.get("due_date"), r.get("status")] for r in rows],
+        )
+    return _section("Model Remediation (in-scope)", body) if body else ""
+
+
+def build_tex(
+    meeting: dict, settings: dict, logo_filename: str | None = None,
+    remediations_by_model: dict[str, list[dict]] | None = None,
+) -> str:
     """Render the LaTeX source for a meeting pack."""
     data = meeting.get("data", {})
     fields = settings.get("fields", {})
@@ -100,6 +123,9 @@ def build_tex(meeting: dict, settings: dict, logo_filename: str | None = None) -
         ["ID", "Action", "Owner", "Target", "Status"],
         [[a.get("item_id"), a.get("description"), a.get("owner"), a.get("target_date"),
           a.get("status")] for a in data.get("actions", [])])) if data.get("actions") else ""
+    remediation = _model_remediation_section(
+        data.get("models_in_scope") or [], remediations_by_model or {},
+    )
 
     footer = _esc(fields.get("framework", "")) + " --- " + _esc(fields.get("handbook_reference", ""))
     return (
@@ -110,7 +136,7 @@ def build_tex(meeting: dict, settings: dict, logo_filename: str | None = None) -
         "\\pagestyle{plain}\n\\begin{document}\n"
         "\\begin{center}\n" + header + "\\end{center}\n"
         "{\\Large\\textbf{" + _esc(title) + "}}\\\\[4pt]\n" + info + "\\par\\bigskip\n" +
-        participants + agenda + minutes + decisions + actions +
+        participants + agenda + minutes + decisions + actions + remediation +
         "\\vfill\\begin{center}\\small\\textcolor{gray}{" + footer + "}\\end{center}\n"
         "\\end{document}\n"
     )
@@ -130,6 +156,27 @@ def compile_tex(tex: str, assets: dict[str, bytes] | None = None) -> bytes:
         return (base / "doc.pdf").read_bytes()
 
 
+def _collect_remediations(meeting: dict) -> dict[str, list[dict]]:
+    """For each in-scope model, gather its open remediation steps.
+
+    The lookup goes through the model inventory's public projection — the same
+    surface the rest of the platform reads from, so the pack stays in sync with
+    what's on screen.
+    """
+    from src.governance.model_inventory import get_model
+    out: dict[str, list[dict]] = {}
+    for item in meeting.get("data", {}).get("models_in_scope") or []:
+        model_id = item.get("model_id")
+        if not model_id or model_id in out:
+            continue
+        model = get_model(model_id)
+        steps = (model or {}).get("data", {}).get("remediation_steps") or []
+        open_steps = [s for s in steps if (s.get("status") or "Open") != "Closed"]
+        if open_steps:
+            out[model_id] = open_steps
+    return out
+
+
 def render_pack_pdf(meeting: dict, settings: dict) -> bytes:
     """Build and compile a meeting pack, embedding the logo if one is set."""
     logo = settings.get("logo")
@@ -140,4 +187,7 @@ def render_pack_pdf(meeting: dict, settings: dict) -> bytes:
         if path.exists():
             logo_filename = "logo." + extension(logo["filename"])
             assets[logo_filename] = path.read_bytes()
-    return compile_tex(build_tex(meeting, settings, logo_filename), assets)
+    return compile_tex(
+        build_tex(meeting, settings, logo_filename, _collect_remediations(meeting)),
+        assets,
+    )

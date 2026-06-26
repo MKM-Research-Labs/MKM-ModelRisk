@@ -40,27 +40,14 @@ from src.governance.mrc import (
     update_collection_item,
     update_meeting_field,
 )
-from src.web._helpers import context_from_request, json_body, reference_options
+from src.web._helpers import context_from_request, json_body, reference_options, resolve_field
 
 mrc_bp = Blueprint("mrc", __name__, url_prefix="/api/meetings")
 
 
-def _resolve_field(field: dict, options_by_list: dict) -> dict:
-    """Resolve a field's spec, promoting a ``reference`` to a choice dropdown
-    once the referenced list has values."""
-    field_type = field["type"]
-    options = list(field.get("options", []))
-    reference = field.get("reference")
-    if reference and options_by_list.get(reference):
-        field_type = "choice"
-        options = options_by_list[reference]
-    return {"key": field["key"], "label": field["label"], "type": field_type,
-            "options": options, "required": bool(field.get("required"))}
-
-
 def _field_specs():
     options_by_list = reference_options()
-    return [_resolve_field({**spec, "key": key}, options_by_list)
+    return [resolve_field({**spec, "key": key}, options_by_list)
             for key, spec in MEETING_FIELD_SPECS.items()]
 
 
@@ -69,7 +56,7 @@ def _collection_specs():
     return [
         {
             "key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
-            "fields": [_resolve_field(f, options_by_list) for f in spec["fields"]],
+            "fields": [resolve_field(f, options_by_list) for f in spec["fields"]],
         }
         for key, spec in MRC_COLLECTION_SPECS.items()
     ]
