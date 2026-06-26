@@ -30,6 +30,7 @@ from src.governance.documents import add_document, find_document, remove_documen
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory.report import render_report_pdf
 from src.governance.model_inventory.risk import compute_risk_rating
+from src.governance.mrc import meeting_items_for_model
 from src.governance.mrc_settings import get_settings
 from src.command import dispatch
 from src.governance.model_inventory import (
@@ -181,6 +182,22 @@ def risk_rating(model_id: str):
     if model is None:
         return jsonify({"error": "model not found"}), 404
     return jsonify(compute_risk_rating(model["data"], as_of=date.today().isoformat()))
+
+
+@models_bp.get("/<model_id>/decisions")
+def decisions_for_model(model_id: str):
+    """Read-only: every MRC decision linked to this model."""
+    if get_model(model_id) is None:
+        return jsonify({"error": "model not found"}), 404
+    return jsonify(meeting_items_for_model("decisions", model_id))
+
+
+@models_bp.get("/<model_id>/actions")
+def actions_for_model(model_id: str):
+    """Read-only: every MRC action linked to this model."""
+    if get_model(model_id) is None:
+        return jsonify({"error": "model not found"}), 404
+    return jsonify(meeting_items_for_model("actions", model_id))
 
 
 @models_bp.post("")

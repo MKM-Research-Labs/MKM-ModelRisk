@@ -103,4 +103,27 @@ const DetailTabs = {
     return "<table><thead><tr><th>When (UTC)</th><th>Event</th><th>Actor</th><th>Reason</th></tr></thead><tbody>" +
       rows + "</tbody></table>";
   },
+
+  // Read-only renderer for items projected from MRC meetings (decisions /
+  // actions linked to this model). Includes the source meeting on every row.
+  linkedItems(label, items, fields) {
+    if (!items.length) {
+      return '<p class="muted">' + esc(label) +
+        " are recorded against MRC meetings — link a meeting decision or action " +
+        "to this model and it will appear here.</p>" +
+        '<div class="empty">No ' + esc(label.toLowerCase()) + " linked yet.</div>";
+    }
+    const head = fields.map((k) => "<th>" + esc(k.replace("_", " ")) + "</th>").join("") +
+      "<th>From meeting</th>";
+    const rows = items.map(function (it) {
+      const cells = fields.map((k) => "<td>" + fieldDisplay(it[k]) + "</td>").join("");
+      const meeting = "<td>" + esc(it.meeting_title || it.meeting_id) +
+        '<br><span class="muted">' + esc(it.meeting_id) +
+        (it.meeting_date ? " · " + esc(it.meeting_date) : "") + "</span></td>";
+      return "<tr>" + cells + meeting + "</tr>";
+    }).join("");
+    return '<p class="muted">' + esc(label) + " linked to this model from the MRC meeting log " +
+      "(read-only).</p>" +
+      "<table><thead><tr>" + head + "</tr></thead><tbody>" + rows + "</tbody></table>";
+  },
 };

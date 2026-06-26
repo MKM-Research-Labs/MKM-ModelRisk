@@ -53,7 +53,7 @@ def register_model(page: Page, model_id: str, name: str) -> None:
 
 def open_model(page: Page, model_id: str) -> None:
     page.click(f"tr.clickable[data-id='{model_id}']")
-    expect(page.locator(".dtabs")).to_be_visible()
+    expect(page.locator("#m-detail .dtabs")).to_be_visible()
 
 
 def open_detail_tab(page: Page, dtab: str) -> None:

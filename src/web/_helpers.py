@@ -26,6 +26,7 @@ from flask import request
 
 from config.governance import REFERENCE_SPECS
 from src.command import CommandContext, context_from_headers
+from src.governance.model_inventory import list_models
 from src.governance.reference import get_reference_lists
 
 
@@ -35,12 +36,19 @@ def json_body() -> dict[str, Any]:
 
 
 def reference_options() -> dict[str, list]:
-    """Current option values per reference list, using each list's display field."""
+    """Current option values per reference list, using each list's display field.
+
+    Also exposes the model inventory under the synthetic key ``model_inventory``
+    so collection fields (e.g. an MRC decision's linked model) can render as a
+    dropdown of registered model ids.
+    """
     lists = get_reference_lists()
-    return {
+    options = {
         name: [item[REFERENCE_SPECS[name].get("display", "value")] for item in items]
         for name, items in lists.items()
     }
+    options["model_inventory"] = [m["model_id"] for m in list_models()]
+    return options
 
 
 def request_actor() -> str:

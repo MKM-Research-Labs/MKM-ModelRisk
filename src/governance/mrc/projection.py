@@ -94,3 +94,25 @@ def list_meetings(config=None) -> list[dict[str, Any]]:
             )
             rows = cur.fetchall()
     return [_row_to_dict(row) for row in rows]
+
+
+def meeting_items_for_model(
+    collection: str, model_id: str, config=None,
+) -> list[dict[str, Any]]:
+    """All items from ``collection`` across every meeting where item.model_id == ``model_id``.
+
+    Each result is the original item, augmented with the source meeting's id,
+    title and date so the model-side read view can credit and link back.
+    """
+    results: list[dict[str, Any]] = []
+    for meeting in list_meetings(config):
+        data = meeting.get("data") or {}
+        for item in data.get(collection) or []:
+            if item.get("model_id") == model_id:
+                results.append({
+                    **item,
+                    "meeting_id": meeting["meeting_id"],
+                    "meeting_title": data.get("title"),
+                    "meeting_date": data.get("date"),
+                })
+    return results

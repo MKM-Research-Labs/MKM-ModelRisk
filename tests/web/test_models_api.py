@@ -164,3 +164,45 @@ def test_invalid_field_value_is_400(client):
         headers=HEADERS,
     )
     assert response.status_code == 400
+
+
+def _schedule_meeting(client, meeting_id="MTG1"):
+    return client.post(
+        "/api/meetings",
+        json={"meeting_id": meeting_id, "title": "Q1", "date": "2026-03-15", "confirmed": True},
+        headers=HEADERS,
+    )
+
+
+def _add_meeting_item(client, collection, fields, meeting_id="MTG1"):
+    return client.post(
+        "/api/meetings/" + meeting_id + "/collections/" + collection,
+        json={"fields": fields, "confirmed": True}, headers=HEADERS,
+    )
+
+
+def test_decisions_for_model(client):
+    _register(client, model_id="M1", name="Alpha")
+    _schedule_meeting(client)
+    _add_meeting_item(client, "decisions", {"description": "Approve recal", "model_id": "M1"})
+    _add_meeting_item(client, "decisions", {"description": "Unrelated"})  # no model_id
+
+    response = client.get("/api/models/M1/decisions")
+    assert response.status_code == 200
+    decisions = response.get_json()
+    assert [d["description"] for d in decisions] == ["Approve recal"]
+    assert decisions[0]["meeting_id"] == "MTG1"
+
+
+def test_actions_for_model(client):
+    _register(client, model_id="M2", name="Beta")
+    _schedule_meeting(client)
+    _add_meeting_item(client, "actions", {"description": "Backtest", "model_id": "M2"})
+
+    actions = client.get("/api/models/M2/actions").get_json()
+    assert [a["description"] for a in actions] == ["Backtest"]
+
+
+def test_decisions_and_actions_unknown_model_is_404(client):
+    assert client.get("/api/models/NOPE/decisions").status_code == 404
+    assert client.get("/api/models/NOPE/actions").status_code == 404
