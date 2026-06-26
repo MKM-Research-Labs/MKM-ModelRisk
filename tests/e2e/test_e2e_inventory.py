@@ -99,3 +99,23 @@ def test_retire_model(page: Page, base_url: str):
     page.click("#d-retire")
     confirm(page)
     expect(page.locator("tr.clickable[data-id='MKM-E2E-008']")).to_contain_text("retired")
+
+
+def test_register_with_company_assignment(page: Page, base_url: str):
+    """Once a Company exists, registration captures it and the model is stamped."""
+    open_app(page, base_url)
+    # Seed a Company so the form has something to pick.
+    from tests.e2e._flows import add_collection_item, open_admin_subtab
+    open_admin_subtab(page, "company")
+    add_collection_item(page, "company", {"value": "Sterling Bank plc"})
+    # Back to inventory, register with the new Company.
+    page.click(".tab[data-tab='inventory']")
+    page.click("#m-register")
+    page.fill("#reg-model_id", "MKM-E2E-CO-001")
+    page.fill("#reg-name", "Companied Model")
+    page.select_option("#reg-company", "Sterling Bank plc")
+    page.click("#reg-submit")
+    confirm(page)
+    # The inventory list row carries a Company column.
+    row = page.locator("tr.clickable[data-id='MKM-E2E-CO-001']")
+    expect(row).to_contain_text("Sterling Bank plc")

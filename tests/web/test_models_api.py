@@ -206,3 +206,31 @@ def test_actions_for_model(client):
 def test_decisions_and_actions_unknown_model_is_404(client):
     assert client.get("/api/models/NOPE/decisions").status_code == 404
     assert client.get("/api/models/NOPE/actions").status_code == 404
+
+
+def _add_company(client, value="Sterling Bank plc"):
+    return client.post(
+        "/api/reference/collections/company",
+        json={"fields": {"value": value}, "confirmed": True}, headers=HEADERS,
+    )
+
+
+def test_register_requires_company_when_admin_lists_have_one(client):
+    """No inventory may exist outside a Company once the org is set up."""
+    _add_company(client)
+    response = _register(client, model_id="M-no-co")
+    assert response.status_code == 400
+    assert "company is required" in response.get_json()["error"].lower()
+
+
+def test_register_with_company_succeeds_when_required(client):
+    _add_company(client)
+    response = _register(client, model_id="M-co", company="Sterling Bank plc")
+    assert response.status_code == 201
+    assert response.get_json()["data"]["company"] == "Sterling Bank plc"
+
+
+def test_register_without_company_allowed_in_fresh_repo(client):
+    """Until any Company exists, registration without one stays open."""
+    response = _register(client, model_id="M-fresh")
+    assert response.status_code == 201

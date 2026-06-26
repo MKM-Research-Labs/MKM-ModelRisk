@@ -203,10 +203,15 @@ def actions_for_model(model_id: str):
 @models_bp.post("")
 def register():
     body = json_body()
+    # Once the admin lists hold at least one Company, every new model must be
+    # tagged with one (no inventory outside a Company). Fresh repos with no
+    # companies configured can still register models so the bring-up isn't
+    # bootstrap-blocked.
+    require_company = bool(reference_options().get("company"))
     dispatch(
         "register_model", register_model, context=context_from_request(body),
         model_id=body.get("model_id"), name=body.get("name"),
-        fields=body.get("fields") or {},
+        fields=body.get("fields") or {}, require_company=require_company,
     )
     rebuild_inventory_view()
     return jsonify(get_model(body.get("model_id"))), 201

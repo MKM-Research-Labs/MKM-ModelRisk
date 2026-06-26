@@ -32,7 +32,7 @@ from config.governance import (
 from src.command import dispatch
 from src.files import UploadError, upload_path
 from src.governance.documents import add_document, find_document, remove_document
-from src.governance.model_inventory import list_models
+from src.governance.model_inventory import get_model, list_models
 from src.governance.pvm import (
     add_collection_item,
     get_pvm,
@@ -121,6 +121,19 @@ def get_one(pvm_id: str):
 @pvm_bp.post("")
 def register():
     body = json_body()
+    # PVM inherits its Company transitively from the analytics_model. Once any
+    # Company exists in the admin lists, a PVM can only bind to an analytics
+    # model that already carries one (so "no inventory outside a Company"
+    # extends to PVMs by construction, not by duplicating the field).
+    if reference_options().get("company"):
+        analytics_model_id = (body.get("fields") or {}).get("analytics_model")
+        if analytics_model_id:
+            analytics_model = get_model(analytics_model_id)
+            if analytics_model is not None and not (analytics_model["data"] or {}).get("company"):
+                return jsonify({"error": (
+                    f"cannot bind PVM to analytics model {analytics_model_id}: "
+                    "the model has no Company assigned"
+                )}), 400
     dispatch(
         "register_pvm", register_pvm, context=context_from_request(body),
         pvm_id=body.get("pvm_id"), product=body.get("product"), fields=body.get("fields") or {})

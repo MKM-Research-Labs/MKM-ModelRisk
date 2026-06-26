@@ -45,13 +45,18 @@
     <section id="tab-reference" class="panel"></section>
   </main>
 
-  <!-- Register a model: minimum info; the rest is edited on the model afterwards. -->
+  <!-- Register a model: id, name + mandatory Company (no inventory outside a
+       Company once one exists in the admin lists). Division & Department are
+       optional and cascade off the chosen Company. -->
   <div id="register-overlay" class="overlay hidden">
     <div class="modal">
       <h2>Register a model</h2>
-      <p class="muted">Enter the minimum to register. You can fill in everything else on the model afterwards.</p>
+      <p class="muted">Every model belongs to a Company. Pick where this one lives; everything else is edited on the model afterwards.</p>
       <div class="field"><label for="reg-model_id">Model ID *</label><input id="reg-model_id" placeholder="MKM-CR-001"></div>
       <div class="field"><label for="reg-name">Name *</label><input id="reg-name" placeholder="Retail Credit Scoring"></div>
+      <div class="field"><label for="reg-company">Company *</label><select id="reg-company"></select></div>
+      <div class="field"><label for="reg-division">Division</label><select id="reg-division"></select></div>
+      <div class="field"><label for="reg-department">Department</label><select id="reg-department"></select></div>
       <div class="modal-actions">
         <button id="reg-cancel" class="btn ghost">Cancel</button>
         <button id="reg-submit" class="btn primary">Register&hellip;</button>
