@@ -181,6 +181,38 @@ def add_items_bulk(meeting_id: str, collection: str):
     return jsonify(get_meeting(meeting_id)), 201
 
 
+@mrc_bp.post("/<meeting_id>/collections/models_in_scope/set")
+def set_models_in_scope(meeting_id: str):
+    """Replace the in-scope model set with the given list.
+
+    The diff is computed against the current state: new ids are added,
+    missing ids are removed. Each add/remove is still a separate event,
+    so the audit trail records exactly what changed.
+    """
+    body = json_body()
+    ctx = context_from_request(body)
+    desired = {mid for mid in (body.get("model_ids") or []) if mid}
+    meeting = get_meeting(meeting_id)
+    if meeting is None:
+        return jsonify({"error": "meeting not found"}), 404
+    current_items = meeting["data"].get("models_in_scope") or []
+    current_by_id = {it["model_id"]: it["item_id"] for it in current_items if it.get("model_id")}
+    for model_id in desired - current_by_id.keys():
+        dispatch(
+            "add_collection_item", add_collection_item, context=ctx,
+            meeting_id=meeting_id, collection="models_in_scope",
+            fields={"model_id": model_id},
+        )
+    for model_id in current_by_id.keys() - desired:
+        dispatch(
+            "remove_collection_item", remove_collection_item, context=ctx,
+            meeting_id=meeting_id, collection="models_in_scope",
+            item_id=current_by_id[model_id],
+        )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id))
+
+
 @mrc_bp.post("/<meeting_id>/collections/<collection>/<item_id>")
 def update_item(meeting_id: str, collection: str, item_id: str):
     body = json_body()
