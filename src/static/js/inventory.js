@@ -63,12 +63,39 @@ const Inventory = {
     await this.loadList();
   },
 
-  // Register with the minimum (ID + name); the rest is edited on the model after.
-  openRegister() {
+  // Register with id + name + the org assignment (Company mandatory). The
+  // header org-scope selector pre-fills Company when it is set.
+  async openRegister() {
     document.getElementById("reg-model_id").value = "";
     document.getElementById("reg-name").value = "";
+    await this._populateOrgPickers();
     document.getElementById("register-overlay").classList.remove("hidden");
     document.getElementById("reg-model_id").focus();
+  },
+
+  async _populateOrgPickers() {
+    const ref = (await App.get("/api/reference")).data || {};
+    const empty = '<option value=""></option>';
+    const opts = (items) => empty + (items || []).map((it) =>
+      "<option>" + esc(it.value) + "</option>").join("");
+    document.getElementById("reg-company").innerHTML = opts(ref.company);
+    const divisions = ref.division || [], departments = ref.department || [];
+    const filter = (sel, list, parentKey, parentVal) => {
+      sel.innerHTML = empty + list
+        .filter((it) => !parentVal || it[parentKey] === parentVal)
+        .map((it) => "<option>" + esc(it.value) + "</option>").join("");
+    };
+    const company = document.getElementById("reg-company");
+    const division = document.getElementById("reg-division");
+    const department = document.getElementById("reg-department");
+    company.value = OrgScope.get().company || "";
+    filter(division, divisions, "company", company.value);
+    filter(department, departments, "division", division.value);
+    company.onchange = () => {
+      filter(division, divisions, "company", company.value);
+      filter(department, departments, "division", division.value);
+    };
+    division.onchange = () => filter(department, departments, "division", division.value);
   },
 
   closeRegister() {
@@ -78,11 +105,16 @@ const Inventory = {
   submitRegister() {
     const id = val("reg-model_id"), name = val("reg-name");
     if (!id || !name) { App.toast("Model ID and name are required", "error"); return; }
+    const fields = {};
+    ["company", "division", "department"].forEach((k) => {
+      const v = val("reg-" + k);
+      if (v) fields[k] = v;
+    });
+    // Company option may still be empty if the admin lists are unset (fresh
+    // repo); the backend allows that, otherwise it rejects with a clear error.
     this.closeRegister();
-    // Company comes from the header org-scope selector; everything else is
-    // edited on the model once it exists.
     App.amend('Register model "' + id + '" (' + name + ").", "POST", "/api/models",
-      { model_id: id, name: name, fields: OrgScope.get() }, () => this.render());
+      { model_id: id, name: name, fields: fields }, () => this.render());
   },
 
   _summary(models) {
