@@ -68,9 +68,10 @@ def open_admin_subtab(page: Page, atab: str) -> None:
 
 
 def add_collection_item(page: Page, list_key: str, fields: dict[str, str]) -> str:
-    """Fill the add form for a reference list and submit through confirm-to-amend.
+    """Fill the add form for a collection and submit through confirm-to-amend.
 
-    Returns the new item's id (read from the rendered row).
+    Returns the new item's id (read from the rendered row). Falls back to
+    ``data-rm`` for collections without inline edit (e.g. version_history).
     """
     for key, value in fields.items():
         selector = f"#add-{list_key}-{key}"
@@ -80,9 +81,31 @@ def add_collection_item(page: Page, list_key: str, fields: dict[str, str]) -> st
             page.fill(selector, value)
     page.click(f"[data-add='{list_key}']")
     confirm(page)
-    row = page.locator(f"[data-ed^='{list_key}|']").first
-    expect(row).to_be_visible()
-    return row.get_attribute("data-ed").split("|", 1)[1]
+    marker = page.locator(f"[data-ed^='{list_key}|'], [data-rm^='{list_key}|']").first
+    expect(marker).to_be_visible()
+    return marker.get_attribute("data-ed" if marker.get_attribute("data-ed") else "data-rm").split("|", 1)[1]
+
+
+def edit_model_field(page: Page, key: str, value: str, *, choice: bool = False) -> None:
+    """Edit one scalar field on a model's overview tab via confirm-to-amend."""
+    page.click(f"[data-edit='{key}']")
+    if choice:
+        page.select_option("#ed-input", value)
+    else:
+        page.fill("#ed-input", value)
+    page.click("#ed-save")
+    confirm(page)
+
+
+def edit_pvm_field(page: Page, key: str, value: str, *, choice: bool = False) -> None:
+    """Edit one scalar field on a PVM's overview tab via confirm-to-amend."""
+    page.click(f"[data-edit='{key}']")
+    if choice:
+        page.select_option("#ped-input", value)
+    else:
+        page.fill("#ped-input", value)
+    page.click("#ped-save")
+    confirm(page)
 
 
 def edit_collection_item(page: Page, list_key: str, item_id: str, fields: dict[str, str]) -> None:
