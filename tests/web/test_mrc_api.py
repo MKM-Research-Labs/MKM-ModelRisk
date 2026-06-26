@@ -180,3 +180,49 @@ def test_bulk_add_without_confirmation_is_409(client):
         headers=HEADERS,
     )
     assert response.status_code == 409
+
+
+def _set_scope(client, model_ids):
+    return client.post(
+        "/api/meetings/MTG1/collections/models_in_scope/set",
+        json={"model_ids": model_ids, "confirmed": True}, headers=HEADERS,
+    )
+
+
+def test_set_models_in_scope_adds_and_removes(client):
+    """The /set endpoint diffs the desired set against the current state."""
+    _schedule(client)
+    _add(client, "models_in_scope", {"model_id": "M-A"})
+    _add(client, "models_in_scope", {"model_id": "M-B"})
+
+    # Desired: keep B, drop A, add C.
+    response = _set_scope(client, ["M-B", "M-C"])
+    assert response.status_code == 200
+    scope = response.get_json()["data"]["models_in_scope"]
+    assert {item["model_id"] for item in scope} == {"M-B", "M-C"}
+
+
+def test_set_models_in_scope_no_change_is_noop(client):
+    _schedule(client)
+    _add(client, "models_in_scope", {"model_id": "M-A"})
+    response = _set_scope(client, ["M-A"])
+    assert response.status_code == 200
+    scope = response.get_json()["data"]["models_in_scope"]
+    assert [item["model_id"] for item in scope] == ["M-A"]
+
+
+def test_set_models_in_scope_unknown_meeting_is_404(client):
+    response = client.post(
+        "/api/meetings/NOPE/collections/models_in_scope/set",
+        json={"model_ids": ["M-A"], "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 404
+
+
+def test_set_models_in_scope_without_confirmation_is_409(client):
+    _schedule(client)
+    response = client.post(
+        "/api/meetings/MTG1/collections/models_in_scope/set",
+        json={"model_ids": ["M-A"]}, headers=HEADERS,
+    )
+    assert response.status_code == 409

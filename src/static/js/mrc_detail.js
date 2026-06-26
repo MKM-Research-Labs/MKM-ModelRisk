@@ -22,13 +22,15 @@
 // Decisions / Actions / Documents. The collection tabs reuse the shared
 // Collections renderer (add/edit/remove); Models joins the inventory.
 const MeetingDetail = {
-  _id: null, _meeting: null, _specs: null, _models: [], _tab: "agenda",
+  _id: null, _meeting: null, _specs: null, _models: [], _inventory: [],
+  _tab: "agenda", _showAll: false,
 
   async show(meetingId, tab) {
     this._id = meetingId;
     this._specs = await MRC.specs();
     this._meeting = await App.get("/api/meetings/" + meetingId);
     this._models = await App.get("/api/meetings/" + meetingId + "/models");
+    this._inventory = await App.get("/api/models");
     if (tab) this._tab = tab;
     this._render();
     document.getElementById("mt-detail").scrollIntoView({ block: "start" });
@@ -95,36 +97,73 @@ const MeetingDetail = {
       false, () => this.show(this._id, this._tab), d, bulk);
   },
 
+  // Org-scope filter: pick the most specific level set on the meeting and
+  // show models that match it (department > division > company > all).
+  _scopeFilter() {
+    const md = this._meeting.data || {};
+    if (md.department) return { key: "department", value: md.department };
+    if (md.division) return { key: "division", value: md.division };
+    if (md.company) return { key: "company", value: md.company };
+    return null;
+  },
+
+  _candidateModels() {
+    const filter = this._scopeFilter();
+    if (this._showAll || !filter) return this._inventory.slice();
+    return this._inventory.filter((m) => (m.data || {})[filter.key] === filter.value);
+  },
+
   _modelsTab() {
-    const rows = this._models.length ? this._models.map((m) =>
-      '<tr><td class="modelid">' + esc(m.model_id) + "</td><td>" + fieldDisplay(m.name) + "</td><td>" +
-      tierBadge(m.tier) + "</td><td>" + ragBadge(m.rag_rating) + "</td><td>" + reviewBadge(m.review_status) +
-      '</td><td class="rowact"><span class="edit-btn" data-rmmodel="' + esc(m.item_id) +
-      '">remove</span></td></tr>').join("") :
-      '<tr><td colspan="6" class="empty">No models in scope.</td></tr>';
-    return "<table><thead><tr><th>Model ID</th><th>Name</th><th>Tier</th><th>RAG</th><th>Status</th><th></th></tr></thead><tbody>" +
-      rows + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px"><div class="field"><label>Model ID</label>' +
-      '<input id="mt-add-model" placeholder="MKM-SI-001"></div>' +
-      '<button class="btn small" id="mt-add-model-btn">Add model…</button></div>';
+    const inScope = new Set(this._models.map((m) => m.model_id));
+    const filter = this._scopeFilter();
+    const candidates = this._candidateModels();
+    const banner = filter
+      ? '<div class="muted" style="margin-bottom:6px">Filtered to ' + esc(filter.key) +
+        " = <b>" + esc(filter.value) + "</b>. " +
+        '<label style="margin-left:8px"><input type="checkbox" id="mt-show-all"' +
+        (this._showAll ? " checked" : "") + "> Show all models</label></div>"
+      : '<div class="muted" style="margin-bottom:6px">No org scope set on this meeting; ' +
+        "showing all inventory.</div>";
+    const rows = candidates.length ? candidates.map((m) => {
+      const d = m.data || {};
+      const checked = inScope.has(m.model_id) ? " checked" : "";
+      return '<tr><td><input type="checkbox" data-mscope="' + esc(m.model_id) + '"' + checked +
+        '></td><td class="modelid">' + esc(m.model_id) + "</td><td>" + fieldDisplay(d.name) +
+        "</td><td>" + tierBadge(d.tier) + "</td><td>" + ragBadge(d.rag_rating) +
+        "</td><td>" + fieldDisplay(d.company) + "</td></tr>";
+    }).join("") :
+      '<tr><td colspan="6" class="empty">No models match this scope.</td></tr>';
+    return banner +
+      "<table><thead><tr><th></th><th>Model ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
+      "<th>Company</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+      '<div class="row" style="margin-top:10px">' +
+      '<button class="btn small primary" id="mt-save-models">Save selection&hellip;</button>' +
+      '<span class="muted" id="mt-models-summary" style="margin-left:8px">' +
+      inScope.size + " model" + (inScope.size === 1 ? "" : "s") + " currently in scope." +
+      "</span></div>";
   },
 
   _bindModels() {
     const self = this;
-    const base = "/api/meetings/" + this._id + "/collections/models_in_scope";
-    document.getElementById("mt-add-model-btn").onclick = function () {
-      const mid = val("mt-add-model");
-      if (!mid) { App.toast("Model ID is required", "error"); return; }
-      App.amend("Add model " + mid + " to scope.", "POST", base, { fields: { model_id: mid } },
-        () => self.show(self._id, "models_in_scope"));
+    const toggle = document.getElementById("mt-show-all");
+    if (toggle) toggle.onchange = function () {
+      self._showAll = toggle.checked; self._render();
     };
-    document.querySelectorAll("[data-rmmodel]").forEach(function (el) {
-      const iid = el.getAttribute("data-rmmodel");
-      el.onclick = function () {
-        App.amend("Remove " + iid + " from scope.", "POST", base + "/" + iid + "/delete", {},
-          () => self.show(self._id, "models_in_scope"));
-      };
-    });
+    document.getElementById("mt-save-models").onclick = function () {
+      const selected = [];
+      document.querySelectorAll("[data-mscope]").forEach(function (cb) {
+        if (cb.checked) selected.push(cb.getAttribute("data-mscope"));
+      });
+      // Carry across any in-scope ids that the current filter hid, so the
+      // user doesn't accidentally remove them by saving a filtered view.
+      const visible = new Set(self._candidateModels().map((m) => m.model_id));
+      self._models.forEach(function (m) {
+        if (!visible.has(m.model_id)) selected.push(m.model_id);
+      });
+      App.amend("Set " + selected.length + " models in scope.", "POST",
+        "/api/meetings/" + self._id + "/collections/models_in_scope/set",
+        { model_ids: selected }, () => self.show(self._id, "models_in_scope"));
+    };
   },
 
   _bindInfo(d) {
