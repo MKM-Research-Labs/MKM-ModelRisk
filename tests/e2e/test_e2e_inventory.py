@@ -17,13 +17,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Inventory e2e: register a model, open it, edit a field through confirm-to-amend."""
+"""Inventory e2e: register, open, edit scalar fields of every type, retire."""
 from __future__ import annotations
 
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e._flows import confirm, open_app, open_model, register_model
+from tests.e2e._flows import (
+    confirm,
+    edit_model_field,
+    open_app,
+    open_model,
+    register_model,
+)
 
 pytestmark = pytest.mark.e2e
 
@@ -52,3 +58,44 @@ def test_edit_field_records_amendment(page: Page, base_url: str):
     page.click("#ed-save")
     confirm(page)
     expect(page.locator("#row-owner")).to_contain_text("Jane Modeller")
+
+
+def test_edit_lifecycle_stage_choice(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-004", "PD Model")
+    open_model(page, "MKM-E2E-004")
+    edit_model_field(page, "lifecycle_stage", "Production", choice=True)
+    expect(page.locator("#row-lifecycle_stage")).to_contain_text("Production")
+
+
+def test_edit_next_review_date(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-005", "LGD Model")
+    open_model(page, "MKM-E2E-005")
+    edit_model_field(page, "next_review_date", "2026-12-31")
+    expect(page.locator("#row-next_review_date")).to_contain_text("2026-12-31")
+
+
+def test_edit_tier(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-006", "EAD Model")
+    open_model(page, "MKM-E2E-006")
+    edit_model_field(page, "tier", "2", choice=True)
+    expect(page.locator("#row-tier")).to_contain_text("Tier 2")
+
+
+def test_edit_rag_rating_choice(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-007", "VaR Model")
+    open_model(page, "MKM-E2E-007")
+    edit_model_field(page, "rag_rating", "Amber", choice=True)
+    expect(page.locator("#row-rag_rating")).to_contain_text("Amber")
+
+
+def test_retire_model(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-008", "Legacy Model")
+    open_model(page, "MKM-E2E-008")
+    page.click("#d-retire")
+    confirm(page)
+    expect(page.locator("tr.clickable[data-id='MKM-E2E-008']")).to_contain_text("retired")
