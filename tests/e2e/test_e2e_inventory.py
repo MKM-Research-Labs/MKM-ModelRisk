@@ -76,12 +76,12 @@ def test_edit_next_review_date(page: Page, base_url: str):
     expect(page.locator("#row-next_review_date")).to_contain_text("2026-12-31")
 
 
-def test_edit_tier(page: Page, base_url: str):
+def test_edit_materiality_choice(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-006", "EAD Model")
     open_model(page, "MKM-E2E-006")
-    edit_model_field(page, "tier", "2", choice=True)
-    expect(page.locator("#row-tier")).to_contain_text("Tier 2")
+    edit_model_field(page, "materiality", "High", choice=True)
+    expect(page.locator("#row-materiality")).to_contain_text("High")
 
 
 def test_edit_rag_rating_choice(page: Page, base_url: str):

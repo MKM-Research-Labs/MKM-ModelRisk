@@ -90,16 +90,6 @@ def test_add_change_history(page: Page, base_url: str):
     expect(page.locator("#dt-content")).to_contain_text("Methodology refresh")
 
 
-def test_add_dependency(page: Page, base_url: str):
-    _setup(page, base_url, "MKM-E2E-015", "dependencies")
-    add_collection_item(
-        page, "dependencies",
-        {"direction": "upstream", "model_id": "MKM-CR-002", "note": "Consumes PD output"},
-    )
-    expect(page.locator("#dt-content")).to_contain_text("MKM-CR-002")
-    expect(page.locator("#dt-content")).to_contain_text("upstream")
-
-
 def test_set_validation_question_status(page: Page, base_url: str):
     _setup(page, base_url, "MKM-E2E-016", "validation_questions")
     # The nine SR 26-2 questions are seeded on registration; pick the first

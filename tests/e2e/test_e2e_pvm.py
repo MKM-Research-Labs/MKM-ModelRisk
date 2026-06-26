@@ -17,13 +17,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""PVM e2e: register a PVM against a live model, rebind a component, edit status."""
+"""PVM e2e: register a PVM against a live model, rebind a component, edit
+status, add to its registers and upload a document, retire."""
 from __future__ import annotations
 
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e._flows import confirm, open_app, open_tab, register_model
+from tests.e2e._flows import add_collection_item, confirm, open_app, open_tab, register_model
 
 pytestmark = pytest.mark.e2e
 
@@ -87,3 +88,47 @@ def test_pvm_governance_tabs_and_rag(page: Page, base_url: str):
     page.click("#ped-save")
     confirm(page)
     expect(page.locator("#row-rag_rating")).to_contain_text("Green")
+
+
+def test_pvm_add_assumption(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-AN5", "Analytics Engine")
+    _register_pvm(page, "PVM-E2E-005", "Swap", "MKM-E2E-AN5")
+    page.click("tr.clickable[data-id='PVM-E2E-005']")
+    page.click("[data-ptab='assumptions']")
+    add_collection_item(page, "assumptions", {"description": "Flat vol surface", "impact": "Low"})
+    expect(page.locator("#pt-content")).to_contain_text("Flat vol surface")
+
+
+def test_pvm_add_remediation_step(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-AN6", "Analytics Engine")
+    _register_pvm(page, "PVM-E2E-006", "Cap", "MKM-E2E-AN6")
+    page.click("tr.clickable[data-id='PVM-E2E-006']")
+    page.click("[data-ptab='remediation_steps']")
+    add_collection_item(page, "remediation_steps", {"description": "Re-bootstrap curve"})
+    expect(page.locator("#pt-content")).to_contain_text("Re-bootstrap curve")
+
+
+def test_pvm_upload_supporting_document(page: Page, base_url: str, tmp_path):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-AN7", "Analytics Engine")
+    _register_pvm(page, "PVM-E2E-007", "Floor", "MKM-E2E-AN7")
+    page.click("tr.clickable[data-id='PVM-E2E-007']")
+    page.click("[data-ptab='docs']")
+    pdf = tmp_path / "pvm_spec.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n% e2e fixture\n")
+    page.set_input_files("#doc-file", str(pdf))
+    page.fill("#doc-desc", "PVM specification")
+    page.click("#doc-upload")
+    expect(page.locator("#pt-content")).to_contain_text("pvm_spec.pdf")
+
+
+def test_pvm_retire(page: Page, base_url: str):
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-AN8", "Analytics Engine")
+    _register_pvm(page, "PVM-E2E-008", "Inflation Swap", "MKM-E2E-AN8")
+    page.click("tr.clickable[data-id='PVM-E2E-008']")
+    page.click("#pvm-retire")
+    confirm(page)
+    expect(page.locator("tr.clickable[data-id='PVM-E2E-008']")).to_contain_text("retired")
