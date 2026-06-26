@@ -148,3 +148,35 @@ def test_add_without_confirmation_is_409(client):
         json={"fields": {"title": "x"}}, headers=HEADERS,
     )
     assert response.status_code == 409
+
+
+def test_bulk_add_collection_items(client):
+    """Three populated rows and two blank ones produce three events."""
+    _schedule(client)
+    response = client.post(
+        "/api/meetings/MTG1/collections/minutes/bulk",
+        json={
+            "items": [
+                {"fields": {"title": "Welcome", "presenter": "Chair"}},
+                {"fields": {"title": "Approvals", "text": "Two approved."}},
+                {"fields": {}},
+                {"fields": {"title": "AOB"}},
+                {"fields": {"title": "  ", "text": ""}},  # whitespace-only, skipped
+            ],
+            "confirmed": True,
+        },
+        headers=HEADERS,
+    )
+    assert response.status_code == 201
+    minutes = response.get_json()["data"]["minutes"]
+    assert [m["title"] for m in minutes] == ["Welcome", "Approvals", "AOB"]
+
+
+def test_bulk_add_without_confirmation_is_409(client):
+    _schedule(client)
+    response = client.post(
+        "/api/meetings/MTG1/collections/minutes/bulk",
+        json={"items": [{"fields": {"title": "x"}}]},
+        headers=HEADERS,
+    )
+    assert response.status_code == 409

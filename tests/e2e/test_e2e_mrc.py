@@ -52,3 +52,28 @@ def test_double_click_opens_meeting_detail(page: Page, base_url: str):
     expect(detail).to_contain_text("Q4 Model Risk Committee")
     expect(detail).to_contain_text("Agenda")
     expect(detail).to_contain_text("Meeting Pack PDF")
+
+
+def test_bulk_add_minutes(page: Page, base_url: str):
+    """Fill three of the five minutes rows and save them in one go."""
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-2026-BLK", "Bulk Minutes")
+    page.dblclick("tr.clickable[data-id='MRC-2026-BLK']")
+    page.click("[data-mtab='minutes']")
+    expect(page.locator("[data-bulk-add='minutes']")).to_be_visible()
+
+    page.fill("#badd-minutes-0-title", "Welcome")
+    page.fill("#badd-minutes-1-title", "Approvals")
+    page.fill("#badd-minutes-1-text", "Two models approved.")
+    page.fill("#badd-minutes-2-title", "AOB")
+
+    page.click("[data-bulk-add='minutes']")
+    confirm(page)
+
+    expect(page.locator("[data-mtab='minutes']")).to_contain_text("(3)")
+    # First tbody is the existing items; the second is the empty bulk-add form.
+    body = page.locator("#mtd-content tbody").first
+    expect(body).to_contain_text("Welcome")
+    expect(body).to_contain_text("Approvals")
+    expect(body).to_contain_text("AOB")

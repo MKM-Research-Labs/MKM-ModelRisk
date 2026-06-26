@@ -159,6 +159,28 @@ def add_item(meeting_id: str, collection: str):
     return jsonify(get_meeting(meeting_id)), 201
 
 
+@mrc_bp.post("/<meeting_id>/collections/<collection>/bulk")
+def add_items_bulk(meeting_id: str, collection: str):
+    """Add up to N items to a collection in one submission.
+
+    Items with all-empty fields are skipped so the UI can submit a fixed
+    number of input rows and only commit the populated ones. Each accepted
+    item becomes its own event (preserving event-log granularity).
+    """
+    body = json_body()
+    ctx = context_from_request(body)
+    for item in body.get("items") or []:
+        fields = (item.get("fields") if isinstance(item, dict) else None) or {}
+        if not any(str(v).strip() for v in fields.values()):
+            continue
+        dispatch(
+            "add_collection_item", add_collection_item, context=ctx,
+            meeting_id=meeting_id, collection=collection, fields=fields,
+        )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id)), 201
+
+
 @mrc_bp.post("/<meeting_id>/collections/<collection>/<item_id>")
 def update_item(meeting_id: str, collection: str, item_id: str):
     body = json_body()
