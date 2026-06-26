@@ -112,3 +112,50 @@ def test_render_skips_non_image_logo(monkeypatch):
     settings = {"fields": {}, "logo": {"filename": "doc.pdf", "original_name": "doc.pdf"}}
     render_pack_pdf(MEETING, settings)
     assert captured["assets"] == {}
+
+
+def test_build_tex_includes_remediation_for_in_scope_models():
+    """Open remediation steps for in-scope models surface as a Pack section."""
+    meeting = {
+        "meeting_id": "MTG1",
+        "data": {
+            "title": "Q3 MRC",
+            "models_in_scope": [{"model_id": "MDL-A"}, {"model_id": "MDL-B"}],
+        },
+    }
+    remediations = {
+        "MDL-A": [
+            {"item_id": "RM-001", "description": "Recalibrate vol surface",
+             "owner": "Alice", "priority": "High", "due_date": "2026-12-01", "status": "Open"},
+        ],
+    }
+    tex = build_tex(meeting, {"fields": {}}, None, remediations)
+    assert "Model Remediation (in-scope)" in tex
+    assert "MDL-A" in tex
+    assert "Recalibrate vol surface" in tex
+    # MDL-B has no items; it doesn't get a subsection.
+    assert "{MDL-B}" not in tex
+
+
+def test_build_tex_omits_remediation_when_empty():
+    tex = build_tex({"meeting_id": "M", "data": {"models_in_scope": [{"model_id": "X"}]}},
+                    {"fields": {}}, None, {})
+    assert "Model Remediation" not in tex
+
+
+def test_render_pack_pulls_remediations_from_inventory(monkeypatch):
+    """render_pack_pdf reaches into the inventory projection for open steps."""
+    captured = _stub_compile(monkeypatch)
+    monkeypatch.setattr("src.governance.mrc.pack.build_tex",
+                        lambda meeting, settings, logo, remediations:
+                        (captured.update(remediations=remediations) or "tex"))
+    monkeypatch.setattr("src.governance.model_inventory.get_model",
+                        lambda mid: {"data": {"remediation_steps": [
+                            {"item_id": "RM-1", "description": "Fix", "status": "Open"},
+                            {"item_id": "RM-2", "description": "Done", "status": "Closed"},
+                        ]}} if mid == "MDL-X" else None)
+    meeting = {"meeting_id": "M", "data": {"models_in_scope": [{"model_id": "MDL-X"}]}}
+    render_pack_pdf(meeting, {"fields": {}, "logo": None})
+    assert list(captured["remediations"].keys()) == ["MDL-X"]
+    # Closed steps are filtered out — only Open / In Progress flow into the pack.
+    assert [s["item_id"] for s in captured["remediations"]["MDL-X"]] == ["RM-1"]

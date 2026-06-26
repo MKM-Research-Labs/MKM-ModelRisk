@@ -48,6 +48,7 @@ COLLECTION_SPECS = {
         {"key": "short_label", "label": "Topic", "type": "text"},
         {"key": "question", "label": "Question", "type": "text", "required": True},
         {"key": "status", "label": "Status", "type": "choice", "options": VALID_VQ_STATUSES},
+        {"key": "rationale", "label": "Rationale", "type": "text"},
         {"key": "evidence", "label": "Evidence", "type": "text"},
     ]},
     "version_history": {"label": "Versions", "id_prefix": "V", "fields": [
@@ -59,7 +60,7 @@ COLLECTION_SPECS = {
     ]},
     "remediation_steps": {"label": "Remediation", "id_prefix": "RM", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
-        {"key": "owner", "label": "Owner", "type": "text"},
+        {"key": "owner", "label": "Owner", "type": "text", "reference": "people"},
         {"key": "priority", "label": "Priority", "type": "choice", "options": VALID_PRIORITY},
         {"key": "due_date", "label": "Due date", "type": "date"},
         {"key": "status", "label": "Status", "type": "choice", "options": VALID_REMEDIATION_STATUS},

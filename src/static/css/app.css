@@ -132,3 +132,9 @@ td.num, th.num { text-align: center; }
 .danger-zone .dz-text b { display: block; margin-bottom: 4px; }
 .danger-zone .dz-text p { margin: 0; font-size: 12px; }
 .danger-zone .dz-action { flex-shrink: 0; }
+
+/* Normalise form-control height so date inputs, selects and text inputs line
+   up in compact add forms (the date input has an internal calendar button
+   that nudges its rendered height; the others match it explicitly). */
+input, select { box-sizing: border-box; height: 34px; }
+textarea { box-sizing: border-box; }

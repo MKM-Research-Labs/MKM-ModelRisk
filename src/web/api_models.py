@@ -44,7 +44,13 @@ from src.governance.model_inventory import (
     update_collection_item,
     update_model_field,
 )
-from src.web._helpers import context_from_request, json_body, reference_options, request_actor
+from src.web._helpers import (
+    context_from_request,
+    json_body,
+    reference_options,
+    request_actor,
+    resolve_field,
+)
 
 
 def _model_scope(model_id: str) -> str:
@@ -53,7 +59,7 @@ def _model_scope(model_id: str) -> str:
 models_bp = Blueprint("models", __name__, url_prefix="/api/models")
 
 
-def _grouped_specs(reference_options: dict[str, list]):
+def _grouped_specs(options_by_list: dict[str, list]):
     """Field specs grouped for the detail view.
 
     Fields backed by a reference list become dropdowns (type ``choice``) once
@@ -67,35 +73,21 @@ def _grouped_specs(reference_options: dict[str, list]):
             group = {"group": spec["group"], "fields": []}
             by_name[spec["group"]] = group
             groups.append(group)
-        field_type = spec["type"]
-        options = list(spec.get("options", []))
-        reference = spec.get("reference")
-        if reference and reference_options.get(reference):
-            field_type = "choice"
-            options = reference_options[reference]
+        resolved = resolve_field({**spec, "key": key}, options_by_list)
         group["fields"].append(
-            {"key": key, "label": spec["label"], "type": field_type, "options": options}
+            {"key": resolved["key"], "label": resolved["label"],
+             "type": resolved["type"], "options": resolved["options"]}
         )
     return groups
 
 
 def _collection_specs():
     """Collection metadata (label, id prefix, item fields) for the UI."""
+    options_by_list = reference_options()
     return [
         {
-            "key": key,
-            "label": spec["label"],
-            "id_prefix": spec["id_prefix"],
-            "fields": [
-                {
-                    "key": f["key"],
-                    "label": f["label"],
-                    "type": f["type"],
-                    "options": list(f.get("options", [])),
-                    "required": bool(f.get("required")),
-                }
-                for f in spec["fields"]
-            ],
+            "key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
+            "fields": [resolve_field(f, options_by_list) for f in spec["fields"]],
         }
         for key, spec in COLLECTION_SPECS.items()
     ]

@@ -109,7 +109,7 @@ const Detail = {
     }
     if (this._tab === "validation_questions") {
       box.innerHTML = DetailTabs.validation(d, this._model.retired);
-      this._bindCollection("validation_questions"); return;
+      this._bindValidationSaves(); return;
     }
     if (this._tab === "version_history") {
       box.innerHTML = DetailTabs.versions(d, this.collSpec("version_history"), this._model.retired);
@@ -123,6 +123,24 @@ const Detail = {
   _bindCollection(key) {
     Collections.bind("/api/models/" + this._id + "/collections/", { collections: [this.collSpec(key)] },
       this._model.retired, () => this.show(this._id, this._tab), this._model.data);
+  },
+
+  _bindValidationSaves() {
+    if (this._model.retired) return;
+    const self = this;
+    document.querySelectorAll("[data-vq-save]").forEach(function (btn) {
+      const itemId = btn.getAttribute("data-vq-save");
+      btn.onclick = function () {
+        const status = val("vq-" + itemId + "-status");
+        const rationale = val("vq-" + itemId + "-rationale");
+        App.amend(
+          "Update " + itemId + ' — status="' + status + '", rationale.', "POST",
+          "/api/models/" + self._id + "/collections/validation_questions/" + itemId,
+          { fields: { status: status, rationale: rationale } },
+          () => self.show(self._id, "validation_questions"),
+        );
+      };
+    });
   },
 
   _overview(d) {
