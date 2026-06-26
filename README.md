@@ -66,7 +66,7 @@ the single `src/database/` utility.
 
 | Requirement | Notes |
 |---|---|
-| **PostgreSQL 16** | The database, run natively (no Docker). E.g. `brew install postgresql@16`. |
+| **PostgreSQL 16** | The database, run natively (no Docker). `brew install postgresql@16` on either Apple Silicon (`/opt/homebrew`) or Intel (`/usr/local`) Homebrew — `scripts/pg.sh` auto-detects either. |
 | **Python 3.13** | The application runtime. |
 | **tectonic** *(optional)* | A LaTeX engine, required only for the Meeting Pack, Model Risk Report, and Audit Reports PDFs. Install with `brew install tectonic`. |
 | **pandoc** *(optional)* | Renders the User Guide PDF in the Audit Reports tab. Install with `brew install pandoc`. |
@@ -82,8 +82,9 @@ git clone git@github.com:MKM-Research-Labs/MKM-ModelRisk.git
 cd MKM-ModelRisk
 
 # 2. Create a local PostgreSQL cluster (port 5433) + the mkm_modelrisk database.
-#    Uses ./.pgdata by default; needs postgresql@16 on PATH.
-export PATH="/opt/homebrew/opt/postgresql@16/bin:$PATH"
+#    Uses ./.pgdata by default. scripts/pg.sh auto-detects postgresql@16 from
+#    either /opt/homebrew (Apple Silicon) or /usr/local (Intel) Homebrew; for a
+#    non-Homebrew install, set MKM_PG_BIN to the directory containing initdb.
 scripts/pg.sh init               # one-off; then scripts/pg.sh start|stop|status
 
 # 3. Create the virtualenv and install

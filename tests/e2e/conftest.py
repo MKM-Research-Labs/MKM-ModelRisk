@@ -37,6 +37,11 @@ import pytest
 
 from config import DatabaseConfig
 
+try:
+    import playwright  # noqa: F401
+except ImportError:
+    collect_ignore_glob = ["test_e2e_*.py"]
+
 E2E_DB = "mkm_modelrisk_e2e"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 

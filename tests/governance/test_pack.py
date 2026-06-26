@@ -21,6 +21,9 @@
 from __future__ import annotations
 
 import base64
+import shutil
+
+import pytest
 
 from src.files import save_upload
 from src.governance.mrc.pack import build_tex, compile_tex, render_pack_pdf
@@ -67,6 +70,7 @@ def test_build_tex_omits_empty_sections():
     assert "Participants" not in tex and "Agenda" not in tex
 
 
+@pytest.mark.skipif(shutil.which("tectonic") is None, reason="tectonic not installed (optional)")
 def test_compile_tex_produces_pdf():
     tex = build_tex(MEETING, {"fields": {"org_name": "MKM"}}, "logo.png")
     pdf = compile_tex(tex, {"logo.png": PNG})

@@ -13,7 +13,17 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && { set -a; . ./.env; set +a; }
 
-PGBIN="${MKM_PG_BIN:-/opt/homebrew/opt/postgresql@16/bin}"
+if [ -n "${MKM_PG_BIN:-}" ]; then
+  PGBIN="$MKM_PG_BIN"
+elif [ -d /opt/homebrew/opt/postgresql@16/bin ]; then
+  PGBIN=/opt/homebrew/opt/postgresql@16/bin   # Apple Silicon Homebrew
+elif [ -d /usr/local/opt/postgresql@16/bin ]; then
+  PGBIN=/usr/local/opt/postgresql@16/bin      # Intel Homebrew
+else
+  echo "postgresql@16 not found. Install with: brew install postgresql@16" >&2
+  echo "Or set MKM_PG_BIN to the directory containing initdb/pg_ctl." >&2
+  exit 1
+fi
 DATA="${MKM_PG_DATA_DIR:-$PWD/.pgdata}"
 PORT="${MKM_DB_PORT:-5433}"
 OWNER="${MKM_DB_OWNER_USER:-mkm_owner}"
