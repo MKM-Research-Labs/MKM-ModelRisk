@@ -20,9 +20,13 @@
 
 // Structured collections (assumptions, limitations, validation questions, …)
 // rendered as tables with an add form, inline remove, and inline choice edits.
+// When ``bulk`` is true, the single add row is replaced by five rows so the
+// user can capture multiple items (e.g. MRC minutes) in one submission.
+const BULK_ROWS = 5;
 const Collections = {
-  render(data, specs, retired) {
-    return specs.collections.map((c) => this._section(c, data[c.key] || [], retired)).join("");
+  render(data, specs, retired, bulk) {
+    return specs.collections.map((c) =>
+      this._section(c, data[c.key] || [], retired, bulk)).join("");
   },
 
   _cell(c, item, f, retired) {
@@ -45,16 +49,16 @@ const Collections = {
     return "<tr>" + cells + actions + "</tr>";
   },
 
-  _section(c, items, retired) {
+  _section(c, items, retired, bulk) {
     const head = c.fields.map((f) => "<th>" + esc(f.label) + "</th>").join("") +
       (retired ? "" : "<th></th>");
     const span = c.fields.length + (retired ? 0 : 1);
     const body = items.length
       ? items.map((it) => this._row(c, it, retired)).join("")
       : '<tr><td colspan="' + span + '" class="empty">None.</td></tr>';
+    const form = retired ? "" : (bulk ? this._bulkAddForm(c) : this._addForm(c));
     return '<div class="section-header">' + esc(c.label) + "</div>" +
-      "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
-      (retired ? "" : this._addForm(c));
+      "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" + form;
   },
 
   _addForm(c) {
@@ -65,7 +69,23 @@ const Collections = {
       '<button class="btn small" data-add="' + c.key + '">Add…</button></div>';
   },
 
-  bind(base, specs, retired, refresh, data) {
+  _bulkAddForm(c) {
+    const head = c.fields.map((f) =>
+      "<th>" + esc(f.label) + (f.required ? " *" : "") + "</th>").join("");
+    const rows = [];
+    for (let r = 0; r < BULK_ROWS; r++) {
+      const cells = c.fields.map((f) =>
+        "<td>" + inputControl("badd-" + c.key + "-" + r + "-" + f.key, f) + "</td>").join("");
+      rows.push("<tr>" + cells + "</tr>");
+    }
+    return '<div class="section-header" style="margin-top:14px">Add up to ' + BULK_ROWS +
+      " at once</div>" +
+      "<table><thead><tr>" + head + "</tr></thead><tbody>" + rows.join("") + "</tbody></table>" +
+      '<div class="row" style="margin-top:8px">' +
+      '<button class="btn small primary" data-bulk-add="' + c.key + '">Save&hellip;</button></div>';
+  },
+
+  bind(base, specs, retired, refresh, data, bulk) {
     if (retired) return;
     const byKey = {};
     specs.collections.forEach((c) => { byKey[c.key] = c; });
@@ -79,18 +99,25 @@ const Collections = {
       };
     });
 
-    document.querySelectorAll("[data-add]").forEach(function (btn) {
-      const c = byKey[btn.getAttribute("data-add")];
-      btn.onclick = function () {
-        const fields = {};
-        c.fields.forEach(function (f) {
-          const v = val("add-" + c.key + "-" + f.key);
-          if (v !== "") fields[f.key] = v;
-        });
-        App.amend("Add an item to " + c.label + ".", "POST",
-          base + c.key, { fields: fields }, refresh);
-      };
-    });
+    if (bulk) {
+      document.querySelectorAll("[data-bulk-add]").forEach(function (btn) {
+        const c = byKey[btn.getAttribute("data-bulk-add")];
+        btn.onclick = function () { self._submitBulk(base, c, refresh); };
+      });
+    } else {
+      document.querySelectorAll("[data-add]").forEach(function (btn) {
+        const c = byKey[btn.getAttribute("data-add")];
+        btn.onclick = function () {
+          const fields = {};
+          c.fields.forEach(function (f) {
+            const v = val("add-" + c.key + "-" + f.key);
+            if (v !== "") fields[f.key] = v;
+          });
+          App.amend("Add an item to " + c.label + ".", "POST",
+            base + c.key, { fields: fields }, refresh);
+        };
+      });
+    }
 
     document.querySelectorAll("[data-rm]").forEach(function (el) {
       const parts = el.getAttribute("data-rm").split("|");
@@ -109,6 +136,22 @@ const Collections = {
           "POST", base + parts[0] + "/" + parts[1], { fields: fields }, refresh);
       };
     });
+  },
+
+  _submitBulk(base, c, refresh) {
+    const items = [];
+    for (let r = 0; r < BULK_ROWS; r++) {
+      const fields = {};
+      let any = false;
+      c.fields.forEach(function (f) {
+        const v = val("badd-" + c.key + "-" + r + "-" + f.key);
+        if (v !== "") { fields[f.key] = v; any = true; }
+      });
+      if (any) items.push({ fields: fields });
+    }
+    if (!items.length) { App.toast("Fill at least one row", "error"); return; }
+    App.amend("Add " + items.length + " items to " + c.label + ".", "POST",
+      base + c.key + "/bulk", { items: items }, refresh);
   },
 
   // Replace a row in place with an editor for all of the item's fields.

@@ -86,9 +86,13 @@ const MeetingDetail = {
       box.innerHTML = '<div class="empty">Document uploads are coming next.</div>'; return;
     }
     const spec = this.collSpec(this._tab);
-    box.innerHTML = Collections.render(d, { collections: [spec] }, false);
+    // Agenda / minutes / decisions / actions accept multiple new entries at
+    // once; participants stays single because one-at-a-time matches the way
+    // attendees are added in practice.
+    const bulk = ["agenda", "minutes", "decisions", "actions"].indexOf(this._tab) >= 0;
+    box.innerHTML = Collections.render(d, { collections: [spec] }, false, bulk);
     Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
-      false, () => this.show(this._id, this._tab), d);
+      false, () => this.show(this._id, this._tab), d, bulk);
   },
 
   _modelsTab() {
