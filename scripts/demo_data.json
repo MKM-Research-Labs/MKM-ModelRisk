@@ -83,7 +83,10 @@
                  "methodology": "SABR with Hagan expansion; calibrated per-expiry."},
       "collections": {
         "assumptions": [{"description": "Beta fixed at 0.5 across the surface", "impact": "Medium"}],
-        "limitations": [{"description": "Hagan expansion unstable for very low strikes", "impact": "High"}]
+        "limitations": [{"description": "Hagan expansion unstable for very low strikes", "impact": "High"}],
+        "operational_failure_events": [
+          {"date": "2026-02-12", "description": "Pricing instability on deep-OTM low-strike swaptions; Hagan expansion blew up on a 25y EUR receiver.", "remediation": "Fall-back to flat-vol pricing engaged; trade re-quoted under approved override. SABR recalibration plan opened for Q2.", "responsible": "Priya Anand", "accountable": "Priya Anand", "consulted": "Johnny Mattimore", "informed_client": "Yes", "informed_senior_mgmt": "Yes"}
+        ]
       },
       "validation": {"VQ-001": "Partially Addressed"}
     },

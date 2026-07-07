@@ -33,6 +33,10 @@ VALID_DEPENDENCY_DIRECTIONS = ("upstream", "downstream")
 VALID_VERSION_LIFECYCLE = (
     "New", "Being Enhanced", "No New Development", "Marked for Removal",
 )
+# Stakeholder-informed flags on an Operational Failure Event (W4b). Each is an
+# independent Yes/No because in practice an event may inform one and not the
+# other (e.g. internal noise that didn't reach the client).
+VALID_INFORMED = ("Yes", "No")
 
 # Structured collections on a model: arrays of items. Each item is built from the
 # field specs below; ``id_prefix`` seeds generated item ids (e.g. AS-001). One
@@ -85,5 +89,24 @@ COLLECTION_SPECS = {
          "options": VALID_DEPENDENCY_DIRECTIONS, "required": True},
         {"key": "model_id", "label": "Related model", "type": "text", "required": True},
         {"key": "note", "label": "Note", "type": "text"},
+    ]},
+    # W4b — Operational Failure Events: post-mortems of incidents touching the
+    # model, with RACI (Responsible / Accountable / Consulted / Informed). The
+    # Stakeholders leg ("Informed") is split into Client + Senior management so
+    # each can be toggled independently.
+    "operational_failure_events": {"label": "Events", "id_prefix": "EV", "fields": [
+        {"key": "date", "label": "Event date", "type": "date", "required": True},
+        {"key": "description", "label": "What happened", "type": "text", "required": True},
+        {"key": "remediation", "label": "Remediation", "type": "text"},
+        {"key": "responsible", "label": "Responsible (Operational)",
+         "type": "text", "reference": "people"},
+        {"key": "accountable", "label": "Accountable (Model owner)",
+         "type": "text", "reference": "people"},
+        {"key": "consulted", "label": "Consulted (MRC)",
+         "type": "text", "reference": "people"},
+        {"key": "informed_client", "label": "Informed: Client",
+         "type": "choice", "options": VALID_INFORMED},
+        {"key": "informed_senior_mgmt", "label": "Informed: Senior management",
+         "type": "choice", "options": VALID_INFORMED},
     ]},
 }
