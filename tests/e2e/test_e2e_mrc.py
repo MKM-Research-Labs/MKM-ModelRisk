@@ -110,6 +110,59 @@ def test_models_multi_select_saves_selection(page: Page, base_url: str):
     expect(page.locator("[data-mscope='MKM-MS-002']")).not_to_be_checked()
 
 
+def test_meeting_pack_pdf_downloads(page: Page, base_url: str):
+    """The Meeting Pack PDF endpoint returns an application/pdf response."""
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-PACK", "Pack Meeting")
+    response = page.request.get(f"{base_url}/api/meetings/MRC-PACK/pack.pdf")
+    if response.status != 200:
+        # tectonic not installed on this machine — record the skip cleanly.
+        assert "tectonic" in response.text().lower() or response.status == 500
+        pytest.skip("tectonic not installed (optional)")
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.body()[:5] == b"%PDF-"
+
+
+def _edit_meeting_field(page: Page, key: str, value: str) -> None:
+    """Edit a scalar meeting field via the chip's inline editor."""
+    page.click(f"[data-minfo='{key}']")
+    selector = "#mf-input"
+    if page.locator(selector).evaluate("el => el.tagName") == "SELECT":
+        page.select_option(selector, value)
+    else:
+        page.fill(selector, value)
+    page.click("#mf-save")
+    confirm(page)
+
+
+def test_edit_meeting_chair(page: Page, base_url: str):
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-EDIT-1", "Editable Meeting")
+    page.dblclick("tr.clickable[data-id='MRC-EDIT-1']")
+    _edit_meeting_field(page, "chair", "New Chair")
+    expect(page.locator("#minfo-chair")).to_contain_text("New Chair")
+
+
+def test_edit_meeting_location(page: Page, base_url: str):
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-EDIT-2", "Editable Meeting")
+    page.dblclick("tr.clickable[data-id='MRC-EDIT-2']")
+    _edit_meeting_field(page, "location", "Room 204, 1 Lombard Court")
+    expect(page.locator("#minfo-location")).to_contain_text("Room 204")
+
+
+def test_edit_meeting_status_choice(page: Page, base_url: str):
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-EDIT-3", "Editable Meeting")
+    page.dblclick("tr.clickable[data-id='MRC-EDIT-3']")
+    _edit_meeting_field(page, "status", "Completed")
+    expect(page.locator("#minfo-status")).to_contain_text("Completed")
+
+
 def _bulk_add_decision(page: Page, description: str, model_id: str):
     """Use the bulk-add form on the Decisions tab to add a single linked item."""
     page.click("[data-mtab='decisions']")

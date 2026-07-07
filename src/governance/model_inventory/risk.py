@@ -147,4 +147,5 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
         "approved_rag": data.get("rag_rating"),
         "events_in_window": _events_in_window(data, as_of),
         "events_window_days": EVENTS_WINDOW_DAYS,
+        "signoff_history": data.get("rag_signoff_history") or [],
     }

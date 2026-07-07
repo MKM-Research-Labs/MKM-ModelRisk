@@ -28,6 +28,7 @@ from tests.e2e._flows import (
     edit_model_field,
     open_app,
     open_model,
+    open_tab,
     register_model,
 )
 
@@ -118,6 +119,78 @@ def test_risk_heatmap_reflects_materiality_and_complexity(page: Page, base_url: 
     expect(banner).to_contain_text("Low")
     # The events counter renders (zero for a fresh model).
     expect(page.locator("#dt-content")).to_contain_text("Events (past 365 days)")
+
+
+def test_risk_composite_breakdown_renders(page: Page, base_url: str):
+    """The 5-component composite breakdown surfaces on the Risk Rating tab."""
+    open_app(page, base_url)
+    register_model(page, "MKM-X1-RC-01", "Composite Model")
+    open_model(page, "MKM-X1-RC-01")
+    page.click("[data-dtab='risk']")
+    body = page.locator("#dt-content")
+    expect(body).to_contain_text("Composite Score")
+    expect(body).to_contain_text("Validation Coverage")
+    expect(body).to_contain_text("Remediation Health")
+    expect(body).to_contain_text("Review Currency")
+    expect(body).to_contain_text("Assumption Risk")
+    expect(body).to_contain_text("Limitation Risk")
+
+
+def test_events_counter_reflects_recent_event(page: Page, base_url: str):
+    """Adding an event bumps the past-year counter on the Risk Rating tab."""
+    open_app(page, base_url)
+    register_model(page, "MKM-X1-EV-01", "Events Counter Model")
+    open_model(page, "MKM-X1-EV-01")
+    page.click("[data-dtab='risk']")
+    expect(page.locator("#dt-content")).to_contain_text("Events (past 365 days)")
+    # Add a recent event, then re-open the Risk tab.
+    page.click("[data-dtab='operational_failure_events']")
+    from tests.e2e._flows import add_collection_item
+    add_collection_item(
+        page, "operational_failure_events",
+        {"date": "2026-06-01", "description": "Recent incident"},
+    )
+    page.click("[data-dtab='risk']")
+    events_card = page.locator(".scard", has_text="Events (past 365 days)")
+    expect(events_card).to_contain_text("1")
+
+
+def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
+    """Approved sign-offs surface as a chronological table on the Risk tab (W4c)."""
+    open_app(page, base_url)
+    register_model(page, "MKM-X1-SO-01", "Signoff History Model")
+    # Schedule + request + approve a sign-off; check history appears.
+    open_tab(page, "mrc")
+    page.fill("#sc-meeting_id", "MRC-X1-SO")
+    page.fill("#sc-title", "Signoff Meeting")
+    page.fill("#sc-date", "2026-11-11")
+    page.click("#mt-schedule")
+    confirm(page)
+    open_tab(page, "inventory")
+    open_model(page, "MKM-X1-SO-01")
+    edit_model_field(page, "materiality", "High", choice=True)
+    expect(page.locator("#row-materiality")).to_contain_text("High")
+    edit_model_field(page, "complexity", "Low", choice=True)  # -> Amber cell
+    expect(page.locator("#row-complexity")).to_contain_text("Low")
+    page.click("[data-dtab='risk']")
+    page.click("#req-signoff")
+    page.select_option("#signoff-meeting-pick", "MRC-X1-SO")
+    page.click("#signoff-submit")
+    confirm(page)
+    # MRC approves.
+    open_tab(page, "mrc")
+    page.dblclick("tr.clickable[data-id='MRC-X1-SO']")
+    page.click("[data-mtab='agenda']")
+    page.get_by_text("Approve sign-off").first.click()
+    confirm(page)
+    # Back to the model — Risk tab now shows the history table.
+    open_tab(page, "inventory")
+    open_model(page, "MKM-X1-SO-01")
+    page.click("[data-dtab='risk']")
+    body = page.locator("#dt-content")
+    expect(body).to_contain_text("Sign-off history")
+    expect(body).to_contain_text("MRC-X1-SO")
+    expect(body).to_contain_text("Amber")  # the "To" column of the history row
 
 
 def test_register_with_company_assignment(page: Page, base_url: str):
