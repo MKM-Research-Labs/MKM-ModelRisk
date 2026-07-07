@@ -101,6 +101,25 @@ def test_retire_model(page: Page, base_url: str):
     expect(page.locator("tr.clickable[data-id='MKM-E2E-008']")).to_contain_text("retired")
 
 
+def test_risk_heatmap_reflects_materiality_and_complexity(page: Page, base_url: str):
+    """W4a: setting Materiality + Complexity places the model on the heatmap."""
+    open_app(page, base_url)
+    register_model(page, "MKM-E2E-HM-01", "Heatmap Model")
+    open_model(page, "MKM-E2E-HM-01")
+    edit_model_field(page, "materiality", "High", choice=True)
+    expect(page.locator("#row-materiality")).to_contain_text("High")
+    edit_model_field(page, "complexity", "Low", choice=True)
+    expect(page.locator("#row-complexity")).to_contain_text("Low")
+    page.click("[data-dtab='risk']")
+    # High Materiality × Low Complexity → Amber per the config lookup.
+    banner = page.locator("#dt-content .riskbanner")
+    expect(banner).to_contain_text("Amber")
+    expect(banner).to_contain_text("High")
+    expect(banner).to_contain_text("Low")
+    # The events counter renders (zero for a fresh model).
+    expect(page.locator("#dt-content")).to_contain_text("Events (past 365 days)")
+
+
 def test_register_with_company_assignment(page: Page, base_url: str):
     """Once a Company exists, registration captures it and the model is stamped."""
     open_app(page, base_url)

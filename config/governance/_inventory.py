@@ -157,6 +157,21 @@ RISK_WEIGHTS = (
 RISK_ACCEPTABLE_AT = 0.75
 RISK_CONDITIONAL_AT = 0.50
 
+# W4a — 3×3 heatmap (Materiality × Complexity → RAG). Owner sets the two axes
+# on the model; the heatmap cell is the primary risk rating, supplemented by
+# the composite breakdown above. Materiality outweighs complexity on the
+# diagonal because high-stakes-simple is still worse than low-stakes-complex.
+MATERIALITY_ORDER = ("Low", "Medium", "High")
+COMPLEXITY_ORDER = ("Low", "Medium", "High")
+RISK_HEATMAP = {
+    ("High", "Low"): "Amber", ("High", "Medium"): "Red", ("High", "High"): "Red",
+    ("Medium", "Low"): "Green", ("Medium", "Medium"): "Amber", ("Medium", "High"): "Red",
+    ("Low", "Low"): "Green", ("Low", "Medium"): "Green", ("Low", "High"): "Amber",
+}
+# Rolling window (days) for the "operational events past year" counter surfaced
+# on the Risk Rating tab.
+EVENTS_WINDOW_DAYS = 365
+
 # Derived — keep validation and the UI in lockstep with the specs above.
 EDITABLE_FIELDS = tuple(MODEL_FIELD_SPECS.keys())
 FIELD_CHOICES = {
