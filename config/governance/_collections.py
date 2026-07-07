@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """Structured-collection field specs on a model (coding rule R1)."""
+from config.governance._inventory import VALID_RAG_RATINGS
 
 # Closed value sets used by structured collections.
 VALID_IMPACT = ("Low", "Medium", "High")
@@ -88,6 +89,17 @@ COLLECTION_SPECS = {
         {"key": "direction", "label": "Direction", "type": "choice",
          "options": VALID_DEPENDENCY_DIRECTIONS, "required": True},
         {"key": "model_id", "label": "Related model", "type": "text", "required": True},
+        {"key": "note", "label": "Note", "type": "text"},
+    ]},
+    # W4c — audit of RAG sign-offs approved by MRC. One entry per approved
+    # transition; each records where the change came from, what it was, and
+    # which meeting rubber-stamped it.
+    "rag_signoff_history": {"label": "Sign-off history", "id_prefix": "SO", "fields": [
+        {"key": "date", "label": "Date", "type": "date", "required": True},
+        {"key": "from_rating", "label": "From", "type": "choice", "options": VALID_RAG_RATINGS},
+        {"key": "to_rating", "label": "To", "type": "choice",
+         "options": VALID_RAG_RATINGS, "required": True},
+        {"key": "meeting_id", "label": "Meeting", "type": "text"},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
     # W4b — Operational Failure Events: post-mortems of incidents touching the

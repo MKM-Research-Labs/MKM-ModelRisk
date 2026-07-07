@@ -95,6 +95,31 @@ const MeetingDetail = {
     box.innerHTML = Collections.render(d, { collections: [spec] }, false, bulk);
     Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
       false, () => this.show(this._id, this._tab), d, bulk);
+    if (this._tab === "agenda") this._bindSignoffApprovals(d.agenda || []);
+  },
+
+  // W4c — agenda items carrying subject_model_id + proposed_rag are sign-off
+  // requests. Add an "Approve" affordance next to each pending one.
+  _bindSignoffApprovals(items) {
+    const self = this;
+    items.forEach(function (item) {
+      if (!item.subject_model_id || !item.proposed_rag) return;
+      if (item.status === "Completed") return;
+      const row = document.querySelector('[data-ed="agenda|' + item.item_id + '"]');
+      if (!row) return;
+      const cell = row.closest("tr").querySelector(".rowact");
+      const button = document.createElement("span");
+      button.className = "edit-btn";
+      button.style = "color:#388e3c;font-weight:600;margin-left:10px";
+      button.textContent = "Approve sign-off";
+      button.onclick = function () {
+        App.amend("Approve sign-off for " + item.subject_model_id +
+          " → " + item.proposed_rag + ".", "POST",
+          "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff", {},
+          () => self.show(self._id, self._tab));
+      };
+      cell.appendChild(button);
+    });
   },
 
   // Org-scope filter: pick the most specific level set on the meeting and

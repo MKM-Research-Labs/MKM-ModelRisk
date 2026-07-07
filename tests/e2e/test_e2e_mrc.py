@@ -119,6 +119,45 @@ def _bulk_add_decision(page: Page, description: str, model_id: str):
     confirm(page)
 
 
+def test_signoff_workflow_owner_requests_and_mrc_approves(page: Page, base_url: str):
+    """W4c end-to-end: owner requests sign-off; MRC approves; model RAG snaps."""
+    open_app(page, base_url)
+    register_model(page, "MKM-SO-01", "Sign-off Model")
+    # Schedule a meeting so the request modal has a target.
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-SO", "Sign-off Meeting")
+    # Set materiality + complexity to place it on the heatmap (Amber cell).
+    open_tab(page, "inventory")
+    open_model(page, "MKM-SO-01")
+    from tests.e2e._flows import edit_model_field
+    edit_model_field(page, "materiality", "High", choice=True)
+    expect(page.locator("#row-materiality")).to_contain_text("High")
+    edit_model_field(page, "complexity", "Low", choice=True)
+    expect(page.locator("#row-complexity")).to_contain_text("Low")
+    # Risk Rating tab → Request sign-off.
+    page.click("[data-dtab='risk']")
+    expect(page.locator("#req-signoff")).to_be_visible()
+    page.click("#req-signoff")
+    page.select_option("#signoff-meeting-pick", "MRC-SO")
+    page.click("#signoff-submit")
+    confirm(page)
+    # Pending-signoff panel shows on the model.
+    expect(page.locator("#dt-content")).to_contain_text("Pending MRC sign-off")
+    expect(page.locator("#dt-content")).to_contain_text("MRC-SO")
+    # MRC approves via the agenda tab.
+    open_tab(page, "mrc")
+    page.dblclick("tr.clickable[data-id='MRC-SO']")
+    page.click("[data-mtab='agenda']")
+    approve = page.get_by_text("Approve sign-off").first
+    expect(approve).to_be_visible()
+    approve.click()
+    confirm(page)
+    # Model's approved rag_rating is now Amber (the heatmap value).
+    open_tab(page, "inventory")
+    row = page.locator("tr.clickable[data-id='MKM-SO-01']")
+    expect(row).to_contain_text("Amber")
+
+
 def test_decision_linked_to_model_appears_on_model_detail(page: Page, base_url: str):
     """A linked decision projects onto the model's read-only Decisions tab."""
     open_app(page, base_url)

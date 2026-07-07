@@ -101,7 +101,10 @@ const Detail = {
     const d = this._model.data || {};
     const box = document.getElementById("dt-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
-    if (this._tab === "risk") { box.innerHTML = DetailTabs.risk(this._risk); return; }
+    if (this._tab === "risk") {
+      box.innerHTML = DetailTabs.risk(this._risk);
+      this._bindSignoffRequest(); return;
+    }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "decisions") { box.innerHTML = DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]); return; }
     if (this._tab === "actions") { box.innerHTML = DetailTabs.linkedItems("Actions", this._actions, ["description", "owner", "target_date", "status"]); return; }
@@ -202,6 +205,37 @@ const Detail = {
         btn.onclick = function () { self._edit(self.specByKey(key), self._model.data[key]); };
       });
     }
+  },
+
+  // W4c — open the sign-off picker, then hand the chosen meeting off to the
+  // standard confirm-to-amend flow.
+  _bindSignoffRequest() {
+    const btn = document.getElementById("req-signoff");
+    if (!btn) return;
+    const self = this;
+    btn.onclick = async function () {
+      const proposed = btn.getAttribute("data-proposed");
+      const meetings = (await App.get("/api/meetings")).filter((m) => m.status === "Scheduled");
+      if (!meetings.length) { App.toast("No Scheduled meetings — schedule one first.", "error"); return; }
+      const pick = document.getElementById("signoff-meeting-pick");
+      pick.innerHTML = meetings.map((m) => "<option value=\"" + esc(m.meeting_id) + "\">" +
+        esc(m.meeting_id) + " · " + esc(m.data.title || "") +
+        (m.data.date ? " (" + esc(m.data.date) + ")" : "") + "</option>").join("");
+      document.getElementById("signoff-summary").innerHTML =
+        "Queue a sign-off request for <b>" + esc(self._id) +
+        "</b> → proposed <b>" + esc(proposed) + "</b>.";
+      const overlay = document.getElementById("signoff-overlay");
+      overlay.classList.remove("hidden");
+      document.getElementById("signoff-cancel").onclick = () => overlay.classList.add("hidden");
+      document.getElementById("signoff-submit").onclick = () => {
+        const meetingId = pick.value;
+        overlay.classList.add("hidden");
+        App.amend("Request MRC sign-off at " + meetingId + ".", "POST",
+          "/api/models/" + self._id + "/request-signoff",
+          { meeting_id: meetingId, proposed_rag: proposed },
+          () => self.show(self._id, "risk"));
+      };
+    };
   },
 
   _bindRetire() {

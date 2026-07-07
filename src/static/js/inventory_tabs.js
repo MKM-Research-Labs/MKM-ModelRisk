@@ -120,11 +120,36 @@ const DetailTabs = {
         s + '%</span></div><div class="progress"><div class="bar" style="width:' + s + "%;background:" +
         barColor(s) + '"></div></div></div>';
     }).join("");
+    const signoff = this._signoffPanel(rating);
     return '<p class="muted">Risk rating is set by the owner via Materiality and Complexity (the heatmap). ' +
       "The composite breakdown below tracks operational health signals — validation coverage, " +
       "remediation health, review currency, assumptions and limitations.</p>" +
-      headline + this.heatmap(hm) + events +
+      headline + signoff + this.heatmap(hm) + events +
       '<div class="section-header">Composite Score: ' + pct + "% (" + esc(rating.rating) + ")</div>" + comps;
+  },
+
+  // W4c: sign-off state comparing the current heatmap RAG to the approved
+  // (stored) rag_rating. Emits a "Request sign-off" button when they differ.
+  _signoffPanel(rating) {
+    const pending = rating.pending_signoff;
+    const proposed = (rating.heatmap || {}).rag;
+    if (pending) {
+      return '<div class="dz-row" style="border:1px solid #f57c00;background:#fff8e1;padding:10px 14px;border-radius:6px;margin:8px 0">' +
+        '<div class="dz-text"><b>Pending MRC sign-off</b>' +
+        '<p class="muted">Proposed <b>' + esc(pending.proposed_rag) + "</b> awaiting sign-off at " +
+        '<span class="code">' + esc(pending.meeting_id) + "</span> — " +
+        esc(pending.meeting_title || "") + (pending.meeting_date ? " (" + esc(pending.meeting_date) + ")" : "") +
+        ".</p></div></div>";
+    }
+    if (proposed && proposed !== rating.approved_rag) {
+      return '<div class="dz-row" style="border:1px solid var(--line);padding:10px 14px;border-radius:6px;margin:8px 0">' +
+        '<div class="dz-text"><b>Heatmap ' + esc(proposed) + " differs from approved " +
+        esc(rating.approved_rag || "—") + "</b>" +
+        '<p class="muted">Request an MRC sign-off to promote this to the approved rating.</p></div>' +
+        '<div class="dz-action"><button class="btn small primary" id="req-signoff" data-proposed="' +
+        esc(proposed) + '">Request MRC sign-off&hellip;</button></div></div>';
+    }
+    return "";
   },
 
   versions(data, spec, retired) {
