@@ -26,7 +26,12 @@ from flask import Blueprint, Response, jsonify
 
 from config.governance import MEETING_FIELD_SPECS, MRC_COLLECTION_SPECS
 from src.command import dispatch
-from src.governance.model_inventory import get_model
+from src.governance.model_inventory import (
+    add_collection_item as _model_add,
+    get_model,
+    rebuild_inventory_view,
+    update_model_field,
+)
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.mrc.pack import render_pack_pdf
 from src.governance.mrc_settings import get_settings
@@ -212,6 +217,60 @@ def update_item(meeting_id: str, collection: str, item_id: str):
     )
     rebuild_meeting_view()
     return jsonify(get_meeting(meeting_id))
+
+
+@mrc_bp.post("/<meeting_id>/agenda/<item_id>/approve-signoff")
+def approve_signoff(meeting_id: str, item_id: str):
+    """W4c: Approve a Risk Rating sign-off agenda item.
+
+    Snaps the subject model's rag_rating to the item's proposed_rag, stamps a
+    history entry on the model, and marks the agenda item Completed. All three
+    are separate events (auditable end-to-end); one confirm from the caller.
+    """
+    body = json_body()
+    meeting = get_meeting(meeting_id)
+    if meeting is None:
+        return jsonify({"error": "meeting not found"}), 404
+    agenda = meeting["data"].get("agenda") or []
+    item = next((a for a in agenda if a.get("item_id") == item_id), None)
+    if item is None:
+        return jsonify({"error": "agenda item not found"}), 404
+    model_id = item.get("subject_model_id")
+    proposed_rag = item.get("proposed_rag")
+    if not model_id or not proposed_rag:
+        return jsonify({"error": "agenda item is not a sign-off request"}), 400
+    model = get_model(model_id)
+    if model is None:
+        return jsonify({"error": f"subject model {model_id} not found"}), 404
+    ctx = context_from_request(body)
+    from_rating = (model["data"] or {}).get("rag_rating")
+    dispatch(
+        "update_model_field", update_model_field, context=ctx,
+        model_id=model_id, field="rag_rating", value=proposed_rag,
+    )
+    history_fields = {
+        "to_rating": proposed_rag,
+        "meeting_id": meeting_id,
+    }
+    if from_rating:
+        history_fields["from_rating"] = from_rating  # choice field: skip if unset
+    if meeting["data"].get("date"):
+        history_fields["date"] = meeting["data"]["date"]
+    if body.get("note"):
+        history_fields["note"] = body["note"]
+    dispatch(
+        "add_collection_item", _model_add, context=ctx,
+        model_id=model_id, collection="rag_signoff_history",
+        fields=history_fields,
+    )
+    dispatch(
+        "update_collection_item", update_collection_item, context=ctx,
+        meeting_id=meeting_id, collection="agenda", item_id=item_id,
+        fields={"status": "Completed"},
+    )
+    rebuild_inventory_view()
+    rebuild_meeting_view()
+    return jsonify({"meeting": get_meeting(meeting_id), "model": get_model(model_id)})
 
 
 @mrc_bp.post("/<meeting_id>/collections/<collection>/<item_id>/delete")

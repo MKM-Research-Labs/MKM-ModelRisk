@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """MRC settings, branding and meeting field specs (coding rule R1)."""
+from config.governance._inventory import VALID_RAG_RATINGS
 
 # --- MRC settings & branding (header for the console and Meeting Pack PDF) ---
 VALID_FREQUENCY = ("Monthly", "Quarterly", "Semi-annual", "Annual")
@@ -70,6 +71,13 @@ MRC_COLLECTION_SPECS = {
         {"key": "description", "label": "Description", "type": "text"},
         {"key": "presenter", "label": "Presenter", "type": "text"},
         {"key": "status", "label": "Status", "type": "choice", "options": VALID_AGENDA_STATUS},
+        # W4c — sign-off agenda items link back to a model and carry the
+        # proposed RAG. When the item is Approved at the meeting, the linked
+        # model's official rag_rating snaps to proposed_rag.
+        {"key": "subject_model_id", "label": "Subject model",
+         "type": "text", "reference": "model_inventory"},
+        {"key": "proposed_rag", "label": "Proposed RAG",
+         "type": "choice", "options": VALID_RAG_RATINGS},
     ]},
     "minutes": {"label": "Minutes", "id_prefix": "MIN", "fields": [
         {"key": "title", "label": "Title", "type": "text", "required": True},

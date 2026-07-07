@@ -30,6 +30,7 @@ from src.web.api_audit_reports import audit_reports_bp
 from src.web.api_bibliography import bib_bp
 from src.web.api_documents import documents_bp
 from src.web.api_models import models_bp
+from src.web import api_models_signoff  # noqa: F401 — attaches endpoints to models_bp
 from src.web.api_mrc import mrc_bp
 from src.web.api_mrc_settings import settings_bp
 from src.web.api_pvm import pvm_bp

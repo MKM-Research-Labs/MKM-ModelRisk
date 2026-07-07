@@ -78,6 +78,21 @@
     </div>
   </div>
 
+  <!-- W4c — Sign-off request picker: choose which Scheduled meeting to
+       attach the risk-rating sign-off agenda item to. Then flows into the
+       standard confirm-to-amend modal. -->
+  <div id="signoff-overlay" class="overlay hidden">
+    <div class="modal">
+      <h2>Request MRC sign-off</h2>
+      <p class="muted" id="signoff-summary"></p>
+      <div class="field"><label for="signoff-meeting-pick">Meeting</label><select id="signoff-meeting-pick"></select></div>
+      <div class="modal-actions">
+        <button id="signoff-cancel" class="btn ghost">Cancel</button>
+        <button id="signoff-submit" class="btn primary">Queue&hellip;</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Confirm-to-amend modal: every mutation passes through here. -->
   <div id="confirm-overlay" class="overlay hidden">
     <div class="modal">

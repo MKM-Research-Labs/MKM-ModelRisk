@@ -144,6 +144,7 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
         "score": round(composite, 4),
         "components": components,
         "heatmap": heatmap,
+        "approved_rag": data.get("rag_rating"),
         "events_in_window": _events_in_window(data, as_of),
         "events_window_days": EVENTS_WINDOW_DAYS,
     }

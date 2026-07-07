@@ -97,18 +97,22 @@ def list_meetings(config=None) -> list[dict[str, Any]]:
 
 
 def meeting_items_for_model(
-    collection: str, model_id: str, config=None,
+    collection: str, model_id: str, config=None, *, field: str = "model_id",
 ) -> list[dict[str, Any]]:
-    """All items from ``collection`` across every meeting where item.model_id == ``model_id``.
+    """All items from ``collection`` across every meeting where item[``field``] == ``model_id``.
 
     Each result is the original item, augmented with the source meeting's id,
     title and date so the model-side read view can credit and link back.
+
+    ``field`` names the key on the item that carries the model reference —
+    "model_id" for decisions/actions (default), "subject_model_id" for agenda
+    sign-off items (W4c).
     """
     results: list[dict[str, Any]] = []
     for meeting in list_meetings(config):
         data = meeting.get("data") or {}
         for item in data.get(collection) or []:
-            if item.get("model_id") == model_id:
+            if item.get(field) == model_id:
                 results.append({
                     **item,
                     "meeting_id": meeting["meeting_id"],

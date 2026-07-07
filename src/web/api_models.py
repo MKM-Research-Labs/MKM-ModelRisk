@@ -173,7 +173,10 @@ def risk_rating(model_id: str):
     model = get_model(model_id)
     if model is None:
         return jsonify({"error": "model not found"}), 404
-    return jsonify(compute_risk_rating(model["data"], as_of=date.today().isoformat()))
+    payload = compute_risk_rating(model["data"], as_of=date.today().isoformat())
+    from src.web.api_models_signoff import pending_signoff  # avoids import cycle
+    payload["pending_signoff"] = pending_signoff(model_id)
+    return jsonify(payload)
 
 
 @models_bp.get("/<model_id>/decisions")
