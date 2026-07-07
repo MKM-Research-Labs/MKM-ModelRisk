@@ -55,6 +55,10 @@
           {"version": "3.0.0", "date": "2024-11-04", "description": "Move to NSS-fitted curve discounting; deprecate flat-rate path.", "author": "Priya Anand", "lifecycle": "No New Development"},
           {"version": "3.1.0", "date": "2025-04-15", "description": "Add corporate-bond OAS adjustment and credit spread overlay.", "author": "Priya Anand", "lifecycle": "No New Development"},
           {"version": "3.2.0", "date": "2025-12-08", "description": "Current production version. Performance tuned; settlement-date handling cleaned up.", "author": "Priya Anand", "lifecycle": "Being Enhanced"}
+        ],
+        "rag_signoff_history": [
+          {"date": "2024-11-15", "from_rating": "Amber", "to_rating": "Green", "meeting_id": "MRC-2024-Q4", "note": "Post-NSS refresh sign-off — model back within tolerance."},
+          {"date": "2025-06-18", "from_rating": "Green", "to_rating": "Green", "meeting_id": "MRC-2025-Q2", "note": "Annual review — no change to approved rating."}
         ]
       },
       "validation": {"VQ-001": "Addressed", "VQ-002": "Addressed", "VQ-009": "Addressed"}
@@ -223,6 +227,28 @@
           {"description": "Recalibrate SABR low-strike wing and cap Hagan expansion at the trouble points.", "owner": "Priya Anand", "target_date": "2026-05-31", "status": "Open", "model_id": "STB-SABR-001"},
           {"description": "Refresh validation question coverage on STB-BND-001 ahead of next review.", "owner": "Johnny Mattimore", "target_date": "2026-09-30", "status": "Open", "model_id": "STB-BND-001"},
           {"description": "Publish the updated Model Risk Handbook to the document store.", "owner": "David K Kelly", "target_date": "2026-04-15", "status": "Open"}
+        ]
+      }
+    },
+    {
+      "meeting_id": "MRC-2026-Q2", "title": "Q2 Model Risk Committee",
+      "fields": {"date": "2026-06-24", "time": "14:00", "location": "Boardroom, 1 Lombard Court",
+                 "chair": "David K Kelly", "company": "Sterling Bank plc", "division": "Markets"},
+      "collections": {
+        "agenda": [
+          {"title": "Risk rating sign-off: STB-BND-001 → Red", "presenter": "Priya Anand", "status": "Pending", "subject_model_id": "STB-BND-001", "proposed_rag": "Red", "description": "Owner requests promotion from Green to Red — heatmap (High × Medium) crossed threshold after Q1 events."},
+          {"title": "Risk rating sign-off: STB-SABR-001 → Red", "presenter": "Priya Anand", "status": "Pending", "subject_model_id": "STB-SABR-001", "proposed_rag": "Red", "description": "Escalate to Red pending completion of Hagan-wing recalibration; validation still Partial."},
+          {"title": "Q1 action review", "presenter": "David K Kelly", "status": "Pending", "description": "Review of open actions carried over from Q1: local-vol framework, SABR recalibration, VQ refresh."}
+        ],
+        "participants": [
+          {"name": "David K Kelly", "role": "Chief Risk Officer", "organisation": "Sterling Bank plc", "status": "Invited"},
+          {"name": "Johnny Mattimore", "role": "Head of Model Validation", "organisation": "Sterling Bank plc", "status": "Invited"},
+          {"name": "Priya Anand", "role": "Head of Rates", "organisation": "Sterling Bank plc", "status": "Invited"},
+          {"name": "Sofia Castro", "role": "Head of Equity Derivatives", "organisation": "Sterling Bank plc", "status": "Invited"}
+        ],
+        "models_in_scope": [
+          {"model_id": "STB-BND-001"},
+          {"model_id": "STB-SABR-001"}
         ]
       }
     }
