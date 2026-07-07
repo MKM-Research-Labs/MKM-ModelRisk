@@ -27,12 +27,14 @@ AGGREGATE_TYPE = "MRCSettings"
 AGGREGATE_ID = "global"
 EVENT_SETTING_UPDATED = "MRCSettingUpdated"
 EVENT_LOGO_SET = "MRCLogoSet"
+EVENT_TOR_SET = "MRCTorSet"
 
 
-def load(config=None) -> tuple[dict, dict | None, int]:
-    """Fold the settings stream into ``(fields, logo, version)``."""
+def load(config=None) -> tuple[dict, dict | None, dict | None, int]:
+    """Fold the settings stream into ``(fields, logo, tor, version)``."""
     fields = dict(MRC_SETTINGS_DEFAULTS)
     logo = None
+    tor = None
     version = 0
     for event in read_stream(
         aggregate_type=AGGREGATE_TYPE, aggregate_id=AGGREGATE_ID, config=config
@@ -44,11 +46,16 @@ def load(config=None) -> tuple[dict, dict | None, int]:
                 "filename": event.payload["filename"],
                 "original_name": event.payload["original_name"],
             }
+        elif event.event_type == EVENT_TOR_SET:
+            tor = {
+                "filename": event.payload["filename"],
+                "original_name": event.payload["original_name"],
+            }
         version = event.stream_seq
-    return fields, logo, version
+    return fields, logo, tor, version
 
 
 def get_settings(config=None) -> dict:
-    """Current MRC settings: ``{fields, logo}``."""
-    fields, logo, _ = load(config)
-    return {"fields": fields, "logo": logo}
+    """Current MRC settings: ``{fields, logo, tor}``."""
+    fields, logo, tor, _ = load(config)
+    return {"fields": fields, "logo": logo, "tor": tor}

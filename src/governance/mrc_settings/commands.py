@@ -30,6 +30,7 @@ from src.governance.mrc_settings._store import (
     AGGREGATE_TYPE,
     EVENT_LOGO_SET,
     EVENT_SETTING_UPDATED,
+    EVENT_TOR_SET,
     load,
 )
 
@@ -37,7 +38,7 @@ _SPEC_BY_KEY = {spec["key"]: spec for spec in MRC_SETTINGS_SPECS}
 
 
 def _record(event_type, payload, actor, reason, config) -> Event:
-    _, _, version = load(config)
+    _, _, _, version = load(config)
     return append_event(
         aggregate_type=AGGREGATE_TYPE, aggregate_id=AGGREGATE_ID, event_type=event_type,
         payload=payload, actor=actor, reason=reason, expected_version=version, config=config,
@@ -62,3 +63,11 @@ def set_logo(
     """Record that the branding logo has been set to an uploaded file."""
     payload = {"filename": filename, "original_name": original_name}
     return _record(EVENT_LOGO_SET, payload, actor, reason, config)
+
+
+def set_tor(
+    *, filename: str, original_name: str, actor: str, reason: str | None = None, config=None,
+) -> Event:
+    """Record that the MRC Terms of Reference document has been uploaded."""
+    payload = {"filename": filename, "original_name": original_name}
+    return _record(EVENT_TOR_SET, payload, actor, reason, config)

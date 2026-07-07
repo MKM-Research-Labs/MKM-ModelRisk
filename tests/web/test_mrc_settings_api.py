@@ -85,3 +85,38 @@ def test_logo_bad_extension_is_400(client):
 
 def test_logo_not_set_is_404(client):
     assert client.get("/api/mrc/logo").status_code == 404
+
+
+def test_tor_upload_then_download(client):
+    upload = client.post(
+        "/api/mrc/settings/tor",
+        data={"file": (io.BytesIO(b"%PDF-fake"), "mrc-tor.pdf")},
+        content_type="multipart/form-data", headers=HEADERS,
+    )
+    assert upload.status_code == 201
+    assert upload.get_json()["tor"]["original_name"] == "mrc-tor.pdf"
+
+    served = client.get("/api/mrc/tor")
+    assert served.status_code == 200
+    assert served.headers["Content-Disposition"].endswith('filename=mrc-tor.pdf')
+    assert served.data == b"%PDF-fake"
+
+
+def test_tor_missing_file_is_400(client):
+    response = client.post(
+        "/api/mrc/settings/tor", data={}, content_type="multipart/form-data", headers=HEADERS,
+    )
+    assert response.status_code == 400
+
+
+def test_tor_not_set_is_404(client):
+    assert client.get("/api/mrc/tor").status_code == 404
+
+
+def test_tor_bad_extension_is_400(client):
+    response = client.post(
+        "/api/mrc/settings/tor",
+        data={"file": (io.BytesIO(b"x"), "evil.exe")},
+        content_type="multipart/form-data", headers=HEADERS,
+    )
+    assert response.status_code == 400
