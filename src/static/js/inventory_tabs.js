@@ -93,6 +93,21 @@ const DetailTabs = {
       "Rows: Materiality &middot; Columns: Complexity. Set both on the Overview tab." + "</div>";
   },
 
+  // W4c — chronological table of approved sign-offs on this model. Rendered
+  // as a supporting section under the composite breakdown on the Risk Rating
+  // tab. Empty when no sign-offs have been recorded yet.
+  signoffHistory(history) {
+    const items = history || [];
+    if (!items.length) return "";
+    const rows = items.map((s) => "<tr><td>" + fieldDisplay(s.date) + "</td><td>" +
+      (s.from_rating ? ragBadge(s.from_rating) : '<span class="muted">—</span>') +
+      "</td><td>" + ragBadge(s.to_rating) + "</td><td>" +
+      fieldDisplay(s.meeting_id) + "</td><td>" + fieldDisplay(s.note) + "</td></tr>").join("");
+    return '<div class="section-header">Sign-off history</div>' +
+      '<table class="signoff-history"><thead><tr><th>Date</th><th>From</th><th>To</th>' +
+      "<th>Meeting</th><th>Note</th></tr></thead><tbody>" + rows + "</tbody></table>";
+  },
+
   risk(rating) {
     const color = RISK_COLORS[rating.rating] || "#9e9e9e";
     const pct = Math.round(rating.score * 100);
@@ -125,7 +140,8 @@ const DetailTabs = {
       "The composite breakdown below tracks operational health signals — validation coverage, " +
       "remediation health, review currency, assumptions and limitations.</p>" +
       headline + signoff + this.heatmap(hm) + events +
-      '<div class="section-header">Composite Score: ' + pct + "% (" + esc(rating.rating) + ")</div>" + comps;
+      '<div class="section-header">Composite Score: ' + pct + "% (" + esc(rating.rating) + ")</div>" +
+      comps + this.signoffHistory(rating.signoff_history);
   },
 
   // W4c: sign-off state comparing the current heatmap RAG to the approved

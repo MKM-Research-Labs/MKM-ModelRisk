@@ -28,10 +28,12 @@ from playwright.sync_api import Page, expect
 from tests.e2e._flows import (
     add_collection_item,
     confirm,
+    edit_collection_item,
     open_app,
     open_detail_tab,
     open_model,
     register_model,
+    remove_collection_item,
 )
 
 pytestmark = pytest.mark.e2e
@@ -141,3 +143,39 @@ def test_set_validation_question_status_and_rationale(page: Page, base_url: str)
     )
     expect(page.locator(f"#vq-{item_id}-status")).to_have_value("Addressed")
     expect(page.locator("[data-dtab='validation_questions']")).to_contain_text("1/9")
+
+
+# --- X1 coverage: edit and remove operations on model collections -----------
+
+def test_edit_limitation_updates_row(page: Page, base_url: str):
+    _setup(page, base_url, "MKM-X1-EDIT1", "limitations")
+    item_id = add_collection_item(
+        page, "limitations",
+        {"description": "Original wording", "impact": "Medium"},
+    )
+    edit_collection_item(page, "limitations", item_id,
+                         {"description": "Refined after review", "impact": "High"})
+    body = page.locator("#dt-content")
+    expect(body).to_contain_text("Refined after review")
+    expect(body).to_contain_text("High")
+
+
+def test_remove_remediation_step_shrinks_list(page: Page, base_url: str):
+    _setup(page, base_url, "MKM-X1-RM1", "remediation_steps")
+    item_id = add_collection_item(page, "remediation_steps",
+                                  {"description": "Transient item"})
+    expect(page.locator("[data-dtab='remediation_steps']")).to_contain_text("(1)")
+    remove_collection_item(page, "remediation_steps", item_id)
+    expect(page.locator("[data-dtab='remediation_steps']")).to_contain_text("(0)")
+    expect(page.locator("#dt-content")).not_to_contain_text("Transient item")
+
+
+def test_remove_version_history_entry(page: Page, base_url: str):
+    """Versions use the timeline renderer (data-rm only, no data-ed)."""
+    _setup(page, base_url, "MKM-X1-RM2", "version_history")
+    item_id = add_collection_item(
+        page, "version_history",
+        {"version": "0.9.0", "description": "Beta rev", "lifecycle": "Marked for Removal"},
+    )
+    remove_collection_item(page, "version_history", item_id)
+    expect(page.locator("#dt-content")).not_to_contain_text("Beta rev")
