@@ -136,35 +136,8 @@ def test_department_delete(page: Page, base_url: str):
     expect(page.locator(f"[data-ed='department|{item_id}']")).to_have_count(0)
 
 
-# ------------------------------------------------------- Market Data Model ----
-
-def test_market_data_model_create(page: Page, base_url: str):
-    _on(page, base_url, "market_data_model")
-    item_id = add_collection_item(
-        page, "market_data_model",
-        {"name": "Bloomberg Curves", "vendor": "Bloomberg", "update_frequency": "Daily"},
-    )
-    expect(page.locator(f"[data-ed='market_data_model|{item_id}']")).to_be_visible()
-
-
-def test_market_data_model_edit(page: Page, base_url: str):
-    _on(page, base_url, "market_data_model")
-    item_id = add_collection_item(
-        page, "market_data_model",
-        {"name": "Bloomberg Curves", "update_frequency": "Daily"},
-    )
-    edit_collection_item(page, "market_data_model", item_id, {"name": "Bloomberg IR Curves"})
-    expect(page.locator(f"[data-ed='market_data_model|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Bloomberg IR Curves")
-
-
-def test_market_data_model_delete(page: Page, base_url: str):
-    _on(page, base_url, "market_data_model")
-    item_id = add_collection_item(
-        page, "market_data_model",
-        {"name": "Bloomberg Curves", "update_frequency": "Daily"},
-    )
-    remove_collection_item(page, "market_data_model", item_id)
-    expect(page.locator(f"[data-ed='market_data_model|{item_id}']")).to_have_count(0)
+# Market Data Models are no longer a reference list — they live in the Model
+# Inventory tagged type="Market Data Model" (see test_e2e_product for the binding).
 
 
 # -------------------------------------------------------- Calculating Agent ----

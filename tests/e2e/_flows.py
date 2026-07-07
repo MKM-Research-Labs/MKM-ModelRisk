@@ -42,10 +42,12 @@ def confirm(page: Page) -> None:
     expect(page.locator("#confirm-overlay")).to_be_hidden()
 
 
-def register_model(page: Page, model_id: str, name: str) -> None:
+def register_model(page: Page, model_id: str, name: str, model_type: str | None = None) -> None:
     page.click("#m-register")          # open the registration modal
     page.fill("#reg-model_id", model_id)
     page.fill("#reg-name", name)
+    if model_type is not None:
+        page.select_option("#reg-type", model_type)   # e.g. "Market Data Model"
     page.click("#reg-submit")          # submit -> confirm-to-amend
     confirm(page)
     expect(page.locator(f"tr.clickable[data-id='{model_id}']")).to_be_visible()

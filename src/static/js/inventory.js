@@ -68,9 +68,18 @@ const Inventory = {
   async openRegister() {
     document.getElementById("reg-model_id").value = "";
     document.getElementById("reg-name").value = "";
+    this._populateTypePicker();
     await this._populateOrgPickers();
     document.getElementById("register-overlay").classList.remove("hidden");
     document.getElementById("reg-model_id").focus();
+  },
+
+  _populateTypePicker() {
+    const spec = this.specByKey("type");
+    if (!spec) return;
+    const options = ["", ...(spec.options || [])]
+      .map((o) => "<option>" + esc(o) + "</option>").join("");
+    document.getElementById("reg-type").innerHTML = options;
   },
 
   async _populateOrgPickers() {
@@ -106,7 +115,7 @@ const Inventory = {
     const id = val("reg-model_id"), name = val("reg-name");
     if (!id || !name) { App.toast("Model ID and name are required", "error"); return; }
     const fields = {};
-    ["company", "division", "department"].forEach((k) => {
+    ["type", "company", "division", "department"].forEach((k) => {
       const v = val("reg-" + k);
       if (v) fields[k] = v;
     });
