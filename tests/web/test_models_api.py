@@ -93,6 +93,23 @@ def test_field_specs_endpoint(client):
     assert "tier" in specs["register"]
 
 
+def test_type_field_is_a_choice_on_the_register_form(client):
+    specs = client.get("/api/models/fields").get_json()
+    model_type = next(f for g in specs["groups"] for f in g["fields"] if f["key"] == "type")
+    assert model_type["type"] == "choice"
+    assert list(model_type["options"]) == ["Analytical Model", "Market Data Model", "Other"]
+    assert "type" in specs["register"]
+
+
+def test_register_market_data_model_type(client):
+    assert _register(client, model_id="STB-MD-1", type="Market Data Model").status_code == 201
+    assert client.get("/api/models/STB-MD-1").get_json()["data"]["type"] == "Market Data Model"
+
+
+def test_register_rejects_unknown_type(client):
+    assert _register(client, model_id="M-BAD", type="Spreadsheet").status_code == 400
+
+
 def test_register_with_organisation_fields(client):
     response = client.post(
         "/api/models",

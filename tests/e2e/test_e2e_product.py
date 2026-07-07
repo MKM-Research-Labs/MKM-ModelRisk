@@ -29,13 +29,14 @@ from tests.e2e._flows import add_collection_item, confirm, open_app, open_tab, r
 pytestmark = pytest.mark.e2e
 
 
-def _register_product(page: Page, product_id: str, product: str, analytics: str) -> None:
+def _register_product(page: Page, product_id: str, product: str, analytics: str,
+                      market_data: str) -> None:
     open_tab(page, "product")
     page.click("#product-register")
     page.fill("#preg-product_id", product_id)
     page.fill("#preg-product", product)
     page.select_option("#preg-analytics_model", analytics)
-    page.fill("#preg-market_data_model", "NSS curve")
+    page.select_option("#preg-market_data_model", market_data)   # a Market Data Model inventory id
     page.fill("#preg-calculating_agent", "Murex")
     page.click("#product-reg-submit")
     confirm(page)
@@ -44,16 +45,18 @@ def _register_product(page: Page, product_id: str, product: str, analytics: str)
 def test_register_product_shows_derived_identifier(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN1", "Analytics Engine")
-    _register_product(page, "Product-E2E-001", "Government Bond", "MKM-E2E-AN1")
+    register_model(page, "MKM-E2E-MD1", "Vol Surface", model_type="Market Data Model")
+    _register_product(page, "Product-E2E-001", "Government Bond", "MKM-E2E-AN1", "MKM-E2E-MD1")
     row = page.locator("tr.clickable[data-id='Product-E2E-001']")
-    expect(row).to_contain_text("MKM-E2E-AN1.NSS curve.Murex")
+    expect(row).to_contain_text("MKM-E2E-AN1.MKM-E2E-MD1.Murex")
     expect(row).to_contain_text("Government Bond")
 
 
 def test_product_detail_tabs_and_rebind(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN2", "Analytics Engine")
-    _register_product(page, "Product-E2E-002", "Swaption", "MKM-E2E-AN2")
+    register_model(page, "MKM-E2E-MD2", "Vol Surface", model_type="Market Data Model")
+    _register_product(page, "Product-E2E-002", "Swaption", "MKM-E2E-AN2", "MKM-E2E-MD2")
     page.click("tr.clickable[data-id='Product-E2E-002']")
     expect(page.locator(".dtabs")).to_contain_text("Limitations")
     expect(page.locator(".dtabs")).to_contain_text("Audit")
@@ -67,7 +70,8 @@ def test_product_detail_tabs_and_rebind(page: Page, base_url: str):
 def test_product_edit_status_field(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN3", "Analytics Engine")
-    _register_product(page, "Product-E2E-003", "Equity Option", "MKM-E2E-AN3")
+    register_model(page, "MKM-E2E-MD3", "Vol Surface", model_type="Market Data Model")
+    _register_product(page, "Product-E2E-003", "Equity Option", "MKM-E2E-AN3", "MKM-E2E-MD3")
     page.click("tr.clickable[data-id='Product-E2E-003']")
     page.click("[data-edit='status']")
     page.select_option("#ped-input", "Active")
@@ -79,7 +83,8 @@ def test_product_edit_status_field(page: Page, base_url: str):
 def test_product_governance_tabs_and_rag(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN4", "Analytics Engine")
-    _register_product(page, "Product-E2E-004", "Government Bond", "MKM-E2E-AN4")
+    register_model(page, "MKM-E2E-MD4", "Vol Surface", model_type="Market Data Model")
+    _register_product(page, "Product-E2E-004", "Government Bond", "MKM-E2E-AN4", "MKM-E2E-MD4")
     page.click("tr.clickable[data-id='Product-E2E-004']")
     expect(page.locator(".dtabs")).to_contain_text("Remediation")
     expect(page.locator(".dtabs")).to_contain_text("Docs")
@@ -93,7 +98,8 @@ def test_product_governance_tabs_and_rag(page: Page, base_url: str):
 def test_product_add_assumption(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN5", "Analytics Engine")
-    _register_product(page, "Product-E2E-005", "Swap", "MKM-E2E-AN5")
+    register_model(page, "MKM-E2E-MD5", "Vol Surface", model_type="Market Data Model")
+    _register_product(page, "Product-E2E-005", "Swap", "MKM-E2E-AN5", "MKM-E2E-MD5")
     page.click("tr.clickable[data-id='Product-E2E-005']")
     page.click("[data-ptab='assumptions']")
     add_collection_item(page, "assumptions", {"description": "Flat vol surface", "impact": "Low"})
@@ -103,7 +109,8 @@ def test_product_add_assumption(page: Page, base_url: str):
 def test_product_add_remediation_step(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN6", "Analytics Engine")
-    _register_product(page, "Product-E2E-006", "Cap", "MKM-E2E-AN6")
+    register_model(page, "MKM-E2E-MD6", "Vol Surface", model_type="Market Data Model")
+    _register_product(page, "Product-E2E-006", "Cap", "MKM-E2E-AN6", "MKM-E2E-MD6")
     page.click("tr.clickable[data-id='Product-E2E-006']")
     page.click("[data-ptab='remediation_steps']")
     add_collection_item(page, "remediation_steps", {"description": "Re-bootstrap curve"})
@@ -113,7 +120,8 @@ def test_product_add_remediation_step(page: Page, base_url: str):
 def test_product_upload_supporting_document(page: Page, base_url: str, tmp_path):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN7", "Analytics Engine")
-    _register_product(page, "Product-E2E-007", "Floor", "MKM-E2E-AN7")
+    register_model(page, "MKM-E2E-MD7", "Vol Surface", model_type="Market Data Model")
+    _register_product(page, "Product-E2E-007", "Floor", "MKM-E2E-AN7", "MKM-E2E-MD7")
     page.click("tr.clickable[data-id='Product-E2E-007']")
     page.click("[data-ptab='docs']")
     pdf = tmp_path / "product_spec.pdf"
@@ -127,7 +135,8 @@ def test_product_upload_supporting_document(page: Page, base_url: str, tmp_path)
 def test_product_retire(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN8", "Analytics Engine")
-    _register_product(page, "Product-E2E-008", "Inflation Swap", "MKM-E2E-AN8")
+    register_model(page, "MKM-E2E-MD8", "Vol Surface", model_type="Market Data Model")
+    _register_product(page, "Product-E2E-008", "Inflation Swap", "MKM-E2E-AN8", "MKM-E2E-MD8")
     page.click("tr.clickable[data-id='Product-E2E-008']")
     page.click("#product-retire")
     confirm(page)
