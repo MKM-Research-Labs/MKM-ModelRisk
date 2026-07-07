@@ -30,16 +30,16 @@ VALID_PRODUCT_STATUS = ("Proposed", "Active", "Suspended", "Retired")
 # engine that prices the product; then Market Data, then the Calculating Agent).
 PRODUCT_BINDINGS = ("analytics_model", "market_data_model", "calculating_agent")
 
-# Ordered scalar field specs. ``analytics_model`` references the Model Inventory
-# (resolved specially, not via a reference list); the other two bindings and the
-# owner reference admin lists.
+# Ordered scalar field specs. ``analytics_model`` and ``market_data_model`` both
+# reference the Model Inventory (resolved specially, not via a reference list —
+# a Market Data Model is an inventory model of type "Market Data Model"); the
+# calculating agent and the owner reference admin lists.
 PRODUCT_FIELD_SPECS = {
     "product": {"label": "Product", "type": "text", "group": "Product"},
     "product_id": {"label": "Product ID", "type": "text", "group": "Product"},
     "description": {"label": "Description", "type": "text", "group": "Product"},
     "analytics_model": {"label": "Analytics Model", "type": "text", "group": "Bindings"},
-    "market_data_model": {"label": "Market Data Model", "type": "text", "group": "Bindings",
-                          "reference": "market_data_model"},
+    "market_data_model": {"label": "Market Data Model", "type": "text", "group": "Bindings"},
     "calculating_agent": {"label": "Calculating Agent", "type": "text", "group": "Bindings",
                           "reference": "calculating_agent"},
     "rag_rating": {"label": "RAG rating", "type": "choice", "options": VALID_RAG_RATINGS,

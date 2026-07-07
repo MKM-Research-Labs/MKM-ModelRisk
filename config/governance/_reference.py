@@ -22,14 +22,12 @@
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 
-# Order: the Company org hierarchy first, then the Product engines/platform
-# (Market Data Model + Calculating Agent), then the People directory.
+# Order: the Company org hierarchy first, then the Product platform (Calculating
+# Agent), then the People directory. Market Data Models are no longer a reference
+# list — they live in the Model Inventory tagged type="Market Data Model".
 REFERENCE_LISTS = (
-    "company", "division", "department", "market_data_model", "calculating_agent", "people",
+    "company", "division", "department", "calculating_agent", "people",
 )
-
-# How often a Market Data Model refreshes its inputs (Product spec §8).
-VALID_MDM_FREQUENCY = ("Real-time", "Intraday", "Daily", "Weekly", "Ad-hoc")
 
 # The org hierarchy cascades: a Division belongs to a Company, a Department to a
 # Division. Each unit carries an Owner (a person), so model ownership attaches to
@@ -50,16 +48,7 @@ REFERENCE_SPECS = {
         {"key": "division", "label": "Division", "type": "text", "reference": "division", "required": True},
         dict(_OWNER),
     ]},
-    # --- Product reference data (engines + platform) ---
-    "market_data_model": {"label": "Market Data Model", "id_prefix": "MDM", "display": "name",
-                          "fields": [
-        {"key": "name", "label": "Name", "type": "text", "required": True},
-        {"key": "description", "label": "Description", "type": "text"},
-        {"key": "vendor", "label": "Vendor / source", "type": "text"},
-        {"key": "method", "label": "Construction method", "type": "text"},
-        {"key": "update_frequency", "label": "Update frequency", "type": "choice",
-         "options": VALID_MDM_FREQUENCY},
-    ]},
+    # --- Product reference data (platform) ---
     "calculating_agent": {"label": "Calculating Agent", "id_prefix": "CA", "display": "value",
                           "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},

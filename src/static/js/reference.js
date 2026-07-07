@@ -25,8 +25,7 @@ const Reference = {
   _tab: "company",
   _TABS: [
     ["company", "Company"], ["division", "Division"], ["department", "Department"],
-    ["market_data_model", "Market Data"], ["calculating_agent", "Calc Agent"],
-    ["mrc", "MRC"], ["people", "People"],
+    ["calculating_agent", "Calc Agent"], ["mrc", "MRC"], ["people", "People"],
   ],
 
   async render() {
