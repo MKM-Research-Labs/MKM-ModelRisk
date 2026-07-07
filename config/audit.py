@@ -22,8 +22,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from config.database import DatabaseConfig
+
 # Where generated audit report PDFs are written (under the gitignored uploads/).
-AUDIT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "uploads" / "audit"
+# Scoped by the active database name so reports from different databases (e.g.
+# the dev vs. the pre-seeded demo DB) never overwrite or masquerade as one
+# another — they share this fixed path but should not share files.
+AUDIT_OUTPUT_DIR = (
+    Path(__file__).resolve().parents[1] / "uploads" / "audit" / DatabaseConfig.from_env().name
+)
 
 # The user guide (Markdown) — published as a PDF into the Audit Reports tab.
 USER_GUIDE_MD = Path(__file__).resolve().parents[1] / "docs" / "user_guide.md"
