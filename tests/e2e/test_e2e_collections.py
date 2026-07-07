@@ -93,6 +93,30 @@ def test_add_version_with_lifecycle_shows_badge(page: Page, base_url: str):
     expect(item).to_contain_text("Being Enhanced")
 
 
+def test_events_tab_records_a_post_mortem_with_raci(page: Page, base_url: str):
+    """W4b: Operational Failure Events captures an incident with the RACI legs."""
+    open_app(page, base_url)
+    # Seed a Person so the People-referenced RACI fields render as choices.
+    from tests.e2e._flows import add_collection_item, open_admin_subtab
+    open_admin_subtab(page, "people")
+    add_collection_item(page, "people", {"name": "Lena Okafor"})
+    page.click(".tab[data-tab='inventory']")
+    register_model(page, "MKM-E2E-EV1", "Events Model")
+    open_model(page, "MKM-E2E-EV1")
+    open_detail_tab(page, "operational_failure_events")
+    add_collection_item(
+        page, "operational_failure_events",
+        {"date": "2026-05-12", "description": "Curve flipped sign on illiquid tenor",
+         "remediation": "Rolled back to prior dataset; root cause under investigation",
+         "responsible": "Lena Okafor",
+         "informed_client": "No", "informed_senior_mgmt": "Yes"},
+    )
+    body = page.locator("#dt-content")
+    expect(body).to_contain_text("Curve flipped sign on illiquid tenor")
+    expect(body).to_contain_text("Lena Okafor")
+    expect(page.locator("[data-dtab='operational_failure_events']")).to_contain_text("(1)")
+
+
 def test_add_change_history(page: Page, base_url: str):
     _setup(page, base_url, "MKM-E2E-014", "change_history")
     add_collection_item(

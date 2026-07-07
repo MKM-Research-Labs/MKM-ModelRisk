@@ -85,7 +85,9 @@ const Detail = {
       ["overview", "Overview", null], ["remediation_steps", "Remediation", n("remediation_steps")],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
       ["assumptions", "Assumptions", n("assumptions")], ["change_history", "Changes", null],
-      ["validation_questions", "Validation", cov], ["risk", "Risk Rating", null],
+      ["validation_questions", "Validation", cov],
+      ["operational_failure_events", "Events", n("operational_failure_events")],
+      ["risk", "Risk Rating", null],
       ["decisions", "Decisions", this._decisions.length],
       ["actions", "Actions", this._actions.length],
       ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
@@ -118,6 +120,16 @@ const Detail = {
     const spec = this.collSpec(this._tab);
     box.innerHTML = Collections.render(d, { collections: [spec] }, this._model.retired);
     this._bindCollection(this._tab);
+    if (this._tab === "operational_failure_events") this._defaultAccountable(d);
+  },
+
+  // Pre-fill an Event's Accountable field with the model's owner so the chair
+  // can capture an incident without re-typing who owns the model.
+  _defaultAccountable(d) {
+    const accountable = document.getElementById("add-operational_failure_events-accountable");
+    if (accountable && d.owner && [...accountable.options].some((o) => o.value === d.owner)) {
+      accountable.value = d.owner;
+    }
   },
 
   _bindCollection(key) {
