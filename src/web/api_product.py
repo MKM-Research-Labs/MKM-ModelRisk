@@ -61,8 +61,12 @@ def _product_scope(product_id: str) -> str:
     return f"product/{product_id}"
 
 
-def _grouped_specs(options: dict[str, list], model_ids: list[str]):
-    """Field specs grouped for the detail view; bindings resolve to dropdowns."""
+def _grouped_specs(options: dict[str, list], inventory_ids: dict[str, list[str]]):
+    """Field specs grouped for the detail view; bindings resolve to dropdowns.
+
+    ``inventory_ids`` maps each inventory-backed binding ("analytics_model",
+    "market_data_model") to the list of eligible model IDs.
+    """
     groups: list[dict] = []
     by_name: dict[str, dict] = {}
     for key, spec in PRODUCT_FIELD_SPECS.items():
@@ -72,8 +76,8 @@ def _grouped_specs(options: dict[str, list], model_ids: list[str]):
             by_name[spec["group"]] = group
             groups.append(group)
         field_type, choices = spec["type"], list(spec.get("options", []))
-        if key == "analytics_model":
-            field_type, choices = "choice", model_ids
+        if key in inventory_ids:
+            field_type, choices = "choice", inventory_ids[key]
         else:
             reference = spec.get("reference")
             if reference and options.get(reference):
@@ -94,9 +98,17 @@ def _collection_specs():
 
 @product_bp.get("/fields")
 def field_specs():
-    live_models = [m["model_id"] for m in list_models() if not m["retired"]]
+    # A Product's analytics engine is any live model that isn't a Market Data
+    # Model; its market-data binding is a live model of type "Market Data Model".
+    live = [m for m in list_models() if not m["retired"]]
+    inventory_ids = {
+        "analytics_model": [
+            m["model_id"] for m in live if (m["data"] or {}).get("type") != "Market Data Model"],
+        "market_data_model": [
+            m["model_id"] for m in live if (m["data"] or {}).get("type") == "Market Data Model"],
+    }
     return jsonify({
-        "groups": _grouped_specs(reference_options(), live_models),
+        "groups": _grouped_specs(reference_options(), inventory_ids),
         "register": list(PRODUCT_REGISTER_FIELDS),
         "bindings": list(PRODUCT_BINDINGS),
         "collections": _collection_specs(),

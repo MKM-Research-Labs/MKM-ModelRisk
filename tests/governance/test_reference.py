@@ -42,7 +42,7 @@ def test_only_one_company_allowed():
 def test_lists_empty_initially():
     assert get_reference_lists() == {
         "people": [], "company": [], "division": [], "department": [],
-        "market_data_model": [], "calculating_agent": [],
+        "calculating_agent": [],
     }
 
 
@@ -75,21 +75,6 @@ def test_add_multiple_options_increment_ids():
 def test_division_requires_its_company():
     with pytest.raises(DomainError):
         add_option(list_name="division", fields={"value": "Orphan"}, actor="admin")
-
-
-def test_add_market_data_model():
-    add_option(list_name="market_data_model",
-               fields={"name": "NSS bond curve", "vendor": "ICE", "update_frequency": "Daily"},
-               actor="admin")
-    mdm = get_reference_lists()["market_data_model"][0]
-    assert mdm["item_id"] == "MDM-001"
-    assert mdm["name"] == "NSS bond curve" and mdm["update_frequency"] == "Daily"
-
-
-def test_market_data_model_rejects_unknown_frequency():
-    with pytest.raises(DomainError):
-        add_option(list_name="market_data_model",
-                   fields={"name": "X", "update_frequency": "Hourly"}, actor="admin")
 
 
 def test_add_calculating_agent():

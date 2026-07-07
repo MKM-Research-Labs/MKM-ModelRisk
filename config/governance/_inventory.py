@@ -35,6 +35,10 @@ VALID_VALIDATION_STATUSES = (
 )
 VALID_MATERIALITY = ("Low", "Medium", "High")
 VALID_COMPLEXITY = ("Low", "Medium", "High")
+# What kind of model this is. Analytical models price/quantify risk; Market Data
+# Models produce calibrated curves/surfaces consumed by the analytical engines
+# (both are models — they involve methodology and judgement, not raw vendor feeds).
+VALID_MODEL_TYPES = ("Analytical Model", "Market Data Model", "Other")
 VALID_LIFECYCLE_STAGES = ("Development", "Validation", "Production", "Retired")
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 
@@ -46,7 +50,7 @@ TIER_MAX = 5
 # model is defined by its ID within the selected Company. Division and Department
 # are captured on the form.
 REGISTER_FIELDS = (
-    "division", "department", "repo_location", "codebase", "category", "tier", "owner",
+    "division", "department", "repo_location", "codebase", "type", "category", "tier", "owner",
 )
 
 # Ordered scalar field specifications. type is one of: text | choice | date | tier.
@@ -62,6 +66,10 @@ MODEL_FIELD_SPECS = {
     "name": {"label": "Name", "type": "text", "group": "Classification"},
     "short_name": {"label": "Short name", "type": "text", "group": "Classification"},
     "description": {"label": "Description", "type": "text", "group": "Classification"},
+    "type": {
+        "label": "Type", "type": "choice",
+        "options": VALID_MODEL_TYPES, "group": "Classification",
+    },
     "category": {"label": "Category", "type": "text", "group": "Classification"},
     "tier": {"label": "Tier", "type": "tier", "group": "Classification"},
     "tier_rationale": {"label": "Tier rationale", "type": "text", "group": "Classification"},
