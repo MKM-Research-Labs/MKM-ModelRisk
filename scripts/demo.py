@@ -48,9 +48,9 @@ from src.governance.mrc import add_collection_item as _meeting_add
 from src.governance.mrc import rebuild_meeting_view, schedule_meeting
 from src.governance.mrc.pack import compile_tex
 from src.governance.mrc_settings import set_field, set_logo
-from src.governance.pvm import add_collection_item as _pvm_add
-from src.governance.pvm import list_pvms, rebuild_pvm_view, register_pvm
-from src.governance.pvm.commands import AGGREGATE_TYPE as PVM_AGGREGATE
+from src.governance.product import add_collection_item as _product_add
+from src.governance.product import list_products, rebuild_product_view, register_product
+from src.governance.product.commands import AGGREGATE_TYPE as PRODUCT_AGGREGATE
 from src.governance.reference import add_option
 
 DEMO_DB = "mkm_modelrisk_demo"
@@ -101,12 +101,12 @@ def _demo_pdf() -> bytes | None:
 
 
 def _seed_documents() -> None:
-    """Attach the placeholder demo PDF to every model and PVM."""
+    """Attach the placeholder demo PDF to every model and Product."""
     pdf = _demo_pdf()
     if pdf is None:
         return
     targets = [(MODEL_AGGREGATE, m["model_id"], "model") for m in list_models()]
-    targets += [(PVM_AGGREGATE, p["pvm_id"], "pvm") for p in list_pvms()]
+    targets += [(PRODUCT_AGGREGATE, p["product_id"], "product") for p in list_products()]
     for aggregate_type, aggregate_id, prefix in targets:
         add_document(
             aggregate_type=aggregate_type, aggregate_id=aggregate_id,
@@ -133,12 +133,12 @@ def seed() -> None:
             _model_update(model_id=model["model_id"], collection="validation_questions",
                           item_id=item_id, fields={"status": status}, actor=_ACTOR)
     rebuild_inventory_view()
-    for pvm in data["pvms"]:
-        register_pvm(pvm_id=pvm["pvm_id"], product=pvm["product"], fields=pvm["fields"], actor=_ACTOR)
-        rebuild_pvm_view()
-        for collection, items in pvm.get("collections", {}).items():
+    for product in data["products"]:
+        register_product(product_id=product["product_id"], product=product["product"], fields=product["fields"], actor=_ACTOR)
+        rebuild_product_view()
+        for collection, items in product.get("collections", {}).items():
             for item in items:
-                _pvm_add(pvm_id=pvm["pvm_id"], collection=collection, fields=item, actor=_ACTOR)
+                _product_add(product_id=product["product_id"], collection=collection, fields=item, actor=_ACTOR)
     for meeting in data["meetings"]:
         schedule_meeting(meeting_id=meeting["meeting_id"], title=meeting["title"],
                          date=meeting["fields"]["date"], fields=meeting.get("fields", {}), actor=_ACTOR)
@@ -149,7 +149,7 @@ def seed() -> None:
         add_reference(fields=reference, actor=_ACTOR)
     _seed_documents()
     rebuild_inventory_view()
-    rebuild_pvm_view()
+    rebuild_product_view()
     rebuild_meeting_view()
 
 

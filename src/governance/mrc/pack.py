@@ -25,6 +25,7 @@ logo from the MRC settings when one is set.
 """
 from __future__ import annotations
 
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -142,8 +143,22 @@ def build_tex(
     )
 
 
+class TectonicNotFound(RuntimeError):
+    """The tectonic LaTeX engine is not installed, so no PDF can be produced."""
+
+
 def compile_tex(tex: str, assets: dict[str, bytes] | None = None) -> bytes:
-    """Compile LaTeX source to PDF bytes using tectonic."""
+    """Compile LaTeX source to PDF bytes using tectonic.
+
+    Raises ``TectonicNotFound`` when the engine is not on PATH, so callers can
+    turn a missing optional dependency into a clean error instead of a raw
+    ``FileNotFoundError`` from the subprocess layer.
+    """
+    if shutil.which("tectonic") is None:
+        raise TectonicNotFound(
+            "tectonic is not installed, so PDF reports cannot be generated. "
+            "Install it (e.g. `brew install tectonic`) and try again."
+        )
     with tempfile.TemporaryDirectory() as directory:
         base = Path(directory)
         (base / "doc.tex").write_text(tex)

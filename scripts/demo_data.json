@@ -137,9 +137,9 @@
       "validation": {"VQ-001": "Addressed", "VQ-002": "Addressed", "VQ-004": "Addressed", "VQ-009": "Addressed"}
     }
   ],
-  "pvms": [
+  "products": [
     {
-      "pvm_id": "PVM-0001", "product": "Government Bond",
+      "product_id": "Product-0001", "product": "Government Bond",
       "fields": {"product_id": "GILT-2034", "analytics_model": "STB-BND-001",
                  "market_data_model": "NSS bond curve", "calculating_agent": "Murex",
                  "status": "Active", "owner": "Priya Anand", "rag_rating": "Green",
@@ -149,7 +149,7 @@
                  "monitoring_results": "P&L explained within tolerance for Q1; no exceptions."}
     },
     {
-      "pvm_id": "PVM-0002", "product": "Interest Rate Swaption",
+      "product_id": "Product-0002", "product": "Interest Rate Swaption",
       "fields": {"product_id": "GBP-SWPTN", "analytics_model": "STB-SABR-001",
                  "market_data_model": "SABR swaption vol", "calculating_agent": "Murex",
                  "status": "Active", "owner": "Priya Anand", "rag_rating": "Amber",
@@ -163,7 +163,7 @@
       }
     },
     {
-      "pvm_id": "PVM-0003", "product": "Equity Option",
+      "product_id": "Product-0003", "product": "Equity Option",
       "fields": {"product_id": "FTSE-EUOPT", "analytics_model": "STB-BS-001",
                  "market_data_model": "Equity vol surface", "calculating_agent": "Murex",
                  "status": "Active", "owner": "Sofia Castro", "rag_rating": "Green",
@@ -173,14 +173,14 @@
                  "monitoring_results": "Stable; within expectation."}
     },
     {
-      "pvm_id": "PVM-0004", "product": "Equity Barrier Option",
+      "product_id": "Product-0004", "product": "Equity Barrier Option",
       "fields": {"product_id": "FTSE-BARR", "analytics_model": "STB-BS-001",
                  "market_data_model": "Equity vol surface", "calculating_agent": "Calypso",
                  "status": "Suspended", "owner": "Sofia Castro", "rag_rating": "Red",
                  "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-04-30",
                  "description": "Knock-out barrier option currently shoehorned onto the plain Black-Scholes engine.",
                  "monitoring_approach": "Compare hedges vs a barrier-aware benchmark where available.",
-                 "monitoring_results": "Barrier risk not captured by the Black-Scholes engine; PVM suspended pending a local-vol framework."},
+                 "monitoring_results": "Barrier risk not captured by the Black-Scholes engine; Product suspended pending a local-vol framework."},
       "collections": {
         "limitations": [{"description": "Shoehorning: barrier valued on plain Black-Scholes, missing barrier risk that should drive hedging", "impact": "High"}],
         "remediation_steps": [{"description": "Deliver a barrier-aware local-volatility framework", "owner": "Sofia Castro", "priority": "High", "due_date": "2026-04-30", "status": "Open"}]
@@ -196,14 +196,14 @@
       "collections": {
         "agenda": [
           {"title": "SABR validation status", "presenter": "Johnny Mattimore", "status": "Completed"},
-          {"title": "Barrier-option PVM suspension", "presenter": "Sofia Castro", "status": "Completed"},
+          {"title": "Barrier-option Product suspension", "presenter": "Sofia Castro", "status": "Completed"},
           {"title": "PFE wrong-way risk remediation", "presenter": "Johnny Mattimore", "status": "Pending"}
         ],
         "minutes": [
           {"title": "Welcome and apologies", "presenter": "David K Kelly", "text": "Chair welcomed attendees and noted apologies from Sofia Castro (Equity Derivatives)."},
-          {"title": "Q1 model risk dashboard", "presenter": "David K Kelly", "text": "Inventory at 6 models, 4 PVMs. Two amber items: SABR (validation) and Barrier Option PVM (suspended)."},
+          {"title": "Q1 model risk dashboard", "presenter": "David K Kelly", "text": "Inventory at 6 models, 4 Products. Two amber items: SABR (validation) and Barrier Option Product (suspended)."},
           {"title": "SABR validation status", "presenter": "Johnny Mattimore", "text": "Low-strike Hagan expansion instability confirmed; partial coverage on VQ-001. Recalibration plan tabled for Q2."},
-          {"title": "Barrier-option PVM suspension", "presenter": "Priya Anand", "text": "Reported on Sofia's behalf: PVM-0004 suspended; barrier risk not captured by the Black-Scholes engine. Local-vol framework scoped for delivery by end of April."},
+          {"title": "Barrier-option Product suspension", "presenter": "Priya Anand", "text": "Reported on Sofia's behalf: Product-0004 suspended; barrier risk not captured by the Black-Scholes engine. Local-vol framework scoped for delivery by end of April."},
           {"title": "AOB", "presenter": "David K Kelly", "text": "No other business; meeting closed at 15:30."}
         ],
         "participants": [
@@ -218,7 +218,7 @@
           {"model_id": "STB-SABR-001"}
         ],
         "decisions": [
-          {"description": "Suspend PVM-0004 (Equity Barrier Option) until a barrier-aware framework is delivered.", "date": "2026-03-18", "model_id": "STB-BS-001"},
+          {"description": "Suspend Product-0004 (Equity Barrier Option) until a barrier-aware framework is delivered.", "date": "2026-03-18", "model_id": "STB-BS-001"},
           {"description": "Escalate SABR low-strike instability; target remediation by Q2.", "date": "2026-03-18", "model_id": "STB-SABR-001"},
           {"description": "Endorse the framework refresh and continue current MRC cadence (quarterly).", "date": "2026-03-18"}
         ],

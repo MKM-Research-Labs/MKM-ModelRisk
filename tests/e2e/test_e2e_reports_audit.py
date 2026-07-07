@@ -40,6 +40,22 @@ def test_model_risk_report_is_pdf(page: Page, base_url: str):
     assert response.body()[:5] == b"%PDF-"
 
 
+def test_generate_audit_reports_never_500s(page: Page, base_url: str):
+    # Regardless of whether tectonic is installed on the host, the "Generate
+    # reports" action must degrade gracefully: 200 when the engine is present,
+    # otherwise a clean 503 carrying an actionable message — never a raw 500.
+    open_app(page, base_url)
+    response = page.request.post(
+        base_url + "/api/audit-reports/generate",
+        headers={"X-Auth-Request-User": "risk@kerrshearer.co.uk"},
+    )
+    if shutil.which("tectonic") is None:
+        assert response.status == 503
+        assert "tectonic" in response.json()["error"]
+    else:
+        assert response.ok
+
+
 def test_audit_trail_records_registration(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-021", "Hazard Curve")

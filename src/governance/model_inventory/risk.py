@@ -108,7 +108,7 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
     and past-year events count.
 
     ``rating`` and ``score`` remain the composite view for callers (the Model
-    Risk Report PDF, PVM headers, list badges) — the heatmap is additional
+    Risk Report PDF, Product headers, list badges) — the heatmap is additional
     context surfaced primarily on the Risk Rating tab.
     """
     scores = {

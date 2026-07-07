@@ -31,6 +31,7 @@ from audit.pdf import render_audit_pdf
 from config.audit import AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS, USER_GUIDE_MD
 from src.governance.model_inventory import list_models
 from src.governance.model_inventory.report import render_report_pdf
+from src.governance.mrc.pack import TectonicNotFound
 from src.governance.mrc_settings import get_settings
 
 # Module-level so tests can point it at a temporary directory.
@@ -81,8 +82,13 @@ def generate():
     """(Re)generate the audit report PDFs into the output directory."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     as_of = date.today().isoformat()
-    (OUTPUT_DIR / "coding_rule_audit.pdf").write_bytes(render_audit_pdf(build_report(), as_of))
-    (OUTPUT_DIR / "model_risk_report.pdf").write_bytes(
-        render_report_pdf(list_models(), get_settings(), as_of))
+    try:
+        (OUTPUT_DIR / "coding_rule_audit.pdf").write_bytes(render_audit_pdf(build_report(), as_of))
+        (OUTPUT_DIR / "model_risk_report.pdf").write_bytes(
+            render_report_pdf(list_models(), get_settings(), as_of))
+    except TectonicNotFound as exc:
+        # Optional system dependency missing: surface an actionable 503 rather
+        # than a raw 500 stack trace.
+        return jsonify({"error": str(exc)}), 503
     _render_user_guide(OUTPUT_DIR / "user_guide.pdf")
     return jsonify(_catalogue())

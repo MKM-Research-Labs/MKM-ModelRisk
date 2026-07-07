@@ -55,6 +55,20 @@ def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
     assert served.status_code == 200 and served.data.startswith(b"%PDF")
 
 
+def test_generate_returns_503_without_tectonic(client, tmp_path, monkeypatch):
+    # The engine is an optional system dependency: when it's absent, generation
+    # must fail with an actionable 503, not an unhandled 500 stack trace.
+    out = tmp_path / "audit"
+    monkeypatch.setattr(mod, "OUTPUT_DIR", out)
+    monkeypatch.setattr(pack.shutil, "which", lambda _name: None)          # no tectonic
+    monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})
+
+    res = client.post("/api/audit-reports/generate", headers=HEADERS)
+    assert res.status_code == 503
+    assert "tectonic" in res.get_json()["error"]
+    assert not list(out.glob("*.pdf"))          # nothing half-written
+
+
 def test_user_guide_skipped_without_pandoc(tmp_path, monkeypatch):
     monkeypatch.setattr(mod.shutil, "which", lambda _name: None)
     dest = tmp_path / "user_guide.pdf"

@@ -17,10 +17,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Pure decision logic for the PVM aggregate (validation only, no I/O).
+"""Pure decision logic for the Product aggregate (validation only, no I/O).
 
 Cross-aggregate facts (does the Analytics Model resolve to a live model; would
-the component combination duplicate an existing PVM) are computed by the command
+the component combination duplicate an existing Product) are computed by the command
 layer and passed in, so these functions stay pure and unit-testable.
 """
 from __future__ import annotations
@@ -28,112 +28,112 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (
-    PVM_BINDINGS,
-    PVM_COLLECTION_SPECS,
-    PVM_EDITABLE_FIELDS,
-    PVM_FIELD_CHOICES,
-    PVM_FIELD_SPECS,
+    PRODUCT_BINDINGS,
+    PRODUCT_COLLECTION_SPECS,
+    PRODUCT_EDITABLE_FIELDS,
+    PRODUCT_FIELD_CHOICES,
+    PRODUCT_FIELD_SPECS,
 )
 from src.governance import collections as coll
 from src.governance.errors import DomainError
-from src.governance.pvm._state import (
+from src.governance.product._state import (
     EVENT_FIELD_EDITED,
     EVENT_REBOUND,
     EVENT_REGISTERED,
     EVENT_RETIRED,
-    PvmState,
+    ProductState,
 )
 
 
 def _validate_field(field: str, value: Any) -> None:
-    if field in PVM_FIELD_CHOICES and value not in PVM_FIELD_CHOICES[field]:
-        allowed = ", ".join(PVM_FIELD_CHOICES[field])
+    if field in PRODUCT_FIELD_CHOICES and value not in PRODUCT_FIELD_CHOICES[field]:
+        allowed = ", ".join(PRODUCT_FIELD_CHOICES[field])
         raise DomainError(f"{field} must be one of: {allowed}")
 
 
-def _require_editable(state: PvmState) -> None:
+def _require_editable(state: ProductState) -> None:
     if not state.exists:
-        raise DomainError("PVM does not exist")
+        raise DomainError("Product does not exist")
     if state.retired:
-        raise DomainError("cannot edit a retired PVM")
+        raise DomainError("cannot edit a retired Product")
 
 
 def decide_register(
-    state: PvmState, *, pvm_id: str, product: str, fields: dict[str, Any],
+    state: ProductState, *, product_id: str, product: str, fields: dict[str, Any],
     analytics_live: bool, duplicate: bool,
 ) -> tuple[str, dict[str, Any]]:
     if state.exists:
-        raise DomainError(f"PVM {pvm_id} is already registered")
-    if not pvm_id or not product:
-        raise DomainError("pvm_id and product are required")
-    for binding in PVM_BINDINGS:
+        raise DomainError(f"Product {product_id} is already registered")
+    if not product_id or not product:
+        raise DomainError("product_id and product are required")
+    for binding in PRODUCT_BINDINGS:
         if not fields.get(binding):
             raise DomainError(f"{binding} is required")
     if not analytics_live:
         raise DomainError("analytics_model must reference a live inventory model")
     if duplicate:
-        raise DomainError("a PVM already binds this Product + Analytics + Market Data + Agent")
+        raise DomainError("a Product already binds this Product + Analytics + Market Data + Agent")
     for field, value in fields.items():
-        if field not in PVM_FIELD_SPECS:
+        if field not in PRODUCT_FIELD_SPECS:
             raise DomainError(f"unknown field: {field}")
         _validate_field(field, value)
-    payload: dict[str, Any] = {"pvm_id": pvm_id, "product": product, "status": "Proposed"}
+    payload: dict[str, Any] = {"product_id": product_id, "product": product, "status": "Proposed"}
     payload.update(fields)
     return EVENT_REGISTERED, payload
 
 
 def decide_rebind(
-    state: PvmState, *, component: str, value: str, analytics_live: bool, duplicate: bool,
+    state: ProductState, *, component: str, value: str, analytics_live: bool, duplicate: bool,
 ) -> tuple[str, dict[str, Any]]:
     _require_editable(state)
-    if component not in PVM_BINDINGS:
+    if component not in PRODUCT_BINDINGS:
         raise DomainError(f"not a component binding: {component}")
     if not value:
         raise DomainError(f"{component} is required")
     if component == "analytics_model" and not analytics_live:
         raise DomainError("analytics_model must reference a live inventory model")
     if duplicate:
-        raise DomainError("rebinding would duplicate an existing PVM's component combination")
+        raise DomainError("rebinding would duplicate an existing Product's component combination")
     return EVENT_REBOUND, {"component": component, "value": value}
 
 
 def decide_edit_field(
-    state: PvmState, *, field: str, value: Any
+    state: ProductState, *, field: str, value: Any
 ) -> tuple[str, dict[str, Any]]:
     _require_editable(state)
-    if field not in PVM_EDITABLE_FIELDS:
+    if field not in PRODUCT_EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
     _validate_field(field, value)
     return EVENT_FIELD_EDITED, {"field": field, "value": value}
 
 
-def decide_retire(state: PvmState) -> tuple[str, dict[str, Any]]:
+def decide_retire(state: ProductState) -> tuple[str, dict[str, Any]]:
     if not state.exists:
-        raise DomainError("PVM does not exist")
+        raise DomainError("Product does not exist")
     if state.retired:
-        raise DomainError("PVM is already retired")
+        raise DomainError("Product is already retired")
     return EVENT_RETIRED, {}
 
 
 def decide_add_item(
-    state: PvmState, *, collection: str, fields: dict[str, Any]
+    state: ProductState, *, collection: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     _require_editable(state)
     return coll.decide_add(
-        state.collections, PVM_COLLECTION_SPECS, collection=collection, fields=fields)
+        state.collections, PRODUCT_COLLECTION_SPECS, collection=collection, fields=fields)
 
 
 def decide_update_item(
-    state: PvmState, *, collection: str, item_id: str, fields: dict[str, Any]
+    state: ProductState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     _require_editable(state)
     return coll.decide_update(
-        state.collections, PVM_COLLECTION_SPECS, collection=collection, item_id=item_id, fields=fields)
+        state.collections, PRODUCT_COLLECTION_SPECS, collection=collection, item_id=item_id, fields=fields)
 
 
 def decide_remove_item(
-    state: PvmState, *, collection: str, item_id: str
+    state: ProductState, *, collection: str, item_id: str
 ) -> tuple[str, dict[str, Any]]:
     _require_editable(state)
     return coll.decide_remove(
-        state.collections, PVM_COLLECTION_SPECS, collection=collection, item_id=item_id)
+        state.collections, PRODUCT_COLLECTION_SPECS, collection=collection, item_id=item_id)

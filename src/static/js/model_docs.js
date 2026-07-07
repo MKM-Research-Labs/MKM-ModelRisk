@@ -24,7 +24,7 @@ const ModelDocs = {
   _id: null, _docs: [], _categories: [], _retired: false, _cat: null,
   _base: "/api/models/", _refresh: null, _host: "dt-content",
 
-  // base / refresh / host let the same renderer serve any aggregate (models, PVMs).
+  // base / refresh / host let the same renderer serve any aggregate (models, Products).
   render(modelId, docs, categories, retired, base, refresh, host) {
     this._id = modelId;
     this._docs = docs;

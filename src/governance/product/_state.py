@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Current-state fold for the PVM aggregate (pure, no I/O)."""
+"""Current-state fold for the Product aggregate (pure, no I/O)."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
@@ -25,15 +25,15 @@ from typing import Any
 
 from src.governance import collections as coll
 
-EVENT_REGISTERED = "PvmRegistered"
-EVENT_REBOUND = "PvmComponentRebound"
-EVENT_FIELD_EDITED = "PvmFieldEdited"
-EVENT_RETIRED = "PvmRetired"
+EVENT_REGISTERED = "ProductRegistered"
+EVENT_REBOUND = "ProductComponentRebound"
+EVENT_FIELD_EDITED = "ProductFieldEdited"
+EVENT_RETIRED = "ProductRetired"
 
 
 @dataclass(frozen=True)
-class PvmState:
-    """The reconstructed current state of one PVM."""
+class ProductState:
+    """The reconstructed current state of one Product."""
 
     exists: bool = False
     retired: bool = False
@@ -41,14 +41,14 @@ class PvmState:
     collections: dict[str, tuple] = field(default_factory=dict)
 
 
-def initial_state() -> PvmState:
-    return PvmState()
+def initial_state() -> ProductState:
+    return ProductState()
 
 
-def apply(state: PvmState, event_type: str, payload: dict[str, Any]) -> PvmState:
+def apply(state: ProductState, event_type: str, payload: dict[str, Any]) -> ProductState:
     """Fold one event into ``state``. Unknown event types are ignored."""
     if event_type == EVENT_REGISTERED:
-        return PvmState(exists=True, retired=False, fields=dict(payload))
+        return ProductState(exists=True, retired=False, fields=dict(payload))
     if event_type == EVENT_REBOUND:
         updated = dict(state.fields)
         updated[payload["component"]] = payload["value"]

@@ -17,35 +17,35 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""HTTP API for the PVM aggregate."""
+"""HTTP API for the Product aggregate."""
 from __future__ import annotations
 
 from flask import Blueprint, jsonify, request, send_file
 
 from config.governance import (
     DOC_CATEGORIES,
-    PVM_BINDINGS,
-    PVM_COLLECTION_SPECS,
-    PVM_FIELD_SPECS,
-    PVM_REGISTER_FIELDS,
+    PRODUCT_BINDINGS,
+    PRODUCT_COLLECTION_SPECS,
+    PRODUCT_FIELD_SPECS,
+    PRODUCT_REGISTER_FIELDS,
 )
 from src.command import dispatch
 from src.files import UploadError, upload_path
 from src.governance.documents import add_document, find_document, remove_document
 from src.governance.model_inventory import get_model, list_models
-from src.governance.pvm import (
+from src.governance.product import (
     add_collection_item,
-    get_pvm,
-    list_pvms,
+    get_product,
+    list_products,
     rebind_component,
-    rebuild_pvm_view,
-    register_pvm,
+    rebuild_product_view,
+    register_product,
     remove_collection_item,
-    retire_pvm,
+    retire_product,
     update_collection_item,
-    update_pvm_field,
+    update_product_field,
 )
-from src.governance.pvm.commands import AGGREGATE_TYPE as PVM_AGGREGATE
+from src.governance.product.commands import AGGREGATE_TYPE as PRODUCT_AGGREGATE
 from src.web._helpers import (
     context_from_request,
     json_body,
@@ -54,18 +54,18 @@ from src.web._helpers import (
     resolve_field,
 )
 
-pvm_bp = Blueprint("pvm", __name__, url_prefix="/api/pvms")
+product_bp = Blueprint("product", __name__, url_prefix="/api/products")
 
 
-def _pvm_scope(pvm_id: str) -> str:
-    return f"pvm/{pvm_id}"
+def _product_scope(product_id: str) -> str:
+    return f"product/{product_id}"
 
 
 def _grouped_specs(options: dict[str, list], model_ids: list[str]):
     """Field specs grouped for the detail view; bindings resolve to dropdowns."""
     groups: list[dict] = []
     by_name: dict[str, dict] = {}
-    for key, spec in PVM_FIELD_SPECS.items():
+    for key, spec in PRODUCT_FIELD_SPECS.items():
         group = by_name.get(spec["group"])
         if group is None:
             group = {"group": spec["group"], "fields": []}
@@ -88,127 +88,127 @@ def _collection_specs():
     return [
         {"key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
          "fields": [resolve_field(f, options_by_list) for f in spec["fields"]]}
-        for key, spec in PVM_COLLECTION_SPECS.items()
+        for key, spec in PRODUCT_COLLECTION_SPECS.items()
     ]
 
 
-@pvm_bp.get("/fields")
+@product_bp.get("/fields")
 def field_specs():
     live_models = [m["model_id"] for m in list_models() if not m["retired"]]
     return jsonify({
         "groups": _grouped_specs(reference_options(), live_models),
-        "register": list(PVM_REGISTER_FIELDS),
-        "bindings": list(PVM_BINDINGS),
+        "register": list(PRODUCT_REGISTER_FIELDS),
+        "bindings": list(PRODUCT_BINDINGS),
         "collections": _collection_specs(),
         "doc_categories": list(DOC_CATEGORIES),
     })
 
 
-@pvm_bp.get("")
+@product_bp.get("")
 def list_all():
-    return jsonify(list_pvms())
+    return jsonify(list_products())
 
 
-@pvm_bp.get("/used-by/<model_id>")
+@product_bp.get("/used-by/<model_id>")
 def used_by(model_id: str):
-    """PVMs whose Analytics Model is ``model_id`` (lineage)."""
-    return jsonify([p for p in list_pvms() if p["data"].get("analytics_model") == model_id])
+    """Products whose Analytics Model is ``model_id`` (lineage)."""
+    return jsonify([p for p in list_products() if p["data"].get("analytics_model") == model_id])
 
 
-@pvm_bp.get("/<pvm_id>")
-def get_one(pvm_id: str):
-    pvm = get_pvm(pvm_id)
-    if pvm is None:
-        return jsonify({"error": "PVM not found"}), 404
-    return jsonify(pvm)
+@product_bp.get("/<product_id>")
+def get_one(product_id: str):
+    product = get_product(product_id)
+    if product is None:
+        return jsonify({"error": "Product not found"}), 404
+    return jsonify(product)
 
 
-@pvm_bp.post("")
+@product_bp.post("")
 def register():
     body = json_body()
-    # PVM inherits its Company transitively from the analytics_model. Once any
-    # Company exists in the admin lists, a PVM can only bind to an analytics
+    # Product inherits its Company transitively from the analytics_model. Once any
+    # Company exists in the admin lists, a Product can only bind to an analytics
     # model that already carries one (so "no inventory outside a Company"
-    # extends to PVMs by construction, not by duplicating the field).
+    # extends to Products by construction, not by duplicating the field).
     if reference_options().get("company"):
         analytics_model_id = (body.get("fields") or {}).get("analytics_model")
         if analytics_model_id:
             analytics_model = get_model(analytics_model_id)
             if analytics_model is not None and not (analytics_model["data"] or {}).get("company"):
                 return jsonify({"error": (
-                    f"cannot bind PVM to analytics model {analytics_model_id}: "
+                    f"cannot bind Product to analytics model {analytics_model_id}: "
                     "the model has no Company assigned"
                 )}), 400
     dispatch(
-        "register_pvm", register_pvm, context=context_from_request(body),
-        pvm_id=body.get("pvm_id"), product=body.get("product"), fields=body.get("fields") or {})
-    rebuild_pvm_view()
-    return jsonify(get_pvm(body.get("pvm_id"))), 201
+        "register_product", register_product, context=context_from_request(body),
+        product_id=body.get("product_id"), product=body.get("product"), fields=body.get("fields") or {})
+    rebuild_product_view()
+    return jsonify(get_product(body.get("product_id"))), 201
 
 
-@pvm_bp.post("/<pvm_id>/field")
-def update_field(pvm_id: str):
+@product_bp.post("/<product_id>/field")
+def update_field(product_id: str):
     body = json_body()
     dispatch(
-        "update_pvm_field", update_pvm_field, context=context_from_request(body),
-        pvm_id=pvm_id, field=body.get("field"), value=body.get("value"))
-    rebuild_pvm_view()
-    return jsonify(get_pvm(pvm_id))
+        "update_product_field", update_product_field, context=context_from_request(body),
+        product_id=product_id, field=body.get("field"), value=body.get("value"))
+    rebuild_product_view()
+    return jsonify(get_product(product_id))
 
 
-@pvm_bp.post("/<pvm_id>/rebind")
-def rebind(pvm_id: str):
+@product_bp.post("/<product_id>/rebind")
+def rebind(product_id: str):
     body = json_body()
     dispatch(
         "rebind_component", rebind_component, context=context_from_request(body),
-        pvm_id=pvm_id, component=body.get("component"), value=body.get("value"))
-    rebuild_pvm_view()
-    return jsonify(get_pvm(pvm_id))
+        product_id=product_id, component=body.get("component"), value=body.get("value"))
+    rebuild_product_view()
+    return jsonify(get_product(product_id))
 
 
-@pvm_bp.post("/<pvm_id>/retire")
-def retire(pvm_id: str):
+@product_bp.post("/<product_id>/retire")
+def retire(product_id: str):
     body = json_body()
-    dispatch("retire_pvm", retire_pvm, context=context_from_request(body), pvm_id=pvm_id)
-    rebuild_pvm_view()
-    return jsonify(get_pvm(pvm_id))
+    dispatch("retire_product", retire_product, context=context_from_request(body), product_id=product_id)
+    rebuild_product_view()
+    return jsonify(get_product(product_id))
 
 
-@pvm_bp.post("/<pvm_id>/collections/<collection>")
-def add_item(pvm_id: str, collection: str):
+@product_bp.post("/<product_id>/collections/<collection>")
+def add_item(product_id: str, collection: str):
     body = json_body()
     dispatch(
         "add_collection_item", add_collection_item, context=context_from_request(body),
-        pvm_id=pvm_id, collection=collection, fields=body.get("fields") or {})
-    rebuild_pvm_view()
-    return jsonify(get_pvm(pvm_id)), 201
+        product_id=product_id, collection=collection, fields=body.get("fields") or {})
+    rebuild_product_view()
+    return jsonify(get_product(product_id)), 201
 
 
-@pvm_bp.post("/<pvm_id>/collections/<collection>/<item_id>")
-def update_item(pvm_id: str, collection: str, item_id: str):
+@product_bp.post("/<product_id>/collections/<collection>/<item_id>")
+def update_item(product_id: str, collection: str, item_id: str):
     body = json_body()
     dispatch(
         "update_collection_item", update_collection_item, context=context_from_request(body),
-        pvm_id=pvm_id, collection=collection, item_id=item_id, fields=body.get("fields") or {})
-    rebuild_pvm_view()
-    return jsonify(get_pvm(pvm_id))
+        product_id=product_id, collection=collection, item_id=item_id, fields=body.get("fields") or {})
+    rebuild_product_view()
+    return jsonify(get_product(product_id))
 
 
-@pvm_bp.post("/<pvm_id>/collections/<collection>/<item_id>/delete")
-def delete_item(pvm_id: str, collection: str, item_id: str):
+@product_bp.post("/<product_id>/collections/<collection>/<item_id>/delete")
+def delete_item(product_id: str, collection: str, item_id: str):
     body = json_body()
     dispatch(
         "remove_collection_item", remove_collection_item, context=context_from_request(body),
-        pvm_id=pvm_id, collection=collection, item_id=item_id)
-    rebuild_pvm_view()
-    return jsonify(get_pvm(pvm_id))
+        product_id=product_id, collection=collection, item_id=item_id)
+    rebuild_product_view()
+    return jsonify(get_product(product_id))
 
 
-@pvm_bp.post("/<pvm_id>/documents")
-def upload_document(pvm_id: str):
-    """Supporting Documentation: upload a categorised file against the PVM."""
-    if get_pvm(pvm_id) is None:
-        return jsonify({"error": "PVM not found"}), 404
+@product_bp.post("/<product_id>/documents")
+def upload_document(product_id: str):
+    """Supporting Documentation: upload a categorised file against the Product."""
+    if get_product(product_id) is None:
+        return jsonify({"error": "Product not found"}), 404
     category = request.form.get("category")
     if category not in DOC_CATEGORIES:
         return jsonify({"error": "invalid category"}), 400
@@ -217,29 +217,29 @@ def upload_document(pvm_id: str):
         return jsonify({"error": "no file provided"}), 400
     try:
         add_document(
-            aggregate_type=PVM_AGGREGATE, aggregate_id=pvm_id, scope=_pvm_scope(pvm_id),
+            aggregate_type=PRODUCT_AGGREGATE, aggregate_id=product_id, scope=_product_scope(product_id),
             category=category, filename=file.filename, data=file.read(),
             description=request.form.get("description", ""), actor=request_actor())
     except UploadError as exc:
         return jsonify({"error": str(exc)}), 400
-    rebuild_pvm_view()
-    return jsonify(get_pvm(pvm_id)), 201
+    rebuild_product_view()
+    return jsonify(get_product(product_id)), 201
 
 
-@pvm_bp.get("/<pvm_id>/documents/<item_id>/download")
-def download_document(pvm_id: str, item_id: str):
-    doc = find_document(PVM_AGGREGATE, pvm_id, item_id)
+@product_bp.get("/<product_id>/documents/<item_id>/download")
+def download_document(product_id: str, item_id: str):
+    doc = find_document(PRODUCT_AGGREGATE, product_id, item_id)
     if doc is None:
         return jsonify({"error": "document not found"}), 404
-    path = upload_path(_pvm_scope(pvm_id), doc["filename"])
+    path = upload_path(_product_scope(product_id), doc["filename"])
     if not path.exists():
         return jsonify({"error": "file missing"}), 404
     return send_file(str(path), as_attachment=True, download_name=doc["original_name"])
 
 
-@pvm_bp.post("/<pvm_id>/documents/<item_id>/delete")
-def delete_document(pvm_id: str, item_id: str):
+@product_bp.post("/<product_id>/documents/<item_id>/delete")
+def delete_document(product_id: str, item_id: str):
     remove_document(
-        aggregate_type=PVM_AGGREGATE, aggregate_id=pvm_id, item_id=item_id, actor=request_actor())
-    rebuild_pvm_view()
-    return jsonify(get_pvm(pvm_id))
+        aggregate_type=PRODUCT_AGGREGATE, aggregate_id=product_id, item_id=item_id, actor=request_actor())
+    rebuild_product_view()
+    return jsonify(get_product(product_id))

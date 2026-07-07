@@ -17,23 +17,23 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Product Valuation Model (PVM) field metadata and vocabulary (coding rule R1)."""
+"""Product Valuation Model (Product) field metadata and vocabulary (coding rule R1)."""
 from __future__ import annotations
 
 from config.governance._collections import COLLECTION_SPECS
 from config.governance._inventory import VALID_RAG_RATINGS
 
-VALID_PVM_STATUS = ("Proposed", "Active", "Suspended", "Retired")
+VALID_PRODUCT_STATUS = ("Proposed", "Active", "Suspended", "Retired")
 
 # The three component bindings: set at registration, changed only via a rebind.
 # The derived identifier reads them in this order (Analytics leads — it is the
 # engine that prices the product; then Market Data, then the Calculating Agent).
-PVM_BINDINGS = ("analytics_model", "market_data_model", "calculating_agent")
+PRODUCT_BINDINGS = ("analytics_model", "market_data_model", "calculating_agent")
 
 # Ordered scalar field specs. ``analytics_model`` references the Model Inventory
 # (resolved specially, not via a reference list); the other two bindings and the
 # owner reference admin lists.
-PVM_FIELD_SPECS = {
+PRODUCT_FIELD_SPECS = {
     "product": {"label": "Product", "type": "text", "group": "Product"},
     "product_id": {"label": "Product ID", "type": "text", "group": "Product"},
     "description": {"label": "Description", "type": "text", "group": "Product"},
@@ -44,7 +44,7 @@ PVM_FIELD_SPECS = {
                           "reference": "calculating_agent"},
     "rag_rating": {"label": "RAG rating", "type": "choice", "options": VALID_RAG_RATINGS,
                    "group": "Risk rating"},
-    "status": {"label": "Status", "type": "choice", "options": VALID_PVM_STATUS, "group": "Governance"},
+    "status": {"label": "Status", "type": "choice", "options": VALID_PRODUCT_STATUS, "group": "Governance"},
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
     "notes": {"label": "Notes", "type": "text", "group": "Governance"},
     "mrc_signoff_date": {"label": "MRC sign-off", "type": "date", "group": "Review dates"},
@@ -56,19 +56,19 @@ PVM_FIELD_SPECS = {
 
 # Fields editable through the generic field-edit command (the bindings are not —
 # they are changed via rebind; ``status`` Retired is reached via retire).
-PVM_EDITABLE_FIELDS = (
+PRODUCT_EDITABLE_FIELDS = (
     "product", "product_id", "description", "rag_rating", "status", "owner", "notes",
     "mrc_signoff_date", "next_review_date", "last_review_date",
     "monitoring_approach", "monitoring_results",
 )
-PVM_FIELD_CHOICES = {"status": VALID_PVM_STATUS, "rag_rating": VALID_RAG_RATINGS}
+PRODUCT_FIELD_CHOICES = {"status": VALID_PRODUCT_STATUS, "rag_rating": VALID_RAG_RATINGS}
 
-# The register form's minimum (besides the mandatory PVM ID).
-PVM_REGISTER_FIELDS = ("product", "analytics_model", "market_data_model", "calculating_agent")
+# The register form's minimum (besides the mandatory Product ID).
+PRODUCT_REGISTER_FIELDS = ("product", "analytics_model", "market_data_model", "calculating_agent")
 
 # Production-level registers — reuse the inventory's Limitations / Assumptions /
 # Remediation shapes; Supporting Documentation reuses the per-aggregate Docs store.
-PVM_COLLECTION_SPECS = {
+PRODUCT_COLLECTION_SPECS = {
     "limitations": COLLECTION_SPECS["limitations"],
     "assumptions": COLLECTION_SPECS["assumptions"],
     "remediation_steps": COLLECTION_SPECS["remediation_steps"],

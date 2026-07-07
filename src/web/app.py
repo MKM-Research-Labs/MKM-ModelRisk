@@ -33,7 +33,7 @@ from src.web.api_models import models_bp
 from src.web import api_models_signoff  # noqa: F401 — attaches endpoints to models_bp
 from src.web.api_mrc import mrc_bp
 from src.web.api_mrc_settings import settings_bp
-from src.web.api_pvm import pvm_bp
+from src.web.api_product import product_bp
 from src.web.api_reference import reference_bp
 from src.web.views import views_bp
 
@@ -56,7 +56,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
     app.register_blueprint(views_bp)
     app.register_blueprint(models_bp)
-    app.register_blueprint(pvm_bp)
+    app.register_blueprint(product_bp)
     app.register_blueprint(mrc_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(reference_bp)
