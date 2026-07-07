@@ -19,6 +19,6 @@
 # SOFTWARE.
 """MRC settings: editable chair/frequency/branding for the console and PDF."""
 from src.governance.mrc_settings._store import get_settings
-from src.governance.mrc_settings.commands import set_field, set_logo
+from src.governance.mrc_settings.commands import set_field, set_logo, set_tor
 
-__all__ = ["get_settings", "set_field", "set_logo"]
+__all__ = ["get_settings", "set_field", "set_logo", "set_tor"]

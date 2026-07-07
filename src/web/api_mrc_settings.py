@@ -25,7 +25,7 @@ from flask import Blueprint, jsonify, request, send_file
 from config.governance import MRC_SETTINGS_SPECS
 from src.command import dispatch
 from src.files import UploadError, save_upload, upload_path
-from src.governance.mrc_settings import get_settings, set_field, set_logo
+from src.governance.mrc_settings import get_settings, set_field, set_logo, set_tor
 from src.web._helpers import context_from_request, json_body, request_actor
 
 settings_bp = Blueprint("mrc_settings", __name__, url_prefix="/api/mrc")
@@ -41,7 +41,10 @@ def _specs():
 @settings_bp.get("/settings")
 def get():
     settings = get_settings()
-    return jsonify({"fields": settings["fields"], "logo": settings["logo"], "specs": _specs()})
+    return jsonify({
+        "fields": settings["fields"], "logo": settings["logo"],
+        "tor": settings.get("tor"), "specs": _specs(),
+    })
 
 
 @settings_bp.post("/settings/field")
@@ -74,3 +77,29 @@ def logo():
     if path is None or not path.exists():
         return jsonify({"error": "no logo"}), 404
     return send_file(str(path))
+
+
+@settings_bp.post("/settings/tor")
+def upload_tor():
+    """Upload the MRC Terms of Reference document (typically a .docx or .pdf)."""
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        meta = save_upload("mrc", file.filename, file.read())
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    set_tor(filename=meta["filename"], original_name=meta["original_name"], actor=request_actor())
+    return jsonify(get_settings()), 201
+
+
+@settings_bp.get("/tor")
+def tor():
+    """Download the current MRC Terms of Reference document, if uploaded."""
+    settings = get_settings()
+    if not settings.get("tor"):
+        return jsonify({"error": "no ToR uploaded"}), 404
+    path = upload_path("mrc", settings["tor"]["filename"])
+    if not path.exists():
+        return jsonify({"error": "ToR file missing"}), 404
+    return send_file(str(path), as_attachment=True, download_name=settings["tor"]["original_name"])

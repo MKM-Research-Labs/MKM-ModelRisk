@@ -34,8 +34,14 @@ const MRC = {
     const specs = await this.specs();
     const settings = await App.get("/api/mrc/settings");
     const el = document.getElementById("tab-mrc");
+    const tor = settings.tor
+      ? '<div class="card" style="display:flex;align-items:center;gap:12px">' +
+        '<span><b>Terms of Reference:</b> ' +
+        '<a href="/api/mrc/tor" target="_blank">&darr; ' + esc(settings.tor.original_name) +
+        "</a></span></div>"
+      : "";
     el.innerHTML =
-      this._headerCards(settings.fields) +
+      this._headerCards(settings.fields) + tor +
       this._scheduleCard(specs) +
       '<div id="mt-summary"></div>' +
       '<div class="card"><h3>Meetings</h3><div id="mt-list"></div></div>' +
