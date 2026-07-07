@@ -163,6 +163,48 @@ def test_edit_meeting_status_choice(page: Page, base_url: str):
     expect(page.locator("#minfo-status")).to_contain_text("Completed")
 
 
+# --- X2 coverage: bulk-add for the other three collection tabs --------------
+
+def test_bulk_add_agenda_items(page: Page, base_url: str):
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-BULK-AG", "Bulk Agenda")
+    page.dblclick("tr.clickable[data-id='MRC-BULK-AG']")
+    page.click("[data-mtab='agenda']")
+    page.fill("#badd-agenda-0-title", "Item A")
+    page.fill("#badd-agenda-1-title", "Item B")
+    page.click("[data-bulk-add='agenda']")
+    confirm(page)
+    expect(page.locator("[data-mtab='agenda']")).to_contain_text("(2)")
+
+
+def test_bulk_add_decisions(page: Page, base_url: str):
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-BULK-DC", "Bulk Decisions")
+    page.dblclick("tr.clickable[data-id='MRC-BULK-DC']")
+    page.click("[data-mtab='decisions']")
+    page.fill("#badd-decisions-0-description", "Decision one")
+    page.fill("#badd-decisions-1-description", "Decision two")
+    page.fill("#badd-decisions-2-description", "Decision three")
+    page.click("[data-bulk-add='decisions']")
+    confirm(page)
+    expect(page.locator("[data-mtab='decisions']")).to_contain_text("(3)")
+
+
+def test_bulk_add_actions(page: Page, base_url: str):
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-BULK-AC", "Bulk Actions")
+    page.dblclick("tr.clickable[data-id='MRC-BULK-AC']")
+    page.click("[data-mtab='actions']")
+    page.fill("#badd-actions-0-description", "Follow up with Priya")
+    page.fill("#badd-actions-1-description", "Schedule validation review")
+    page.click("[data-bulk-add='actions']")
+    confirm(page)
+    expect(page.locator("[data-mtab='actions']")).to_contain_text("(2)")
+
+
 def _bulk_add_decision(page: Page, description: str, model_id: str):
     """Use the bulk-add form on the Decisions tab to add a single linked item."""
     page.click("[data-mtab='decisions']")
