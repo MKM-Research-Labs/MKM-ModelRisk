@@ -92,3 +92,19 @@ def test_model_doc_delete(page: Page, base_url: str, tmp_path):
     page.locator("[data-rmdoc]").first.click()
     confirm(page)
     expect(page.locator("#dt-content")).not_to_contain_text("to_delete.pdf")
+
+
+def test_governance_doc_download_link_works(page: Page, base_url: str, tmp_path):
+    """The Download link on the governance-wide docs table returns the file."""
+    open_app(page, base_url)
+    open_tab(page, "documents")
+    pdf_path = _make_pdf(tmp_path, "downloadable.pdf")
+    page.set_input_files("#gd-file", pdf_path)
+    page.fill("#gd-desc", "Downloadable")
+    page.click("#gd-upload")
+    link = page.locator("#tab-documents tbody tr", has_text="downloadable.pdf").locator("a", has_text="Download")
+    href = link.get_attribute("href")
+    assert href and href.startswith("/api/documents/")
+    response = page.request.get(base_url + href)
+    assert response.ok
+    assert response.body().startswith(b"%PDF")

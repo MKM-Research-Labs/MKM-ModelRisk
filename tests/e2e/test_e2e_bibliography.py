@@ -61,3 +61,26 @@ def test_export_bibtex_link(page: Page, base_url: str):
     response = page.request.get(base_url + "/api/bibliography/export.bib")
     assert response.ok
     assert "@misc{" in response.text()
+
+
+def test_edit_reference_updates_row(page: Page, base_url: str):
+    open_app(page, base_url)
+    open_tab(page, "bibliography")
+    _add_reference(page)
+    # Trigger the row's Edit affordance, revise the title, save.
+    row = page.locator("#bib-rows tr", has_text="Handbook of Model Risk")
+    row.locator("[data-bibed]").click()
+    page.fill("#bib-title", "Handbook of Model Risk (2nd ed.)")
+    page.click("#bib-save")
+    confirm(page)
+    expect(page.locator("#bib-rows tr", has_text="Handbook of Model Risk (2nd ed.)")).to_be_visible()
+
+
+def test_delete_reference_removes_row(page: Page, base_url: str):
+    open_app(page, base_url)
+    open_tab(page, "bibliography")
+    _add_reference(page)
+    row = page.locator("#bib-rows tr", has_text="Handbook of Model Risk")
+    row.locator("[data-bibrm]").click()
+    confirm(page)
+    expect(page.locator("#bib-rows tr", has_text="Handbook of Model Risk")).to_have_count(0)

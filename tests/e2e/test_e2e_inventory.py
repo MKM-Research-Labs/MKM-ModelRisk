@@ -211,3 +211,65 @@ def test_register_with_company_assignment(page: Page, base_url: str):
     # The inventory list row carries a Company column.
     row = page.locator("tr.clickable[data-id='MKM-E2E-CO-001']")
     expect(row).to_contain_text("Sterling Bank plc")
+
+
+# --- X2 coverage: retired read-only, org-scope filter, per-model audit ------
+
+def test_retired_model_hides_edit_and_danger_zone(page: Page, base_url: str):
+    """Once retired, edit pencils vanish and the Danger Zone is suppressed."""
+    open_app(page, base_url)
+    register_model(page, "MKM-X2-RET", "Legacy Model")
+    open_model(page, "MKM-X2-RET")
+    page.click("#d-retire")
+    confirm(page)
+    open_model(page, "MKM-X2-RET")  # reopen after list re-render
+    # No danger zone.
+    expect(page.locator(".danger-zone")).to_have_count(0)
+    # No edit pencils on any Overview row.
+    expect(page.locator("[data-edit]")).to_have_count(0)
+    # "Read only" badge is shown somewhere in the detail.
+    expect(page.locator("#m-detail")).to_contain_text("retired")
+
+
+def test_org_scope_header_filters_inventory(page: Page, base_url: str):
+    """Setting the header Company filter narrows the inventory list."""
+    # Seed reference data + models directly via the API — the UI paths are
+    # already covered by test_company_create and test_register_with_company_assignment.
+    # Here we're isolating the header-scope filter.
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    for value in ("Alpha Bank", "Beta Bank"):
+        page.request.post(
+            base_url + "/api/reference/collections/company",
+            data={"fields": {"value": value}, "confirmed": True}, headers=headers,
+        )
+    for model_id, company in [("MKM-X2-FA", "Alpha Bank"), ("MKM-X2-FB", "Beta Bank")]:
+        page.request.post(
+            base_url + "/api/models",
+            data={"model_id": model_id, "name": model_id + " Model",
+                  "fields": {"company": company}, "confirmed": True},
+            headers=headers,
+        )
+    open_app(page, base_url)
+    # Both visible under "All companies".
+    expect(page.locator("tr.clickable[data-id='MKM-X2-FA']")).to_be_visible()
+    expect(page.locator("tr.clickable[data-id='MKM-X2-FB']")).to_be_visible()
+    # Narrow to Alpha Bank — only MKM-X2-FA remains.
+    page.select_option("#scope-company", "Alpha Bank")
+    expect(page.locator("tr.clickable[data-id='MKM-X2-FA']")).to_be_visible()
+    expect(page.locator("tr.clickable[data-id='MKM-X2-FB']")).to_have_count(0)
+
+
+def test_per_model_audit_tab_shows_recorded_events(page: Page, base_url: str):
+    """The model's Audit dtab renders the events recorded against it."""
+    open_app(page, base_url)
+    register_model(page, "MKM-X2-AUD", "Audit Model")
+    open_model(page, "MKM-X2-AUD")
+    edit_model_field(page, "owner", "Priya Anand")
+    expect(page.locator("#row-owner")).to_contain_text("Priya Anand")
+    page.click("[data-dtab='audit']")
+    body = page.locator("#dt-content")
+    # Register + field-update events should both appear as event-type rows.
+    expect(body).to_contain_text("ModelRegistered")
+    expect(body).to_contain_text("ModelFieldUpdated")
+    # Actor stamped on each row (dev@localhost is the fallback SSO identity).
+    expect(body).to_contain_text("dev@localhost")
