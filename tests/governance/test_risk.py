@@ -96,3 +96,68 @@ def test_review_currency_future_is_one():
 def test_review_currency_overdue_is_zero():
     result = compute_risk_rating({"next_review_date": "2020-01-01"}, as_of=AS_OF)
     assert _component(result, "review_currency")["score"] == 0.0
+
+
+# --- W4a heatmap + events -----------------------------------------------------
+
+def test_heatmap_reads_materiality_and_complexity():
+    result = compute_risk_rating({"materiality": "High", "complexity": "Medium"}, as_of=AS_OF)
+    assert result["heatmap"]["materiality"] == "High"
+    assert result["heatmap"]["complexity"] == "Medium"
+    assert result["heatmap"]["rag"] == "Red"
+
+
+def test_heatmap_covers_every_diagonal():
+    """Materiality outweighs complexity: HighMat-LowComp > LowMat-HighComp on RAG."""
+    assert compute_risk_rating(
+        {"materiality": "High", "complexity": "Low"}, as_of=AS_OF,
+    )["heatmap"]["rag"] == "Amber"
+    assert compute_risk_rating(
+        {"materiality": "Low", "complexity": "High"}, as_of=AS_OF,
+    )["heatmap"]["rag"] == "Amber"
+    assert compute_risk_rating(
+        {"materiality": "Low", "complexity": "Low"}, as_of=AS_OF,
+    )["heatmap"]["rag"] == "Green"
+    assert compute_risk_rating(
+        {"materiality": "High", "complexity": "High"}, as_of=AS_OF,
+    )["heatmap"]["rag"] == "Red"
+
+
+def test_heatmap_rag_is_none_without_both_axes():
+    assert compute_risk_rating(
+        {"materiality": "High"}, as_of=AS_OF,
+    )["heatmap"]["rag"] is None
+    assert compute_risk_rating({}, as_of=AS_OF)["heatmap"]["rag"] is None
+
+
+def test_heatmap_response_includes_full_grid():
+    """The full mapping is echoed so the UI colours each cell from config."""
+    result = compute_risk_rating({}, as_of=AS_OF)
+    grid = result["heatmap"]["grid"]
+    assert grid["High|High"] == "Red"
+    assert grid["Low|Low"] == "Green"
+    assert len(grid) == 9
+
+
+def test_events_counted_when_within_365_days():
+    data = {"operational_failure_events": [
+        {"date": "2026-05-01", "description": "recent"},
+        {"date": "2025-08-01", "description": "still within window"},
+        {"date": "2024-01-01", "description": "outside window — stale"},
+        {"date": "", "description": "no date — skipped"},
+        {"date": "not-a-date", "description": "unparseable — skipped"},
+    ]}
+    result = compute_risk_rating(data, as_of="2026-06-22")
+    assert result["events_in_window"] == 2
+    assert result["events_window_days"] == 365
+
+
+def test_events_zero_when_no_events():
+    result = compute_risk_rating({}, as_of=AS_OF)
+    assert result["events_in_window"] == 0
+
+
+def test_events_zero_when_as_of_is_unparseable():
+    """Bad as_of doesn't crash — window collapses to nothing."""
+    data = {"operational_failure_events": [{"date": "2026-05-01"}]}
+    assert compute_risk_rating(data, as_of="bogus")["events_in_window"] == 0

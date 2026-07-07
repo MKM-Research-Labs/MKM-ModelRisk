@@ -25,9 +25,16 @@ health, review currency, assumption risk and limitation risk.
 """
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Any
 
-from config.governance import RISK_ACCEPTABLE_AT, RISK_CONDITIONAL_AT, RISK_WEIGHTS
+from config.governance import (
+    EVENTS_WINDOW_DAYS,
+    RISK_ACCEPTABLE_AT,
+    RISK_CONDITIONAL_AT,
+    RISK_HEATMAP,
+    RISK_WEIGHTS,
+)
 
 
 def _validation_coverage(data: dict[str, Any]) -> float:
@@ -65,8 +72,45 @@ def _impact_health(items: list) -> float:
     return 1.0 - high / len(items)
 
 
+def _heatmap_rag(materiality: str | None, complexity: str | None) -> str | None:
+    """3×3 heatmap lookup: the owner-set Materiality × Complexity cell → RAG."""
+    if not materiality or not complexity:
+        return None
+    return RISK_HEATMAP.get((materiality, complexity))
+
+
+def _events_in_window(data: dict[str, Any], as_of: str) -> int:
+    """Count operational failure events whose date falls within the rolling window."""
+    events = data.get("operational_failure_events") or []
+    if not events:
+        return 0
+    try:
+        as_of_date = date.fromisoformat(as_of)
+    except ValueError:
+        return 0
+    cutoff = as_of_date - timedelta(days=EVENTS_WINDOW_DAYS)
+    count = 0
+    for event in events:
+        event_date = event.get("date")
+        if not event_date:
+            continue
+        try:
+            parsed = date.fromisoformat(event_date)
+        except ValueError:
+            continue
+        if cutoff <= parsed <= as_of_date:
+            count += 1
+    return count
+
+
 def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
-    """Return ``{rating, score, components:[{key,label,weight,score}]}``."""
+    """Return the risk rating envelope: heatmap headline, composite breakdown
+    and past-year events count.
+
+    ``rating`` and ``score`` remain the composite view for callers (the Model
+    Risk Report PDF, PVM headers, list badges) — the heatmap is additional
+    context surfaced primarily on the Risk Rating tab.
+    """
     scores = {
         "validation_coverage": _validation_coverage(data),
         "remediation_health": _remediation_health(data),
@@ -85,4 +129,21 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
         {"key": key, "label": label, "weight": weight, "score": scores[key]}
         for key, label, weight in RISK_WEIGHTS
     ]
-    return {"rating": rating, "score": round(composite, 4), "components": components}
+    materiality = data.get("materiality")
+    complexity = data.get("complexity")
+    heatmap = {
+        "materiality": materiality,
+        "complexity": complexity,
+        "rag": _heatmap_rag(materiality, complexity),
+        # Full lookup as pipe-joined keys so the UI can colour every cell
+        # without knowing the mapping itself (R1: config is the single truth).
+        "grid": {f"{m}|{c}": rag for (m, c), rag in RISK_HEATMAP.items()},
+    }
+    return {
+        "rating": rating,
+        "score": round(composite, 4),
+        "components": components,
+        "heatmap": heatmap,
+        "events_in_window": _events_in_window(data, as_of),
+        "events_window_days": EVENTS_WINDOW_DAYS,
+    }

@@ -138,3 +138,9 @@ td.num, th.num { text-align: center; }
    that nudges its rendered height; the others match it explicitly). */
 input, select { box-sizing: border-box; height: 34px; }
 textarea { box-sizing: border-box; }
+
+/* W4a — Risk Rating heatmap grid. */
+.heatmap { border-collapse: separate; border-spacing: 4px; margin: 4px 0 6px; }
+.heatmap th { text-align: center; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 8px; font-weight: 700; }
+.heatmap tbody th { text-align: right; }
+.heatmap td.hcell { width: 90px; height: 60px; text-align: center; vertical-align: middle; border-radius: 6px; font-size: 12px; font-weight: 600; }

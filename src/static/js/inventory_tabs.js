@@ -67,9 +67,52 @@ const DetailTabs = {
       "</thead><tbody>" + rows + "</tbody></table>";
   },
 
+  // W4a: 3×3 heatmap grid (Materiality × Complexity → RAG). The current cell
+  // is highlighted; the rating headline is the cell's colour.
+  heatmap(hm) {
+    const rows = ["High", "Medium", "Low"];
+    const cols = ["Low", "Medium", "High"];
+    const grid = hm.grid || {};
+    const cellRag = (m, c) => grid[m + "|" + c] || "";
+    const table = rows.map(function (m) {
+      const cells = cols.map(function (c) {
+        const rag = cellRag(m, c);
+        const bg = RAG_COLORS[rag] || "#9e9e9e";
+        const here = (m === hm.materiality && c === hm.complexity);
+        const style = "background:" + bg + "22;color:" + bg + ";" +
+          (here ? "outline:3px solid " + bg + ";outline-offset:-3px;font-weight:800;" : "");
+        return '<td class="hcell" style="' + style + '">' + esc(rag || "—") +
+          (here ? '<br><span style="font-size:10px">YOU</span>' : "") + "</td>";
+      }).join("");
+      return "<tr><th>" + esc(m) + "</th>" + cells + "</tr>";
+    }).join("");
+    return '<table class="heatmap"><thead><tr><th></th>' +
+      cols.map((c) => "<th>" + esc(c) + "</th>").join("") +
+      "</tr></thead><tbody>" + table + "</tbody></table>" +
+      '<div class="muted" style="font-size:11px;margin-top:6px">' +
+      "Rows: Materiality &middot; Columns: Complexity. Set both on the Overview tab." + "</div>";
+  },
+
   risk(rating) {
     const color = RISK_COLORS[rating.rating] || "#9e9e9e";
     const pct = Math.round(rating.score * 100);
+    const hm = rating.heatmap || {};
+    const hmRag = hm.rag;
+    const hmColor = RAG_COLORS[hmRag] || "#9e9e9e";
+    const headline = hmRag
+      ? '<div class="riskbanner" style="border-color:' + hmColor + ";background:" + hmColor + '14">' +
+        '<div class="muted" style="text-align:center">HEATMAP RATING</div>' +
+        '<div style="text-align:center;font-size:28px;font-weight:800;color:' + hmColor + '">' +
+        esc(hmRag) + "</div>" +
+        '<div style="text-align:center" class="muted">Materiality: <b>' + esc(hm.materiality) +
+        "</b> &middot; Complexity: <b>" + esc(hm.complexity) + "</b></div></div>"
+      : '<div class="riskbanner" style="border-color:#9e9e9e;background:#9e9e9e14">' +
+        '<div class="muted" style="text-align:center">HEATMAP RATING</div>' +
+        '<div style="text-align:center;font-size:16px" class="muted">Set Materiality and Complexity on Overview to place this model on the heatmap.</div>' +
+        "</div>";
+    const events = '<div class="row" style="gap:16px;margin:12px 0"><div class="scard" ' +
+      'style="border-left-color:#1976d2"><div class="lbl">Events (past ' + rating.events_window_days +
+      ' days)</div><div class="val">' + rating.events_in_window + "</div></div></div>";
     const comps = rating.components.map(function (c) {
       const s = Math.round(c.score * 100);
       return '<div style="margin-bottom:10px"><div><b>' + esc(c.label) + '</b> <span class="muted">(' +
@@ -77,13 +120,11 @@ const DetailTabs = {
         s + '%</span></div><div class="progress"><div class="bar" style="width:' + s + "%;background:" +
         barColor(s) + '"></div></div></div>';
     }).join("");
-    return '<p class="muted">Composite of validation coverage, remediation health, review currency, ' +
-      "assumption risk and limitation risk.</p>" +
-      '<div class="riskbanner" style="border-color:' + color + ";background:" + color + '14">' +
-      '<div class="muted" style="text-align:center">EFFECTIVE RATING</div>' +
-      '<div style="text-align:center;font-size:28px;font-weight:800;color:' + color + '">' + esc(rating.rating) + "</div>" +
-      '<div style="text-align:center" class="muted">Composite Score: ' + pct + "%</div></div>" +
-      '<div class="section-header">Component Breakdown</div>' + comps;
+    return '<p class="muted">Risk rating is set by the owner via Materiality and Complexity (the heatmap). ' +
+      "The composite breakdown below tracks operational health signals — validation coverage, " +
+      "remediation health, review currency, assumptions and limitations.</p>" +
+      headline + this.heatmap(hm) + events +
+      '<div class="section-header">Composite Score: ' + pct + "% (" + esc(rating.rating) + ")</div>" + comps;
   },
 
   versions(data, spec, retired) {
