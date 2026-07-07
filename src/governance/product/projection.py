@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""PVM read model: a current-state projection of the event log into ``pvm_view``."""
+"""Product read model: a current-state projection of the event log into ``product_view``."""
 from __future__ import annotations
 
 from typing import Any
@@ -25,8 +25,8 @@ from typing import Any
 from psycopg.types.json import Jsonb
 
 from src.database import app_connection, read_all
-from src.governance.pvm._state import apply, initial_state
-from src.governance.pvm.commands import AGGREGATE_TYPE
+from src.governance.product._state import apply, initial_state
+from src.governance.product.commands import AGGREGATE_TYPE
 
 
 def derived_identifier(data: dict[str, Any]) -> str | None:
@@ -43,8 +43,8 @@ def _document(state) -> dict[str, Any]:
     return data
 
 
-def rebuild_pvm_view(config=None) -> int:
-    """Rebuild the read model from the event log; return the PVM count."""
+def rebuild_product_view(config=None) -> int:
+    """Rebuild the read model from the event log; return the Product count."""
     states: dict[str, tuple] = {}
     for event in read_all(config=config):
         if event.aggregate_type != AGGREGATE_TYPE:
@@ -53,29 +53,29 @@ def rebuild_pvm_view(config=None) -> int:
         state = apply(state, event.event_type, event.payload)
         states[event.aggregate_id] = (state, event.stream_seq)
     with app_connection(config) as conn, conn.cursor() as cur:
-        cur.execute("DELETE FROM pvm_view")
-        for pvm_id, (state, version) in states.items():
+        cur.execute("DELETE FROM product_view")
+        for product_id, (state, version) in states.items():
             cur.execute(
-                "INSERT INTO pvm_view (pvm_id, data, retired, version) VALUES (%s, %s, %s, %s)",
-                (pvm_id, Jsonb(_document(state)), state.retired, version),
+                "INSERT INTO product_view (product_id, data, retired, version) VALUES (%s, %s, %s, %s)",
+                (product_id, Jsonb(_document(state)), state.retired, version),
             )
     return len(states)
 
 
 def _row_to_dict(row: tuple) -> dict[str, Any]:
-    return {"pvm_id": row[0], "data": row[1], "retired": row[2], "version": row[3]}
+    return {"product_id": row[0], "data": row[1], "retired": row[2], "version": row[3]}
 
 
-def get_pvm(pvm_id: str, config=None) -> dict[str, Any] | None:
+def get_product(product_id: str, config=None) -> dict[str, Any] | None:
     with app_connection(config) as conn, conn.cursor() as cur:
         cur.execute(
-            "SELECT pvm_id, data, retired, version FROM pvm_view WHERE pvm_id = %s", (pvm_id,))
+            "SELECT product_id, data, retired, version FROM product_view WHERE product_id = %s", (product_id,))
         row = cur.fetchone()
     return _row_to_dict(row) if row is not None else None
 
 
-def list_pvms(config=None) -> list[dict[str, Any]]:
+def list_products(config=None) -> list[dict[str, Any]]:
     with app_connection(config) as conn, conn.cursor() as cur:
-        cur.execute("SELECT pvm_id, data, retired, version FROM pvm_view ORDER BY pvm_id")
+        cur.execute("SELECT product_id, data, retired, version FROM product_view ORDER BY product_id")
         rows = cur.fetchall()
     return [_row_to_dict(row) for row in rows]

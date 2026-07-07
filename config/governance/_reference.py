@@ -22,13 +22,13 @@
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 
-# Order: the Company org hierarchy first, then the PVM engines/platform
+# Order: the Company org hierarchy first, then the Product engines/platform
 # (Market Data Model + Calculating Agent), then the People directory.
 REFERENCE_LISTS = (
     "company", "division", "department", "market_data_model", "calculating_agent", "people",
 )
 
-# How often a Market Data Model refreshes its inputs (PVM spec §8).
+# How often a Market Data Model refreshes its inputs (Product spec §8).
 VALID_MDM_FREQUENCY = ("Real-time", "Intraday", "Daily", "Weekly", "Ad-hoc")
 
 # The org hierarchy cascades: a Division belongs to a Company, a Department to a
@@ -50,7 +50,7 @@ REFERENCE_SPECS = {
         {"key": "division", "label": "Division", "type": "text", "reference": "division", "required": True},
         dict(_OWNER),
     ]},
-    # --- PVM reference data (engines + platform) ---
+    # --- Product reference data (engines + platform) ---
     "market_data_model": {"label": "Market Data Model", "id_prefix": "MDM", "display": "name",
                           "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},

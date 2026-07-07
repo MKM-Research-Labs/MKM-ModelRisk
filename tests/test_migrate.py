@@ -41,7 +41,7 @@ def test_migration_files_are_ordered():
         "0002_roles_grants.sql",
         "0003_model_inventory_view.sql",
         "0004_mrc_meeting_view.sql",
-        "0005_pvm_view.sql",
+        "0005_product_view.sql",
     ]
 
 
@@ -53,7 +53,7 @@ def test_run_migrations_applies_then_skips():
         "0002_roles_grants",
         "0003_model_inventory_view",
         "0004_mrc_meeting_view",
-        "0005_pvm_view",
+        "0005_product_view",
     ]
     # Re-running is a no-op: every version already recorded.
     assert run_migrations() == []

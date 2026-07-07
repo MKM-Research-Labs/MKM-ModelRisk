@@ -26,7 +26,8 @@ import shutil
 import pytest
 
 from src.files import save_upload
-from src.governance.mrc.pack import build_tex, compile_tex, render_pack_pdf
+from src.governance.mrc.pack import (
+    TectonicNotFound, build_tex, compile_tex, render_pack_pdf)
 
 # A 1x1 PNG so tectonic has a real image to embed.
 PNG = base64.b64decode(
@@ -75,6 +76,14 @@ def test_compile_tex_produces_pdf():
     tex = build_tex(MEETING, {"fields": {"org_name": "MKM"}}, "logo.png")
     pdf = compile_tex(tex, {"logo.png": PNG})
     assert pdf[:4] == b"%PDF"
+
+
+def test_compile_tex_raises_when_tectonic_missing(monkeypatch):
+    # When the engine is absent, callers get a typed error they can translate
+    # into a clean response — not a raw FileNotFoundError from subprocess.
+    monkeypatch.setattr("src.governance.mrc.pack.shutil.which", lambda _name: None)
+    with pytest.raises(TectonicNotFound, match="tectonic is not installed"):
+        compile_tex("\\documentclass{article}\\begin{document}x\\end{document}")
 
 
 def _stub_compile(monkeypatch):

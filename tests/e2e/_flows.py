@@ -97,8 +97,8 @@ def edit_model_field(page: Page, key: str, value: str, *, choice: bool = False) 
     confirm(page)
 
 
-def edit_pvm_field(page: Page, key: str, value: str, *, choice: bool = False) -> None:
-    """Edit one scalar field on a PVM's overview tab via confirm-to-amend."""
+def edit_product_field(page: Page, key: str, value: str, *, choice: bool = False) -> None:
+    """Edit one scalar field on a Product's overview tab via confirm-to-amend."""
     page.click(f"[data-edit='{key}']")
     if choice:
         page.select_option("#ped-input", value)

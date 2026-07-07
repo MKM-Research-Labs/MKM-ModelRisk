@@ -8,6 +8,13 @@
 #
 # (The same dependencies are declared in pyproject.toml; this file is provided
 #  for a quick `pip install -r` venv setup.)
+#
+# --- System dependencies (NOT pip-installable) ---
+# Audit-report PDF generation shells out to these binaries; they must be on PATH.
+# Install on macOS with:  brew install tectonic pandoc
+#   tectonic  -- LaTeX engine; REQUIRED for the coding-rule audit + Model Risk
+#                Report PDFs. Absent -> "Generate reports" returns a 503.
+#   pandoc    -- Markdown->PDF; OPTIONAL, only the user-guide PDF (skipped if absent).
 
 # --- Runtime ---
 psycopg[binary]==3.3.4

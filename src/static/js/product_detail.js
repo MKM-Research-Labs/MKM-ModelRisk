@@ -18,37 +18,37 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// PVM detail: header + tabbed detail (Overview with component bindings/rebind,
+// Product detail: header + tabbed detail (Overview with component bindings/rebind,
 // Limitations, Assumptions, Audit). The identifier is derived from the bindings.
-const PVM_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
-const PVM_OVERVIEW_MONITORING = ["monitoring_approach", "monitoring_results"];
-const PVM_OVERVIEW_GOV = ["status", "owner", "mrc_signoff_date", "next_review_date",
+const PRODUCT_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
+const PRODUCT_OVERVIEW_MONITORING = ["monitoring_approach", "monitoring_results"];
+const PRODUCT_OVERVIEW_GOV = ["status", "owner", "mrc_signoff_date", "next_review_date",
   "last_review_date", "notes"];
 
-const PvmDetail = {
-  _id: null, _pvm: null, _specs: null, _audit: [], _tab: "overview",
+const ProductDetail = {
+  _id: null, _product: null, _specs: null, _audit: [], _tab: "overview",
 
-  async show(pvmId, tab) {
-    this._id = pvmId;
-    this._specs = PVM._specs || await PVM.specs();
-    this._pvm = await App.get("/api/pvms/" + pvmId);
-    this._audit = (await App.get("/api/audit")).filter((e) => e.aggregate_id === pvmId);
+  async show(productId, tab) {
+    this._id = productId;
+    this._specs = Product._specs || await Product.specs();
+    this._product = await App.get("/api/products/" + productId);
+    this._audit = (await App.get("/api/audit")).filter((e) => e.aggregate_id === productId);
     if (tab) this._tab = tab;
     this._render();
-    document.getElementById("pvm-detail").scrollIntoView({ block: "start" });
+    document.getElementById("product-detail").scrollIntoView({ block: "start" });
   },
 
-  fieldSpec(key) { return PVM.fieldSpec(key); },
+  fieldSpec(key) { return Product.fieldSpec(key); },
   collSpec(key) { return this._specs.collections.find((c) => c.key === key); },
 
   _render() {
-    const d = this._pvm.data || {};
-    const listview = document.getElementById("pvm-listview");
+    const d = this._product.data || {};
+    const listview = document.getElementById("product-listview");
     if (listview) listview.style.display = "none";
-    document.getElementById("pvm-detail").innerHTML =
-      '<div style="margin-bottom:12px"><button class="btn small" id="pvm-back">&lsaquo; All PVMs</button></div>' +
+    document.getElementById("product-detail").innerHTML =
+      '<div style="margin-bottom:12px"><button class="btn small" id="product-back">&lsaquo; All Products</button></div>' +
       '<div class="card">' + this._header(d) + this._tabbar(d) + '<div id="pt-content"></div></div>';
-    document.getElementById("pvm-back").onclick = () => PvmDetail.close();
+    document.getElementById("product-back").onclick = () => ProductDetail.close();
     document.querySelectorAll("[data-ptab]").forEach((b) => {
       b.onclick = () => { this._tab = b.getAttribute("data-ptab"); this._render(); };
     });
@@ -58,8 +58,8 @@ const PvmDetail = {
   // Return to the list without a full refetch (the list is kept current on edits).
   close() {
     this._tab = "overview";
-    document.getElementById("pvm-detail").innerHTML = "";
-    const listview = document.getElementById("pvm-listview");
+    document.getElementById("product-detail").innerHTML = "";
+    const listview = document.getElementById("product-listview");
     if (listview) listview.style.display = "";
   },
 
@@ -68,7 +68,7 @@ const PvmDetail = {
       '<div class="name">' + fieldDisplay(d.product) + "</div>" +
       '<div class="sub"><span class="code">' + fieldDisplay(d.identifier) + "</span> · " + esc(this._id) +
       (d.product_id ? " · " + esc(d.product_id) : "") + "</div>" +
-      '<div style="margin-top:8px">' + pvmStatusBadge(d.status, this._pvm.retired) + "</div></div>" +
+      '<div style="margin-top:8px">' + productStatusBadge(d.status, this._product.retired) + "</div></div>" +
       '<div class="right"><div class="olabel">OWNER</div>' +
       '<div class="oname">' + fieldDisplay(d.owner) + "</div></div></div>";
   },
@@ -87,19 +87,19 @@ const PvmDetail = {
   },
 
   _renderContent() {
-    const d = this._pvm.data || {};
+    const d = this._product.data || {};
     const box = document.getElementById("pt-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [],
-        this._pvm.retired, "/api/pvms/", () => this.show(this._id, "docs"), "pt-content");
+        this._product.retired, "/api/products/", () => this.show(this._id, "docs"), "pt-content");
       return;
     }
     const spec = this.collSpec(this._tab);
-    box.innerHTML = Collections.render(d, { collections: [spec] }, this._pvm.retired);
-    Collections.bind("/api/pvms/" + this._id + "/collections/", { collections: [spec] },
-      this._pvm.retired, () => this.show(this._id, this._tab), d);
+    box.innerHTML = Collections.render(d, { collections: [spec] }, this._product.retired);
+    Collections.bind("/api/products/" + this._id + "/collections/", { collections: [spec] },
+      this._product.retired, () => this.show(this._id, this._tab), d);
   },
 
   _section(title, keys, d) {
@@ -110,31 +110,31 @@ const PvmDetail = {
   _overview(d) {
     const bindings = this._specs.bindings.map((k) => this._bindingRow(k, d)).join("");
     const left = '<div class="section-header">Components</div>' + bindings +
-      this._section("Product", PVM_OVERVIEW_PRODUCT, d) +
-      this._section("Monitoring", PVM_OVERVIEW_MONITORING, d);
+      this._section("Product", PRODUCT_OVERVIEW_PRODUCT, d) +
+      this._section("Monitoring", PRODUCT_OVERVIEW_MONITORING, d);
     const right = this._section("Risk rating", ["rag_rating"], d) +
-      this._section("Governance &amp; review", PVM_OVERVIEW_GOV, d);
-    const retire = this._pvm.retired
+      this._section("Governance &amp; review", PRODUCT_OVERVIEW_GOV, d);
+    const retire = this._product.retired
       ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>'
-      : '<div style="margin-top:14px"><button class="btn danger small" id="pvm-retire">Retire PVM…</button></div>';
+      : '<div style="margin-top:14px"><button class="btn danger small" id="product-retire">Retire Product…</button></div>';
     return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" + retire;
   },
 
   _editLink(key) {
-    return this._pvm.retired ? "" : '<span class="edit-btn" data-edit="' + key + '">edit</span>';
+    return this._product.retired ? "" : '<span class="edit-btn" data-edit="' + key + '">edit</span>';
   },
 
   _bindingRow(key, d) {
     const f = this.fieldSpec(key);
     return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
       '</div><div class="v"><span class="code">' + fieldDisplay(d[key]) + "</span></div>" +
-      (this._pvm.retired ? "" : '<span class="edit-btn" data-rebind="' + key + '">rebind</span>') + "</div>";
+      (this._product.retired ? "" : '<span class="edit-btn" data-rebind="' + key + '">rebind</span>') + "</div>";
   },
 
   _row(key, d) {
     const f = this.fieldSpec(key);
     let value = fieldDisplay(d[key]);
-    if (key === "status") value = pvmStatusBadge(d[key], this._pvm.retired);
+    if (key === "status") value = productStatusBadge(d[key], this._product.retired);
     else if (key === "rag_rating") value = ragBadge(d[key]);
     return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
       '</div><div class="v">' + value + "</div>" + this._editLink(key) + "</div>";
@@ -142,11 +142,11 @@ const PvmDetail = {
 
   _bindEdits() {
     const self = this;
-    if (this._pvm.retired) return;
-    const retire = document.getElementById("pvm-retire");
+    if (this._product.retired) return;
+    const retire = document.getElementById("product-retire");
     if (retire) retire.onclick = function () {
-      App.amend("Retire PVM " + self._id + " (it can no longer be edited).", "POST",
-        "/api/pvms/" + self._id + "/retire", {}, function () { PVM.render(); });
+      App.amend("Retire Product " + self._id + " (it can no longer be edited).", "POST",
+        "/api/products/" + self._id + "/retire", {}, function () { Product.render(); });
     };
     document.querySelectorAll("[data-edit]").forEach(function (btn) {
       const key = btn.getAttribute("data-edit");
@@ -165,7 +165,7 @@ const PvmDetail = {
       inputControl("ped-input", f) + '<button class="btn small primary" id="ped-save">' + verb +
       '…</button><button class="btn small" id="ped-cancel">Cancel</button></div>';
     const input = document.getElementById("ped-input");
-    const current = this._pvm.data[f.key];
+    const current = this._product.data[f.key];
     if (current !== null && current !== undefined) input.value = current;
     document.getElementById("ped-cancel").onclick = () => this.show(this._id, "overview");
     document.getElementById("ped-save").onclick = () => {
@@ -173,8 +173,8 @@ const PvmDetail = {
         ? { component: f.key, value: input.value.trim() }
         : { field: f.key, value: input.value.trim() };
       App.amend(verb + " " + f.label + ' to "' + input.value + '" on ' + this._id + ".", "POST",
-        "/api/pvms/" + this._id + endpoint, body,
-        () => { this.show(this._id, "overview"); PVM.loadList(); });
+        "/api/products/" + this._id + endpoint, body,
+        () => { this.show(this._id, "overview"); Product.loadList(); });
     };
   },
 };

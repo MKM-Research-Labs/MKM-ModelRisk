@@ -1,4 +1,4 @@
-# MKM-ModelRisk — Product Valuation Model (PVM) Specification
+# MKM-ModelRisk — Product Valuation Model (Product) Specification
 
 **Status:** Draft for review
 **Audience:** Engineering, Model Risk Committee (MRC)
@@ -12,7 +12,7 @@
 1. [Purpose & motivation](#1-purpose--motivation)
 2. [Concept](#2-concept)
 3. [Domain model](#3-domain-model)
-4. [PVM identifier](#4-pvm-identifier)
+4. [Product identifier](#4-product-identifier)
 5. [Aggregate, events & commands](#5-aggregate-events--commands)
 6. [User experience](#6-user-experience)
 7. [Monitoring](#7-monitoring)
@@ -35,45 +35,45 @@ two. That simplification overlooks the difference between a model in development
 and the same model running in production against live portfolios, real market
 data, and finite compute.
 
-This spec introduces the **Product Valuation Model (PVM)**: a first-class
-inventory concept that captures the *practical application* of models. A PVM
+This spec introduces the **Product Valuation Model (Product)**: a first-class
+inventory concept that captures the *practical application* of models. A Product
 defines a **product** and links how that product should be **risked and priced**
 by binding together the three components that determine its behaviour in
 production — an **Analytics Model**, a **Market Data Model**, and a
-**Calculating Agent** — under a single PVM banner.
+**Calculating Agent** — under a single Product banner.
 
-This establishes an explicit **hierarchy**. The PVM is the top-level,
+This establishes an explicit **hierarchy**. The Product is the top-level,
 client-facing artifact — it is what the client sees and what the business
 transacts. The models beneath it are **engines**: reusable analytical and
-market-data machinery that the PVM wires together for a specific product. The
+market-data machinery that the Product wires together for a specific product. The
 goal is to let the MRC govern and monitor at the level where production risk
 actually materialises, not only at the level of the abstract engine.
 
 ## 2. Concept
 
-> A **Product Valuation Model (PVM)** is the *instance* of a model within a
+> A **Product Valuation Model (Product)** is the *instance* of a model within a
 > production environment, where it must interact with real market data,
 > computational infrastructure, and business processes.
 
 A sophisticated pricing model that performs flawlessly in development may behave
 quite differently under production constraints, data-quality issues, and
-compute limits. The same analytical model frequently supports **many** PVMs
+compute limits. The same analytical model frequently supports **many** Products
 across different products, markets, and platforms — so model-level monitoring
-can mask risks that only appear at the PVM level (e.g. a Black-Scholes model
-that looks fine "on average" but misbehaves in a specific commodities PVM).
+can mask risks that only appear at the Product level (e.g. a Black-Scholes model
+that looks fine "on average" but misbehaves in a specific commodities Product).
 
-A PVM therefore pairs **one product** with a unique combination of three
+A Product therefore pairs **one product** with a unique combination of three
 components, each contributing its own risk characteristics:
 
 | Component | Role in the hierarchy | What it is | Examples |
 |---|---|---|---|
 | **Analytics Model** | Engine | The core quantitative methodology that has gone through development & validation (i.e. an existing inventory model). | Bond/cashflow; Black-Scholes; SABR |
 | **Market Data Model** | Engine | How market information is sourced, processed and transformed into model inputs: vendors, curve construction, proxies for missing points, update timing/frequency. | ICE direct; NSS curve fit; curve interpolation/extrapolation |
-| **Calculating Agent** | Platform | A simple name telling the user **which environment the PVM is calculated in**. Maintained as institution reference data. | Murex; Calypso; AM |
+| **Calculating Agent** | Platform | A simple name telling the user **which environment the Product is calculated in**. Maintained as institution reference data. | Murex; Calypso; AM |
 
 ## 3. Domain model
 
-The PVM is a new **aggregate** alongside the existing model inventory and MRC
+The Product is a new **aggregate** alongside the existing model inventory and MRC
 meeting aggregates. It is event-sourced and confirm-to-amend like everything
 else on the platform.
 
@@ -81,8 +81,8 @@ else on the platform.
 
 ```
    CLIENT-FACING        ┌──────────────────────┐
-   (what the client ────│         PVM          │  defines a product;
-    sees & transacts)   │  (PVM-xxxx, banner)  │  links how it is risked & priced
+   (what the client ────│         Product          │  defines a product;
+    sees & transacts)   │  (Product-xxxx, banner)  │  links how it is risked & priced
                         └───────────┬──────────┘
                         binds exactly one of each:
           ┌──────────────────┬──────────────────┬──────────────────┐
@@ -92,46 +92,46 @@ else on the platform.
    └──── ENGINES (reusable machinery) ────┘   └─ PLATFORM (where it runs) ─┘
 ```
 
-- The **PVM sits at the top** of the hierarchy: it is the client-facing artifact.
+- The **Product sits at the top** of the hierarchy: it is the client-facing artifact.
   The Analytics Model and Market Data Model below it are reusable **engines**;
   the Calculating Agent is the **platform** the engines run on.
-- A **PVM** binds **exactly one** Analytics Model, **one** Market Data Model,
+- A **Product** binds **exactly one** Analytics Model, **one** Market Data Model,
   and **one** Calculating Agent, against **one** Product.
 - The **Analytics Model** reference points at an existing record in the **Model
-  Inventory** — it is *not* duplicated. This is the lineage link: a PVM inherits
+  Inventory** — it is *not* duplicated. This is the lineage link: a Product inherits
   its analytical model's validation status, tier, assumptions, and limitations.
-- One Analytics Model may be referenced by **many** PVMs (the one-to-many that
+- One Analytics Model may be referenced by **many** Products (the one-to-many that
   motivates this whole feature).
 - A **Market Data Model** is a reusable reference record (`MDM-xxx`); the
   **Calculating Agent** is an institution reference value maintained under Admin
   (see [§5](#5-aggregate-events--commands)). Both are defined once and reused
-  across many PVMs.
+  across many Products.
 
-### 3.2 PVM record fields
+### 3.2 Product record fields
 
 | Field | Notes |
 |---|---|
-| **PVM ID** | Stable identifier, e.g. `PVM-0001` (mandatory). |
-| **Product** | The product/instrument this PVM values, e.g. *Government Bond*, *Equity Option* (mandatory). |
+| **Product ID** | Stable identifier, e.g. `Product-0001` (mandatory). |
+| **Product** | The product/instrument this Product values, e.g. *Government Bond*, *Equity Option* (mandatory). |
 | **Product ID** | The product instance reference where one exists. |
 | **Analytics Model** | Reference to an inventory model, e.g. `MKM-CR-001` (mandatory). |
 | **Market Data Model** | Reference to an `MDM-xxx` record (mandatory). |
 | **Calculating Agent** | Selected from the Admin reference list, e.g. *Murex* (mandatory). |
-| **PVM identifier** | Derived; see [§4](#4-pvm-identifier). |
+| **Product identifier** | Derived; see [§4](#4-product-identifier). |
 | **Status** | Lifecycle: Proposed / Active / Suspended / Retired. |
 | **Owner** | From the People directory. |
-| **Monitoring approach** | Free text: how this PVM is monitored (see [§7](#7-monitoring)). |
+| **Monitoring approach** | Free text: how this Product is monitored (see [§7](#7-monitoring)). |
 | **Monitoring results** | Free text: latest monitoring findings/observations. |
 | **Notes** | Free text. |
 
-A PVM also carries the standard structured registers where they add value at the
+A Product also carries the standard structured registers where they add value at the
 production level — **Limitations** and **Assumptions** — mirroring how inventory
 models work today. Monitoring is captured as the two narrative fields above
 rather than a structured time-series (see [§7](#7-monitoring)).
 
-## 4. PVM identifier
+## 4. Product identifier
 
-Each PVM renders a human-readable identifier in the form:
+Each Product renders a human-readable identifier in the form:
 
 ```
 <AnalyticsModelID>.<MarketDataModelID>.<CalculatingAgent>
@@ -140,7 +140,7 @@ Each PVM renders a human-readable identifier in the form:
 The Analytics Model leads, because it is the engine that defines how the product
 is priced and risked; the Market Data Model feeds it; the Calculating Agent is
 where it runs. A product that is a **Government Bond** plus an **Equity Option**
-might be made up of these PVMs:
+might be made up of these Products:
 
 ```
 Bond_Pricer.NSSF_bond_curve.Murex
@@ -161,7 +161,7 @@ audited event).
 
 ## 5. Aggregate, events & commands
 
-PVMs follow the platform's event-sourced, confirm-to-amend pattern: every
+Products follow the platform's event-sourced, confirm-to-amend pattern: every
 command opens a confirmation dialog, accepts an optional reason, and appends a
 hash-chained event on confirmation. The Audit Trail *is* the change history.
 
@@ -171,21 +171,21 @@ hash-chained event on confirmation. The Audit Trail *is* the change history.
   description, vendor/source, curve or construction method, update frequency.
 - **Calculating Agent** — a new **Admin reference menu**, maintained alongside
   the existing Company / Division / Department lists (see [§6](#6-user-experience)).
-  It is simply a name that tells the user which environment the PVM is calculated
+  It is simply a name that tells the user which environment the Product is calculated
   in (e.g. *Murex*, *Calypso*, *AM*) — no further attributes. Once populated, the
-  PVM's Calculating Agent field renders as a dropdown sourced from this list,
-  keeping the value consistent across PVMs.
+  Product's Calculating Agent field renders as a dropdown sourced from this list,
+  keeping the value consistent across Products.
 
-### 5.2 PVM aggregate events
+### 5.2 Product aggregate events
 
 | Event | Trigger |
 |---|---|
-| `PvmRegistered` | A PVM is created with its product and three component bindings. |
-| `PvmComponentRebound` | A component reference (Analytics / MDM / Agent) is changed. |
-| `PvmFieldEdited` | A scalar field (owner, status, monitoring approach, monitoring results, notes) is edited. |
-| `PvmLimitationAdded` / `…Removed` | Production-level limitation register. |
-| `PvmAssumptionAdded` / `…Removed` | Production-level assumption register. |
-| `PvmSuspended` / `PvmRetired` | Lifecycle transitions; retired PVMs are read-only. |
+| `ProductRegistered` | A Product is created with its product and three component bindings. |
+| `ProductComponentRebound` | A component reference (Analytics / MDM / Agent) is changed. |
+| `ProductFieldEdited` | A scalar field (owner, status, monitoring approach, monitoring results, notes) is edited. |
+| `ProductLimitationAdded` / `…Removed` | Production-level limitation register. |
+| `ProductAssumptionAdded` / `…Removed` | Production-level assumption register. |
+| `ProductSuspended` / `ProductRetired` | Lifecycle transitions; retired Products are read-only. |
 
 ### 5.3 Validation rules
 
@@ -194,38 +194,38 @@ hash-chained event on confirmation. The Audit Trail *is* the change history.
 - The combination (Product + Analytics + MDM + Agent) **should be unique** —
   duplicates are flagged at confirmation, not silently allowed.
 - Retiring or removing an inventory model that is still referenced by an Active
-  PVM is **blocked** with a clear message listing the dependent PVMs.
+  Product is **blocked** with a clear message listing the dependent Products.
 
 ## 6. User experience
 
-A new top-level **PVMs** tab, modelled on the Model Inventory:
+A new top-level **Products** tab, modelled on the Model Inventory:
 
-- **List** — summary cards (counts by status) and a table: PVM ID, product,
+- **List** — summary cards (counts by status) and a table: Product ID, product,
   derived identifier, Analytics Model, Calculating Agent, owner, status.
-- **Register a PVM** — a card taking PVM ID + product, then three dropdowns:
+- **Register a Product** — a card taking Product ID + product, then three dropdowns:
   **Analytics Model** (sourced from the Model Inventory), **Market Data Model**
   (from the MDM reference records), and **Calculating Agent** (from the Admin
   reference menu). Confirm to create.
-- **PVM detail** — header (identifier, product, status, owner) plus tabs:
+- **Product detail** — header (identifier, product, status, owner) plus tabs:
   **Overview** (the bindings, each with an inline *rebind* link; plus the
   **Monitoring approach** and **Monitoring results** fields, inline-editable),
   **Limitations**, **Assumptions**, and **Audit**.
 - **Cross-links** — the Analytics Model binding deep-links to that model's
-  inventory record; conversely, an inventory model gains a **"Used by N PVMs"**
-  panel listing the PVMs that reference it.
+  inventory record; conversely, an inventory model gains a **"Used by N Products"**
+  panel listing the Products that reference it.
 
 **Admin.** The reference-menus section gains a fourth list, **Calculating
 Agent**, maintained exactly like Company / Division / Department.
 
-PVMs may be added to an **MRC meeting's** scope alongside models, so the
+Products may be added to an **MRC meeting's** scope alongside models, so the
 committee can review a production instance directly.
 
 ## 7. Monitoring
 
-Monitoring is captured on the PVM record as two free-text fields rather than a
+Monitoring is captured on the Product record as two free-text fields rather than a
 structured time-series tab:
 
-- **Monitoring approach** — how this PVM is monitored: what is watched, at what
+- **Monitoring approach** — how this Product is monitored: what is watched, at what
   frequency, and against what expectation.
 - **Monitoring results** — the latest findings/observations from that approach.
 
@@ -235,20 +235,20 @@ once the activity is bedded in. Suggested content for the *approach* field:
 | Basis | What it reveals |
 |---|---|
 | **Notional Outstanding** | Business growth, concentration risk, capacity limits; sudden spikes flag unvalidated new-product launches. |
-| **Maturity Profile** | Model-appropriateness; e.g. a short-dated PVM suddenly taking long-dated exposure signals "shoehorning". |
+| **Maturity Profile** | Model-appropriateness; e.g. a short-dated Product suddenly taking long-dated exposure signals "shoehorning". |
 | **Key Sensitivities** | Delta and vega behaviour; instability or non-response to market moves flags underlying model problems. |
 | **P&L backtest** | The strongest signal: hypothetical P&L (Taylor approximation from delta/vega and observed market moves) vs. actual P&L. Persistent unexplained difference = the model is missing or mis-capturing risk. |
 
 > **The "shoehorning" risk this is designed to catch:** a barrier option valued
-> on a plain Black-Scholes PVM because it is the only available equity framework.
+> on a plain Black-Scholes Product because it is the only available equity framework.
 > It produces prices and sensitivities but misses the barrier risks that should
-> drive hedging — visible at the PVM level, invisible at the model level.
+> drive hedging — visible at the Product level, invisible at the model level.
 
 ## 8. Controlled vocabularies
 
 | Field | Values |
 |---|---|
-| PVM status | Proposed, Active, Suspended, Retired |
+| Product status | Proposed, Active, Suspended, Retired |
 | Market Data Model update frequency | Real-time, Intraday, Daily, Weekly, Ad-hoc |
 | **Calculating Agent** | *Admin reference menu* (institution-maintained, e.g. Murex, Calypso, AM) — not a fixed vocabulary. |
 
@@ -257,25 +257,25 @@ referenced Analytics Model and are not redefined here.)
 
 ## 9. Out of scope
 
-- **Computing actual valuations.** This platform governs and monitors PVMs; it
+- **Computing actual valuations.** This platform governs and monitors Products; it
   does not price instruments or run the engines. Metrics are recorded from
   upstream systems.
 - **Live feeds from Murex/Calypso/etc.** Initial release is manual/recorded
   entry; automated ingestion is a later phase.
 - **Re-validating the analytics model.** Validation stays on the inventory model
-  record; a PVM inherits and references it.
+  record; a Product inherits and references it.
 
 ## 10. Open questions
 
 1. **Monitoring depth** — narrative approach/results fields are sufficient for
    v1. Do we later want to graduate the recurring measures (notional,
    sensitivities, P&L backtest) into a structured time-series with trends?
-2. **PVM-level risk rating** — do we want a composite rating for a PVM, or does
+2. **Product-level risk rating** — do we want a composite rating for a Product, or does
    it simply surface its Analytics Model's rating plus monitoring health?
-4. **Many-product PVMs** — the handbook example lists three identifiers under one
+4. **Many-product Products** — the handbook example lists three identifiers under one
    product set; confirm whether a "product" can bundle instruments or is strictly
-   one instrument per PVM.
-5. **Terminology guard** — elsewhere in the library "PVM" is used for *Product,
+   one instrument per Product.
+5. **Terminology guard** — elsewhere in the library "Product" is used for *Product,
    Valuation and Market data* (a banking data architecture). This spec uses
    *Product Valuation Model*. Confirm the platform standardises on the latter to
    avoid collision.

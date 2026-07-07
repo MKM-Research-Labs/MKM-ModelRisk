@@ -17,35 +17,35 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""PVM aggregate: register/rebind/edit/retire Product Valuation Models and query them."""
-from src.governance.pvm.commands import (
+"""Product aggregate: register/rebind/edit/retire Product Valuation Models and query them."""
+from src.governance.product.commands import (
     AGGREGATE_TYPE,
     add_collection_item,
     rebind_component,
-    register_pvm,
+    register_product,
     remove_collection_item,
-    retire_pvm,
+    retire_product,
     update_collection_item,
-    update_pvm_field,
+    update_product_field,
 )
-from src.governance.pvm.projection import (
+from src.governance.product.projection import (
     derived_identifier,
-    get_pvm,
-    list_pvms,
-    rebuild_pvm_view,
+    get_product,
+    list_products,
+    rebuild_product_view,
 )
 
 __all__ = [
     "AGGREGATE_TYPE",
-    "register_pvm",
+    "register_product",
     "rebind_component",
-    "update_pvm_field",
-    "retire_pvm",
+    "update_product_field",
+    "retire_product",
     "add_collection_item",
     "update_collection_item",
     "remove_collection_item",
     "derived_identifier",
-    "get_pvm",
-    "list_pvms",
-    "rebuild_pvm_view",
+    "get_product",
+    "list_products",
+    "rebuild_product_view",
 ]
