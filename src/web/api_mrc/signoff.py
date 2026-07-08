@@ -73,8 +73,12 @@ def approve_signoff(meeting_id: str, item_id: str):
         history_fields["from_rating"] = from_rating
     if meeting["data"].get("date"):
         history_fields["date"] = meeting["data"]["date"]
-    if body.get("note"):
-        history_fields["note"] = body["note"]
+    # Approval comments: an explicit ``note`` wins, else fall back to the
+    # confirm-dialog ``reason`` so the chair's comment is captured on the model's
+    # sign-off history, not just the audit event.
+    note = body.get("note") or body.get("reason")
+    if note:
+        history_fields["note"] = note
     dispatch(
         "add_collection_item", _model_add, context=ctx,
         model_id=model_id, collection="rag_signoff_history", fields=history_fields,

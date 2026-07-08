@@ -169,6 +169,23 @@ def test_approve_signoff_snaps_model_rating_and_records_history(client):
     assert payload["meeting"]["data"]["agenda"][0]["status"] == "Completed"
 
 
+def test_approve_signoff_records_confirm_reason_as_comment(client):
+    # "Approve with comments": when no explicit note is sent, the confirm-dialog
+    # reason is captured as the sign-off history note.
+    _seed_mrc(client)
+    _register_subject_model(client)
+    _schedule_meeting(client)
+    _request_signoff(client)
+    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    response = client.post(
+        f"/api/meetings/MTG1/agenda/{agenda_id}/approve-signoff",
+        json={"confirmed": True, "reason": "Chair satisfied with validation"}, headers=HEADERS,
+    )
+    assert response.status_code == 200
+    history = response.get_json()["model"]["data"]["rag_signoff_history"]
+    assert history[0]["note"] == "Chair satisfied with validation"
+
+
 def test_approve_signoff_unknown_meeting_is_404(client):
     response = client.post(
         "/api/meetings/NOPE/agenda/AG-001/approve-signoff",
