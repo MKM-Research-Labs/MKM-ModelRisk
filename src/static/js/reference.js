@@ -19,13 +19,15 @@
 // SOFTWARE.
 
 // Admin tab: sub-tabs for each section (left to right) — Company, Division,
-// Department, MRC settings, People. The org lists reuse the shared Collections
-// renderer; a Division picks its Company and a Department its Division.
+// Department, MRC, People. The org lists reuse the shared Collections renderer;
+// a Division picks its Company and a Department its Division. The MRC tab shows
+// the committees list and, below it, the MRC's own detail (settings + Terms of
+// Reference) — one place for everything about the committee.
 const Reference = {
   _tab: "company",
   _TABS: [
     ["company", "Company"], ["division", "Division"], ["department", "Department"],
-    ["calculating_agent", "Calc Agent"], ["mrc", "MRC"], ["people", "People"],
+    ["mrc", "MRC"], ["calculating_agent", "Calc Agent"], ["people", "People"],
   ],
 
   async render() {
@@ -41,10 +43,6 @@ const Reference = {
   },
 
   async _renderBody(container) {
-    if (this._tab === "mrc") {
-      await Settings.render(container);
-      return;
-    }
     const res = await App.get("/api/reference");
     const spec = res.collections.find((c) => c.key === this._tab);
     const specs = { collections: [spec] };
@@ -56,6 +54,13 @@ const Reference = {
     Collections.bind("/api/reference/collections/", specs, false, () => this.render(), data);
     if (this._tab === "company") {
       document.getElementById("logo-upload").onclick = () => this._uploadLogo();
+    }
+    // The MRC's detail — settings (name/chair/frequency) + Terms of Reference —
+    // renders below the committees list, so the whole MRC lives on one tab.
+    if (this._tab === "mrc") {
+      const detail = document.createElement("div");
+      container.appendChild(detail);
+      await Settings.render(detail);
     }
   },
 

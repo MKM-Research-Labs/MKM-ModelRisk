@@ -125,7 +125,10 @@ tr.clickable:hover td { background: #f7fbff; }
 td.num, th.num { text-align: center; }
 
 /* GitHub-style "Danger Zone" — red-bordered card holding destructive actions. */
-.danger-zone { border-color: var(--red); padding: 0; }
+.dtab-danger { color: var(--red); }
+.dtab-danger.active { color: var(--red); border-bottom-color: var(--red); }
+.dtab-danger:hover { color: var(--red); }
+.danger-zone { border: 1px solid var(--red); border-radius: 8px; overflow: hidden; }
 .danger-zone .dz-header { background: var(--red); color: #fff; padding: 8px 16px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px 8px 0 0; }
 .danger-zone .dz-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; }
 .danger-zone .dz-row + .dz-row { border-top: 1px solid #f1c5c2; }
@@ -139,8 +142,14 @@ td.num, th.num { text-align: center; }
 input, select { box-sizing: border-box; height: 34px; }
 textarea { box-sizing: border-box; }
 
-/* W4a — Risk Rating heatmap grid. */
-.heatmap { border-collapse: separate; border-spacing: 4px; margin: 4px 0 6px; }
-.heatmap th { text-align: center; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 8px; font-weight: 700; }
-.heatmap tbody th { text-align: right; }
+/* W4a — Risk Rating heatmap grid. Shrink the whole table to its content — the
+   row-label column was stretching to fill the card, leaving a huge empty
+   band on the left. */
+.heatmap-wrap { display: inline-flex; align-items: stretch; gap: 6px; margin: 6px 0; }
+.hm-y-axis { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); text-align: center; padding: 20px 0; }
+.hm-x-axis { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); text-align: center; padding: 0 0 4px 70px; }
+.heatmap { border-collapse: separate; border-spacing: 4px; width: auto; }
+.heatmap th { text-align: center; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; padding: 4px 6px; font-weight: 700; }
+.heatmap tbody th { text-align: right; width: 70px; white-space: nowrap; }
+.heatmap thead th:first-child { width: 70px; }
 .heatmap td.hcell { width: 90px; height: 60px; text-align: center; vertical-align: middle; border-radius: 6px; font-size: 12px; font-weight: 600; }

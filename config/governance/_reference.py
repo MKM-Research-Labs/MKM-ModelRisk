@@ -22,12 +22,20 @@
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 
-# Order: the Company org hierarchy first, then the Product platform (Calculating
-# Agent), then the People directory. Market Data Models are no longer a reference
-# list — they live in the Model Inventory tagged type="Market Data Model".
+# Order: the Company org hierarchy first, then the MRC committees anchored to
+# that hierarchy, then the Product platform (Calculating Agent), then the
+# People directory. Market Data Models are no longer a reference list — they
+# live in the Model Inventory tagged type="Market Data Model".
 REFERENCE_LISTS = (
-    "company", "division", "department", "calculating_agent", "people",
+    "company", "division", "department", "mrc", "calculating_agent", "people",
 )
+
+# MRC committees are anchored to one of the three org tiers. A Department-level
+# MRC only sees models in that department; Division sees everything across its
+# departments; Company sees the whole inventory. Approvals can be escalated up
+# this hierarchy manually (never automatic).
+VALID_MRC_LEVELS = ("Company", "Division", "Department")
+VALID_MRC_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 
 # The org hierarchy cascades: a Division belongs to a Company, a Department to a
 # Division. Each unit carries an Owner (a person), so model ownership attaches to
@@ -47,6 +55,21 @@ REFERENCE_SPECS = {
         {"key": "value", "label": "Value", "type": "text", "required": True},
         {"key": "division", "label": "Division", "type": "text", "reference": "division", "required": True},
         dict(_OWNER),
+    ]},
+    # --- MRC committees anchored to the org hierarchy ---
+    # ``value`` is the MRC's unique identifier (e.g. MRC-EMEA-RATES); ``name`` is
+    # the human-readable label. ``level`` fixes which org tier this committee
+    # sits at; ``scope_value`` is which specific Division/Department it covers
+    # (unused for a Company-level MRC).
+    "mrc": {"label": "MRC", "id_prefix": "MRC", "display": "value", "fields": [
+        {"key": "value", "label": "MRC ID", "type": "text", "required": True},
+        {"key": "name", "label": "Name", "type": "text", "required": True},
+        {"key": "level", "label": "Level", "type": "choice",
+         "options": VALID_MRC_LEVELS, "required": True},
+        {"key": "scope_value", "label": "Division / Department", "type": "text"},
+        {"key": "chair", "label": "Chair", "type": "text", "reference": "people"},
+        {"key": "frequency", "label": "Frequency", "type": "choice",
+         "options": VALID_MRC_FREQUENCIES},
     ]},
     # --- Product reference data (platform) ---
     "calculating_agent": {"label": "Calculating Agent", "id_prefix": "CA", "display": "value",

@@ -197,3 +197,38 @@ def test_company_logo_upload(page: Page, base_url: str, tmp_path):
     page.click("#logo-upload")
     # The page re-renders with a logo <img> in the Company logo section.
     expect(page.locator("img[alt='logo']")).to_be_visible()
+
+
+# ------------------------------------------------------ MRC (committee list) --
+
+def test_mrc_committee_create(page: Page, base_url: str):
+    _on(page, base_url, "mrc")
+    item_id = add_collection_item(
+        page, "mrc",
+        {"value": "MRC-DEPT-RATES", "name": "Rates Trading MRC",
+         "level": "Department", "scope_value": "Rates Trading",
+         "frequency": "Monthly"},
+    )
+    expect(page.locator(f"[data-ed='mrc|{item_id}']")).to_be_visible()
+
+
+def test_mrc_committee_edit(page: Page, base_url: str):
+    _on(page, base_url, "mrc")
+    item_id = add_collection_item(
+        page, "mrc",
+        {"value": "MRC-DIV-MARKETS", "name": "Markets MRC",
+         "level": "Division", "scope_value": "Markets"},
+    )
+    edit_collection_item(page, "mrc", item_id, {"name": "Global Markets MRC"})
+    expect(page.locator(f"[data-ed='mrc|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Global Markets MRC")
+
+
+def test_mrc_committee_delete(page: Page, base_url: str):
+    _on(page, base_url, "mrc")
+    item_id = add_collection_item(
+        page, "mrc",
+        {"value": "MRC-CO-STERLING", "name": "Sterling Bank MRC",
+         "level": "Company"},
+    )
+    remove_collection_item(page, "mrc", item_id)
+    expect(page.locator(f"[data-ed='mrc|{item_id}']")).to_have_count(0)

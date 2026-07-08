@@ -21,18 +21,17 @@
 from config.governance._inventory import VALID_RAG_RATINGS
 
 # --- MRC settings & branding (header for the console and Meeting Pack PDF) ---
+# Address, handbook reference and framework were dropped as not required; the
+# ToR document (uploaded separately) carries that detail. What remains is the
+# institution name, the chair and the meeting cadence.
 VALID_FREQUENCY = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 MRC_SETTINGS_SPECS = (
     {"key": "org_name", "label": "Organisation name", "type": "text"},
-    {"key": "org_address", "label": "Address", "type": "text"},
     {"key": "chair", "label": "Chair", "type": "text"},
     {"key": "frequency", "label": "Frequency", "type": "choice", "options": VALID_FREQUENCY},
-    {"key": "handbook_reference", "label": "Handbook reference", "type": "text"},
-    {"key": "framework", "label": "Framework", "type": "text"},
 )
 MRC_SETTINGS_KEYS = tuple(spec["key"] for spec in MRC_SETTINGS_SPECS)
 MRC_SETTINGS_DEFAULTS = {
-    "framework": "MKM Research Labs Model Risk Governance",
     "frequency": "Quarterly",
 }
 
@@ -47,10 +46,13 @@ VALID_PARTICIPANT_STATUS = ("Invited", "Attended", "Apologies", "Declined")
 REVIEW_DUE_SOON_DAYS = 30
 REVIEW_UPCOMING_DAYS = 90
 
-# Scalar meeting fields (title/date are mandatory at scheduling time). An MRC is
-# assigned to a Company, optionally narrowed to a Division and then a Department
-# (each a dropdown from the cascading org hierarchy).
+# Scalar meeting fields (title/date are mandatory at scheduling time). Each
+# meeting belongs to an MRC committee (the ``mrc`` binding, chosen from the
+# Admin > MRC list) — that committee carries the chair, level and cadence. A
+# meeting is also assigned to a Company, optionally narrowed to a Division and
+# then a Department (each a dropdown from the cascading org hierarchy).
 MEETING_FIELD_SPECS = {
+    "mrc": {"label": "MRC", "type": "text", "reference": "mrc"},
     "title": {"label": "Title", "type": "text"},
     "date": {"label": "Date", "type": "date"},
     "company": {"label": "Company", "type": "text", "reference": "company"},

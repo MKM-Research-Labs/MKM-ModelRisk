@@ -36,7 +36,7 @@ const Settings = {
         '<button class="btn small" id="tor-replace" style="margin-left:auto">Replace&hellip;</button></div>'
       : '<div class="muted" style="margin-top:8px">No Terms of Reference uploaded.</div>';
     container.innerHTML =
-      '<div class="card"><h3>MRC settings &amp; branding</h3>' +
+      '<div class="card"><h3>MRC detail</h3>' +
       '<p class="muted">These populate the console header cards and the Meeting Pack PDF header. ' +
       "The company logo is set on the Company tab.</p>" + rows +
       '<div class="section-header" style="margin-top:16px">Terms of Reference</div>' + tor +

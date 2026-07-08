@@ -86,11 +86,19 @@ const DetailTabs = {
       }).join("");
       return "<tr><th>" + esc(m) + "</th>" + cells + "</tr>";
     }).join("");
-    return '<table class="heatmap"><thead><tr><th></th>' +
+    // Axis titles live outside the table so they can't stretch the row-label
+    // column: materiality runs vertically down the left, complexity across
+    // above the column headers.
+    return '<div class="heatmap-wrap">' +
+      '<div class="hm-y-axis">Materiality</div>' +
+      "<div>" +
+      '<div class="hm-x-axis">Complexity &rarr;</div>' +
+      '<table class="heatmap"><thead><tr><th></th>' +
       cols.map((c) => "<th>" + esc(c) + "</th>").join("") +
       "</tr></thead><tbody>" + table + "</tbody></table>" +
-      '<div class="muted" style="font-size:11px;margin-top:6px">' +
-      "Rows: Materiality &middot; Columns: Complexity. Set both on the Overview tab." + "</div>";
+      "</div></div>" +
+      '<div class="muted" style="font-size:11px;margin-top:2px">' +
+      "Set Materiality and Complexity on the Overview tab.</div>";
   },
 
   // W4c — chronological table of approved sign-offs on this model. Rendered

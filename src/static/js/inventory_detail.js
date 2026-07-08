@@ -50,13 +50,12 @@ const Detail = {
   _render() {
     const d = this._model.data || {};
     document.getElementById("m-detail").innerHTML =
-      '<div class="card">' + this._header(d) + this._tabbar(d) + '<div id="dt-content"></div></div>' +
-      this._dangerZone();
+      '<div class="card">' + this._header(d) + this._tabbar(d) + '<div id="dt-content"></div></div>';
     document.querySelectorAll("[data-dtab]").forEach((b) => {
       b.onclick = () => { this._tab = b.getAttribute("data-dtab"); this._render(); };
     });
     this._renderContent();
-    this._bindRetire();
+    if (this._tab === "danger") this._bindRetire();
   },
 
   _header(d) {
@@ -91,10 +90,14 @@ const Detail = {
       ["decisions", "Decisions", this._decisions.length],
       ["actions", "Actions", this._actions.length],
       ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
+      ["danger", "Danger", null],
     ];
-    return '<div class="dtabs">' + tabs.map((t) =>
-      '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-dtab="' + t[0] + '">' +
-      esc(t[1]) + (t[2] !== null ? " (" + t[2] + ")" : "") + "</button>").join("") + "</div>";
+    return '<div class="dtabs">' + tabs.map((t) => {
+      const danger = t[0] === "danger" ? " dtab-danger" : "";
+      return '<button class="dtab' + (t[0] === this._tab ? " active" : "") + danger +
+        '" data-dtab="' + t[0] + '">' +
+        esc(t[1]) + (t[2] !== null ? " (" + t[2] + ")" : "") + "</button>";
+    }).join("") + "</div>";
   },
 
   _renderContent() {
@@ -106,6 +109,7 @@ const Detail = {
       this._bindSignoffRequest(); return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
+    if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
     if (this._tab === "decisions") { box.innerHTML = DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]); return; }
     if (this._tab === "actions") { box.innerHTML = DetailTabs.linkedItems("Actions", this._actions, ["description", "owner", "target_date", "status"]); return; }
     if (this._tab === "docs") {
@@ -171,9 +175,14 @@ const Detail = {
       '<div class="section-header">Testing</div>' + testing + "</div></div>" + status;
   },
 
-  _dangerZone() {
-    if (this._model.retired) return "";
-    return '<div class="card danger-zone">' +
+  // Contents of the "Danger" dtab — replaces the earlier below-card danger zone.
+  // Sits inside #dt-content so the tab bar handles activation, and reuses the
+  // existing .danger-zone card styling for the red border + header.
+  _dangerContent() {
+    if (this._model.retired) {
+      return '<div class="empty">This model is retired and read-only. Nothing further can be changed.</div>';
+    }
+    return '<div class="danger-zone">' +
       '<div class="dz-header">Danger Zone</div>' +
       '<div class="dz-row">' +
       '<div class="dz-text"><b>Retire this model</b>' +
