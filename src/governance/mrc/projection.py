@@ -96,6 +96,77 @@ def list_meetings(config=None) -> list[dict[str, Any]]:
     return [_row_to_dict(row) for row in rows]
 
 
+def _enrich(meeting: dict | None, refs: dict[str, list]) -> dict | None:
+    """Overlay the derived org scope onto a meeting from its bound MRC."""
+    if meeting is None:
+        return None
+    mrc_value = (meeting["data"] or {}).get("mrc")
+    if not mrc_value:
+        return meeting
+    derived = derive_org_scope(mrc_value, refs)
+    if derived:
+        meeting["data"] = {**meeting["data"], **derived}
+    return meeting
+
+
+def get_meeting_enriched(meeting_id: str, config=None) -> dict | None:
+    """Meeting with company/division/department/chair/frequency derived from MRC."""
+    from src.governance.reference import get_reference_lists  # avoid import cycle
+    return _enrich(get_meeting(meeting_id, config=config), get_reference_lists(config))
+
+
+def list_meetings_enriched(config=None) -> list[dict]:
+    """Every meeting with its MRC-derived fields folded in."""
+    from src.governance.reference import get_reference_lists  # avoid import cycle
+    refs = get_reference_lists(config)
+    return [_enrich(m, refs) for m in list_meetings(config)]
+
+
+def derive_org_scope(mrc_value: str | None, refs: dict[str, list]) -> dict[str, Any]:
+    """Look up a meeting's org scope + chair + frequency from its MRC.
+
+    The MRC reference row carries a level (Company/Division/Department) and a
+    scope_value pointing at one Division or Department. Everything above that
+    level chains up through the Division / Department reference lists. Returns
+    only the fields we can resolve — missing links produce a partial dict.
+    """
+    if not mrc_value:
+        return {}
+    mrc = next(
+        (m for m in refs.get("mrc") or [] if m.get("value") == mrc_value), None,
+    )
+    if not mrc:
+        return {}
+    result: dict[str, Any] = {}
+    for key in ("chair", "frequency"):
+        if mrc.get(key):
+            result[key] = mrc[key]
+    level, scope = mrc.get("level"), mrc.get("scope_value")
+    if level == "Department" and scope:
+        dept = next(
+            (d for d in refs.get("department") or [] if d.get("value") == scope), None,
+        )
+        if dept:
+            result["department"] = dept["value"]
+            div = next(
+                (v for v in refs.get("division") or [] if v.get("value") == dept.get("division")),
+                None,
+            )
+            if div:
+                result["division"] = div["value"]
+                if div.get("company"):
+                    result["company"] = div["company"]
+    elif level == "Division" and scope:
+        div = next(
+            (v for v in refs.get("division") or [] if v.get("value") == scope), None,
+        )
+        if div:
+            result["division"] = div["value"]
+            if div.get("company"):
+                result["company"] = div["company"]
+    return result
+
+
 def meeting_items_for_model(
     collection: str, model_id: str, config=None, *, field: str = "model_id",
 ) -> list[dict[str, Any]]:

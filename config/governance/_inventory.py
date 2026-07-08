@@ -165,16 +165,34 @@ RISK_WEIGHTS = (
 RISK_ACCEPTABLE_AT = 0.75
 RISK_CONDITIONAL_AT = 0.50
 
-# W4a — 3×3 heatmap (Materiality × Complexity → RAG). Owner sets the two axes
-# on the model; the heatmap cell is the primary risk rating, supplemented by
-# the composite breakdown above. Materiality outweighs complexity on the
-# diagonal because high-stakes-simple is still worse than low-stakes-complex.
+# W4a — Materiality × Complexity → RAG heatmaps, one per tier. The owner sets
+# the two axes on the model; the cell for the model's tier is the primary risk
+# rating, supplemented by the composite breakdown above. Rows are materiality
+# (High/Medium/Low), columns complexity (Low/Medium/High).
+#
+# The tier fixes how quickly the map escalates: Tier 1 (mission critical) hits
+# Red readily; Tier 2 (important) is the same shape pushed one step right; Tier 3
+# (not important) stays Green until the top-right corner. Tiers 4-5 (even lower
+# criticality) reuse the Tier 3 table.
 MATERIALITY_ORDER = ("Low", "Medium", "High")
 COMPLEXITY_ORDER = ("Low", "Medium", "High")
-RISK_HEATMAP = {
-    ("High", "Low"): "Amber", ("High", "Medium"): "Red", ("High", "High"): "Red",
-    ("Medium", "Low"): "Green", ("Medium", "Medium"): "Amber", ("Medium", "High"): "Red",
-    ("Low", "Low"): "Green", ("Low", "Medium"): "Green", ("Low", "High"): "Amber",
+RISK_TIER_LABELS = {1: "Mission critical", 2: "Important", 3: "Not important"}
+RISK_HEATMAP_BY_TIER = {
+    1: {  # Tier 1 — mission critical:  A R R / G A R / G G A
+        ("High", "Low"): "Amber", ("High", "Medium"): "Red", ("High", "High"): "Red",
+        ("Medium", "Low"): "Green", ("Medium", "Medium"): "Amber", ("Medium", "High"): "Red",
+        ("Low", "Low"): "Green", ("Low", "Medium"): "Green", ("Low", "High"): "Amber",
+    },
+    2: {  # Tier 2 — important:  G A R / G G A / G G G
+        ("High", "Low"): "Green", ("High", "Medium"): "Amber", ("High", "High"): "Red",
+        ("Medium", "Low"): "Green", ("Medium", "Medium"): "Green", ("Medium", "High"): "Amber",
+        ("Low", "Low"): "Green", ("Low", "Medium"): "Green", ("Low", "High"): "Green",
+    },
+    3: {  # Tier 3 — not important:  G G A / G G G / G G G
+        ("High", "Low"): "Green", ("High", "Medium"): "Green", ("High", "High"): "Amber",
+        ("Medium", "Low"): "Green", ("Medium", "Medium"): "Green", ("Medium", "High"): "Green",
+        ("Low", "Low"): "Green", ("Low", "Medium"): "Green", ("Low", "High"): "Green",
+    },
 }
 # Rolling window (days) for the "operational events past year" counter surfaced
 # on the Risk Rating tab.

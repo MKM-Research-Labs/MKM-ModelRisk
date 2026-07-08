@@ -20,27 +20,33 @@
 """HTTP API for the admin-managed reference (menu) lists."""
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request, send_file
 
 from config.governance import REFERENCE_SPECS
 from src.command import dispatch
+from src.files import UploadError, save_upload, upload_path
 from src.governance.reference import add_option, get_reference_lists, remove_option, update_option
-from src.web._helpers import context_from_request, json_body, reference_options
+from src.web._helpers import context_from_request, json_body, reference_options, request_actor
 
 reference_bp = Blueprint("reference", __name__, url_prefix="/api/reference")
 
 
 def _field_spec(field: dict, options: dict[str, list]) -> dict:
     # A field backed by another list (e.g. a Division's Company, or an Owner)
-    # becomes a dropdown once that list has values.
+    # becomes a dropdown once that list has values. ``hidden`` fields (e.g. the
+    # MRC ToR file metadata) are passed through so the UI can skip them.
     reference = field.get("reference")
     if reference and options.get(reference):
-        return {"key": field["key"], "label": field["label"], "type": "choice",
+        spec = {"key": field["key"], "label": field["label"], "type": "choice",
                 "options": options[reference], "required": bool(field.get("required"))}
-    # Otherwise keep the field's own type and any static options (e.g. a choice
-    # field like the Market Data Model's update frequency).
-    return {"key": field["key"], "label": field["label"], "type": field["type"],
-            "options": list(field.get("options", [])), "required": bool(field.get("required"))}
+    else:
+        # Otherwise keep the field's own type and any static options (e.g. a
+        # choice field like the MRC frequency).
+        spec = {"key": field["key"], "label": field["label"], "type": field["type"],
+                "options": list(field.get("options", [])), "required": bool(field.get("required"))}
+    if field.get("hidden"):
+        spec["hidden"] = True
+    return spec
 
 
 def _specs():
@@ -88,3 +94,41 @@ def remove(list_name: str, item_id: str):
         list_name=list_name, item_id=item_id,
     )
     return jsonify(get_reference_lists())
+
+
+def _mrc_committee(item_id: str) -> dict | None:
+    return next((i for i in get_reference_lists().get("mrc", [])
+                 if i["item_id"] == item_id), None)
+
+
+@reference_bp.post("/collections/mrc/<item_id>/tor")
+def upload_mrc_tor(item_id: str):
+    """Upload a committee's Terms of Reference; stored against that MRC entry."""
+    if _mrc_committee(item_id) is None:
+        return jsonify({"error": "unknown committee"}), 404
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        meta = save_upload("mrc", file.filename, file.read())
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    update_option(
+        list_name="mrc", item_id=item_id,
+        fields={"tor_filename": meta["filename"], "tor_original_name": meta["original_name"]},
+        actor=request_actor(),
+    )
+    return jsonify(get_reference_lists()), 201
+
+
+@reference_bp.get("/collections/mrc/<item_id>/tor")
+def download_mrc_tor(item_id: str):
+    """Download a committee's Terms of Reference document, if uploaded."""
+    item = _mrc_committee(item_id)
+    if item is None or not item.get("tor_filename"):
+        return jsonify({"error": "no ToR uploaded"}), 404
+    path = upload_path("mrc", item["tor_filename"])
+    if not path.exists():
+        return jsonify({"error": "ToR file missing"}), 404
+    return send_file(str(path), as_attachment=True,
+                     download_name=item.get("tor_original_name") or "terms-of-reference")

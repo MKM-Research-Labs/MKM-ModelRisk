@@ -41,7 +41,9 @@ def _add(client, collection, fields):
 def test_field_specs_endpoint(client):
     specs = client.get("/api/meetings/fields").get_json()
     field_keys = [f["key"] for f in specs["fields"]]
-    assert "chair" in field_keys and "location" in field_keys
+    # mrc is the anchor; chair is derived (from the MRC), not a meeting field.
+    assert "mrc" in field_keys and "location" in field_keys
+    assert "chair" not in field_keys
     collection_keys = [c["key"] for c in specs["collections"]]
     assert "agenda" in collection_keys and "participants" in collection_keys
 
@@ -103,9 +105,20 @@ def test_update_meeting_field(client):
     _schedule(client)
     response = client.post(
         "/api/meetings/MTG1/field",
+        json={"field": "location", "value": "Boardroom 2", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.get_json()["data"]["location"] == "Boardroom 2"
+
+
+def test_update_removed_meeting_field_is_400(client):
+    """chair / company / division / department are no longer editable — they're
+    derived from the meeting's MRC binding on read."""
+    _schedule(client)
+    response = client.post(
+        "/api/meetings/MTG1/field",
         json={"field": "chair", "value": "Dr Patel", "confirmed": True}, headers=HEADERS,
     )
-    assert response.get_json()["data"]["chair"] == "Dr Patel"
+    assert response.status_code == 400
 
 
 def test_collection_add_update_remove(client):

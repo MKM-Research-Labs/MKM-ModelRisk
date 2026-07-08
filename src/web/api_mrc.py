@@ -37,8 +37,8 @@ from src.governance.mrc.pack import render_pack_pdf
 from src.governance.mrc_settings import get_settings
 from src.governance.mrc import (
     add_collection_item,
-    get_meeting,
-    list_meetings,
+    get_meeting_enriched as get_meeting,
+    list_meetings_enriched as list_meetings,
     rebuild_meeting_view,
     remove_collection_item,
     schedule_meeting,

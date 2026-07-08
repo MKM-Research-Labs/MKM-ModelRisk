@@ -17,38 +17,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""MRC settings e2e: every field on the Admin > MRC sub-tab is editable via
-the confirm-to-amend modal and visible after save."""
+"""MRC settings e2e — retired.
+
+Phase MRC-2 moves the singleton MRC settings (chair, frequency) onto
+individual MRC committees in the Admin > MRC list. Org-wide branding
+(org_name, logo, ToR) is being reshaped alongside — the Admin sub-tab
+no longer mounts a Settings.render() card, so the ``#srow-<key>`` inforow
+selectors these tests relied on no longer exist. Fresh coverage will be
+added against the new committee-detail flow once it stabilises.
+"""
 from __future__ import annotations
 
 import pytest
-from playwright.sync_api import Page, expect
-
-from tests.e2e._flows import open_admin_subtab, open_app, set_mrc_setting
 
 pytestmark = pytest.mark.e2e
-
-
-def _open(page: Page, base_url: str) -> None:
-    open_app(page, base_url)
-    # The MRC sub-tab now hosts both the committees list and the MRC branding
-    # settings (org name / chair / frequency + ToR) in the same card stack.
-    open_admin_subtab(page, "mrc")
-
-
-def test_set_org_name(page: Page, base_url: str):
-    _open(page, base_url)
-    set_mrc_setting(page, "org_name", "Sterling Bank Group")
-    expect(page.locator("#srow-org_name")).to_contain_text("Sterling Bank Group")
-
-
-def test_set_chair(page: Page, base_url: str):
-    _open(page, base_url)
-    set_mrc_setting(page, "chair", "Johnny Mattimore")
-    expect(page.locator("#srow-chair")).to_contain_text("Johnny Mattimore")
-
-
-def test_set_frequency_choice(page: Page, base_url: str):
-    _open(page, base_url)
-    set_mrc_setting(page, "frequency", "Semi-annual")
-    expect(page.locator("#srow-frequency")).to_contain_text("Semi-annual")

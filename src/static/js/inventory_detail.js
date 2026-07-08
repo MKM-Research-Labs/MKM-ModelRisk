@@ -22,7 +22,7 @@
 // Remediation, Versions, Limitations, Assumptions, Changes, Validation, Risk
 // Rating, Audit).
 const OVERVIEW_LEFT = ["description", "methodology", "tier_rationale", "source_module", "materiality", "complexity"];
-const OVERVIEW_RIGHT = ["rag_rating", "owner", "model_owner_role", "lifecycle_stage", "validation_status",
+const OVERVIEW_RIGHT = ["rag_rating", "owner", "lifecycle_stage", "validation_status",
   "last_review_date", "mrc_signoff_date", "next_review_date", "recertification_date", "review_frequency", "peer_reviewer"];
 const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
 const HEADER_DATES = ["last_review_date", "mrc_signoff_date", "next_review_date", "recertification_date"];
@@ -72,7 +72,6 @@ const Detail = {
       '<div class="dh-dates">' + dates + "</div></div>" +
       '<div class="right"><div class="olabel">OWNER</div>' +
       '<div class="oname">' + fieldDisplay(d.owner) + "</div>" +
-      '<div class="pill">' + fieldDisplay(d.model_owner_role) + "</div>" +
       '<div style="margin-top:6px">' + ragBadge(d.rag_rating) + "</div></div></div>";
   },
 
@@ -200,8 +199,16 @@ const Detail = {
     const f = this.specByKey(key);
     if (!f) return "";
     let value = fieldDisplay(d[key]);
-    if (key === "rag_rating") value = ragBadge(d[key]);
-    else if (key === "source_module" && d[key]) value = '<span class="code">' + esc(d[key]) + "</span>";
+    if (key === "rag_rating") {
+      // Show the owner's RAG alongside what the tier heatmap ("the table") says,
+      // so any divergence needing MRC sign-off is visible at a glance.
+      const tableRag = (this._risk.heatmap || {}).rag;
+      value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key]) +
+        '<span class="muted" style="font-size:11px;margin-left:12px">Table</span> ' +
+        (tableRag ? ragBadge(tableRag) : '<span class="muted">&mdash;</span>');
+    } else if (key === "source_module" && d[key]) {
+      value = '<span class="code">' + esc(d[key]) + "</span>";
+    }
     return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
       '</div><div class="v">' + value + "</div>" + this._editLink(key) + "</div>";
   },

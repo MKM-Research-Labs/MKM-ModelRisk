@@ -45,6 +45,12 @@ const Reference = {
   async _renderBody(container) {
     const res = await App.get("/api/reference");
     const spec = res.collections.find((c) => c.key === this._tab);
+    // MRC committees are entities with a drill-in detail (fields + per-committee
+    // Terms of Reference), not a plain inline-edit table.
+    if (this._tab === "mrc") {
+      Committees.render(container, spec, res.data.mrc || []);
+      return;
+    }
     const specs = { collections: [spec] };
     const data = {};
     data[this._tab] = res.data[this._tab] || [];
@@ -54,13 +60,6 @@ const Reference = {
     Collections.bind("/api/reference/collections/", specs, false, () => this.render(), data);
     if (this._tab === "company") {
       document.getElementById("logo-upload").onclick = () => this._uploadLogo();
-    }
-    // The MRC's detail — settings (name/chair/frequency) + Terms of Reference —
-    // renders below the committees list, so the whole MRC lives on one tab.
-    if (this._tab === "mrc") {
-      const detail = document.createElement("div");
-      container.appendChild(detail);
-      await Settings.render(detail);
     }
   },
 

@@ -226,7 +226,6 @@
     {
       "meeting_id": "MRC-2026-Q1", "title": "Q1 Model Risk Committee",
       "fields": {"mrc": "MRC-MARKETS", "date": "2026-03-18", "time": "14:00", "location": "Boardroom, 1 Lombard Court",
-                 "chair": "David K Kelly", "company": "Sterling Bank plc", "division": "Markets",
                  "status": "Completed"},
       "collections": {
         "agenda": [
@@ -267,8 +266,7 @@
     },
     {
       "meeting_id": "MRC-2026-Q2", "title": "Q2 Model Risk Committee",
-      "fields": {"mrc": "MRC-MARKETS", "date": "2026-06-24", "time": "14:00", "location": "Boardroom, 1 Lombard Court",
-                 "chair": "David K Kelly", "company": "Sterling Bank plc", "division": "Markets"},
+      "fields": {"mrc": "MRC-MARKETS", "date": "2026-06-24", "time": "14:00", "location": "Boardroom, 1 Lombard Court"},
       "collections": {
         "agenda": [
           {"title": "Risk rating sign-off: STB-BND-001 → Red", "presenter": "Priya Anand", "status": "Pending", "subject_model_id": "STB-BND-001", "proposed_rag": "Red", "description": "Owner requests promotion from Green to Red — heatmap (High × Medium) crossed threshold after Q1 events."},

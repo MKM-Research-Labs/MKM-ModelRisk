@@ -48,19 +48,15 @@ REVIEW_UPCOMING_DAYS = 90
 
 # Scalar meeting fields (title/date are mandatory at scheduling time). Each
 # meeting belongs to an MRC committee (the ``mrc`` binding, chosen from the
-# Admin > MRC list) — that committee carries the chair, level and cadence. A
-# meeting is also assigned to a Company, optionally narrowed to a Division and
-# then a Department (each a dropdown from the cascading org hierarchy).
+# Admin > MRC list) — that committee carries the chair, level and cadence and
+# the org scope (company/division/department). All five of those are derived
+# on read from the MRC entry; they're not stored on the meeting.
 MEETING_FIELD_SPECS = {
     "mrc": {"label": "MRC", "type": "text", "reference": "mrc"},
     "title": {"label": "Title", "type": "text"},
     "date": {"label": "Date", "type": "date"},
-    "company": {"label": "Company", "type": "text", "reference": "company"},
-    "division": {"label": "Division", "type": "text", "reference": "division"},
-    "department": {"label": "Department", "type": "text", "reference": "department"},
     "time": {"label": "Time", "type": "text"},
     "location": {"label": "Location", "type": "text"},
-    "chair": {"label": "Chair", "type": "text", "reference": "people"},
     "status": {"label": "Status", "type": "choice", "options": VALID_MEETING_STATUSES},
 }
 MEETING_FIELDS = tuple(MEETING_FIELD_SPECS.keys())

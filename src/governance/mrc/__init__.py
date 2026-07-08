@@ -28,8 +28,11 @@ from src.governance.mrc.commands import (
     update_meeting_field,
 )
 from src.governance.mrc.projection import (
+    derive_org_scope,
     get_meeting,
+    get_meeting_enriched,
     list_meetings,
+    list_meetings_enriched,
     meeting_items_for_model,
     rebuild_meeting_view,
 )
@@ -42,8 +45,11 @@ __all__ = [
     "add_collection_item",
     "update_collection_item",
     "remove_collection_item",
+    "derive_org_scope",
     "get_meeting",
+    "get_meeting_enriched",
     "list_meetings",
+    "list_meetings_enriched",
     "meeting_items_for_model",
     "rebuild_meeting_view",
 ]
