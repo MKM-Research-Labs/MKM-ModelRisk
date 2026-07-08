@@ -35,6 +35,18 @@ def json_body() -> dict[str, Any]:
     return request.get_json(silent=True) or {}
 
 
+def resolve_mrc_for_org(division: str | None, department: str | None) -> dict[str, Any]:
+    """The MRC committee responsible for a given org location, as a JSON block.
+
+    Returns ``{"mrc": <committee or None>, "level": <match level or None>}`` —
+    the shared shape used by the model and product overviews and by the sign-off
+    router to decide where a request goes.
+    """
+    from src.governance.mrc import matching_mrc  # lazy: avoids an import cycle
+    mrc, level = matching_mrc(division, department, get_reference_lists())
+    return {"mrc": mrc, "level": level}
+
+
 def reference_options() -> dict[str, list]:
     """Current option values per reference list, using each list's display field.
 

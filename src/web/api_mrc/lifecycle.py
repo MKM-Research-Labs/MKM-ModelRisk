@@ -29,6 +29,7 @@ from src.command import dispatch
 from src.governance.model_inventory import get_model
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.mrc import (
+    get_meeting as get_meeting_raw,
     get_meeting_enriched as get_meeting,
     list_meetings_enriched as list_meetings,
     rebuild_meeting_view,
@@ -38,6 +39,7 @@ from src.governance.mrc import (
 from src.governance.mrc.pack import render_pack_pdf
 from src.governance.mrc_settings import get_settings
 from src.web._helpers import context_from_request, json_body
+from src.web._signoff_routing import drain_pending_for_meeting
 from src.web.api_mrc._bp import mrc_bp
 
 
@@ -91,12 +93,15 @@ def models_in_scope(meeting_id: str):
 def schedule():
     body = json_body()
     meeting_id = body.get("meeting_id")
+    ctx = context_from_request(body)
     dispatch(
-        "schedule_meeting", schedule_meeting, context=context_from_request(body),
+        "schedule_meeting", schedule_meeting, context=ctx,
         meeting_id=meeting_id, title=body.get("title"), date=body.get("date"),
         fields=body.get("fields") or {},
     )
     rebuild_meeting_view()
+    # Pull any queued sign-off requests for this committee onto the new agenda.
+    drain_pending_for_meeting(ctx, get_meeting_raw(meeting_id) or {"meeting_id": meeting_id, "data": {}})
     return jsonify(get_meeting(meeting_id)), 201
 
 

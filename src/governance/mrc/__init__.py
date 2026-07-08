@@ -33,6 +33,7 @@ from src.governance.mrc.projection import (
     get_meeting_enriched,
     list_meetings,
     list_meetings_enriched,
+    matching_mrc,
     meeting_items_for_model,
     rebuild_meeting_view,
 )
@@ -50,6 +51,7 @@ __all__ = [
     "get_meeting_enriched",
     "list_meetings",
     "list_meetings_enriched",
+    "matching_mrc",
     "meeting_items_for_model",
     "rebuild_meeting_view",
 ]

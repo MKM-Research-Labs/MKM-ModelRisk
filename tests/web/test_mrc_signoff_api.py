@@ -23,10 +23,22 @@ from __future__ import annotations
 from tests.web.conftest import HEADERS
 
 
-def _schedule(client, meeting_id="MTG1"):
+def _seed_mrc(client, value="MRC-CO", level="Company", scope_value=None):
+    """A Company-level MRC covers every model regardless of its org unit."""
+    fields = {"value": value, "name": value, "level": level}
+    if scope_value:
+        fields["scope_value"] = scope_value
+    return client.post(
+        "/api/reference/collections/mrc",
+        json={"fields": fields, "confirmed": True}, headers=HEADERS,
+    )
+
+
+def _schedule(client, meeting_id="MTG1", mrc="MRC-CO", date="2026-06-30"):
     return client.post(
         "/api/meetings",
-        json={"meeting_id": meeting_id, "title": "Q2 MRC", "date": "2026-06-30", "confirmed": True},
+        json={"meeting_id": meeting_id, "title": "Q2 MRC", "date": date,
+              "fields": {"mrc": mrc}, "confirmed": True},
         headers=HEADERS,
     )
 
@@ -38,10 +50,11 @@ def _add(client, collection, fields):
     )
 
 
-def _schedule_meeting(client, meeting_id="MTG1"):
+def _schedule_meeting(client, meeting_id="MTG1", mrc="MRC-CO", date="2026-09-15"):
     return client.post(
         "/api/meetings",
-        json={"meeting_id": meeting_id, "title": "Q3", "date": "2026-09-15", "confirmed": True},
+        json={"meeting_id": meeting_id, "title": "Q3", "date": date,
+              "fields": {"mrc": mrc}, "confirmed": True},
         headers=HEADERS,
     )
 
@@ -55,15 +68,16 @@ def _register_subject_model(client, model_id="M1", **fields):
     )
 
 
-def _request_signoff(client, model_id="M1", meeting_id="MTG1", proposed_rag="Green"):
+def _request_signoff(client, model_id="M1", proposed_rag="Green"):
     return client.post(
         f"/api/models/{model_id}/request-signoff",
-        json={"meeting_id": meeting_id, "proposed_rag": proposed_rag, "confirmed": True},
+        json={"proposed_rag": proposed_rag, "confirmed": True},
         headers=HEADERS,
     )
 
 
-def test_request_signoff_adds_agenda_item(client):
+def test_request_signoff_attaches_to_scheduled_meeting_of_matching_mrc(client):
+    _seed_mrc(client)
     _register_subject_model(client)
     _schedule_meeting(client)
     response = _request_signoff(client)
@@ -73,31 +87,56 @@ def test_request_signoff_adds_agenda_item(client):
     assert agenda[0]["subject_model_id"] == "M1"
     assert agenda[0]["proposed_rag"] == "Green"
     assert agenda[0]["status"] == "Pending"
+    # The model-side request is now Attached to that meeting.
+    req = response.get_json()["data"]["rag_signoff_requests"][0]
+    assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
 
 
-def test_request_signoff_rejects_missing_meeting(client):
+def test_request_signoff_without_meeting_queues_pending(client):
+    _seed_mrc(client)
     _register_subject_model(client)
-    response = _request_signoff(client, meeting_id="NOPE")
-    assert response.status_code == 404
+    response = _request_signoff(client)
+    assert response.status_code == 201
+    reqs = response.get_json()["data"]["rag_signoff_requests"]
+    assert len(reqs) == 1
+    assert reqs[0]["status"] == "Pending" and reqs[0]["target_mrc"] == "MRC-CO"
+
+
+def test_pending_request_drains_onto_newly_scheduled_meeting(client):
+    _seed_mrc(client)
+    _register_subject_model(client)
+    _request_signoff(client)          # queued — no meeting yet
+    _schedule_meeting(client)          # scheduling drains the queue onto the agenda
+    agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
+    assert len(agenda) == 1 and agenda[0]["subject_model_id"] == "M1"
+    req = client.get("/api/models/M1").get_json()["data"]["rag_signoff_requests"][0]
+    assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
+
+
+def test_request_signoff_blocked_without_matching_mrc(client):
+    _register_subject_model(client)   # no MRC configured at all
+    response = _request_signoff(client)
+    assert response.status_code == 400
+    assert "MRC" in response.get_json()["error"]
 
 
 def test_request_signoff_rejects_unknown_model(client):
-    _schedule_meeting(client)
     response = _request_signoff(client, model_id="NOPE")
     assert response.status_code == 404
 
 
-def test_request_signoff_requires_fields(client):
+def test_request_signoff_requires_proposed_rag(client):
+    _seed_mrc(client)
     _register_subject_model(client)
-    _schedule_meeting(client)
     response = client.post(
         "/api/models/M1/request-signoff",
-        json={"meeting_id": "MTG1", "confirmed": True}, headers=HEADERS,
+        json={"confirmed": True}, headers=HEADERS,
     )
     assert response.status_code == 400
 
 
-def test_request_signoff_rejects_completed_meeting(client):
+def test_request_signoff_ignores_completed_meeting_and_stays_pending(client):
+    _seed_mrc(client)
     _register_subject_model(client)
     _schedule_meeting(client)
     client.post(
@@ -105,11 +144,14 @@ def test_request_signoff_rejects_completed_meeting(client):
         json={"field": "status", "value": "Completed", "confirmed": True}, headers=HEADERS,
     )
     response = _request_signoff(client)
-    assert response.status_code == 400
-    assert "Scheduled" in response.get_json()["error"]
+    assert response.status_code == 201
+    # A Completed meeting is not a valid target — the request waits as Pending.
+    assert response.get_json()["data"]["rag_signoff_requests"][0]["status"] == "Pending"
+    assert not client.get("/api/meetings/MTG1").get_json()["data"].get("agenda")
 
 
 def test_approve_signoff_snaps_model_rating_and_records_history(client):
+    _seed_mrc(client)
     _register_subject_model(client)  # Amber
     _schedule_meeting(client)
     _request_signoff(client)  # proposes Green
@@ -156,12 +198,14 @@ def test_approve_signoff_rejects_non_signoff_agenda(client):
 
 
 def test_pending_signoff_surfaces_on_risk_rating(client):
+    _seed_mrc(client)
     _register_subject_model(client)
     _schedule_meeting(client)
     _request_signoff(client)
     payload = client.get("/api/models/M1/risk-rating").get_json()
     assert payload["pending_signoff"]["proposed_rag"] == "Green"
     assert payload["pending_signoff"]["meeting_id"] == "MTG1"
+    assert payload["pending_signoff"]["status"] == "Attached"
 
 
 def test_pending_signoff_is_none_without_request(client):
@@ -173,17 +217,14 @@ def test_pending_signoff_is_none_without_request(client):
 # --- Phase MRC-4: escalate a sign-off to a parent MRC's meeting -------------
 
 def _seed_signoff_ready(client, meeting_id="MTG1", parent_id="MTG2"):
-    """Register a subject model, schedule two meetings, request a sign-off
-    on the first. Returns the agenda item id."""
+    """Seed an MRC, register a subject model, schedule two meetings of that
+    committee, and raise a sign-off. It attaches to the earliest meeting
+    (``meeting_id``). Returns that agenda item's id."""
+    _seed_mrc(client)
     _register_subject_model(client)
-    _schedule(client, meeting_id)
-    client.post(
-        "/api/meetings",
-        json={"meeting_id": parent_id, "title": "Parent MRC",
-              "date": "2026-10-15", "confirmed": True},
-        headers=HEADERS,
-    )
-    _request_signoff(client, model_id="M1", meeting_id=meeting_id)
+    _schedule(client, meeting_id, date="2026-06-30")           # earliest → attach target
+    _schedule(client, parent_id, date="2026-10-15")            # later parent meeting
+    _request_signoff(client, model_id="M1")
     agenda = client.get(f"/api/meetings/{meeting_id}").get_json()["data"]["agenda"]
     return agenda[0]["item_id"]
 

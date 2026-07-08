@@ -160,6 +160,41 @@ def derive_org_scope(mrc_value: str | None, refs: dict[str, list]) -> dict[str, 
     return result
 
 
+def matching_mrc(
+    division: str | None, department: str | None, refs: dict[str, list],
+) -> tuple[dict[str, Any] | None, str | None]:
+    """The most-specific active MRC committee covering an org location.
+
+    The inverse of :func:`derive_org_scope`: given where a model sits, find the
+    committee responsible for it. A Department-level committee for the model's
+    department wins; failing that a Division-level committee for its division;
+    failing that a Company-level (institution-wide) committee. Archived
+    committees are never matched. Returns ``(committee, level)`` or
+    ``(None, None)`` when nothing covers it.
+    """
+    active = [m for m in refs.get("mrc") or [] if m.get("archived") != "true"]
+    if department:
+        dept = next(
+            (m for m in active
+             if m.get("level") == "Department" and m.get("scope_value") == department),
+            None,
+        )
+        if dept:
+            return dept, "Department"
+    if division:
+        div = next(
+            (m for m in active
+             if m.get("level") == "Division" and m.get("scope_value") == division),
+            None,
+        )
+        if div:
+            return div, "Division"
+    company = next((m for m in active if m.get("level") == "Company"), None)
+    if company:
+        return company, "Company"
+    return None, None
+
+
 def meeting_items_for_model(
     collection: str, model_id: str, config=None, *, field: str = "model_id",
 ) -> list[dict[str, Any]]:

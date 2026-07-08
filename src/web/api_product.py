@@ -52,6 +52,7 @@ from src.web._helpers import (
     reference_options,
     request_actor,
     resolve_field,
+    resolve_mrc_for_org,
 )
 
 product_bp = Blueprint("product", __name__, url_prefix="/api/products")
@@ -133,6 +134,20 @@ def get_one(product_id: str):
     if product is None:
         return jsonify({"error": "Product not found"}), 404
     return jsonify(product)
+
+
+@product_bp.get("/<product_id>/mrc")
+def product_mrc(product_id: str):
+    """The MRC for this product, inherited from its Analytics Model's org unit."""
+    product = get_product(product_id)
+    if product is None:
+        return jsonify({"error": "Product not found"}), 404
+    analytics_model = (product["data"] or {}).get("analytics_model")
+    model = get_model(analytics_model) if analytics_model else None
+    data = (model["data"] if model else {}) or {}
+    result = resolve_mrc_for_org(data.get("division"), data.get("department"))
+    result["via_model"] = analytics_model
+    return jsonify(result)
 
 
 @product_bp.post("")
