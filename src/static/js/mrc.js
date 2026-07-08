@@ -116,6 +116,7 @@ const MRC = {
       const n = (k) => (d[k] || []).length;
       rows += '<tr class="clickable" data-id="' + esc(m.meeting_id) + '">' +
         '<td class="modelid">' + esc(m.meeting_id) + "</td>" +
+        "<td>" + fieldDisplay(d.mrc) + "</td>" +
         "<td>" + fieldDisplay(d.title) + "</td>" +
         "<td>" + fieldDisplay(d.date) + "</td>" +
         "<td>" + statusBadge(m.status) + "</td>" +
@@ -123,7 +124,7 @@ const MRC = {
         '<td class="num">' + n("minutes") + '</td><td class="num">' + n("documents") + "</td></tr>";
     });
     box.innerHTML =
-      "<table><thead><tr><th>ID</th><th>Title</th><th>Date</th><th>Status</th>" +
+      "<table><thead><tr><th>ID</th><th>MRC</th><th>Title</th><th>Date</th><th>Status</th>" +
       "<th>Models</th><th>Agenda</th><th>Minutes</th><th>Docs</th></tr></thead><tbody>" +
       rows + "</tbody></table>";
     box.querySelectorAll("tr.clickable").forEach(function (tr) {

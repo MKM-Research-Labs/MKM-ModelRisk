@@ -97,6 +97,7 @@ def test_retire_model(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-008", "Legacy Model")
     open_model(page, "MKM-E2E-008")
+    page.click("[data-dtab='danger']")
     page.click("#d-retire")
     confirm(page)
     expect(page.locator("tr.clickable[data-id='MKM-E2E-008']")).to_contain_text("retired")
@@ -216,16 +217,20 @@ def test_register_with_company_assignment(page: Page, base_url: str):
 # --- X2 coverage: retired read-only, org-scope filter, per-model audit ------
 
 def test_retired_model_hides_edit_and_danger_zone(page: Page, base_url: str):
-    """Once retired, edit pencils vanish and the Danger Zone is suppressed."""
+    """Once retired, edit pencils vanish and the Danger tab shows a read-only note."""
     open_app(page, base_url)
     register_model(page, "MKM-X2-RET", "Legacy Model")
     open_model(page, "MKM-X2-RET")
+    page.click("[data-dtab='danger']")
     page.click("#d-retire")
     confirm(page)
     open_model(page, "MKM-X2-RET")  # reopen after list re-render
-    # No danger zone.
+    # Danger tab now shows the read-only note, not the retire card.
+    page.click("[data-dtab='danger']")
+    expect(page.locator("#dt-content")).to_contain_text("read-only")
     expect(page.locator(".danger-zone")).to_have_count(0)
     # No edit pencils on any Overview row.
+    page.click("[data-dtab='overview']")
     expect(page.locator("[data-edit]")).to_have_count(0)
     # "Read only" badge is shown somewhere in the detail.
     expect(page.locator("#m-detail")).to_contain_text("retired")

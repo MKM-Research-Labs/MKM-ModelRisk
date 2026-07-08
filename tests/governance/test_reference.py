@@ -42,7 +42,7 @@ def test_only_one_company_allowed():
 def test_lists_empty_initially():
     assert get_reference_lists() == {
         "people": [], "company": [], "division": [], "department": [],
-        "calculating_agent": [],
+        "calculating_agent": [], "mrc": [],
     }
 
 

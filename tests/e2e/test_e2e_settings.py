@@ -31,19 +31,13 @@ pytestmark = pytest.mark.e2e
 
 def _open(page: Page, base_url: str) -> None:
     open_app(page, base_url)
-    open_admin_subtab(page, "mrc")
+    open_admin_subtab(page, "mrc_settings")
 
 
 def test_set_org_name(page: Page, base_url: str):
     _open(page, base_url)
     set_mrc_setting(page, "org_name", "Sterling Bank Group")
     expect(page.locator("#srow-org_name")).to_contain_text("Sterling Bank Group")
-
-
-def test_set_org_address(page: Page, base_url: str):
-    _open(page, base_url)
-    set_mrc_setting(page, "org_address", "1 Pearl Lane, London EC2")
-    expect(page.locator("#srow-org_address")).to_contain_text("1 Pearl Lane, London EC2")
 
 
 def test_set_chair(page: Page, base_url: str):
@@ -56,15 +50,3 @@ def test_set_frequency_choice(page: Page, base_url: str):
     _open(page, base_url)
     set_mrc_setting(page, "frequency", "Semi-annual")
     expect(page.locator("#srow-frequency")).to_contain_text("Semi-annual")
-
-
-def test_set_handbook_reference(page: Page, base_url: str):
-    _open(page, base_url)
-    set_mrc_setting(page, "handbook_reference", "MRH-2026-v3")
-    expect(page.locator("#srow-handbook_reference")).to_contain_text("MRH-2026-v3")
-
-
-def test_set_framework(page: Page, base_url: str):
-    _open(page, base_url)
-    set_mrc_setting(page, "framework", "SR 26-2 / EU CRR3")
-    expect(page.locator("#srow-framework")).to_contain_text("SR 26-2 / EU CRR3")

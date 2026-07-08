@@ -1,11 +1,8 @@
 {
   "settings": {
     "org_name": "Sterling Bank plc",
-    "org_address": "1 Lombard Court, London EC3V 9AH",
     "chair": "David K Kelly",
-    "frequency": "Quarterly",
-    "handbook_reference": "SR 26-2 / Handbook of Model Risk Management for Vendors",
-    "framework": "Sterling Bank Model Risk Governance Framework"
+    "frequency": "Quarterly"
   },
   "reference": {
     "company": [
@@ -32,6 +29,9 @@
       {"value": "Murex"},
       {"value": "Calypso"},
       {"value": "AM"}
+    ],
+    "mrc": [
+      {"value": "MRC-MARKETS", "name": "Markets Model Risk Committee", "level": "Division", "scope_value": "Markets", "chair": "David K Kelly", "frequency": "Quarterly"}
     ]
   },
   "models": [
@@ -225,7 +225,7 @@
   "meetings": [
     {
       "meeting_id": "MRC-2026-Q1", "title": "Q1 Model Risk Committee",
-      "fields": {"date": "2026-03-18", "time": "14:00", "location": "Boardroom, 1 Lombard Court",
+      "fields": {"mrc": "MRC-MARKETS", "date": "2026-03-18", "time": "14:00", "location": "Boardroom, 1 Lombard Court",
                  "chair": "David K Kelly", "company": "Sterling Bank plc", "division": "Markets",
                  "status": "Completed"},
       "collections": {
@@ -267,7 +267,7 @@
     },
     {
       "meeting_id": "MRC-2026-Q2", "title": "Q2 Model Risk Committee",
-      "fields": {"date": "2026-06-24", "time": "14:00", "location": "Boardroom, 1 Lombard Court",
+      "fields": {"mrc": "MRC-MARKETS", "date": "2026-06-24", "time": "14:00", "location": "Boardroom, 1 Lombard Court",
                  "chair": "David K Kelly", "company": "Sterling Bank plc", "division": "Markets"},
       "collections": {
         "agenda": [
