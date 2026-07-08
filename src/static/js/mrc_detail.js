@@ -60,7 +60,9 @@ const MeetingDetail = {
 
   _info(d) {
     // Phase MRC-2/5: mrc + org tier and chair are derived from the MRC binding;
-    // shown read-only. date/time/location/status stay editable.
+    // date/time/location are fixed at scheduling — all shown read-only. Only
+    // Status stays editable: it's the meeting's lifecycle control (Scheduled →
+    // Held/Completed), and nothing else in the UI moves it.
     const readOnly = (label, key) => '<span class="datechip" id="minfo-' + key + '">' +
       '<span class="muted">' + label + ':</span> <b>' + fieldDisplay(d[key]) + "</b></span>";
     const editable = (label, key) => '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
@@ -68,8 +70,8 @@ const MeetingDetail = {
       '<span class="edit-btn" data-minfo="' + key + '">edit</span></span>';
     return '<div class="dh-dates">' + readOnly("MRC", "mrc") + readOnly("Division", "division") +
       readOnly("Department", "department") + readOnly("Chair", "chair") + "</div>" +
-      '<div class="dh-dates">' + editable("Date", "date") + editable("Time", "time") +
-      editable("Location", "location") + editable("Status", "status") + "</div>";
+      '<div class="dh-dates">' + readOnly("Date", "date") + readOnly("Time", "time") +
+      readOnly("Location", "location") + editable("Status", "status") + "</div>";
   },
 
   _tabbar(d) {
@@ -176,7 +178,7 @@ const MeetingDetail = {
     document.querySelectorAll("[data-agapprove]").forEach(function (btn) {
       const item = byId("data-agapprove", btn);
       btn.onclick = () => App.amend("Approve sign-off for " + item.subject_model_id +
-        " → " + item.proposed_rag + ".", "POST",
+        " → " + item.proposed_rag + ". Add any comments in the box below (optional).", "POST",
         "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff", {},
         () => self.show(self._id, "agenda"));
     });
@@ -207,23 +209,38 @@ const MeetingDetail = {
     };
   },
 
-  // Phase MRC-4: reuse the sign-off picker overlay to choose which parent-MRC
-  // Scheduled meeting the escalation lands on.
+  // Phase MRC-4: reuse the sign-off picker overlay to choose which MRC the
+  // escalation goes to. You pick a committee, not a specific meeting — it lands
+  // on that MRC's soonest Scheduled meeting.
   async _openEscalatePicker(item) {
     const meetings = (await App.get("/api/meetings")).filter(
-      (m) => m.status === "Scheduled" && m.meeting_id !== this._id,
+      (m) => m.status === "Scheduled" && m.meeting_id !== this._id && (m.data || {}).mrc,
     );
-    if (!meetings.length) {
-      App.toast("No other Scheduled meetings available to escalate to.", "error");
+    // Group Scheduled meetings by their MRC; each committee routes to its
+    // earliest-dated meeting (the option value the backend attaches to).
+    const byMrc = {};
+    meetings.forEach((m) => {
+      const cur = byMrc[m.data.mrc];
+      if (!cur || (m.data.date || "9999-99-99") < (cur.data.date || "9999-99-99")) {
+        byMrc[m.data.mrc] = m;
+      }
+    });
+    const mrcs = Object.keys(byMrc).sort();
+    if (!mrcs.length) {
+      App.toast("No other MRC has a Scheduled meeting to escalate to.", "error");
       return;
     }
     const pick = document.getElementById("signoff-meeting-pick");
-    pick.innerHTML = meetings.map((m) => "<option value=\"" + esc(m.meeting_id) + "\">" +
-      esc(m.meeting_id) + " · " + esc(m.data.title || "") +
-      (m.data.date ? " (" + esc(m.data.date) + ")" : "") + "</option>").join("");
+    pick.innerHTML = mrcs.map((mrc) => {
+      const m = byMrc[mrc];
+      return "<option value=\"" + esc(m.meeting_id) + "\">" + esc(mrc) + " · " +
+        esc(m.data.title || m.meeting_id) +
+        (m.data.date ? " (" + esc(m.data.date) + ")" : "") + "</option>";
+    }).join("");
     document.getElementById("signoff-summary").innerHTML =
       "Escalate sign-off for <b>" + esc(item.subject_model_id) +
-      "</b> → proposed <b>" + esc(item.proposed_rag) + "</b> to a higher-tier MRC meeting.";
+      "</b> → proposed <b>" + esc(item.proposed_rag) +
+      "</b> to another MRC. It lands on that committee's next Scheduled meeting.";
     const overlay = document.getElementById("signoff-overlay");
     overlay.classList.remove("hidden");
     const self = this;

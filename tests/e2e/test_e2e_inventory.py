@@ -177,9 +177,8 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
     edit_model_field(page, "complexity", "Low", choice=True)  # -> Amber cell
     expect(page.locator("#row-complexity")).to_contain_text("Low")
     page.click("[data-dtab='risk']")
+    # Auto-routes to the model's Company-level MRC and attaches to its meeting.
     page.click("#req-signoff")
-    page.select_option("#signoff-meeting-pick", "MRC-X1-SO")
-    page.click("#signoff-submit")
     confirm(page)
     # MRC approves via the agenda tab (bespoke renderer since the user's rewrite;
     # sign-off items expose a data-agapprove hook).

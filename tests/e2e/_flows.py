@@ -97,6 +97,10 @@ def edit_model_field(page: Page, key: str, value: str, *, choice: bool = False) 
         page.fill("#ed-input", value)
     page.click("#ed-save")
     confirm(page)
+    # Wait for the async re-render to settle — the inline editor is gone once the
+    # detail has re-fetched and re-rendered. Otherwise a follow-on tab switch can
+    # race the re-render and get clobbered back to the overview.
+    expect(page.locator("#ed-input")).to_have_count(0)
 
 
 def edit_product_field(page: Page, key: str, value: str, *, choice: bool = False) -> None:
