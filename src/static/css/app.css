@@ -122,6 +122,7 @@ tr.clickable:hover td { background: #f7fbff; }
 .vitem { border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; margin-bottom: 10px; font-size: 12px; }
 .rowact { white-space: nowrap; }
 .rowact .edit-btn + .edit-btn { margin-left: 10px; }
+.rowact .btn + .btn { margin-left: 8px; }
 td.num, th.num { text-align: center; }
 
 /* GitHub-style "Danger Zone" — red-bordered card holding destructive actions. */

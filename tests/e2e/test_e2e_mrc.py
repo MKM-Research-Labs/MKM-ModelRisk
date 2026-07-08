@@ -29,7 +29,21 @@ from tests.e2e._flows import confirm, open_app, open_model, open_tab, register_m
 pytestmark = pytest.mark.e2e
 
 
-def _schedule(page: Page, meeting_id: str, title: str):
+def _seed_default_mrc(page: Page, base_url: str) -> None:
+    """Seed a Company-level MRC committee via API. mrc.js hides the schedule
+    form until at least one committee exists (Phase MRC-5)."""
+    page.request.post(
+        base_url + "/api/reference/collections/mrc",
+        data={"fields": {"value": "MRC-DEFAULT", "name": "Default MRC", "level": "Company"},
+              "confirmed": True},
+        headers={"X-Auth-Request-User": "e2e", "Content-Type": "application/json"},
+    )
+
+
+def _schedule(page: Page, base_url: str, meeting_id: str, title: str):
+    """Seed a default committee, open the MRC tab, fill the schedule form."""
+    _seed_default_mrc(page, base_url)
+    open_tab(page, "mrc")
     page.fill("#sc-meeting_id", meeting_id)
     page.fill("#sc-title", title)
     page.fill("#sc-date", "2026-09-15")
@@ -39,15 +53,13 @@ def _schedule(page: Page, meeting_id: str, title: str):
 
 def test_schedule_meeting_appears(page: Page, base_url: str):
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-2026-Q3", "Q3 Model Risk Committee")
+    _schedule(page, base_url, "MRC-2026-Q3", "Q3 Model Risk Committee")
     expect(page.locator("tr.clickable[data-id='MRC-2026-Q3']")).to_contain_text("Q3 Model Risk Committee")
 
 
 def test_double_click_opens_meeting_detail(page: Page, base_url: str):
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-2026-Q4", "Q4 Model Risk Committee")
+    _schedule(page, base_url, "MRC-2026-Q4", "Q4 Model Risk Committee")
     page.dblclick("tr.clickable[data-id='MRC-2026-Q4']")
     detail = page.locator("#mt-detail")
     expect(detail).to_contain_text("Q4 Model Risk Committee")
@@ -58,8 +70,7 @@ def test_double_click_opens_meeting_detail(page: Page, base_url: str):
 def test_bulk_add_minutes(page: Page, base_url: str):
     """Fill three of the five minutes rows and save them in one go."""
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-2026-BLK", "Bulk Minutes")
+    _schedule(page, base_url, "MRC-2026-BLK", "Bulk Minutes")
     page.dblclick("tr.clickable[data-id='MRC-2026-BLK']")
     page.click("[data-mtab='minutes']")
     expect(page.locator("[data-bulk-add='minutes']")).to_be_visible()
@@ -87,8 +98,7 @@ def test_models_multi_select_saves_selection(page: Page, base_url: str):
     register_model(page, "MKM-MS-002", "Market Risk")
     register_model(page, "MKM-MS-003", "Liquidity")
 
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-MS", "Multi-select")
+    _schedule(page, base_url, "MRC-MS", "Multi-select")
     page.dblclick("tr.clickable[data-id='MRC-MS']")
     page.click("[data-mtab='models_in_scope']")
 
@@ -113,8 +123,7 @@ def test_models_multi_select_saves_selection(page: Page, base_url: str):
 def test_meeting_pack_pdf_downloads(page: Page, base_url: str):
     """The Meeting Pack PDF endpoint returns an application/pdf response."""
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-PACK", "Pack Meeting")
+    _schedule(page, base_url, "MRC-PACK", "Pack Meeting")
     response = page.request.get(f"{base_url}/api/meetings/MRC-PACK/pack.pdf")
     if response.status != 200:
         # tectonic not installed on this machine — record the skip cleanly.
@@ -142,8 +151,7 @@ def _edit_meeting_field(page: Page, key: str, value: str) -> None:
 
 def test_edit_meeting_location(page: Page, base_url: str):
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-EDIT-2", "Editable Meeting")
+    _schedule(page, base_url, "MRC-EDIT-2", "Editable Meeting")
     page.dblclick("tr.clickable[data-id='MRC-EDIT-2']")
     _edit_meeting_field(page, "location", "Room 204, 1 Lombard Court")
     expect(page.locator("#minfo-location")).to_contain_text("Room 204")
@@ -151,8 +159,7 @@ def test_edit_meeting_location(page: Page, base_url: str):
 
 def test_edit_meeting_status_choice(page: Page, base_url: str):
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-EDIT-3", "Editable Meeting")
+    _schedule(page, base_url, "MRC-EDIT-3", "Editable Meeting")
     page.dblclick("tr.clickable[data-id='MRC-EDIT-3']")
     _edit_meeting_field(page, "status", "Completed")
     expect(page.locator("#minfo-status")).to_contain_text("Completed")
@@ -160,23 +167,25 @@ def test_edit_meeting_status_choice(page: Page, base_url: str):
 
 # --- X2 coverage: bulk-add for the other three collection tabs --------------
 
-def test_bulk_add_agenda_items(page: Page, base_url: str):
+def test_add_agenda_items(page: Page, base_url: str):
+    """Agenda uses a bespoke card-per-item renderer (per-item approve/escalate),
+    not the shared Collections bulk-add — add items one at a time."""
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-BULK-AG", "Bulk Agenda")
+    _schedule(page, base_url, "MRC-BULK-AG", "Bulk Agenda")
     page.dblclick("tr.clickable[data-id='MRC-BULK-AG']")
     page.click("[data-mtab='agenda']")
-    page.fill("#badd-agenda-0-title", "Item A")
-    page.fill("#badd-agenda-1-title", "Item B")
-    page.click("[data-bulk-add='agenda']")
-    confirm(page)
-    expect(page.locator("[data-mtab='agenda']")).to_contain_text("(2)")
+    for i, title in enumerate(("Item A", "Item B"), start=1):
+        page.fill("#ag-add-title", title)
+        page.click("#ag-add")
+        confirm(page)
+        expect(page.locator("[data-mtab='agenda']")).to_contain_text(f"({i})")
+    expect(page.locator("#agenda-list")).to_contain_text("Item A")
+    expect(page.locator("#agenda-list")).to_contain_text("Item B")
 
 
 def test_bulk_add_decisions(page: Page, base_url: str):
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-BULK-DC", "Bulk Decisions")
+    _schedule(page, base_url, "MRC-BULK-DC", "Bulk Decisions")
     page.dblclick("tr.clickable[data-id='MRC-BULK-DC']")
     page.click("[data-mtab='decisions']")
     page.fill("#badd-decisions-0-description", "Decision one")
@@ -189,8 +198,7 @@ def test_bulk_add_decisions(page: Page, base_url: str):
 
 def test_bulk_add_actions(page: Page, base_url: str):
     open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-BULK-AC", "Bulk Actions")
+    _schedule(page, base_url, "MRC-BULK-AC", "Bulk Actions")
     page.dblclick("tr.clickable[data-id='MRC-BULK-AC']")
     page.click("[data-mtab='actions']")
     page.fill("#badd-actions-0-description", "Follow up with Priya")
@@ -214,8 +222,7 @@ def test_signoff_workflow_owner_requests_and_mrc_approves(page: Page, base_url: 
     open_app(page, base_url)
     register_model(page, "MKM-SO-01", "Sign-off Model")
     # Schedule a meeting so the request modal has a target.
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-SO", "Sign-off Meeting")
+    _schedule(page, base_url, "MRC-SO", "Sign-off Meeting")
     # Set materiality + complexity to place it on the heatmap (Amber cell).
     open_tab(page, "inventory")
     open_model(page, "MKM-SO-01")
@@ -238,7 +245,7 @@ def test_signoff_workflow_owner_requests_and_mrc_approves(page: Page, base_url: 
     open_tab(page, "mrc")
     page.dblclick("tr.clickable[data-id='MRC-SO']")
     page.click("[data-mtab='agenda']")
-    approve = page.get_by_text("Approve sign-off").first
+    approve = page.locator("[data-agapprove]").first
     expect(approve).to_be_visible()
     approve.click()
     confirm(page)
@@ -253,8 +260,7 @@ def test_decision_linked_to_model_appears_on_model_detail(page: Page, base_url: 
     open_app(page, base_url)
     register_model(page, "MKM-LINK-001", "Linked Model")
 
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-LINK", "Linked Meeting")
+    _schedule(page, base_url, "MRC-LINK", "Linked Meeting")
     page.dblclick("tr.clickable[data-id='MRC-LINK']")
     _bulk_add_decision(page, "Approve recalibration", "MKM-LINK-001")
 
@@ -277,14 +283,10 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
     registration are already covered elsewhere; this test is about the filter.
     """
     headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
-    # Org tree
-    for value in ("Alpha Bank",):
-        page.request.post(base_url + "/api/reference/collections/company",
-                          data={"fields": {"value": value}, "confirmed": True}, headers=headers)
-    for name, company in (("Markets", "Alpha Bank"),):
-        page.request.post(base_url + "/api/reference/collections/division",
-                          data={"fields": {"value": name, "company": company},
-                                "confirmed": True}, headers=headers)
+    # Org tree — Phase MRC-5: the single institution is implicit; only the
+    # Division/Department tiers are stored as reference lists.
+    page.request.post(base_url + "/api/reference/collections/division",
+                      data={"fields": {"value": "Markets"}, "confirmed": True}, headers=headers)
     for name, division in (("Rates Trading", "Markets"), ("Equity Derivatives", "Markets")):
         page.request.post(base_url + "/api/reference/collections/department",
                           data={"fields": {"value": name, "division": division},
@@ -299,8 +301,7 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
                            ("MRC-M-EQD", "Equity Derivatives")):
         page.request.post(base_url + "/api/models",
                           data={"model_id": model_id, "name": model_id,
-                                "fields": {"company": "Alpha Bank", "division": "Markets",
-                                           "department": dept},
+                                "fields": {"division": "Markets", "department": dept},
                                 "confirmed": True}, headers=headers)
     # Schedule a meeting bound to the Department MRC.
     page.request.post(base_url + "/api/meetings",

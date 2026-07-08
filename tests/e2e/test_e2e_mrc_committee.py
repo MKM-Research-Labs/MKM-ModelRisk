@@ -116,6 +116,14 @@ def test_committee_edit_frequency_choice(page: Page, base_url: str):
 
 def test_committee_scoped_to_department(page: Page, base_url: str):
     """A Department-level committee keeps its org anchor (level + scope) on the row."""
+    # Seed the org tree (Division + Department) via API so the scope picker has
+    # options; the Committee admin drives its scope select from those lists.
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    page.request.post(base_url + "/api/reference/collections/division",
+                      data={"fields": {"value": "Markets"}, "confirmed": True}, headers=headers)
+    page.request.post(base_url + "/api/reference/collections/department",
+                      data={"fields": {"value": "Rates Trading", "division": "Markets"},
+                            "confirmed": True}, headers=headers)
     _open_mrc_admin(page, base_url)
     item_id = _add_committee(page, {
         "value": "MRC-DEPT-RATES",
@@ -129,13 +137,18 @@ def test_committee_scoped_to_department(page: Page, base_url: str):
     expect(row).to_contain_text("Rates Trading")
 
 
-def test_committee_remove(page: Page, base_url: str):
+def test_committee_archive(page: Page, base_url: str):
+    """Committees are archived, never deleted — the row stays in the list but
+    is marked ``muted`` and gains an "Archived" badge."""
     _open_mrc_admin(page, base_url)
     item_id = _add_committee(page, _COMPANY_MRC)
     _open_detail(page, item_id)
-    page.click("#crm")
+    page.click("#carch")
     confirm(page)
-    expect(page.locator(f"tr.clickable[data-cid='{item_id}']")).to_have_count(0)
+    row = page.locator(f"tr.clickable[data-cid='{item_id}']")
+    expect(row).to_be_visible()
+    expect(row).to_have_class("clickable muted")
+    expect(row).to_contain_text("Archived")
 
 
 def test_committee_tor_upload(page: Page, base_url: str, tmp_path):

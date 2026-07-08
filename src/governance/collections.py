@@ -50,11 +50,14 @@ def fold(collections: dict[str, tuple], event_type: str, payload: dict[str, Any]
     """
     collection = payload.get("collection")
     if event_type == EVENT_ITEM_ADDED:
-        item = {k: v for k, v in payload.items() if k != "collection"}
+        item = {k: v for k, v in payload.items() if k != "collection" and not k.startswith("_")}
         return {**collections, collection: collections.get(collection, ()) + (item,)}
     if event_type == EVENT_ITEM_UPDATED:
         item_id = payload["item_id"]
-        changes = {k: v for k, v in payload.items() if k not in ("collection", "item_id")}
+        # ``_``-prefixed keys are audit metadata (e.g. ``_changes`` old→new
+        # values), never item state — the fold only applies the flat field keys.
+        changes = {k: v for k, v in payload.items()
+                   if k not in ("collection", "item_id") and not k.startswith("_")}
         items = tuple(
             {**it, **changes} if it["item_id"] == item_id else it
             for it in collections.get(collection, ())
@@ -77,6 +80,10 @@ def _spec(specs: dict, collection: str) -> dict:
 
 def _has_item(collections: dict, collection: str, item_id: str) -> bool:
     return any(it["item_id"] == item_id for it in collections.get(collection, ()))
+
+
+def _find_item(collections: dict, collection: str, item_id: str) -> dict | None:
+    return next((it for it in collections.get(collection, ()) if it["item_id"] == item_id), None)
 
 
 def _validate(spec: dict, fields: dict[str, Any], *, require_required: bool) -> None:
@@ -109,11 +116,14 @@ def decide_update(
     collections: dict, specs: dict, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     spec = _spec(specs, collection)
-    if not _has_item(collections, collection, item_id):
+    current = _find_item(collections, collection, item_id)
+    if current is None:
         raise DomainError(f"unknown item: {item_id}")
     _validate(spec, fields, require_required=False)
     payload: dict[str, Any] = {"collection": collection, "item_id": item_id}
     payload.update(fields)
+    # Capture the before/after for the audit trail (skipped by ``fold``).
+    payload["_changes"] = {k: {"from": current.get(k), "to": v} for k, v in fields.items()}
     return EVENT_ITEM_UPDATED, payload
 
 
@@ -121,6 +131,9 @@ def decide_remove(
     collections: dict, specs: dict, *, collection: str, item_id: str
 ) -> tuple[str, dict[str, Any]]:
     _spec(specs, collection)
-    if not _has_item(collections, collection, item_id):
+    current = _find_item(collections, collection, item_id)
+    if current is None:
         raise DomainError(f"unknown item: {item_id}")
-    return EVENT_ITEM_REMOVED, {"collection": collection, "item_id": item_id}
+    # Retain the removed item's values so the audit trail can show what was lost.
+    removed = {k: v for k, v in current.items() if k != "item_id"}
+    return EVENT_ITEM_REMOVED, {"collection": collection, "item_id": item_id, "_removed": removed}

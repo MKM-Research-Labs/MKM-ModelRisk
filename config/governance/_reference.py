@@ -69,6 +69,10 @@ REFERENCE_SPECS = {
         # detail view renders an upload/download control instead.
         {"key": "tor_filename", "label": "ToR file", "type": "text", "hidden": True},
         {"key": "tor_original_name", "label": "ToR name", "type": "text", "hidden": True},
+        # A committee is never deleted — only archived. Retained for history and
+        # any meetings already bound to it. Hidden from the table/add form; the
+        # detail view offers an Archive / Unarchive toggle.
+        {"key": "archived", "label": "Archived", "type": "text", "hidden": True},
     ]},
     # --- Product reference data (platform) ---
     "calculating_agent": {"label": "Calculating Agent", "id_prefix": "CA", "display": "value",

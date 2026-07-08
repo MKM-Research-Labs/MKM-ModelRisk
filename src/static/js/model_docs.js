@@ -62,7 +62,7 @@ const ModelDocs = {
       esc((d.uploaded_at || "").slice(0, 10)) + "</td><td>" + fmtSize(d.size) +
       '</td><td class="rowact"><a href="' + this._base + this._id + "/documents/" + esc(d.item_id) +
       '/download">Download</a>' +
-      (this._retired ? "" : '<span class="edit-btn" data-rmdoc="' + esc(d.item_id) + '">Delete</span>') +
+      (this._retired ? "" : ' <button class="btn small danger" data-rmdoc="' + esc(d.item_id) + '">Delete</button>') +
       "</td></tr>").join("") : '<tr><td colspan="5" class="empty">No documents.</td></tr>';
     const upload = this._retired ? "" :
       '<div class="row" style="align-items:center;margin-bottom:10px"><input type="file" id="doc-file">' +

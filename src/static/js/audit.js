@@ -18,22 +18,63 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// snake_case / list-key → Title Case for display ("due_date" → "Due Date").
+function auditHumanize(key) {
+  if (!key) return "";
+  return String(key).replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+// Render a before/after value; empty / null shows a muted em-dash.
+function auditValue(v) {
+  if (v === null || v === undefined || v === "") return "<span class='muted'>—</span>";
+  return esc(String(v));
+}
+
 const Audit = {
+  // Which record a change touched: the reference/collection item where known,
+  // otherwise the raw aggregate (for events that aren't collection changes).
+  _record(e) {
+    if (e.target) {
+      return esc(auditHumanize(e.target.collection)) +
+        (e.target.item_id ? " <span class='pill'>" + esc(e.target.item_id) + "</span>" : "");
+    }
+    return esc(e.aggregate_type) + " <span class='pill'>" + esc(e.aggregate_id) + "</span>";
+  },
+
+  // One line per changed field, so Field / Old / New stay aligned within a row.
+  _cells(e) {
+    if (e.changes && e.changes.length) {
+      return {
+        field: e.changes.map((c) => esc(auditHumanize(c.field))).join("<br>"),
+        old: e.changes.map((c) => auditValue(c.from)).join("<br>"),
+        neu: e.changes.map((c) => auditValue(c.to)).join("<br>"),
+      };
+    }
+    // Non-collection events (model registered, meeting held, sign-off, …): no
+    // field-level diff — surface the event name instead.
+    return { field: "<span class='muted'>" + esc(e.event_type) + "</span>", old: "—", neu: "—" };
+  },
+
   async render() {
     const el = document.getElementById("tab-audit");
     const events = await App.get("/api/audit");
     let rows = "";
+    const self = this;
     events.forEach(function (e) {
       const when = e.recorded_at.replace("T", " ").slice(0, 19);
+      const c = self._cells(e);
       rows +=
         "<tr><td>" + esc(e.global_seq) + "</td><td>" + esc(when) + "</td>" +
         "<td>" + esc(e.actor) + "</td>" +
-        "<td>" + esc(e.aggregate_type) + "<br><span class='pill'>" + esc(e.aggregate_id) + "</span></td>" +
-        "<td>" + esc(e.event_type) + "</td>" +
+        "<td>" + self._record(e) + "</td>" +
+        "<td>" + c.field + "</td>" +
+        "<td>" + c.old + "</td>" +
+        "<td>" + c.neu + "</td>" +
         "<td>" + esc(e.reason || "—") + "</td></tr>";
     });
     const body = events.length
-      ? "<table><thead><tr><th>#</th><th>When (UTC)</th><th>Actor</th><th>Aggregate</th><th>Event</th><th>Reason</th></tr></thead><tbody>" +
+      ? "<table><thead><tr><th>#</th><th>When (UTC)</th><th>Who</th><th>Record</th>" +
+        "<th>Field</th><th>Old</th><th>New</th><th>Reason</th></tr></thead><tbody>" +
         rows + "</tbody></table>"
       : '<div class="empty">No events yet. Every change you make appears here, in order, immutably.</div>';
     el.innerHTML =
