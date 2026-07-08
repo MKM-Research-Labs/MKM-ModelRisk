@@ -65,10 +65,15 @@ def resolve_field(field: dict, options_by_list: dict | None = None) -> dict:
     if reference and options_by_list.get(reference):
         field_type = "choice"
         options = options_by_list[reference]
-    return {
+    resolved = {
         "key": field["key"], "label": field["label"], "type": field_type,
         "options": options, "required": bool(field.get("required")),
     }
+    # Carry the hidden flag through so the UI can skip internal fields (e.g. the
+    # agenda escalation back-pointers) in tables and add forms.
+    if field.get("hidden"):
+        resolved["hidden"] = True
+    return resolved
 
 
 def request_actor() -> str:
