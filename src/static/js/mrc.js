@@ -42,7 +42,10 @@ const MRC = {
 
   async render() {
     const specs = await this.specs();
-    this._committees = (await App.get("/api/reference")).data.mrc || [];
+    // Archived committees are retained for history but never offered for
+    // scheduling new meetings — filter them out of the selector.
+    this._committees = ((await App.get("/api/reference")).data.mrc || [])
+      .filter((c) => c.archived !== "true");
     const el = document.getElementById("tab-mrc");
     if (!this._committees.length) {
       el.innerHTML = '<div class="card"><div class="empty">No MRC committees yet. ' +
