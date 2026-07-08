@@ -83,7 +83,8 @@ const ProductDetail = {
       ["danger", "Danger", null],
     ];
     return '<div class="dtabs">' + tabs.map((t) =>
-      '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-ptab="' + t[0] + '">' +
+      '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-ptab="' + t[0] + '"' +
+      (t[0] === "danger" ? ' style="color:#d32f2f"' : "") + ">" +
       esc(t[1]) + (t[2] !== null ? " (" + t[2] + ")" : "") + "</button>").join("") + "</div>";
   },
 
