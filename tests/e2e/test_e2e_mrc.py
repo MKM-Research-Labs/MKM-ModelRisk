@@ -322,14 +322,23 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
 
 def test_escalate_signoff_moves_it_to_parent_meeting(page: Page, base_url: str):
     """Phase MRC-4: the chair escalates a sign-off to a higher-tier meeting."""
+    # Seed the model, two MRC committees + two Scheduled meetings via API.
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    page.request.post(base_url + "/api/models",
+                      data={"model_id": "MKM-ESC-01", "name": "Escalation Model",
+                            "confirmed": True}, headers=headers)
+    for value, name, level in (("MRC-ESC-CO", "Company MRC", "Company"),
+                                ("MRC-ESC-DEPT", "Dept MRC", "Company")):
+        page.request.post(base_url + "/api/reference/collections/mrc",
+                          data={"fields": {"value": value, "name": name, "level": level},
+                                "confirmed": True}, headers=headers)
+    for meeting_id, mrc in (("MRC-DEPT-ESC", "MRC-ESC-DEPT"),
+                             ("MRC-DIV-ESC", "MRC-ESC-CO")):
+        page.request.post(base_url + "/api/meetings",
+                          data={"meeting_id": meeting_id, "title": meeting_id,
+                                "date": "2026-11-01", "fields": {"mrc": mrc},
+                                "confirmed": True}, headers=headers)
     open_app(page, base_url)
-    register_model(page, "MKM-ESC-01", "Escalation Model")
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-DEPT-ESC", "Department MRC meeting")
-    _schedule(page, "MRC-DIV-ESC", "Division MRC meeting (parent)")
-    # Set materiality/complexity so the heatmap disagrees with the approved
-    # rag_rating (Amber cell), then request sign-off at the department meeting.
-    open_tab(page, "inventory")
     open_model(page, "MKM-ESC-01")
     from tests.e2e._flows import edit_model_field
     edit_model_field(page, "materiality", "High", choice=True)
@@ -341,20 +350,21 @@ def test_escalate_signoff_moves_it_to_parent_meeting(page: Page, base_url: str):
     page.select_option("#signoff-meeting-pick", "MRC-DEPT-ESC")
     page.click("#signoff-submit")
     confirm(page)
-    # Chair opens the Department meeting and escalates to Division.
+    # The mrc.js meeting list is filtered by the currently-selected committee
+    # (top-of-page tabs). Switch to the Department committee first.
     open_tab(page, "mrc")
+    page.click("[data-mrc='MRC-ESC-DEPT']")
     page.dblclick("tr.clickable[data-id='MRC-DEPT-ESC']")
     page.click("[data-mtab='agenda']")
-    page.locator("[data-escalate]").first.click()
-    # The picker fetches meetings from the API before showing — wait for the
-    # target option to be populated before selecting.
+    page.locator("[data-agescalate]").first.click()
     expect(page.locator("#signoff-overlay")).to_be_visible()
     expect(page.locator("#signoff-meeting-pick option", has_text="MRC-DIV-ESC")).to_have_count(1)
     page.select_option("#signoff-meeting-pick", "MRC-DIV-ESC")
     page.click("#signoff-submit")
     confirm(page)
-    # The Division meeting now carries the escalated agenda item.
+    # Switch to the parent committee and open its meeting.
     open_tab(page, "mrc")
+    page.click("[data-mrc='MRC-ESC-CO']")
     page.dblclick("tr.clickable[data-id='MRC-DIV-ESC']")
     page.click("[data-mtab='agenda']")
     expect(page.locator("#mtd-content")).to_contain_text("[Escalated]")

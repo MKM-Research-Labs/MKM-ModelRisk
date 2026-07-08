@@ -116,7 +116,8 @@ const Reference = {
   },
 
   // A plain reference list rendered as a table with a working add form and
-  // inline edit / remove per row (via the confirm-to-amend flow).
+  // inline edit / remove per row (via the confirm-to-amend flow). Selectors
+  // mirror the shared Collections module so the e2e helpers can drive both.
   _renderList(container, spec, items) {
     const cols = spec.fields.filter((f) => !f.hidden);
     const head = cols.map((f) => "<th>" + esc(f.label) + "</th>").join("") + "<th></th>";
@@ -124,31 +125,32 @@ const Reference = {
       ? items.map((it) =>
           '<tr id="rlrow-' + esc(it.item_id) + '">' +
           cols.map((f) => "<td>" + fieldDisplay(it[f.key]) + "</td>").join("") +
-          '<td class="rowact"><span class="edit-btn" data-rled="' + esc(it.item_id) +
-          '">edit</span> <span class="edit-btn" data-rlrm="' + esc(it.item_id) +
+          '<td class="rowact"><span class="edit-btn" data-ed="' + esc(spec.key) + "|" + esc(it.item_id) +
+          '">edit</span> <span class="edit-btn" data-rm="' + esc(spec.key) + "|" + esc(it.item_id) +
           '">remove</span></td></tr>').join("")
       : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">None yet.</td></tr>';
     const addInputs = cols.map((f) =>
       '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
-      inputControl("rl-add-" + f.key, f) + "</div>").join("");
+      inputControl("add-" + spec.key + "-" + f.key, f) + "</div>").join("");
     container.innerHTML =
       '<div class="section-header">' + esc(spec.label) + "</div>" +
       "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
       '<div class="row" style="margin-top:8px">' + addInputs +
-      '<button class="btn small" id="rl-add">Add&hellip;</button></div>';
-    document.getElementById("rl-add").onclick = () => {
+      '<button class="btn small" data-add="' + esc(spec.key) + '">Add&hellip;</button></div>';
+    container.querySelector('[data-add="' + spec.key + '"]').onclick = () => {
       const fields = {};
-      cols.forEach((f) => { const v = val("rl-add-" + f.key); if (v !== "") fields[f.key] = v; });
+      cols.forEach((f) => { const v = val("add-" + spec.key + "-" + f.key); if (v !== "") fields[f.key] = v; });
       App.amend("Add to " + spec.label + ".", "POST",
         "/api/reference/collections/" + spec.key, { fields: fields }, () => this.render());
     };
-    container.querySelectorAll("[data-rlrm]").forEach((btn) => {
-      const id = btn.getAttribute("data-rlrm");
+    container.querySelectorAll("[data-rm]").forEach((btn) => {
+      const id = btn.getAttribute("data-rm").split("|")[1];
       btn.onclick = () => App.amend("Remove " + id + ".", "POST",
         "/api/reference/collections/" + spec.key + "/" + id + "/delete", {}, () => this.render());
     });
-    container.querySelectorAll("[data-rled]").forEach((btn) => {
-      const item = items.find((i) => i.item_id === btn.getAttribute("data-rled"));
+    container.querySelectorAll("[data-ed]").forEach((btn) => {
+      const id = btn.getAttribute("data-ed").split("|")[1];
+      const item = items.find((i) => i.item_id === id);
       btn.onclick = () => this._listEdit(spec, cols, item);
     });
   },
@@ -157,17 +159,17 @@ const Reference = {
     const row = document.getElementById("rlrow-" + item.item_id);
     row.innerHTML = '<td colspan="' + (cols.length + 1) + '"><div class="row">' +
       cols.map((f) => '<div class="field"><label>' + esc(f.label) + "</label>" +
-        inputControl("rl-ed-" + f.key, f) + "</div>").join("") +
-      '<button class="btn small primary" id="rl-save">Save&hellip;</button>' +
-      '<button class="btn small" id="rl-cancel">Cancel</button></div></td>';
+        inputControl("ce-" + f.key, f) + "</div>").join("") +
+      '<button class="btn small primary" id="ce-save">Save&hellip;</button>' +
+      '<button class="btn small" id="ce-cancel">Cancel</button></div></td>';
     cols.forEach((f) => {
-      const el = document.getElementById("rl-ed-" + f.key);
+      const el = document.getElementById("ce-" + f.key);
       if (item[f.key] !== null && item[f.key] !== undefined) el.value = item[f.key];
     });
-    document.getElementById("rl-cancel").onclick = () => this.render();
-    document.getElementById("rl-save").onclick = () => {
+    document.getElementById("ce-cancel").onclick = () => this.render();
+    document.getElementById("ce-save").onclick = () => {
       const fields = {};
-      cols.forEach((f) => { const v = val("rl-ed-" + f.key); if (v !== "") fields[f.key] = v; });
+      cols.forEach((f) => { const v = val("ce-" + f.key); if (v !== "") fields[f.key] = v; });
       App.amend("Update " + item.item_id + ".", "POST",
         "/api/reference/collections/" + spec.key + "/" + item.item_id, { fields: fields }, () => this.render());
     };
