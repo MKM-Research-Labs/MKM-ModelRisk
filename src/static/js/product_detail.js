@@ -92,7 +92,9 @@ const ProductDetail = {
   _renderContent() {
     const d = this._product.data || {};
     const box = document.getElementById("pt-content");
-    if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
+    if (this._tab === "overview") {
+      box.innerHTML = this._overview(d); this._bindEdits(); this._bindSignoffRequest(); return;
+    }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); this._bindDanger(); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
@@ -116,7 +118,7 @@ const ProductDetail = {
     const left = '<div class="section-header">Components</div>' + bindings +
       this._section("Product", PRODUCT_OVERVIEW_PRODUCT, d) +
       this._section("Monitoring", PRODUCT_OVERVIEW_MONITORING, d);
-    const right = this._section("Risk rating", ["rag_rating"], d) +
+    const right = this._section("Risk rating", ["rag_rating"], d) + this._signoffPanel(d) +
       this._section("Governance &amp; review", PRODUCT_OVERVIEW_GOV, d) + this._mrcRow(d);
     // Retire lives on the Danger tab; the Overview only flags a retired Product.
     const status = this._product.retired
@@ -159,8 +161,58 @@ const ProductDetail = {
     let value = fieldDisplay(d[key]);
     if (key === "status") value = productStatusBadge(d[key], this._product.retired);
     else if (key === "rag_rating") value = ragBadge(d[key]);
+    // MRC sign-off shows the granting meeting (not the raw date) once approved.
+    else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
+      value = '<span class="code">' + esc(d.mrc_signoff_meeting) + "</span>";
+    }
+    // The sign-off date/meeting are set by the MRC approval, not edited by hand.
+    const editLink = key === "mrc_signoff_date" ? "" : this._editLink(key);
     return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
-      '</div><div class="v">' + value + "</div>" + this._editLink(key) + "</div>";
+      '</div><div class="v">' + value + "</div>" + editLink + "</div>";
+  },
+
+  // MRC sign-off state: a pending/queued request, or a button to request one.
+  _signoffPanel(d) {
+    const pending = (this._mrc || {}).pending_signoff;
+    if (pending) {
+      const detail = pending.status === "Attached"
+        ? 'on the agenda of <span class="code">' + esc(pending.meeting_id) + "</span>" +
+          (pending.meeting_date ? " (" + esc(pending.meeting_date) + ")" : "")
+        : "queued for <b>" + esc(pending.target_mrc || "its MRC") +
+          "</b> — added to that committee's next scheduled meeting";
+      return '<div class="dz-row" style="border:1px solid #f57c00;background:#fff8e1;' +
+        'padding:10px 14px;border-radius:6px;margin:8px 0"><div class="dz-text">' +
+        '<b>Pending MRC sign-off</b><p class="muted">Proposed <b>' + esc(pending.proposed_rag) +
+        "</b> " + detail + ".</p></div></div>";
+    }
+    if (this._product.retired) return "";
+    if (!d.rag_rating) {
+      return '<p class="muted" style="font-size:12px;margin:6px 0">Set a RAG rating to request MRC sign-off.</p>';
+    }
+    if (!(this._mrc || {}).mrc) return "";   // _mrcRow already explains the missing committee
+    return '<div class="dz-row" style="border:1px solid var(--line);padding:10px 14px;' +
+      'border-radius:6px;margin:8px 0"><div class="dz-text"><b>' + esc(d.rag_rating) +
+      " rating not yet signed off</b><p class=\"muted\">Request MRC sign-off — routed to the " +
+      "product's committee, picked up at its next meeting.</p></div>" +
+      '<div class="dz-action"><button class="btn small primary" id="preq-signoff" data-proposed="' +
+      esc(d.rag_rating) + '">Request MRC sign-off&hellip;</button></div></div>';
+  },
+
+  _bindSignoffRequest() {
+    const btn = document.getElementById("preq-signoff");
+    if (!btn) return;
+    const self = this;
+    btn.onclick = function () {
+      const mrc = (self._mrc || {}).mrc;
+      if (!mrc) {
+        App.toast("No MRC covers this product — bind a model / set up an MRC first.", "error");
+        return;
+      }
+      App.amend("Request MRC sign-off for " + self._id + " → " + btn.getAttribute("data-proposed") +
+        " (routed to " + (mrc.name || mrc.value) + ").", "POST",
+        "/api/products/" + self._id + "/request-signoff", {},
+        () => self.show(self._id, "overview"));
+    };
   },
 
   // Danger tab: retire the Product (mirrors the model's Danger zone).

@@ -1,0 +1,142 @@
+# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+#
+# This software is licensed by MKM Research Labs for non-commercial
+# research and educational use only. Any commercial use, including
+# but not limited to use in or for products or services offered for sale,
+# internal business operations intended for commercial advantage, or
+# research and development conducted for a commercial entity, is expressly
+# prohibited unless separately authorized in writing by MKM Research Labs.
+#
+# Use, reproduction, distribution, or modification of this code is subject to the
+# terms and conditions of the license agreement provided with this software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Product MRC sign-off: request → route via the analytics model's MRC → approve."""
+from __future__ import annotations
+
+from tests.web.conftest import HEADERS
+
+
+def _seed_mrc(client, value="MRC-CO", level="Company", scope_value=None):
+    fields = {"value": value, "name": value, "level": level}
+    if scope_value:
+        fields["scope_value"] = scope_value
+    return client.post("/api/reference/collections/mrc",
+                       json={"fields": fields, "confirmed": True}, headers=HEADERS)
+
+
+def _model(client, model_id="M1", **fields):
+    return client.post("/api/models",
+                       json={"model_id": model_id, "name": "Analytics", "fields": fields,
+                             "confirmed": True}, headers=HEADERS)
+
+
+def _product(client, product_id="P1", analytics_model="M1", rag="Amber"):
+    client.post("/api/products",
+                json={"product_id": product_id, "product": "Bond",
+                      "fields": {"analytics_model": analytics_model,
+                                 "market_data_model": "m", "calculating_agent": "c"},
+                      "confirmed": True}, headers=HEADERS)
+    if rag:
+        client.post(f"/api/products/{product_id}/field",
+                    json={"field": "rag_rating", "value": rag, "confirmed": True}, headers=HEADERS)
+
+
+def _schedule(client, meeting_id="MTG1", mrc="MRC-CO", date="2026-09-15"):
+    return client.post("/api/meetings",
+                       json={"meeting_id": meeting_id, "title": "Q3", "date": date,
+                             "fields": {"mrc": mrc}, "confirmed": True}, headers=HEADERS)
+
+
+def _request(client, product_id="P1"):
+    return client.post(f"/api/products/{product_id}/request-signoff",
+                       json={"confirmed": True}, headers=HEADERS)
+
+
+def test_request_attaches_to_scheduled_meeting(client):
+    _seed_mrc(client)
+    _model(client)
+    _product(client)
+    _schedule(client)
+    resp = _request(client)
+    assert resp.status_code == 201
+    agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
+    assert len(agenda) == 1
+    assert agenda[0]["subject_product_id"] == "P1"
+    assert agenda[0]["proposed_rag"] == "Amber"
+    req = resp.get_json()["data"]["rag_signoff_requests"][0]
+    assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
+
+
+def test_request_without_meeting_queues_pending(client):
+    _seed_mrc(client)
+    _model(client)
+    _product(client)
+    resp = _request(client)
+    assert resp.status_code == 201
+    req = resp.get_json()["data"]["rag_signoff_requests"][0]
+    assert req["status"] == "Pending" and req["target_mrc"] == "MRC-CO"
+
+
+def test_pending_request_drains_onto_new_meeting(client):
+    _seed_mrc(client)
+    _model(client)
+    _product(client)
+    _request(client)
+    _schedule(client)
+    agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
+    assert len(agenda) == 1 and agenda[0]["subject_product_id"] == "P1"
+
+
+def test_request_blocked_without_mrc(client):
+    _model(client, division="Nowhere")   # a live analytics model, but no committee covers it
+    _product(client)
+    resp = _request(client)
+    assert resp.status_code == 400
+    assert "MRC" in resp.get_json()["error"]
+
+
+def test_request_blocked_without_rag_rating(client):
+    _seed_mrc(client)
+    _model(client)
+    _product(client, rag=None)
+    resp = _request(client)
+    assert resp.status_code == 400
+    assert "RAG" in resp.get_json()["error"]
+
+
+def test_approve_stamps_signoff_date_meeting_and_history(client):
+    _seed_mrc(client)
+    _model(client)
+    _product(client, rag="Green")
+    _schedule(client)
+    _request(client)
+    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    resp = client.post(f"/api/meetings/MTG1/agenda/{agenda_id}/approve-signoff",
+                       json={"confirmed": True, "reason": "committee satisfied"}, headers=HEADERS)
+    assert resp.status_code == 200
+    product = resp.get_json()["product"]["data"]
+    assert product["rag_rating"] == "Green"
+    assert product["mrc_signoff_date"] == "2026-09-15"
+    assert product["mrc_signoff_meeting"] == "MTG1"
+    assert product["rag_signoff_history"][0]["to_rating"] == "Green"
+    assert product["rag_signoff_requests"][0]["status"] == "Completed"
+    assert resp.get_json()["meeting"]["data"]["agenda"][0]["status"] == "Completed"
+
+
+def test_product_mrc_endpoint_surfaces_pending(client):
+    _seed_mrc(client)
+    _model(client)
+    _product(client)
+    _schedule(client)
+    _request(client)
+    mrc = client.get("/api/products/P1/mrc").get_json()
+    assert mrc["mrc"]["value"] == "MRC-CO"
+    assert mrc["pending_signoff"]["status"] == "Attached"
+    assert mrc["pending_signoff"]["meeting_id"] == "MTG1"

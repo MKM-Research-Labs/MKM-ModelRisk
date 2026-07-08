@@ -17,27 +17,31 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Sign-off request routing shared by the model- and meeting-side endpoints.
+"""Sign-off request routing, shared by models and products.
 
-A Risk-rating sign-off request is raised by the model owner and queued against
-the model's responsible MRC (``rag_signoff_requests`` on the model). It waits as
-``Pending`` until a meeting of that committee is scheduled, at which point it is
-pulled onto the meeting agenda and marked ``Attached``. This module holds the
-two shared operations — attach one request, and drain all Pending requests for a
-committee — used by ``api_models_signoff`` (raise) and ``api_mrc.lifecycle``
-(schedule). It imports only governance functions (no blueprints) to stay
-cycle-free.
+A Risk-rating sign-off request is raised by an owner and queued on the subject
+(a model or a product) against its responsible MRC (``rag_signoff_requests``). It
+waits as ``Pending`` until a meeting of that committee is scheduled, at which
+point it is pulled onto the agenda and marked ``Attached``; when the committee
+approves, the subject's rating/date are stamped and the request is ``Completed``.
+
+Model and product are the same workflow over different aggregates, so a small
+``Subject`` adapter captures the per-aggregate differences (which command to
+dispatch, which agenda field carries the subject id). This module imports only
+governance functions (no blueprints) to stay cycle-free.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from src.command import CommandContext, dispatch
 from src.governance.model_inventory import (
+    add_collection_item as _model_add,
     get_model,
     list_models,
     rebuild_inventory_view,
     update_collection_item as _model_update,
+    update_model_field,
 )
 from src.governance.mrc import (
     add_collection_item as _mrc_add,
@@ -45,6 +49,77 @@ from src.governance.mrc import (
     list_meetings,
     rebuild_meeting_view,
 )
+from src.governance.product import (
+    add_collection_item as _product_add,
+    get_product,
+    list_products,
+    rebuild_product_view,
+    update_collection_item as _product_update,
+    update_product_field,
+)
+
+
+class Subject:
+    """Per-aggregate adapter so the routing is written once for both kinds."""
+
+    def __init__(self, *, kind: str, agenda_id_field: str, id_key: str,
+                 get: Callable, list_all: Callable, add_cmd, update_cmd, field_cmd,
+                 rebuild: Callable, id_kwarg: str):
+        self.kind = kind
+        self.agenda_id_field = agenda_id_field   # e.g. "subject_model_id"
+        self.id_key = id_key                       # e.g. "model_id" (row key)
+        self._get = get
+        self._list = list_all
+        self._add_cmd = add_cmd
+        self._update_cmd = update_cmd
+        self._field_cmd = field_cmd
+        self._rebuild = rebuild
+        self._id_kwarg = id_kwarg                  # e.g. "model_id" (command kwarg)
+
+    def get(self, subject_id: str) -> dict | None:
+        return self._get(subject_id)
+
+    def list_all(self) -> list[dict]:
+        return self._list()
+
+    def rebuild(self) -> None:
+        self._rebuild()
+
+    def add_item(self, ctx: CommandContext, subject_id: str, collection: str, fields: dict) -> None:
+        dispatch("add_collection_item", self._add_cmd, context=ctx,
+                 collection=collection, fields=fields, **{self._id_kwarg: subject_id})
+
+    def update_item(self, ctx: CommandContext, subject_id: str, collection: str,
+                    item_id: str, fields: dict) -> None:
+        dispatch("update_collection_item", self._update_cmd, context=ctx,
+                 collection=collection, item_id=item_id, fields=fields,
+                 **{self._id_kwarg: subject_id})
+
+    def set_field(self, ctx: CommandContext, subject_id: str, field: str, value: Any) -> None:
+        dispatch("update_field", self._field_cmd, context=ctx,
+                 field=field, value=value, **{self._id_kwarg: subject_id})
+
+
+MODEL_SUBJECT = Subject(
+    kind="model", agenda_id_field="subject_model_id", id_key="model_id",
+    get=get_model, list_all=list_models, add_cmd=_model_add, update_cmd=_model_update,
+    field_cmd=update_model_field, rebuild=rebuild_inventory_view, id_kwarg="model_id",
+)
+PRODUCT_SUBJECT = Subject(
+    kind="product", agenda_id_field="subject_product_id", id_key="product_id",
+    get=get_product, list_all=list_products, add_cmd=_product_add, update_cmd=_product_update,
+    field_cmd=update_product_field, rebuild=rebuild_product_view, id_kwarg="product_id",
+)
+SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT)
+
+
+def subject_for_agenda_item(item: dict) -> tuple[Subject | None, str | None]:
+    """Pick the adapter + subject id an agenda sign-off item points at."""
+    for subject in SUBJECTS:
+        subject_id = item.get(subject.agenda_id_field)
+        if subject_id:
+            return subject, subject_id
+    return None, None
 
 
 def _newest(items: list[dict]) -> dict | None:
@@ -67,67 +142,85 @@ def earliest_scheduled_for_mrc(target_mrc: str, config=None) -> dict | None:
     return scheduled[0] if scheduled else None
 
 
-def attach_request(
-    ctx: CommandContext, model_id: str, request_item: dict, meeting: dict, config=None,
-) -> None:
-    """Put a queued request onto a meeting's agenda and mark it Attached.
+def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
+                  proposed_rag: str, target_mrc: str, note: str | None = None) -> dict | None:
+    """Queue a sign-off request on the subject and attach it if a meeting exists."""
+    fields = {"proposed_rag": proposed_rag, "target_mrc": target_mrc, "status": "Pending"}
+    if note:
+        fields["note"] = note
+    subject.add_item(ctx, subject_id, "rag_signoff_requests", fields)
+    subject.rebuild()
+    refreshed = subject.get(subject_id) or {"data": {}}
+    request = _newest(refreshed["data"].get("rag_signoff_requests") or [])
+    meeting = earliest_scheduled_for_mrc(target_mrc)
+    if meeting is not None and request is not None:
+        attach_request(ctx, subject, subject_id, request, meeting)
+    return subject.get(subject_id)
 
-    Two events (agenda item on the meeting; status update on the model request),
-    both under the caller's single confirmation. Rebuilds both read models.
-    """
+
+def attach_request(ctx: CommandContext, subject: Subject, subject_id: str,
+                   request_item: dict, meeting: dict, config=None) -> None:
+    """Put a queued request onto a meeting's agenda and mark it Attached."""
     meeting_id = meeting["meeting_id"]
     proposed = request_item.get("proposed_rag")
     dispatch(
         "add_collection_item", _mrc_add, context=ctx,
         meeting_id=meeting_id, collection="agenda",
         fields={
-            "title": f"Risk rating sign-off: {model_id} → {proposed}",
-            "subject_model_id": model_id,
+            "title": f"Risk rating sign-off: {subject_id} → {proposed}",
+            subject.agenda_id_field: subject_id,
             "proposed_rag": proposed,
             "status": "Pending",
         },
     )
     rebuild_meeting_view(config)
-    # Recover the id the engine assigned so the request can point back at it.
     refreshed = get_meeting(meeting_id, config=config) or {"data": {}}
     agenda = [
         a for a in (refreshed["data"].get("agenda") or [])
-        if a.get("subject_model_id") == model_id and a.get("proposed_rag") == proposed
+        if a.get(subject.agenda_id_field) == subject_id and a.get("proposed_rag") == proposed
     ]
     agenda_item = _newest(agenda)
-    dispatch(
-        "update_collection_item", _model_update, context=ctx,
-        model_id=model_id, collection="rag_signoff_requests", item_id=request_item["item_id"],
-        fields={
-            "status": "Attached", "meeting_id": meeting_id,
-            "agenda_item_id": (agenda_item or {}).get("item_id", ""),
-        },
+    subject.update_item(
+        ctx, subject_id, "rag_signoff_requests", request_item["item_id"],
+        {"status": "Attached", "meeting_id": meeting_id,
+         "agenda_item_id": (agenda_item or {}).get("item_id", "")},
     )
-    rebuild_inventory_view(config)
+    subject.rebuild()
+
+
+def complete_request_for_agenda(ctx: CommandContext, subject: Subject, subject_id: str,
+                                agenda_item_id: str, config=None) -> None:
+    """Mark the subject's queued request Completed once its agenda item is approved."""
+    fresh = subject.get(subject_id) or {"data": {}}
+    request = next(
+        (r for r in (fresh["data"].get("rag_signoff_requests") or [])
+         if r.get("agenda_item_id") == agenda_item_id and r.get("status") == "Attached"),
+        None,
+    )
+    if request is not None:
+        subject.update_item(ctx, subject_id, "rag_signoff_requests",
+                            request["item_id"], {"status": "Completed"})
+        subject.rebuild()
 
 
 def drain_pending_for_meeting(ctx: CommandContext, meeting: dict, config=None) -> int:
-    """Attach every Pending request for this meeting's MRC onto its agenda.
-
-    Called after a meeting is scheduled. Returns the number attached.
-    """
+    """Attach every Pending request (models + products) for this meeting's MRC."""
     target_mrc = (meeting.get("data") or {}).get("mrc")
     if not target_mrc:
         return 0
     attached = 0
-    for model in list_models(config):
-        data = model.get("data") or {}
-        for req in data.get("rag_signoff_requests") or []:
-            if req.get("status") == "Pending" and req.get("target_mrc") == target_mrc:
-                # Re-read the model each time so request ids stay valid across the
-                # updates we apply within this loop.
-                fresh = get_model(model["model_id"], config=config) or {"data": {}}
-                current = next(
-                    (r for r in (fresh["data"].get("rag_signoff_requests") or [])
-                     if r.get("item_id") == req.get("item_id")),
-                    None,
-                )
-                if current and current.get("status") == "Pending":
-                    attach_request(ctx, model["model_id"], current, meeting, config=config)
-                    attached += 1
+    for subject in SUBJECTS:
+        for row in subject.list_all():
+            data = row.get("data") or {}
+            for req in data.get("rag_signoff_requests") or []:
+                if req.get("status") == "Pending" and req.get("target_mrc") == target_mrc:
+                    fresh = subject.get(row[subject.id_key]) or {"data": {}}
+                    current = next(
+                        (r for r in (fresh["data"].get("rag_signoff_requests") or [])
+                         if r.get("item_id") == req.get("item_id")),
+                        None,
+                    )
+                    if current and current.get("status") == "Pending":
+                        attach_request(ctx, subject, row[subject.id_key], current, meeting, config=config)
+                        attached += 1
     return attached

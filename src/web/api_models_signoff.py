@@ -30,16 +30,11 @@ from __future__ import annotations
 
 from flask import jsonify
 
-from src.command import dispatch
-from src.governance.model_inventory import (
-    add_collection_item as _model_add,
-    get_model,
-    rebuild_inventory_view,
-)
+from src.governance.model_inventory import get_model
 from src.governance.mrc import get_meeting, matching_mrc
 from src.governance.reference import get_reference_lists
 from src.web._helpers import context_from_request, json_body
-from src.web._signoff_routing import _newest, attach_request, earliest_scheduled_for_mrc
+from src.web._signoff_routing import MODEL_SUBJECT, _newest, raise_signoff
 from src.web.api_models import models_bp
 
 
@@ -89,20 +84,7 @@ def request_signoff(model_id: str):
     if mrc is None:
         return jsonify({"error": "no MRC committee covers this model's division/department — "
                                  "configure one under Admin → MRC first"}), 400
-    target_mrc = mrc["value"]
     ctx = context_from_request(body)
-    fields = {"proposed_rag": proposed_rag, "target_mrc": target_mrc, "status": "Pending"}
-    if body.get("note"):
-        fields["note"] = body["note"]
-    dispatch(
-        "add_collection_item", _model_add, context=ctx,
-        model_id=model_id, collection="rag_signoff_requests", fields=fields,
-    )
-    rebuild_inventory_view()
-    # Attach straight away if the committee already has a Scheduled meeting.
-    refreshed = get_model(model_id)
-    request = _newest(refreshed["data"].get("rag_signoff_requests") or [])
-    meeting = earliest_scheduled_for_mrc(target_mrc)
-    if meeting is not None and request is not None:
-        attach_request(ctx, model_id, request, meeting)
+    raise_signoff(ctx, MODEL_SUBJECT, model_id,
+                  proposed_rag=proposed_rag, target_mrc=mrc["value"], note=body.get("note"))
     return jsonify(get_model(model_id)), 201
