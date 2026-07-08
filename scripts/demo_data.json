@@ -9,13 +9,13 @@
       {"value": "Sterling Bank plc", "owner": "David K Kelly"}
     ],
     "division": [
-      {"value": "Markets", "company": "Sterling Bank plc", "owner": "Priya Anand"},
-      {"value": "Treasury", "company": "Sterling Bank plc", "owner": "Marcus Reid"}
+      {"value": "Markets"},
+      {"value": "Treasury"}
     ],
     "department": [
-      {"value": "Rates Trading", "division": "Markets", "owner": "Priya Anand"},
-      {"value": "Equity Derivatives", "division": "Markets", "owner": "Sofia Castro"},
-      {"value": "Funding & Liquidity", "division": "Treasury", "owner": "Marcus Reid"}
+      {"value": "Rates Trading", "division": "Markets"},
+      {"value": "Equity Derivatives", "division": "Markets"},
+      {"value": "Funding & Liquidity", "division": "Treasury"}
     ],
     "people": [
       {"name": "David K Kelly", "email": "david.kelly@sterlingbank.com", "role": "Chief Risk Officer", "organisation": "Sterling Bank plc"},

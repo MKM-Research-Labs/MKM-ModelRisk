@@ -27,30 +27,25 @@ from src.governance.reference import add_option, get_reference_lists, remove_opt
 
 
 def test_update_option_edits_fields():
-    add_option(list_name="company", fields={"value": "MKM Bank"}, actor="admin")
-    update_option(list_name="company", item_id="CO-001", fields={"owner": "jane@firm"}, actor="admin")
-    company = get_reference_lists()["company"][0]
-    assert company["owner"] == "jane@firm"
-
-
-def test_only_one_company_allowed():
-    add_option(list_name="company", fields={"value": "MKM Bank"}, actor="admin")
-    with pytest.raises(DomainError):
-        add_option(list_name="company", fields={"value": "Second Co"}, actor="admin")
+    add_option(list_name="division", fields={"value": "Markets"}, actor="admin")
+    update_option(list_name="division", item_id="DV-001",
+                  fields={"value": "Global Markets"}, actor="admin")
+    division = get_reference_lists()["division"][0]
+    assert division["value"] == "Global Markets"
 
 
 def test_lists_empty_initially():
     assert get_reference_lists() == {
-        "people": [], "company": [], "division": [], "department": [],
+        "people": [], "division": [], "department": [],
         "calculating_agent": [], "mrc": [],
     }
 
 
 def test_add_menu_value_generates_id_and_appears():
-    add_option(list_name="company", fields={"value": "MKM Bank"}, actor="admin")
+    add_option(list_name="division", fields={"value": "Markets"}, actor="admin")
     lists = get_reference_lists()
-    assert lists["company"][0]["item_id"] == "CO-001"
-    assert lists["company"][0]["value"] == "MKM Bank"
+    assert lists["division"][0]["item_id"] == "DV-001"
+    assert lists["division"][0]["value"] == "Markets"
 
 
 def test_add_person_record():
@@ -66,15 +61,10 @@ def test_add_person_record():
 
 
 def test_add_multiple_options_increment_ids():
-    add_option(list_name="division", fields={"value": "Group Risk", "company": "MKM Bank"}, actor="admin")
-    add_option(list_name="division", fields={"value": "Markets", "company": "MKM Bank"}, actor="admin")
+    add_option(list_name="division", fields={"value": "Group Risk"}, actor="admin")
+    add_option(list_name="division", fields={"value": "Markets"}, actor="admin")
     ids = [item["item_id"] for item in get_reference_lists()["division"]]
     assert ids == ["DV-001", "DV-002"]
-
-
-def test_division_requires_its_company():
-    with pytest.raises(DomainError):
-        add_option(list_name="division", fields={"value": "Orphan"}, actor="admin")
 
 
 def test_add_calculating_agent():
@@ -84,9 +74,9 @@ def test_add_calculating_agent():
 
 
 def test_remove_option():
-    add_option(list_name="company", fields={"value": "MKM Bank"}, actor="admin")
-    remove_option(list_name="company", item_id="CO-001", actor="admin")
-    assert get_reference_lists()["company"] == []
+    add_option(list_name="division", fields={"value": "Markets"}, actor="admin")
+    remove_option(list_name="division", item_id="DV-001", actor="admin")
+    assert get_reference_lists()["division"] == []
 
 
 def test_add_requires_required_field():
@@ -101,4 +91,4 @@ def test_add_unknown_list_raises():
 
 def test_remove_unknown_item_raises():
     with pytest.raises(DomainError):
-        remove_option(list_name="company", item_id="CO-999", actor="admin")
+        remove_option(list_name="division", item_id="DV-999", actor="admin")

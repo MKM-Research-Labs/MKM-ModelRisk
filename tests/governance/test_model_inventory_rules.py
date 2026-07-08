@@ -79,36 +79,8 @@ def test_register_validates_field_values():
         )
 
 
-def test_register_requires_company_when_flagged():
-    with pytest.raises(DomainError, match="company is required"):
-        decide_register(
-            initial_state(), model_id="M1", name="Alpha", fields={},
-            require_company=True,
-        )
-    # Whitespace alone doesn't satisfy the requirement.
-    with pytest.raises(DomainError, match="company is required"):
-        decide_register(
-            initial_state(), model_id="M1", name="Alpha", fields={"company": "   "},
-            require_company=True,
-        )
-
-
-def test_register_with_company_passes_when_required():
-    event_type, payload = decide_register(
-        initial_state(), model_id="M1", name="Alpha",
-        fields={"company": "Sterling Bank plc"}, require_company=True,
-    )
-    assert event_type == EVENT_REGISTERED
-    assert payload["company"] == "Sterling Bank plc"
-
-
-def test_register_without_company_passes_when_not_required():
-    event_type, payload = decide_register(
-        initial_state(), model_id="M1", name="Alpha", fields={},
-        require_company=False,
-    )
-    assert event_type == EVENT_REGISTERED
-    assert "company" not in payload
+# The require_company gate has been retired (Phase MRC-5): the instance is
+# always a single institution, so ``company`` is no longer a per-model field.
 
 
 def test_update_field_emits_event():

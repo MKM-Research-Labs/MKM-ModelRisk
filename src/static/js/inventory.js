@@ -86,26 +86,19 @@ const Inventory = {
   async _populateOrgPickers() {
     const ref = (await App.get("/api/reference")).data || {};
     const empty = '<option value=""></option>';
-    const opts = (items) => empty + (items || []).map((it) =>
-      "<option>" + esc(it.value) + "</option>").join("");
-    document.getElementById("reg-company").innerHTML = opts(ref.company);
     const divisions = ref.division || [], departments = ref.department || [];
-    const filter = (sel, list, parentKey, parentVal) => {
-      sel.innerHTML = empty + list
-        .filter((it) => !parentVal || it[parentKey] === parentVal)
-        .map((it) => "<option>" + esc(it.value) + "</option>").join("");
-    };
-    const company = document.getElementById("reg-company");
+    const listOpts = (items) => empty + items.map((it) =>
+      "<option>" + esc(it.value) + "</option>").join("");
     const division = document.getElementById("reg-division");
     const department = document.getElementById("reg-department");
-    company.value = OrgScope.get().company || "";
-    filter(division, divisions, "company", company.value);
-    filter(department, departments, "division", division.value);
-    company.onchange = () => {
-      filter(division, divisions, "company", company.value);
-      filter(department, departments, "division", division.value);
+    division.innerHTML = listOpts(divisions);
+    const filterDept = (parent) => {
+      department.innerHTML = empty + departments
+        .filter((it) => !parent || it.division === parent)
+        .map((it) => "<option>" + esc(it.value) + "</option>").join("");
     };
-    division.onchange = () => filter(department, departments, "division", division.value);
+    filterDept(division.value);
+    division.onchange = () => filterDept(division.value);
   },
 
   closeRegister() {
@@ -116,7 +109,7 @@ const Inventory = {
     const id = val("reg-model_id"), name = val("reg-name");
     if (!id || !name) { App.toast("Model ID and name are required", "error"); return; }
     const fields = {};
-    ["type", "company", "division", "department"].forEach((k) => {
+    ["type", "division", "department"].forEach((k) => {
       const v = val("reg-" + k);
       if (v) fields[k] = v;
     });
@@ -147,9 +140,7 @@ const Inventory = {
     document.getElementById("m-summary").innerHTML = this._summary(models);
     const box = document.getElementById("m-list");
     if (!models.length) {
-      box.innerHTML = '<div class="empty">' +
-        (all.length ? "No models in the selected Company."
-          : "No models yet. Register one above.") + "</div>";
+      box.innerHTML = '<div class="empty">No models yet. Register one above.</div>';
       return;
     }
     let rows = "";
@@ -162,14 +153,14 @@ const Inventory = {
         '<tr class="clickable" data-id="' + esc(m.model_id) + '">' +
         '<td class="modelid">' + esc(m.model_id) + "</td>" +
         "<td>" + fieldDisplay(d.name) + "</td>" +
-        "<td>" + fieldDisplay(d.company) + "</td>" +
+        "<td>" + fieldDisplay(d.division) + "</td>" +
         "<td>" + tierBadge(d.tier) + "</td>" +
         "<td>" + ragBadge(d.rag_rating) + "</td>" +
         "<td>" + fieldDisplay(d.owner) + "</td>" +
         "<td>" + lifecycle + "</td></tr>";
     });
     box.innerHTML =
-      "<table><thead><tr><th>ID</th><th>Name</th><th>Company</th><th>Tier</th>" +
+      "<table><thead><tr><th>ID</th><th>Name</th><th>Division</th><th>Tier</th>" +
       "<th>RAG</th><th>Owner</th><th>Lifecycle</th></tr></thead><tbody>" + rows + "</tbody></table>";
     box.querySelectorAll("tr.clickable").forEach(function (tr) {
       tr.onclick = function () { Detail.show(tr.getAttribute("data-id")); };

@@ -126,9 +126,10 @@ def derive_org_scope(mrc_value: str | None, refs: dict[str, list]) -> dict[str, 
     """Look up a meeting's org scope + chair + frequency from its MRC.
 
     The MRC reference row carries a level (Company/Division/Department) and a
-    scope_value pointing at one Division or Department. Everything above that
-    level chains up through the Division / Department reference lists. Returns
-    only the fields we can resolve — missing links produce a partial dict.
+    scope_value pointing at one Division or Department. Department-level
+    committees also resolve their parent Division from the Department
+    reference list. Company-level committees are institution-wide and only
+    contribute chair + frequency. Returns only the fields we can resolve.
     """
     if not mrc_value:
         return {}
@@ -148,22 +149,14 @@ def derive_org_scope(mrc_value: str | None, refs: dict[str, list]) -> dict[str, 
         )
         if dept:
             result["department"] = dept["value"]
-            div = next(
-                (v for v in refs.get("division") or [] if v.get("value") == dept.get("division")),
-                None,
-            )
-            if div:
-                result["division"] = div["value"]
-                if div.get("company"):
-                    result["company"] = div["company"]
+            if dept.get("division"):
+                result["division"] = dept["division"]
     elif level == "Division" and scope:
         div = next(
             (v for v in refs.get("division") or [] if v.get("value") == scope), None,
         )
         if div:
             result["division"] = div["value"]
-            if div.get("company"):
-                result["company"] = div["company"]
     return result
 
 

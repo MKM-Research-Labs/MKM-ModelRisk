@@ -55,9 +55,9 @@ REGISTER_FIELDS = (
 
 # Ordered scalar field specifications. type is one of: text | choice | date | tier.
 MODEL_FIELD_SPECS = {
-    # --- Organisation (company/division/department are backed by admin-managed
-    #     reference lists; company is set via the header org-scope selector) ---
-    "company": {"label": "Company", "type": "text", "group": "Organisation", "reference": "company"},
+    # --- Organisation (division/department are backed by admin-managed
+    #     reference lists; every model belongs to the singleton institution
+    #     whose name is on the MRC settings under org_name). ---
     "division": {"label": "Division", "type": "text", "group": "Organisation", "reference": "division"},
     "department": {"label": "Department", "type": "text", "group": "Organisation", "reference": "department"},
     "repo_location": {"label": "Repository location", "type": "text", "group": "Organisation"},

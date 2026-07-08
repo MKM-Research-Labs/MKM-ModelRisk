@@ -138,19 +138,9 @@ def get_one(product_id: str):
 @product_bp.post("")
 def register():
     body = json_body()
-    # Product inherits its Company transitively from the analytics_model. Once any
-    # Company exists in the admin lists, a Product can only bind to an analytics
-    # model that already carries one (so "no inventory outside a Company"
-    # extends to Products by construction, not by duplicating the field).
-    if reference_options().get("company"):
-        analytics_model_id = (body.get("fields") or {}).get("analytics_model")
-        if analytics_model_id:
-            analytics_model = get_model(analytics_model_id)
-            if analytics_model is not None and not (analytics_model["data"] or {}).get("company"):
-                return jsonify({"error": (
-                    f"cannot bind Product to analytics model {analytics_model_id}: "
-                    "the model has no Company assigned"
-                )}), 400
+    # Phase MRC-5: Company is no longer a per-model field. Every instance is
+    # a single institution and every model lives under it, so the analytics
+    # binding check reduces to "does the model exist".
     dispatch(
         "register_product", register_product, context=context_from_request(body),
         product_id=body.get("product_id"), product=body.get("product"), fields=body.get("fields") or {})

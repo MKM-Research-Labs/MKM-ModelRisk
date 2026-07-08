@@ -25,15 +25,44 @@
 const Committees = {
   _spec: null,
   _items: [],
+  _ref: {},             // reference data (divisions/departments) for scope pickers
   _openId: null,        // survives a re-render so the open detail re-opens
 
   _visible() {
     return this._spec.fields.filter((f) => !f.hidden);
   },
 
-  render(container, spec, items) {
+  // The Division/Department scope depends on the committee's level: a
+  // Company-level MRC has no scope; a Division-level one picks a Division; a
+  // Department-level one picks a Department.
+  _scopeOptions(level) {
+    if (level === "Division") return (this._ref.division || []).map((d) => d.value);
+    if (level === "Department") return (this._ref.department || []).map((d) => d.value);
+    return null;  // Company-level, or no level chosen yet
+  },
+
+  _scopeControl(id, level, current) {
+    const opts = this._scopeOptions(level);
+    if (opts === null) {
+      const hint = level === "Company" ? "n/a for a Company-level MRC" : "choose a Level first";
+      return '<input id="' + id + '" disabled placeholder="' + hint + '">';
+    }
+    const choices = ['<option value=""></option>'].concat(opts.map((o) =>
+      "<option" + (o === current ? " selected" : "") + ">" + esc(o) + "</option>")).join("");
+    return '<select id="' + id + '">' + choices + "</select>";
+  },
+
+  _addControl(f) {
+    if (f.key === "scope_value") {
+      return '<span id="cadd-scope-wrap">' + this._scopeControl("cadd-scope_value", "", "") + "</span>";
+    }
+    return inputControl("cadd-" + f.key, f);
+  },
+
+  render(container, spec, items, refData) {
     this._spec = spec;
     this._items = items;
+    this._ref = refData || {};
     const cols = this._visible();
     const head = cols.map((f) => "<th>" + esc(f.label) + "</th>").join("");
     const body = items.length
@@ -43,7 +72,7 @@ const Committees = {
       : '<tr><td colspan="' + cols.length + '" class="empty">No committees yet.</td></tr>';
     const addInputs = cols.map((f) =>
       '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
-      inputControl("cadd-" + f.key, f) + "</div>").join("");
+      this._addControl(f) + "</div>").join("");
     container.innerHTML =
       '<div class="section-header">MRC committees</div>' +
       '<p class="muted">Each committee is anchored to an org tier and carries its chair, cadence ' +
@@ -55,6 +84,14 @@ const Committees = {
     container.querySelectorAll("tr.clickable").forEach((tr) => {
       tr.onclick = () => this._showDetail(tr.getAttribute("data-cid"));
     });
+    // The scope picker follows the chosen Level.
+    const levelSel = document.getElementById("cadd-level");
+    if (levelSel) {
+      levelSel.onchange = () => {
+        document.getElementById("cadd-scope-wrap").innerHTML =
+          this._scopeControl("cadd-scope_value", levelSel.value, "");
+      };
+    }
     document.getElementById("cadd").onclick = () => this._add();
     if (this._openId && items.some((i) => i.item_id === this._openId)) {
       this._showDetail(this._openId);
@@ -120,11 +157,16 @@ const Committees = {
 
   _editField(item, f) {
     const row = document.getElementById("crow-" + f.key);
+    // The scope picker is a Division/Department list matching the committee's
+    // current level (and disabled for a Company-level MRC).
+    const control = f.key === "scope_value"
+      ? this._scopeControl("ced-input", item.level, item.scope_value)
+      : inputControl("ced-input", f);
     row.innerHTML = '<div class="k">' + esc(f.label) + '</div><div class="editor">' +
-      inputControl("ced-input", f) + '<button class="btn small primary" id="ced-save">Save&hellip;</button>' +
+      control + '<button class="btn small primary" id="ced-save">Save&hellip;</button>' +
       '<button class="btn small" id="ced-cancel">Cancel</button></div>';
     const input = document.getElementById("ced-input");
-    if (item[f.key] !== null && item[f.key] !== undefined) input.value = item[f.key];
+    if (f.key !== "scope_value" && item[f.key] !== null && item[f.key] !== undefined) input.value = item[f.key];
     document.getElementById("ced-cancel").onclick = () => this._showDetail(item.item_id);
     document.getElementById("ced-save").onclick = () => {
       const fields = {};

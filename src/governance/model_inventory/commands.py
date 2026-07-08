@@ -94,13 +94,12 @@ def _record(
 def register_model(
     *, model_id: str, name: str, actor: str,
     fields: dict[str, Any] | None = None, reason: str | None = None,
-    require_company: bool = False, config=None,
+    config=None,
 ) -> Event:
     """Register a new model, then seed its SR 26-2 validation questions."""
     state, version = _load(model_id, config)
     decision = decide_register(
         state, model_id=model_id, name=name, fields=fields or {},
-        require_company=require_company,
     )
     event = _record(model_id, decision, version, actor, reason, config)
     _seed_validation_questions(model_id, event.stream_seq, actor, config)

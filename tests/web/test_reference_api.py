@@ -53,10 +53,10 @@ def _add_person(client, name):
 
 def test_get_reference_empty(client):
     res = client.get("/api/reference").get_json()
-    assert res["data"] == {"company": [], "division": [], "department": [],
+    assert res["data"] == {"division": [], "department": [],
                            "calculating_agent": [], "mrc": [], "people": []}
     assert [c["key"] for c in res["collections"]] == [
-        "company", "division", "department", "mrc", "calculating_agent", "people"]
+        "division", "department", "mrc", "calculating_agent", "people"]
 
 
 def test_mrc_tor_fields_are_hidden_in_specs(client):
@@ -97,24 +97,24 @@ def test_mrc_tor_upload_unknown_committee_is_404(client):
     assert res.status_code == 404
 
 
-def test_update_company_via_api(client):
-    client.post("/api/reference/collections/company",
-                json={"fields": {"value": "MKM Bank"}, "confirmed": True}, headers=HEADERS)
-    res = client.post("/api/reference/collections/company/CO-001",
-                      json={"fields": {"owner": "jane@firm"}, "confirmed": True}, headers=HEADERS)
+def test_update_division_via_api(client):
+    client.post("/api/reference/collections/division",
+                json={"fields": {"value": "Markets"}, "confirmed": True}, headers=HEADERS)
+    res = client.post("/api/reference/collections/division/DV-001",
+                      json={"fields": {"value": "Global Markets"}, "confirmed": True}, headers=HEADERS)
     assert res.status_code == 200
-    assert res.get_json()["company"][0]["owner"] == "jane@firm"
+    assert res.get_json()["division"][0]["value"] == "Global Markets"
 
 
-def test_division_company_field_becomes_dropdown(client):
-    # Once a company exists, the Division form's Company field is a dropdown.
-    client.post("/api/reference/collections/company",
-                json={"fields": {"value": "MKM Bank"}, "confirmed": True}, headers=HEADERS)
+def test_department_division_field_becomes_dropdown(client):
+    """Once a division exists, the Department form's Division field is a dropdown."""
+    client.post("/api/reference/collections/division",
+                json={"fields": {"value": "Markets"}, "confirmed": True}, headers=HEADERS)
     res = client.get("/api/reference").get_json()
-    division = next(c for c in res["collections"] if c["key"] == "division")
-    company_field = next(f for f in division["fields"] if f["key"] == "company")
-    assert company_field["type"] == "choice"
-    assert "MKM Bank" in company_field["options"]
+    department = next(c for c in res["collections"] if c["key"] == "department")
+    division_field = next(f for f in department["fields"] if f["key"] == "division")
+    assert division_field["type"] == "choice"
+    assert "Markets" in division_field["options"]
 
 
 def test_add_and_remove_person(client):
@@ -145,23 +145,23 @@ def test_owner_and_mrc_chair_become_people_dropdowns(client):
 
 def test_add_and_remove_option(client):
     add = client.post(
-        "/api/reference/collections/company",
-        json={"fields": {"value": "MKM Bank"}, "confirmed": True}, headers=HEADERS,
+        "/api/reference/collections/division",
+        json={"fields": {"value": "Markets"}, "confirmed": True}, headers=HEADERS,
     )
     assert add.status_code == 201
-    item = add.get_json()["company"][0]
-    assert item["value"] == "MKM Bank"
+    item = add.get_json()["division"][0]
+    assert item["value"] == "Markets"
 
     removed = client.post(
-        "/api/reference/collections/company/" + item["item_id"] + "/delete",
+        "/api/reference/collections/division/" + item["item_id"] + "/delete",
         json={"confirmed": True}, headers=HEADERS,
     )
-    assert removed.get_json()["company"] == []
+    assert removed.get_json()["division"] == []
 
 
 def test_add_missing_value_is_400(client):
     response = client.post(
-        "/api/reference/collections/company",
+        "/api/reference/collections/division",
         json={"fields": {}, "confirmed": True}, headers=HEADERS,
     )
     assert response.status_code == 400
@@ -177,18 +177,18 @@ def test_add_unknown_list_is_400(client):
 
 def test_add_without_confirmation_is_409(client):
     response = client.post(
-        "/api/reference/collections/company",
+        "/api/reference/collections/division",
         json={"fields": {"value": "x"}}, headers=HEADERS,
     )
     assert response.status_code == 409
 
 
-def test_model_company_field_becomes_dropdown_after_adding(client):
-    assert _model_field(client, "company")["type"] == "text"
+def test_model_division_field_becomes_dropdown_after_adding(client):
+    assert _model_field(client, "division")["type"] == "text"
     client.post(
-        "/api/reference/collections/company",
-        json={"fields": {"value": "MKM Bank"}, "confirmed": True}, headers=HEADERS,
+        "/api/reference/collections/division",
+        json={"fields": {"value": "Markets"}, "confirmed": True}, headers=HEADERS,
     )
-    enriched = _model_field(client, "company")
+    enriched = _model_field(client, "division")
     assert enriched["type"] == "choice"
-    assert enriched["options"] == ["MKM Bank"]
+    assert enriched["options"] == ["Markets"]
