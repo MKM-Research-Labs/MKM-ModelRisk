@@ -64,50 +64,71 @@ the single `src/database/` utility.
 
 ## Prerequisites
 
-| Requirement | Notes |
-|---|---|
-| **PostgreSQL 16** | The database, run natively (no Docker). `brew install postgresql@16` on either Apple Silicon (`/opt/homebrew`) or Intel (`/usr/local`) Homebrew — `scripts/pg.sh` auto-detects either. |
-| **Python 3.13** | The application runtime. |
-| **tectonic** *(optional)* | A LaTeX engine, required only for the Meeting Pack, Model Risk Report, and Audit Reports PDFs. Install with `brew install tectonic`. |
-| **pandoc** *(optional)* | Renders the User Guide PDF in the Audit Reports tab. Install with `brew install pandoc`. |
-| **Node + jscpd** *(optional)* | Only for the duplicate-code section of `python -m audit`. |
+You need two things installed; the other three are optional and only affect PDF
+export and one extra audit check.
+
+| Requirement | Required? | Install (macOS / Homebrew) |
+|---|---|---|
+| **PostgreSQL 16** | **Yes** — the database, run natively (no Docker). | `brew install postgresql@16` |
+| **Python 3.13** | **Yes** — the application runtime. | `brew install python@3.13` |
+| **tectonic** | Optional — LaTeX engine for the Meeting Pack, Model Risk Report, and Audit Report PDFs. Without it, those exports return a 503; everything else works. | `brew install tectonic` |
+| **pandoc** | Optional — renders the User Guide PDF in the Audit Reports tab. | `brew install pandoc` |
+| **Node + jscpd** | Optional — only the duplicate-code section of `python -m audit`. | `brew install node` |
+
+> On **Intel** Macs Homebrew lives under `/usr/local`; on **Apple Silicon** under
+> `/opt/homebrew`. `scripts/pg.sh` auto-detects `postgresql@16` in either. For a
+> non-Homebrew PostgreSQL, set `MKM_PG_BIN` to the directory that contains `initdb`.
 
 ---
 
 ## Getting started
 
+Run these steps in order from a terminal. Steps 1–6 are a one-off; after that you
+only need `scripts/pg.sh start` and `python app.py` to run the app again.
+
 ```bash
-# 1. Clone
-git clone git@github.com:MKM-Research-Labs/MKM-ModelRisk.git
+# 1. Clone the repository and enter it
+git clone https://github.com/MKM-Research-Labs/MKM-ModelRisk.git
 cd MKM-ModelRisk
 
-# 2. Create a local PostgreSQL cluster (port 5433) + the mkm_modelrisk database.
-#    Uses ./.pgdata by default. scripts/pg.sh auto-detects postgresql@16 from
-#    either /opt/homebrew (Apple Silicon) or /usr/local (Intel) Homebrew; for a
-#    non-Homebrew install, set MKM_PG_BIN to the directory containing initdb.
-scripts/pg.sh init               # one-off; then scripts/pg.sh start|stop|status
+# 2. Create the local PostgreSQL cluster + the mkm_modelrisk database.
+#    One-off. Creates a cluster on port 5433 under ./.pgdata (gitignored).
+scripts/pg.sh init
+#    Started automatically by `init`. To start/stop/check it later:
+#    scripts/pg.sh start | stop | status
 
-# 3. Create the virtualenv and install
+# 3. Create and activate a Python 3.13 virtual environment
 python3.13 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+source .venv/bin/activate        # do this in every new terminal (macOS/Linux)
+
+# 4. Install the Python dependencies (editable install, includes test tooling)
+pip install -e ".[dev]"          # or: pip install -r requirements.txt
 python -m playwright install chromium   # browser used by the e2e tests
 
-# 4. Verify the checkout (recommended): coding-rule audit + test suite
-python -m audit                  # coding rules R1–R6 — exits non-zero on any finding
-pytest --cov                     # ~256 tests, 100% coverage
-
-# 5. (Optional) Seed a few example models so the inventory isn't empty
-PYTHONPATH=. python scripts/seed_demo.py
-
-# 6. Run the governance console (database migrations are applied on startup)
+# 5. Start the app — migrations run automatically on first startup
 python app.py                    # serves http://127.0.0.1:5015
+
+# 6. (Optional) Load a few example models so the inventory isn't empty.
+#    Run in a second terminal (with .venv activated) while the app is stopped,
+#    or before step 5.
+PYTHONPATH=. python scripts/seed_demo.py
 ```
 
 Open **http://127.0.0.1:5015** and you'll land on the **Model Inventory** tab.
 Set the **Acting as** field (top right) to your name/email — that identity is
 recorded on every change you make. From there, follow the
 [**User Guide**](docs/user_guide.md).
+
+**Defaults work out of the box** (see [Configuration](#configuration)) — you only
+need a `.env` file to change ports, database names, or credentials:
+`cp .env.example .env` and edit it.
+
+### Verify the checkout (optional but recommended)
+
+```bash
+python -m audit                  # coding-rule audit — exits non-zero on any finding
+pytest --cov                     # unit + integration suite, 100% coverage
+```
 
 ### Client demo
 

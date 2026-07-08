@@ -25,6 +25,7 @@ else
   exit 1
 fi
 DATA="${MKM_PG_DATA_DIR:-$PWD/.pgdata}"
+HOST="${MKM_DB_HOST:-127.0.0.1}"
 PORT="${MKM_DB_PORT:-5433}"
 OWNER="${MKM_DB_OWNER_USER:-mkm_owner}"
 OWNER_PW="${MKM_DB_OWNER_PASSWORD:-mkm_dev_pw}"
@@ -39,11 +40,11 @@ case "${1:-status}" in
       --pwfile=<(printf '%s' "$OWNER_PW") --locale=en_US.UTF-8 -E UTF-8
     pg_ctl -D "$DATA" -o "-p $PORT" -l "$DATA/server.log" start
     sleep 2
-    PGPASSWORD="$OWNER_PW" createdb -h 127.0.0.1 -p "$PORT" -U "$OWNER" "$DBNAME"
+    PGPASSWORD="$OWNER_PW" createdb -h "$HOST" -p "$PORT" -U "$OWNER" "$DBNAME"
     echo "Cluster ready on port $PORT; database '$DBNAME' created."
     ;;
   start)  pg_ctl -D "$DATA" -o "-p $PORT" -l "$DATA/server.log" start ;;
   stop)   pg_ctl -D "$DATA" stop ;;
-  status) pg_isready -h 127.0.0.1 -p "$PORT" ;;
+  status) pg_isready -h "$HOST" -p "$PORT" ;;
   *)      echo "usage: $0 {init|start|stop|status}" >&2; exit 1 ;;
 esac
