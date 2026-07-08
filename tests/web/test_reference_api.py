@@ -47,7 +47,7 @@ def _meeting_field(client, key):
 def _add_person(client, name):
     return client.post(
         "/api/reference/collections/people",
-        json={"fields": {"name": name, "role": "Owner"}, "confirmed": True}, headers=HEADERS,
+        json={"fields": {"name": name, "level": "Company"}, "confirmed": True}, headers=HEADERS,
     )
 
 

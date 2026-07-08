@@ -18,12 +18,12 @@
       {"value": "Funding & Liquidity", "division": "Treasury"}
     ],
     "people": [
-      {"name": "David K Kelly", "email": "david.kelly@sterlingbank.com", "role": "Chief Risk Officer", "organisation": "Sterling Bank plc"},
-      {"name": "Johnny Mattimore", "email": "johnny.mattimore@sterlingbank.com", "role": "Head of Model Validation", "organisation": "Sterling Bank plc"},
-      {"name": "Priya Anand", "email": "priya.anand@sterlingbank.com", "role": "Head of Rates", "organisation": "Sterling Bank plc"},
-      {"name": "Sofia Castro", "email": "sofia.castro@sterlingbank.com", "role": "Head of Equity Derivatives", "organisation": "Sterling Bank plc"},
-      {"name": "Marcus Reid", "email": "marcus.reid@sterlingbank.com", "role": "Treasurer", "organisation": "Sterling Bank plc"},
-      {"name": "Lena Okafor", "email": "lena.okafor@sterlingbank.com", "role": "Market Data Lead", "organisation": "Sterling Bank plc"}
+      {"name": "David K Kelly", "email": "david.kelly@sterlingbank.com", "level": "Company"},
+      {"name": "Johnny Mattimore", "email": "johnny.mattimore@sterlingbank.com", "level": "Company"},
+      {"name": "Priya Anand", "email": "priya.anand@sterlingbank.com", "level": "Department", "scope_value": "Rates Trading"},
+      {"name": "Sofia Castro", "email": "sofia.castro@sterlingbank.com", "level": "Department", "scope_value": "Equity Derivatives"},
+      {"name": "Marcus Reid", "email": "marcus.reid@sterlingbank.com", "level": "Division", "scope_value": "Treasury"},
+      {"name": "Lena Okafor", "email": "lena.okafor@sterlingbank.com", "level": "Division", "scope_value": "Markets"}
     ],
     "calculating_agent": [
       {"value": "Murex"},
