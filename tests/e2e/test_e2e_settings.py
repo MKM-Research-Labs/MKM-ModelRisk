@@ -31,7 +31,9 @@ pytestmark = pytest.mark.e2e
 
 def _open(page: Page, base_url: str) -> None:
     open_app(page, base_url)
-    open_admin_subtab(page, "mrc_settings")
+    # The MRC sub-tab now hosts both the committees list and the MRC branding
+    # settings (org name / chair / frequency + ToR) in the same card stack.
+    open_admin_subtab(page, "mrc")
 
 
 def test_set_org_name(page: Page, base_url: str):
