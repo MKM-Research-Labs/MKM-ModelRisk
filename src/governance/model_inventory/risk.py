@@ -74,10 +74,10 @@ def _impact_health(items: list) -> float:
 
 
 def _tier_band(tier: Any) -> int:
-    """Map a model tier to one of the three heatmap bands (1/2/3).
+    """Map a model tier to its heatmap band (1/2/3).
 
-    Tiers 1-3 map directly; tiers 4-5 fall back to Tier 3; anything missing or
-    unparseable is treated as Tier 1 (most conservative)."""
+    Tiers are 1-3; the clamp is a safety net for any out-of-range legacy value,
+    and anything missing or unparseable is treated as Tier 1 (most conservative)."""
     try:
         return min(max(int(tier), 1), 3)
     except (TypeError, ValueError):

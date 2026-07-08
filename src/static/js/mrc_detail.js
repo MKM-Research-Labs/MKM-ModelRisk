@@ -122,8 +122,9 @@ const MeetingDetail = {
     });
   },
 
-  // Org-scope filter: pick the most specific level set on the meeting and
-  // show models that match it (department > division > company > all).
+  // Org-scope filter: pick the most specific level set on the meeting (which
+  // is derived from its bound MRC via the enriched meeting read) and show
+  // models that match it (department > division > company > all).
   _scopeFilter() {
     const md = this._meeting.data || {};
     if (md.department) return { key: "department", value: md.department };
@@ -138,17 +139,21 @@ const MeetingDetail = {
     return this._inventory.filter((m) => (m.data || {})[filter.key] === filter.value);
   },
 
+  // Phase MRC-3: name the MRC in the filter banner so the chair can see at a
+  // glance which committee's remit is being surfaced.
   _modelsTab() {
     const inScope = new Set(this._models.map((m) => m.model_id));
     const filter = this._scopeFilter();
     const candidates = this._candidateModels();
+    const mrc = (this._meeting.data || {}).mrc;
+    const mrcNote = mrc ? " for MRC <b>" + esc(mrc) + "</b>" : "";
     const banner = filter
-      ? '<div class="muted" style="margin-bottom:6px">Filtered to ' + esc(filter.key) +
-        " = <b>" + esc(filter.value) + "</b>. " +
+      ? '<div class="muted" style="margin-bottom:6px">Showing models the MRC oversees' +
+        mrcNote + " — " + esc(filter.key) + " <b>" + esc(filter.value) + "</b>. " +
         '<label style="margin-left:8px"><input type="checkbox" id="mt-show-all"' +
         (this._showAll ? " checked" : "") + "> Show all models</label></div>"
-      : '<div class="muted" style="margin-bottom:6px">No org scope set on this meeting; ' +
-        "showing all inventory.</div>";
+      : '<div class="muted" style="margin-bottom:6px">Company-wide MRC' + mrcNote +
+        " — every inventory model is a candidate.</div>";
     const rows = candidates.length ? candidates.map((m) => {
       const d = m.data || {};
       const checked = inScope.has(m.model_id) ? " checked" : "";

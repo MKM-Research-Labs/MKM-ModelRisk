@@ -27,7 +27,7 @@ from tests.e2e._flows import open_app, open_tab
 
 pytestmark = pytest.mark.e2e
 
-TABS = ["inventory", "mrc", "documents", "bibliography", "audit", "reports", "reference"]
+TABS = ["inventory", "product", "mrc", "documents", "bibliography", "audit", "reports", "reference"]
 
 
 def test_app_loads(page: Page, base_url: str):
