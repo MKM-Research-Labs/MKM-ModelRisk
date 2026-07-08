@@ -43,7 +43,7 @@ def _register(client, product_id="Product-0001", **overrides):
 def test_fields_endpoint(client):
     _live_model(client)
     client.post("/api/reference/collections/people",
-                json={"fields": {"name": "Jane"}, "confirmed": True}, headers=HEADERS)
+                json={"fields": {"name": "Jane", "level": "Company"}, "confirmed": True}, headers=HEADERS)
     specs = client.get("/api/products/fields").get_json()
     assert "product" in specs["register"]
     assert specs["bindings"] == ["analytics_model", "market_data_model", "calculating_agent"]
