@@ -29,6 +29,10 @@ const Collections = {
       this._section(c, data[c.key] || [], retired, bulk)).join("");
   },
 
+  // Fields shown in tables / add forms: internal (hidden) fields — e.g. the
+  // agenda escalation back-pointers — are never surfaced to the user.
+  _visible(c) { return c.fields.filter((f) => !f.hidden); },
+
   _cell(c, item, f, retired) {
     if (f.type === "choice" && !retired) {
       const opts = ["", ...f.options]
@@ -41,7 +45,7 @@ const Collections = {
   },
 
   _row(c, item, retired) {
-    const cells = c.fields.map((f) => this._cell(c, item, f, retired)).join("");
+    const cells = this._visible(c).map((f) => this._cell(c, item, f, retired)).join("");
     const actions = retired ? "" :
       '<td class="rowact"><span class="edit-btn" data-ed="' + c.key + "|" + esc(item.item_id) +
       '">edit</span><span class="edit-btn" data-rm="' + c.key + "|" + esc(item.item_id) +
@@ -50,9 +54,9 @@ const Collections = {
   },
 
   _section(c, items, retired, bulk) {
-    const head = c.fields.map((f) => "<th>" + esc(f.label) + "</th>").join("") +
+    const head = this._visible(c).map((f) => "<th>" + esc(f.label) + "</th>").join("") +
       (retired ? "" : "<th></th>");
-    const span = c.fields.length + (retired ? 0 : 1);
+    const span = this._visible(c).length + (retired ? 0 : 1);
     const body = items.length
       ? items.map((it) => this._row(c, it, retired)).join("")
       : '<tr><td colspan="' + span + '" class="empty">None.</td></tr>';
@@ -62,7 +66,7 @@ const Collections = {
   },
 
   _addForm(c) {
-    const inputs = c.fields.map((f) =>
+    const inputs = this._visible(c).map((f) =>
       '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
       inputControl("add-" + c.key + "-" + f.key, f) + "</div>").join("");
     return '<div class="row" style="margin-top:8px">' + inputs +
@@ -70,11 +74,11 @@ const Collections = {
   },
 
   _bulkAddForm(c) {
-    const head = c.fields.map((f) =>
+    const head = this._visible(c).map((f) =>
       "<th>" + esc(f.label) + (f.required ? " *" : "") + "</th>").join("");
     const rows = [];
     for (let r = 0; r < BULK_ROWS; r++) {
-      const cells = c.fields.map((f) =>
+      const cells = this._visible(c).map((f) =>
         "<td>" + inputControl("badd-" + c.key + "-" + r + "-" + f.key, f) + "</td>").join("");
       rows.push("<tr>" + cells + "</tr>");
     }
@@ -109,7 +113,7 @@ const Collections = {
         const c = byKey[btn.getAttribute("data-add")];
         btn.onclick = function () {
           const fields = {};
-          c.fields.forEach(function (f) {
+          self._visible(c).forEach(function (f) {
             const v = val("add-" + c.key + "-" + f.key);
             if (v !== "") fields[f.key] = v;
           });
@@ -143,7 +147,7 @@ const Collections = {
     for (let r = 0; r < BULK_ROWS; r++) {
       const fields = {};
       let any = false;
-      c.fields.forEach(function (f) {
+      this._visible(c).forEach(function (f) {
         const v = val("badd-" + c.key + "-" + r + "-" + f.key);
         if (v !== "") { fields[f.key] = v; any = true; }
       });
@@ -158,20 +162,21 @@ const Collections = {
   _editItem(base, c, itemId, items, refresh) {
     const item = items.find((i) => i.item_id === itemId) || {};
     const row = document.querySelector('[data-ed="' + c.key + "|" + itemId + '"]').closest("tr");
-    const inputs = c.fields.map((f) =>
+    const visible = this._visible(c);
+    const inputs = visible.map((f) =>
       '<div class="field"><label>' + esc(f.label) + "</label>" +
       inputControl("ce-" + f.key, f) + "</div>").join("");
-    row.innerHTML = '<td colspan="' + (c.fields.length + 1) + '"><div class="row">' + inputs +
+    row.innerHTML = '<td colspan="' + (visible.length + 1) + '"><div class="row">' + inputs +
       '<button class="btn small primary" id="ce-save">Save…</button>' +
       '<button class="btn small" id="ce-cancel">Cancel</button></div></td>';
-    c.fields.forEach(function (f) {
+    visible.forEach(function (f) {
       const el = document.getElementById("ce-" + f.key);
       if (item[f.key] !== null && item[f.key] !== undefined) el.value = item[f.key];
     });
     document.getElementById("ce-cancel").onclick = refresh;
     document.getElementById("ce-save").onclick = function () {
       const fields = {};
-      c.fields.forEach(function (f) {
+      visible.forEach(function (f) {
         const v = val("ce-" + f.key);
         if (v !== "") fields[f.key] = v;
       });
