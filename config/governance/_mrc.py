@@ -61,6 +61,8 @@ MEETING_FIELD_SPECS = {
     "location": {"label": "Location", "type": "text"},
     "status": {"label": "Status", "type": "choice", "options": VALID_MEETING_STATUSES},
 }
+# ``company`` is not a meeting field — the institution is a singleton
+# (see MRC settings org_name). Division/department are derived from the MRC.
 MEETING_FIELDS = tuple(MEETING_FIELD_SPECS.keys())
 
 # Structured collections on a meeting — same generic engine as the inventory.

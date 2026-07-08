@@ -97,7 +97,7 @@ def build_tex(
 
     info = " \\quad ".join(
         "\\textbf{" + label + ":} " + _esc(data.get(key))
-        for label, key in (("Company", "company"), ("Division", "division"),
+        for label, key in (("Division", "division"),
                             ("Department", "department"), ("Date", "date"), ("Time", "time"),
                             ("Location", "location"), ("Chair", "chair"), ("Status", "status"))
     )

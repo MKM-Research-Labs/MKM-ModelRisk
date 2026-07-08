@@ -195,33 +195,5 @@ def test_product_document_missing_file_is_404(client):
     assert client.get("/api/products/Product-0001/documents/" + doc["item_id"] + "/download").status_code == 404
 
 
-def _add_company(client, value="Sterling Bank plc"):
-    return client.post(
-        "/api/reference/collections/company",
-        json={"fields": {"value": value}, "confirmed": True}, headers=HEADERS,
-    )
-
-
-def _register_model_with(client, model_id, **fields):
-    return client.post(
-        "/api/models", json={"model_id": model_id, "name": "Analytics",
-                              "fields": fields, "confirmed": True}, headers=HEADERS,
-    )
-
-
-def test_product_rejected_when_analytics_model_has_no_company(client):
-    # Simulate an orphan: the analytics model was registered first (no
-    # Company existed yet), then the org admin set one up. A Product trying to
-    # bind to that orphan model must now be rejected.
-    _live_model(client)
-    _add_company(client)
-    response = _register(client)
-    assert response.status_code == 400
-    assert "no Company" in response.get_json()["error"]
-
-
-def test_product_accepted_when_analytics_model_has_company(client):
-    _add_company(client)
-    _register_model_with(client, "MKM-AN-001", company="Sterling Bank plc")
-    response = _register(client)
-    assert response.status_code == 201
+# The Product ↔ analytics-model company check retired with Phase MRC-5: the
+# instance is a single institution, so every model belongs to it by default.

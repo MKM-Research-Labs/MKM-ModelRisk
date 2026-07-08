@@ -83,12 +83,12 @@ def test_field_specs_endpoint(client):
     assert "Organisation" in group_names
     org = next(g for g in specs["groups"] if g["group"] == "Organisation")
     org_keys = [f["key"] for f in org["fields"]]
-    assert org_keys == ["company", "division", "department", "repo_location", "codebase"]
+    # Phase MRC-5: Company retired — the instance is a single institution.
+    assert org_keys == ["division", "department", "repo_location", "codebase"]
     # A choice field carries its options for the UI to render a dropdown.
     rag = next(f for g in specs["groups"] for f in g["fields"] if f["key"] == "rag_rating")
     assert rag["type"] == "choice"
     assert "Amber" in rag["options"]
-    # Company/Division are set via the header org-scope selector, not the register form.
     assert "company" not in specs["register"]
     assert "tier" in specs["register"]
 
@@ -117,7 +117,6 @@ def test_register_with_organisation_fields(client):
             "model_id": "MKM-CR-001",
             "name": "Retail Credit Scoring",
             "fields": {
-                "company": "MKM Bank",
                 "division": "Risk",
                 "repo_location": "git@github.com:mkm/credit.git",
                 "codebase": "credit-scoring",
@@ -130,7 +129,6 @@ def test_register_with_organisation_fields(client):
     )
     assert response.status_code == 201
     data = client.get("/api/models/MKM-CR-001").get_json()["data"]
-    assert data["company"] == "MKM Bank"
     assert data["division"] == "Risk"
     assert data["repo_location"] == "git@github.com:mkm/credit.git"
     assert data["codebase"] == "credit-scoring"
@@ -225,29 +223,11 @@ def test_decisions_and_actions_unknown_model_is_404(client):
     assert client.get("/api/models/NOPE/actions").status_code == 404
 
 
-def _add_company(client, value="Sterling Bank plc"):
-    return client.post(
-        "/api/reference/collections/company",
-        json={"fields": {"value": value}, "confirmed": True}, headers=HEADERS,
-    )
+# The require-company gate has been retired (Phase MRC-5): the instance is
+# always a single institution; company is no longer a per-model field.
 
 
-def test_register_requires_company_when_admin_lists_have_one(client):
-    """No inventory may exist outside a Company once the org is set up."""
-    _add_company(client)
-    response = _register(client, model_id="M-no-co")
-    assert response.status_code == 400
-    assert "company is required" in response.get_json()["error"].lower()
-
-
-def test_register_with_company_succeeds_when_required(client):
-    _add_company(client)
-    response = _register(client, model_id="M-co", company="Sterling Bank plc")
-    assert response.status_code == 201
-    assert response.get_json()["data"]["company"] == "Sterling Bank plc"
-
-
-def test_register_without_company_allowed_in_fresh_repo(client):
-    """Until any Company exists, registration without one stays open."""
-    response = _register(client, model_id="M-fresh")
+def test_register_still_open_without_org_fields(client):
+    """A model with no org fields set is still valid (division/department optional)."""
+    response = _register(client, model_id="M-no-org")
     assert response.status_code == 201

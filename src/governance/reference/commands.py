@@ -44,9 +44,6 @@ def add_option(
 ) -> Event:
     """Add an entry to a reference list (a menu value or a person record)."""
     collections, version = load(config)
-    # The institution is a single Company; everything links to it (strict hierarchy).
-    if list_name == "company" and collections.get("company"):
-        raise DomainError("Only one company may be defined; edit the existing one.")
     decision = coll.decide_add(
         collections, REFERENCE_SPECS, collection=list_name, fields=fields
     )

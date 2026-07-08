@@ -18,11 +18,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Admin tab: sub-tabs for each section (left to right) — Company, Division,
-// Department, MRC, People. The org lists reuse the shared Collections renderer;
-// a Division picks its Company and a Department its Division. The MRC tab shows
-// the committees list and, below it, the MRC's own detail (settings + Terms of
-// Reference) — one place for everything about the committee.
+// Admin tab: sub-tabs for each reference section. There is a single company per
+// instance (no list / no "add another") — the Company tab edits the institution
+// name + logo, stored on the MRC settings. The simple lists (Division,
+// Department, Calc Agent, People) render through _renderList with working inline
+// edit/remove; MRC is a drill-in.
 const Reference = {
   _tab: "company",
   _TABS: [
@@ -43,105 +43,133 @@ const Reference = {
   },
 
   async _renderBody(container) {
+    // The single company (institution name + logo) lives on the MRC settings,
+    // not the reference lists — edited as one record, never added to.
+    if (this._tab === "company") {
+      await this._renderInstitution(container);
+      return;
+    }
     const res = await App.get("/api/reference");
     const spec = res.collections.find((c) => c.key === this._tab);
     // MRC committees are entities with a drill-in detail (fields + per-committee
-    // Terms of Reference), not a plain inline-edit table.
+    // Terms of Reference); the scope field reacts to the committee's level.
     if (this._tab === "mrc") {
-      Committees.render(container, spec, res.data.mrc || []);
+      Committees.render(container, spec, res.data.mrc || [], res.data);
       return;
     }
-    // There is only ever one company: show it as a single editable record (name
-    // + owner) with the logo — no list/add/remove table.
-    if (this._tab === "company") {
-      await this._renderCompany(container, spec, res.data.company || []);
-      return;
-    }
-    const specs = { collections: [spec] };
-    const data = {};
-    data[this._tab] = res.data[this._tab] || [];
-    container.innerHTML = Collections.render(data, specs, false);
-    Collections.bind("/api/reference/collections/", specs, false, () => this.render(), data);
+    if (!spec) { container.innerHTML = '<div class="empty">This section has moved.</div>'; return; }
+    this._renderList(container, spec, res.data[this._tab] || []);
   },
 
-  // The company's "value" field is its name; label it as such.
-  _companyLabel(f) { return f.key === "value" ? "Company name" : f.label; },
-
-  async _renderCompany(container, spec, items) {
-    const logoHtml = await this._logoSection();
-    if (!items.length) {
-      // Bootstrap only: no company exists yet, so offer a one-time create form.
-      const inputs = spec.fields.map((f) =>
-        '<div class="field"><label>' + esc(this._companyLabel(f)) + (f.required ? " *" : "") +
-        "</label>" + inputControl("co-add-" + f.key, f) + "</div>").join("");
-      container.innerHTML = '<div class="section-header">Company</div>' +
-        '<p class="muted">Define the institution &mdash; everything else links to it.</p>' +
-        '<div class="row">' + inputs + '<button class="btn small" id="co-add">Create&hellip;</button></div>' +
-        logoHtml;
-      document.getElementById("co-add").onclick = () => {
-        const fields = {};
-        spec.fields.forEach((f) => { const v = val("co-add-" + f.key); if (v !== "") fields[f.key] = v; });
-        App.amend("Set the company.", "POST", "/api/reference/collections/company",
-          { fields: fields }, () => this.render());
-      };
-      document.getElementById("logo-upload").onclick = () => this._uploadLogo();
-      return;
-    }
-    const item = items[0];
-    const rows = spec.fields.map((f) =>
-      '<div class="inforow" id="corow-' + f.key + '"><div class="k">' + esc(this._companyLabel(f)) +
-      '</div><div class="v">' + fieldDisplay(item[f.key]) +
-      '</div><span class="edit-btn" data-coed="' + f.key + '">edit</span></div>').join("");
-    container.innerHTML = '<div class="section-header">Company</div>' + rows + logoHtml;
-    document.querySelectorAll("[data-coed]").forEach((btn) => {
-      const f = spec.fields.find((x) => x.key === btn.getAttribute("data-coed"));
-      btn.onclick = () => this._editCompanyField(item, f);
-    });
-    document.getElementById("logo-upload").onclick = () => this._uploadLogo();
-  },
-
-  _editCompanyField(item, f) {
-    const row = document.getElementById("corow-" + f.key);
-    row.innerHTML = '<div class="k">' + esc(this._companyLabel(f)) + '</div><div class="editor">' +
-      inputControl("coed-input", f) + '<button class="btn small primary" id="coed-save">Save&hellip;</button>' +
-      '<button class="btn small" id="coed-cancel">Cancel</button></div>';
-    const input = document.getElementById("coed-input");
-    if (item[f.key] !== null && item[f.key] !== undefined) input.value = item[f.key];
-    document.getElementById("coed-cancel").onclick = () => this.render();
-    document.getElementById("coed-save").onclick = () => {
-      const fields = {};
-      fields[f.key] = input.value.trim();
-      App.amend("Update the company.", "POST",
-        "/api/reference/collections/company/" + item.item_id, { fields: fields }, () => this.render());
-    };
-  },
-
-  // The (single) company's logo — used in the Meeting Pack & Model Risk Report
-  // PDF headers. Stored as the institution branding logo.
-  async _logoSection() {
+  // The one company per instance: its name + logo, stored on the MRC settings.
+  // A single record — there is no option to add another company.
+  async _renderInstitution(container) {
     const s = await App.get("/api/mrc/settings");
-    const logo = s.logo
+    const name = (s.fields && s.fields.org_name) || "";
+    const logoImg = s.logo
       ? '<img src="/api/mrc/logo?ts=' + Date.now() + '" alt="logo" style="max-height:64px;' +
         'border:1px solid var(--line);border-radius:6px;padding:4px;background:#fff">'
       : '<span class="muted">No logo uploaded.</span>';
-    return '<div class="section-header">Company logo</div>' +
+    container.innerHTML =
+      '<div class="section-header">Company</div>' +
+      '<p class="muted">There is a single company per instance &mdash; its name and logo head the ' +
+      "console and the PDF reports. There is no option to add another.</p>" +
+      '<div class="inforow" id="inst-name-row"><div class="k">Company name</div><div class="v">' +
+      (name ? esc(name) : '<span class="muted">Not set</span>') +
+      '</div><span class="edit-btn" id="inst-name-edit">edit</span></div>' +
+      '<div class="section-header" style="margin-top:16px">Logo</div>' +
       '<p class="muted">Used in the Meeting Pack and Model Risk Report PDF headers.</p>' +
-      '<div class="row" style="align-items:center">' + logo + "</div>" +
-      '<div class="row" style="margin-top:8px"><input type="file" id="logo-file" accept="image/png,image/jpeg">' +
-      '<button class="btn small" id="logo-upload">Upload logo</button></div>';
+      '<div class="row" style="align-items:center">' + logoImg + "</div>" +
+      '<div class="row" style="margin-top:8px"><input type="file" id="inst-logo-file" accept="image/png,image/jpeg">' +
+      '<button class="btn small" id="inst-logo-upload">Upload logo</button></div>';
+    document.getElementById("inst-name-edit").onclick = () => this._editInstitutionName(name);
+    document.getElementById("inst-logo-upload").onclick = () => this._uploadInstitutionLogo();
   },
 
-  _uploadLogo() {
-    const fileInput = document.getElementById("logo-file");
+  _editInstitutionName(current) {
+    const row = document.getElementById("inst-name-row");
+    row.innerHTML = '<div class="k">Company name</div><div class="editor">' +
+      '<input id="inst-name-input"><button class="btn small primary" id="inst-name-save">Save&hellip;</button>' +
+      '<button class="btn small" id="inst-name-cancel">Cancel</button></div>';
+    document.getElementById("inst-name-input").value = current || "";
+    document.getElementById("inst-name-cancel").onclick = () => this.render();
+    document.getElementById("inst-name-save").onclick = () => {
+      const value = document.getElementById("inst-name-input").value.trim();
+      App.amend("Set the company name.", "POST", "/api/mrc/settings/field",
+        { field: "org_name", value: value }, () => { this.render(); OrgScope.init(); });
+    };
+  },
+
+  _uploadInstitutionLogo() {
+    const fileInput = document.getElementById("inst-logo-file");
     if (!fileInput.files.length) { App.toast("Choose an image first", "error"); return; }
     const form = new FormData();
     form.append("file", fileInput.files[0]);
     fetch("/api/mrc/settings/logo", {
       method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
     }).then(async (res) => {
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "upload failed"); }
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "upload failed"); }
       App.toast("Logo uploaded", "ok");
       this.render();
+      OrgScope.init();   // refresh the header logo
     }).catch((e) => App.toast(e.message, "error"));
+  },
+
+  // A plain reference list rendered as a table with a working add form and
+  // inline edit / remove per row (via the confirm-to-amend flow).
+  _renderList(container, spec, items) {
+    const cols = spec.fields.filter((f) => !f.hidden);
+    const head = cols.map((f) => "<th>" + esc(f.label) + "</th>").join("") + "<th></th>";
+    const body = items.length
+      ? items.map((it) =>
+          '<tr id="rlrow-' + esc(it.item_id) + '">' +
+          cols.map((f) => "<td>" + fieldDisplay(it[f.key]) + "</td>").join("") +
+          '<td class="rowact"><span class="edit-btn" data-rled="' + esc(it.item_id) +
+          '">edit</span> <span class="edit-btn" data-rlrm="' + esc(it.item_id) +
+          '">remove</span></td></tr>').join("")
+      : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">None yet.</td></tr>';
+    const addInputs = cols.map((f) =>
+      '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
+      inputControl("rl-add-" + f.key, f) + "</div>").join("");
+    container.innerHTML =
+      '<div class="section-header">' + esc(spec.label) + "</div>" +
+      "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
+      '<div class="row" style="margin-top:8px">' + addInputs +
+      '<button class="btn small" id="rl-add">Add&hellip;</button></div>';
+    document.getElementById("rl-add").onclick = () => {
+      const fields = {};
+      cols.forEach((f) => { const v = val("rl-add-" + f.key); if (v !== "") fields[f.key] = v; });
+      App.amend("Add to " + spec.label + ".", "POST",
+        "/api/reference/collections/" + spec.key, { fields: fields }, () => this.render());
+    };
+    container.querySelectorAll("[data-rlrm]").forEach((btn) => {
+      const id = btn.getAttribute("data-rlrm");
+      btn.onclick = () => App.amend("Remove " + id + ".", "POST",
+        "/api/reference/collections/" + spec.key + "/" + id + "/delete", {}, () => this.render());
+    });
+    container.querySelectorAll("[data-rled]").forEach((btn) => {
+      const item = items.find((i) => i.item_id === btn.getAttribute("data-rled"));
+      btn.onclick = () => this._listEdit(spec, cols, item);
+    });
+  },
+
+  _listEdit(spec, cols, item) {
+    const row = document.getElementById("rlrow-" + item.item_id);
+    row.innerHTML = '<td colspan="' + (cols.length + 1) + '"><div class="row">' +
+      cols.map((f) => '<div class="field"><label>' + esc(f.label) + "</label>" +
+        inputControl("rl-ed-" + f.key, f) + "</div>").join("") +
+      '<button class="btn small primary" id="rl-save">Save&hellip;</button>' +
+      '<button class="btn small" id="rl-cancel">Cancel</button></div></td>';
+    cols.forEach((f) => {
+      const el = document.getElementById("rl-ed-" + f.key);
+      if (item[f.key] !== null && item[f.key] !== undefined) el.value = item[f.key];
+    });
+    document.getElementById("rl-cancel").onclick = () => this.render();
+    document.getElementById("rl-save").onclick = () => {
+      const fields = {};
+      cols.forEach((f) => { const v = val("rl-ed-" + f.key); if (v !== "") fields[f.key] = v; });
+      App.amend("Update " + item.item_id + ".", "POST",
+        "/api/reference/collections/" + spec.key + "/" + item.item_id, { fields: fields }, () => this.render());
+    };
   },
 };

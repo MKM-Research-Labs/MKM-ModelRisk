@@ -59,13 +59,17 @@ const MeetingDetail = {
   },
 
   _info(d) {
-    const chip = (label, key) => '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
+    // Phase MRC-2/5: mrc + org tier and chair are derived from the MRC binding;
+    // shown read-only. date/time/location/status stay editable.
+    const readOnly = (label, key) => '<span class="datechip" id="minfo-' + key + '">' +
+      '<span class="muted">' + label + ':</span> <b>' + fieldDisplay(d[key]) + "</b></span>";
+    const editable = (label, key) => '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
       label + ':</span> <b>' + fieldDisplay(d[key]) + "</b> " +
       '<span class="edit-btn" data-minfo="' + key + '">edit</span></span>';
-    return '<div class="dh-dates">' + chip("Company", "company") + chip("Division", "division") +
-      chip("Department", "department") + "</div>" +
-      '<div class="dh-dates">' + chip("Date", "date") + chip("Time", "time") +
-      chip("Location", "location") + chip("Chair", "chair") + chip("Status", "status") + "</div>";
+    return '<div class="dh-dates">' + readOnly("MRC", "mrc") + readOnly("Division", "division") +
+      readOnly("Department", "department") + readOnly("Chair", "chair") + "</div>" +
+      '<div class="dh-dates">' + editable("Date", "date") + editable("Time", "time") +
+      editable("Location", "location") + editable("Status", "status") + "</div>";
   },
 
   _tabbar(d) {
@@ -162,12 +166,11 @@ const MeetingDetail = {
 
   // Org-scope filter: pick the most specific level set on the meeting (which
   // is derived from its bound MRC via the enriched meeting read) and show
-  // models that match it (department > division > company > all).
+  // models that match it (department > division > all).
   _scopeFilter() {
     const md = this._meeting.data || {};
     if (md.department) return { key: "department", value: md.department };
     if (md.division) return { key: "division", value: md.division };
-    if (md.company) return { key: "company", value: md.company };
     return null;
   },
 
@@ -198,12 +201,12 @@ const MeetingDetail = {
       return '<tr><td><input type="checkbox" data-mscope="' + esc(m.model_id) + '"' + checked +
         '></td><td class="modelid">' + esc(m.model_id) + "</td><td>" + fieldDisplay(d.name) +
         "</td><td>" + tierBadge(d.tier) + "</td><td>" + ragBadge(d.rag_rating) +
-        "</td><td>" + fieldDisplay(d.company) + "</td></tr>";
+        "</td><td>" + fieldDisplay(d.division) + "</td></tr>";
     }).join("") :
       '<tr><td colspan="6" class="empty">No models match this scope.</td></tr>';
     return banner +
       "<table><thead><tr><th></th><th>Model ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
-      "<th>Company</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+      "<th>Division</th></tr></thead><tbody>" + rows + "</tbody></table>" +
       '<div class="row" style="margin-top:10px">' +
       '<button class="btn small primary" id="mt-save-models">Save selection&hellip;</button>' +
       '<span class="muted" id="mt-models-summary" style="margin-left:8px">' +

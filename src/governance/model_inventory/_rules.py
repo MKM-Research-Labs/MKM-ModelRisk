@@ -58,14 +58,11 @@ def _validate_field(field: str, value: Any) -> None:
 
 def decide_register(
     state: ModelState, *, model_id: str, name: str, fields: dict[str, Any],
-    require_company: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     if state.exists:
         raise DomainError(f"model {model_id} is already registered")
     if not model_id or not name:
         raise DomainError("model_id and name are required")
-    if require_company and not (fields.get("company") or "").strip():
-        raise DomainError("company is required: no inventory may exist outside a Company")
     for field, value in fields.items():
         if field not in EDITABLE_FIELDS:
             raise DomainError(f"unknown field: {field}")

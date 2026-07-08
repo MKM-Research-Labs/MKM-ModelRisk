@@ -98,32 +98,28 @@ def test_meeting_items_for_model_finds_linked_decisions_and_actions():
 
 # --- Phase MRC-2: org-scope derivation from the MRC binding -----------------
 
-def test_derive_org_scope_department_climbs_the_tree():
-    """A department-level MRC resolves department → division → company."""
+def test_derive_org_scope_department_resolves_division_from_parent():
+    """A department-level MRC resolves department → division."""
     from src.governance.mrc import derive_org_scope
     refs = {
         "mrc": [{"value": "MRC-DEPT", "level": "Department",
                  "scope_value": "Rates Trading", "chair": "Priya", "frequency": "Monthly"}],
         "department": [{"value": "Rates Trading", "division": "Markets"}],
-        "division": [{"value": "Markets", "company": "Sterling Bank plc"}],
-        "company": [{"value": "Sterling Bank plc"}],
+        "division": [{"value": "Markets"}],
     }
-    scope = derive_org_scope("MRC-DEPT", refs)
-    assert scope == {
+    assert derive_org_scope("MRC-DEPT", refs) == {
         "chair": "Priya", "frequency": "Monthly",
-        "department": "Rates Trading", "division": "Markets", "company": "Sterling Bank plc",
+        "department": "Rates Trading", "division": "Markets",
     }
 
 
-def test_derive_org_scope_division_stops_at_division():
+def test_derive_org_scope_division_returns_the_division():
     from src.governance.mrc import derive_org_scope
     refs = {
         "mrc": [{"value": "MRC-DIV", "level": "Division", "scope_value": "Markets"}],
-        "division": [{"value": "Markets", "company": "Sterling Bank plc"}],
+        "division": [{"value": "Markets"}],
     }
-    assert derive_org_scope("MRC-DIV", refs) == {
-        "division": "Markets", "company": "Sterling Bank plc",
-    }
+    assert derive_org_scope("MRC-DIV", refs) == {"division": "Markets"}
 
 
 def test_derive_org_scope_company_level_returns_only_frequency_and_chair():
@@ -142,9 +138,7 @@ def test_get_meeting_enriched_folds_org_scope_into_data():
     """The enriched read merges the MRC's derived scope onto the meeting."""
     from src.governance.mrc import get_meeting_enriched, schedule_meeting
     from src.governance.reference import add_option
-    add_option(list_name="company", fields={"value": "Sterling Bank plc"}, actor="a")
-    add_option(list_name="division",
-               fields={"value": "Markets", "company": "Sterling Bank plc"}, actor="a")
+    add_option(list_name="division", fields={"value": "Markets"}, actor="a")
     add_option(list_name="mrc",
                fields={"value": "MRC-DIV", "name": "Markets MRC",
                        "level": "Division", "scope_value": "Markets", "chair": "Priya"},
@@ -155,5 +149,4 @@ def test_get_meeting_enriched_folds_org_scope_into_data():
     m = get_meeting_enriched("MTG1")
     assert m["data"]["mrc"] == "MRC-DIV"
     assert m["data"]["division"] == "Markets"
-    assert m["data"]["company"] == "Sterling Bank plc"
     assert m["data"]["chair"] == "Priya"

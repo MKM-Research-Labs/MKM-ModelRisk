@@ -22,12 +22,14 @@
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 
-# Order: the Company org hierarchy first, then the MRC committees anchored to
-# that hierarchy, then the Product platform (Calculating Agent), then the
-# People directory. Market Data Models are no longer a reference list — they
-# live in the Model Inventory tagged type="Market Data Model".
+# Order: the Division/Department org tree first, then the MRC committees
+# anchored to that tree, then the Product platform (Calculating Agent), then
+# the People directory. Company is no longer a reference list — it's implicit:
+# every instance IS a single institution, and its name lives in the singleton
+# MRC settings under org_name. Market Data Models live in the Model Inventory
+# tagged type="Market Data Model".
 REFERENCE_LISTS = (
-    "company", "division", "department", "mrc", "calculating_agent", "people",
+    "division", "department", "mrc", "calculating_agent", "people",
 )
 
 # MRC committees are anchored to one of the three org tiers. A Department-level
@@ -37,24 +39,16 @@ REFERENCE_LISTS = (
 VALID_MRC_LEVELS = ("Company", "Division", "Department")
 VALID_MRC_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 
-# The org hierarchy cascades: a Division belongs to a Company, a Department to a
-# Division. Each unit carries an Owner (a person), so model ownership attaches to
-# the org hierarchy rather than to a single committee setting.
-_OWNER = {"key": "owner", "label": "Owner", "type": "text", "reference": "people"}
+# The org hierarchy cascades: a Division is just a name; a Department belongs to a
+# Division. (Divisions/Departments no longer carry an Owner — model ownership is
+# set on the model itself.)
 REFERENCE_SPECS = {
-    "company": {"label": "Company", "id_prefix": "CO", "display": "value", "fields": [
-        {"key": "value", "label": "Value", "type": "text", "required": True},
-        dict(_OWNER),
-    ]},
     "division": {"label": "Division", "id_prefix": "DV", "display": "value", "fields": [
-        {"key": "value", "label": "Value", "type": "text", "required": True},
-        {"key": "company", "label": "Company", "type": "text", "reference": "company", "required": True},
-        dict(_OWNER),
+        {"key": "value", "label": "Division", "type": "text", "required": True},
     ]},
     "department": {"label": "Department", "id_prefix": "DP", "display": "value", "fields": [
-        {"key": "value", "label": "Value", "type": "text", "required": True},
+        {"key": "value", "label": "Department", "type": "text", "required": True},
         {"key": "division", "label": "Division", "type": "text", "reference": "division", "required": True},
-        dict(_OWNER),
     ]},
     # --- MRC committees anchored to the org hierarchy ---
     # ``value`` is the MRC's unique identifier (e.g. MRC-EMEA-RATES); ``name`` is
