@@ -33,6 +33,12 @@ const Collections = {
   // agenda escalation back-pointers — are never surfaced to the user.
   _visible(c) { return c.fields.filter((f) => !f.hidden); },
 
+  // Remediation is edited entirely in place — every field is an inline control
+  // (owner/priority/status as selects, due date as a date input), so there is
+  // no row-level edit/remove.
+  _noActions(c) { return c.key === "remediation_steps"; },
+  _hasActions(c, retired) { return !retired && !this._noActions(c); },
+
   _cell(c, item, f, retired) {
     if (f.type === "choice" && !retired) {
       const opts = ["", ...f.options]
@@ -41,22 +47,26 @@ const Collections = {
       return '<td><select data-upd="' + c.key + "|" + esc(item.item_id) + "|" + f.key +
         '">' + opts + "</select></td>";
     }
+    if (f.type === "date" && !retired) {
+      return '<td><input type="date" data-upd="' + c.key + "|" + esc(item.item_id) + "|" + f.key +
+        '" value="' + esc(item[f.key] || "") + '"></td>';
+    }
     return "<td>" + fieldDisplay(item[f.key]) + "</td>";
   },
 
   _row(c, item, retired) {
     const cells = this._visible(c).map((f) => this._cell(c, item, f, retired)).join("");
-    const actions = retired ? "" :
-      '<td class="rowact"><span class="edit-btn" data-ed="' + c.key + "|" + esc(item.item_id) +
-      '">edit</span><span class="edit-btn" data-rm="' + c.key + "|" + esc(item.item_id) +
-      '">remove</span></td>';
+    const actions = this._hasActions(c, retired) ?
+      '<td class="rowact"><button class="btn small" data-ed="' + c.key + "|" + esc(item.item_id) +
+      '">Edit</button> <button class="btn small danger" data-rm="' + c.key + "|" + esc(item.item_id) +
+      '">Remove</button></td>' : "";
     return "<tr>" + cells + actions + "</tr>";
   },
 
   _section(c, items, retired, bulk) {
     const head = this._visible(c).map((f) => "<th>" + esc(f.label) + "</th>").join("") +
-      (retired ? "" : "<th></th>");
-    const span = this._visible(c).length + (retired ? 0 : 1);
+      (this._hasActions(c, retired) ? "<th></th>" : "");
+    const span = this._visible(c).length + (this._hasActions(c, retired) ? 1 : 0);
     const body = items.length
       ? items.map((it) => this._row(c, it, retired)).join("")
       : '<tr><td colspan="' + span + '" class="empty">None.</td></tr>';

@@ -125,9 +125,9 @@ const Reference = {
       ? items.map((it) =>
           '<tr id="rlrow-' + esc(it.item_id) + '">' +
           cols.map((f) => "<td>" + fieldDisplay(it[f.key]) + "</td>").join("") +
-          '<td class="rowact"><span class="edit-btn" data-ed="' + esc(spec.key) + "|" + esc(it.item_id) +
-          '">edit</span> <span class="edit-btn" data-rm="' + esc(spec.key) + "|" + esc(it.item_id) +
-          '">remove</span></td></tr>').join("")
+          '<td class="rowact"><button class="btn small" data-ed="' + esc(spec.key) + "|" + esc(it.item_id) +
+          '">Edit</button> <button class="btn small danger" data-rm="' + esc(spec.key) + "|" + esc(it.item_id) +
+          '">Remove</button></td></tr>').join("")
       : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">None yet.</td></tr>';
     const addInputs = cols.map((f) =>
       '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +

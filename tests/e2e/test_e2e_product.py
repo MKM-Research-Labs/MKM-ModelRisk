@@ -107,13 +107,17 @@ def test_product_add_assumption(page: Page, base_url: str):
 
 
 def test_product_add_remediation_step(page: Page, base_url: str):
+    """Remediation is edited fully in place — no data-ed/data-rm buttons. Drive
+    the add form directly rather than the shared helper (which looks for them)."""
     open_app(page, base_url)
     register_model(page, "MKM-E2E-AN6", "Analytics Engine")
     register_model(page, "MKM-E2E-MD6", "Vol Surface", model_type="Market Data Model")
     _register_product(page, "Product-E2E-006", "Cap", "MKM-E2E-AN6", "MKM-E2E-MD6")
     page.click("tr.clickable[data-id='Product-E2E-006']")
     page.click("[data-ptab='remediation_steps']")
-    add_collection_item(page, "remediation_steps", {"description": "Re-bootstrap curve"})
+    page.fill("#add-remediation_steps-description", "Re-bootstrap curve")
+    page.click("[data-add='remediation_steps']")
+    confirm(page)
     expect(page.locator("#pt-content")).to_contain_text("Re-bootstrap curve")
 
 

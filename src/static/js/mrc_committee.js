@@ -32,6 +32,10 @@ const Committees = {
     return this._spec.fields.filter((f) => !f.hidden);
   },
 
+  // Committees are archived, never deleted; ``archived`` is stored as the string
+  // "true" via the standard update endpoint.
+  _isArchived(item) { return item.archived === "true"; },
+
   // The Division/Department scope depends on the committee's level: a
   // Company-level MRC has no scope; a Division-level one picks a Division; a
   // Department-level one picks a Department.
@@ -67,8 +71,10 @@ const Committees = {
     const head = cols.map((f) => "<th>" + esc(f.label) + "</th>").join("");
     const body = items.length
       ? items.map((it) =>
-          '<tr class="clickable" data-cid="' + esc(it.item_id) + '">' +
-          cols.map((f) => "<td>" + fieldDisplay(it[f.key]) + "</td>").join("") + "</tr>").join("")
+          '<tr class="clickable' + (this._isArchived(it) ? " muted" : "") + '" data-cid="' + esc(it.item_id) + '">' +
+          cols.map((f, i) => "<td>" + fieldDisplay(it[f.key]) +
+            (i === 0 && this._isArchived(it) ? ' <span class="badge" style="background:var(--muted)">Archived</span>' : "") +
+            "</td>").join("") + "</tr>").join("")
       : '<tr><td colspan="' + cols.length + '" class="empty">No committees yet.</td></tr>';
     const addInputs = cols.map((f) =>
       '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
@@ -124,12 +130,16 @@ const Committees = {
         esc(item.tor_original_name || "Terms of Reference") + "</a>" +
         '<button class="btn small" id="ctor-replace" style="margin-left:auto">Replace&hellip;</button></div>'
       : '<div class="muted" style="margin-top:8px">No Terms of Reference uploaded.</div>';
+    const archived = this._isArchived(item);
+    const archiveBtn = archived
+      ? '<button class="btn small" id="carch">Unarchive committee</button>'
+      : '<button class="btn small danger" id="carch">Archive committee</button>';
     document.getElementById("committee-detail").innerHTML =
       '<div class="card" style="margin-top:14px"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">' + esc(item.name || item.value) + "</h3>" +
       '<span class="muted" style="margin-left:8px">' + esc(item.value) + "</span>" +
-      '<span style="flex:1"></span>' +
-      '<button class="btn small" id="crm">Remove committee</button></div>' + rows +
+      (archived ? ' <span class="badge" style="background:var(--muted);margin-left:8px">Archived</span>' : "") +
+      '<span style="flex:1"></span>' + archiveBtn + "</div>" + rows +
       '<div class="section-header" style="margin-top:16px">Terms of Reference</div>' + tor +
       '<div class="row" style="margin-top:6px"><input type="file" id="ctor-file">' +
       '<button class="btn small primary" id="ctor-upload">Upload ToR</button></div></div>';
@@ -143,12 +153,12 @@ const Committees = {
     document.querySelectorAll("[data-ced]").forEach((btn) => {
       btn.onclick = () => self._editField(item, byKey[btn.getAttribute("data-ced")]);
     });
-    document.getElementById("crm").onclick = () => {
-      App.amend("Remove committee " + item.value + ".", "POST",
-        "/api/reference/collections/mrc/" + item.item_id + "/delete", {}, () => {
-          self._openId = null;
-          Reference.render();
-        });
+    document.getElementById("carch").onclick = () => {
+      const archived = self._isArchived(item);
+      const verb = archived ? "Unarchive" : "Archive";
+      App.amend(verb + " committee " + item.value + ".", "POST",
+        "/api/reference/collections/mrc/" + item.item_id,
+        { fields: { archived: archived ? "false" : "true" } }, () => Reference.render());
     };
     document.getElementById("ctor-upload").onclick = () => self._uploadTor(item.item_id);
     const replace = document.getElementById("ctor-replace");

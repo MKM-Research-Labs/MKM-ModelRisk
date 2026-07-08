@@ -191,7 +191,7 @@ const DetailTabs = {
     const banner = '<div class="vbanner"><span class="muted">CURRENT VERSION</span> <b style="color:#1976d2">v' +
       fieldDisplay(data.version) + "</b></div>";
     const timeline = items.length ? items.map(function (v) {
-      const rm = retired ? "" : ' <span class="edit-btn" data-rm="version_history|' + esc(v.item_id) + '">remove</span>';
+      const rm = retired ? "" : ' <button class="btn small danger" data-rm="version_history|' + esc(v.item_id) + '">Remove</button>';
       return '<div class="vitem"><div><b>' + fieldDisplay(v.version) + "</b>" + lifecycleBadge(v.lifecycle) +
         '<span class="muted" style="float:right">' + fieldDisplay(v.date) + "</span></div><div>" +
         fieldDisplay(v.description) + '</div><div class="muted">Author: ' + fieldDisplay(v.author) +

@@ -47,8 +47,13 @@ def _setup(page: Page, base_url: str, model_id: str, tab: str) -> None:
 
 
 def test_add_remediation_step(page: Page, base_url: str):
+    """Remediation is edited fully in place (every field is an inline control),
+    so it doesn't render row-level edit/remove buttons — drive it through the
+    add form + description assertion rather than the shared helper."""
     _setup(page, base_url, "MKM-E2E-010", "remediation_steps")
-    add_collection_item(page, "remediation_steps", {"description": "Recalibrate severity tail"})
+    page.fill("#add-remediation_steps-description", "Recalibrate severity tail")
+    page.click("[data-add='remediation_steps']")
+    confirm(page)
     expect(page.locator("#dt-content")).to_contain_text("Recalibrate severity tail")
     expect(page.locator("[data-dtab='remediation_steps']")).to_contain_text("1")
 
@@ -160,14 +165,24 @@ def test_edit_limitation_updates_row(page: Page, base_url: str):
     expect(body).to_contain_text("High")
 
 
-def test_remove_remediation_step_shrinks_list(page: Page, base_url: str):
+# test_remove_remediation_step_shrinks_list — retired.
+# Remediation is edited fully in place (owner/priority/status inline selects,
+# due-date inline date input); there is no row-level Remove button. Closing
+# a step happens via the inline Status → "Closed" choice instead.
+
+
+def test_close_remediation_step_via_inline_status(page: Page, base_url: str):
+    """Closing an item flips its inline Status control to "Closed" — the row
+    stays in the list (audit trail) but its state changes."""
     _setup(page, base_url, "MKM-X1-RM1", "remediation_steps")
-    item_id = add_collection_item(page, "remediation_steps",
-                                  {"description": "Transient item"})
+    page.fill("#add-remediation_steps-description", "Transient item")
+    page.click("[data-add='remediation_steps']")
+    confirm(page)
     expect(page.locator("[data-dtab='remediation_steps']")).to_contain_text("(1)")
-    remove_collection_item(page, "remediation_steps", item_id)
-    expect(page.locator("[data-dtab='remediation_steps']")).to_contain_text("(0)")
-    expect(page.locator("#dt-content")).not_to_contain_text("Transient item")
+    # Every remediation field is an inline data-upd control; use the Status one.
+    page.locator("select[data-upd^='remediation_steps|'][data-upd$='|status']").select_option("Closed")
+    confirm(page)
+    expect(page.locator("select[data-upd$='|status']").first).to_have_value("Closed")
 
 
 def test_remove_version_history_entry(page: Page, base_url: str):

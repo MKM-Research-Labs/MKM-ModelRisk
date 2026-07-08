@@ -26,7 +26,7 @@ const GovDocs = {
       "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +
       esc((d.uploaded_at || "").slice(0, 10)) + "</td><td>" + fmtSize(d.size) +
       '</td><td class="rowact"><a href="/api/documents/' + esc(d.item_id) + '/download">Download</a>' +
-      '<span class="edit-btn" data-rmgd="' + esc(d.item_id) + '">Delete</span></td></tr>').join("") :
+      ' <button class="btn small danger" data-rmgd="' + esc(d.item_id) + '">Delete</button></td></tr>').join("") :
       '<tr><td colspan="5" class="empty">No documents uploaded yet.</td></tr>';
     document.getElementById("tab-documents").innerHTML =
       '<div class="card"><h3>Documents (' + docs.length + ")</h3>" +
