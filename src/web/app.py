@@ -20,7 +20,7 @@
 """Flask application factory for the MKM-ModelRisk governance console."""
 from __future__ import annotations
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 from src.command import ConfirmationRequired
 from src.database import run_migrations
@@ -65,4 +65,16 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(audit_bp)
     app.register_blueprint(audit_reports_bp)
     _register_error_handlers(app)
+
+    # Never cache the front-end assets: the console is a single-page app whose
+    # JS/CSS change often, and a stale cached bundle silently breaks buttons
+    # (edit/remove/etc.) because the old handlers no longer match the new DOM.
+    app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
+    @app.after_request
+    def _no_store_static(response):
+        if request.path.startswith("/static/"):
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+        return response
+
     return app
