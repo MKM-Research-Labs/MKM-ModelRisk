@@ -183,6 +183,37 @@ def test_heatmap_reports_its_tier_band_and_label():
     assert missing["tier_band"] == 1 and missing["rag"] == "Red"
 
 
+# --- W4c sign-off state -------------------------------------------------------
+
+def _signed(data):
+    return compute_risk_rating(data, as_of=AS_OF)["signed_off"]
+
+
+def test_green_owner_and_table_still_needs_signoff_when_never_signed_off():
+    # Low × Low is Green on the heatmap; owner also Green. Agreement is not
+    # approval — with no sign-off history the rating is NOT signed off.
+    assert _signed({"tier": 1, "materiality": "Low", "complexity": "Low",
+                    "rag_rating": "Green"}) is False
+
+
+def test_signed_off_when_latest_signoff_matches_heatmap():
+    assert _signed({"tier": 1, "materiality": "Low", "complexity": "Low",
+                    "rag_rating": "Green",
+                    "rag_signoff_history": [{"to_rating": "Green"}]}) is True
+
+
+def test_not_signed_off_when_heatmap_moved_since_last_signoff():
+    # Signed off Green previously, but the heatmap is now Red (High × High, tier 1).
+    assert _signed({"tier": 1, "materiality": "High", "complexity": "High",
+                    "rag_rating": "Green",
+                    "rag_signoff_history": [{"to_rating": "Green"}]}) is False
+
+
+def test_not_signed_off_without_a_heatmap_placement():
+    # No materiality/complexity → no heatmap rag → nothing to sign off yet.
+    assert _signed({"tier": 1, "rag_rating": "Green"}) is False
+
+
 def test_events_counted_when_within_365_days():
     data = {"operational_failure_events": [
         {"date": "2026-05-01", "description": "recent"},

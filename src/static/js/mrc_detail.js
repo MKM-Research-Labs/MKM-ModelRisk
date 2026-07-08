@@ -99,27 +99,65 @@ const MeetingDetail = {
   },
 
   // W4c — agenda items carrying subject_model_id + proposed_rag are sign-off
-  // requests. Add an "Approve" affordance next to each pending one.
+  // requests. Add Approve + Escalate (Phase MRC-4) affordances on each Pending
+  // one; Completed / Escalated items get nothing (already resolved).
   _bindSignoffApprovals(items) {
     const self = this;
     items.forEach(function (item) {
       if (!item.subject_model_id || !item.proposed_rag) return;
-      if (item.status === "Completed") return;
+      if (item.status !== "Pending") return;
       const row = document.querySelector('[data-ed="agenda|' + item.item_id + '"]');
       if (!row) return;
       const cell = row.closest("tr").querySelector(".rowact");
-      const button = document.createElement("span");
-      button.className = "edit-btn";
-      button.style = "color:#388e3c;font-weight:600;margin-left:10px";
-      button.textContent = "Approve sign-off";
-      button.onclick = function () {
+      const approve = document.createElement("span");
+      approve.className = "edit-btn";
+      approve.style = "color:#388e3c;font-weight:600;margin-left:10px";
+      approve.textContent = "Approve sign-off";
+      approve.onclick = function () {
         App.amend("Approve sign-off for " + item.subject_model_id +
           " → " + item.proposed_rag + ".", "POST",
           "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff", {},
           () => self.show(self._id, self._tab));
       };
-      cell.appendChild(button);
+      cell.appendChild(approve);
+      const escalate = document.createElement("span");
+      escalate.className = "edit-btn";
+      escalate.setAttribute("data-escalate", item.item_id);
+      escalate.style = "color:#f57c00;font-weight:600;margin-left:10px";
+      escalate.textContent = "Escalate";
+      escalate.onclick = function () { self._openEscalatePicker(item); };
+      cell.appendChild(escalate);
     });
+  },
+
+  // Phase MRC-4: reuse the sign-off picker overlay to choose which parent-MRC
+  // Scheduled meeting the escalation lands on.
+  async _openEscalatePicker(item) {
+    const meetings = (await App.get("/api/meetings")).filter(
+      (m) => m.status === "Scheduled" && m.meeting_id !== this._id,
+    );
+    if (!meetings.length) {
+      App.toast("No other Scheduled meetings available to escalate to.", "error");
+      return;
+    }
+    const pick = document.getElementById("signoff-meeting-pick");
+    pick.innerHTML = meetings.map((m) => "<option value=\"" + esc(m.meeting_id) + "\">" +
+      esc(m.meeting_id) + " · " + esc(m.data.title || "") +
+      (m.data.date ? " (" + esc(m.data.date) + ")" : "") + "</option>").join("");
+    document.getElementById("signoff-summary").innerHTML =
+      "Escalate sign-off for <b>" + esc(item.subject_model_id) +
+      "</b> → proposed <b>" + esc(item.proposed_rag) + "</b> to a higher-tier MRC meeting.";
+    const overlay = document.getElementById("signoff-overlay");
+    overlay.classList.remove("hidden");
+    const self = this;
+    document.getElementById("signoff-cancel").onclick = () => overlay.classList.add("hidden");
+    document.getElementById("signoff-submit").onclick = () => {
+      const parentMeetingId = pick.value;
+      overlay.classList.add("hidden");
+      App.amend("Escalate sign-off to " + parentMeetingId + ".", "POST",
+        "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/escalate-signoff",
+        { parent_meeting_id: parentMeetingId }, () => self.show(self._id, self._tab));
+    };
   },
 
   // Org-scope filter: pick the most specific level set on the meeting (which

@@ -156,8 +156,9 @@ const DetailTabs = {
       comps + this.signoffHistory(rating.signoff_history);
   },
 
-  // W4c: sign-off state comparing the current heatmap RAG to the approved
-  // (stored) rag_rating. Emits a "Request sign-off" button when they differ.
+  // W4c: sign-off state. A rating needs MRC sign-off until the committee has
+  // actually approved the current heatmap RAG — this includes the case where the
+  // owner and the heatmap already agree (agreement is not approval).
   _signoffPanel(rating) {
     const pending = rating.pending_signoff;
     const proposed = (rating.heatmap || {}).rag;
@@ -169,15 +170,20 @@ const DetailTabs = {
         esc(pending.meeting_title || "") + (pending.meeting_date ? " (" + esc(pending.meeting_date) + ")" : "") +
         ".</p></div></div>";
     }
-    if (proposed && proposed !== rating.approved_rag) {
-      return '<div class="dz-row" style="border:1px solid var(--line);padding:10px 14px;border-radius:6px;margin:8px 0">' +
-        '<div class="dz-text"><b>Heatmap ' + esc(proposed) + " differs from approved " +
-        esc(rating.approved_rag || "—") + "</b>" +
-        '<p class="muted">Request an MRC sign-off to promote this to the approved rating.</p></div>' +
-        '<div class="dz-action"><button class="btn small primary" id="req-signoff" data-proposed="' +
-        esc(proposed) + '">Request MRC sign-off&hellip;</button></div></div>';
-    }
-    return "";
+    // Nothing to sign off until the owner has placed the model on the heatmap.
+    if (!proposed || rating.signed_off) return "";
+    const differs = proposed !== rating.approved_rag;
+    const headline = differs
+      ? "Heatmap " + esc(proposed) + " differs from approved " + esc(rating.approved_rag || "—")
+      : esc(proposed) + " rating not yet signed off by the MRC";
+    const sub = differs
+      ? "Request an MRC sign-off to promote the heatmap rating to the approved rating."
+      : "Owner and heatmap agree, but this rating still needs formal MRC sign-off.";
+    return '<div class="dz-row" style="border:1px solid var(--line);padding:10px 14px;border-radius:6px;margin:8px 0">' +
+      '<div class="dz-text"><b>' + headline + "</b>" +
+      '<p class="muted">' + sub + "</p></div>" +
+      '<div class="dz-action"><button class="btn small primary" id="req-signoff" data-proposed="' +
+      esc(proposed) + '">Request MRC sign-off&hellip;</button></div></div>';
   },
 
   versions(data, spec, retired) {

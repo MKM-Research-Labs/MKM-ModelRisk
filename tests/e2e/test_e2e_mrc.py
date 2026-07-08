@@ -318,3 +318,44 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
     # Toggle "Show all" — both appear.
     page.check("#mt-show-all")
     expect(page.locator("[data-mscope='MRC-M-EQD']")).to_be_visible()
+
+
+def test_escalate_signoff_moves_it_to_parent_meeting(page: Page, base_url: str):
+    """Phase MRC-4: the chair escalates a sign-off to a higher-tier meeting."""
+    open_app(page, base_url)
+    register_model(page, "MKM-ESC-01", "Escalation Model")
+    open_tab(page, "mrc")
+    _schedule(page, "MRC-DEPT-ESC", "Department MRC meeting")
+    _schedule(page, "MRC-DIV-ESC", "Division MRC meeting (parent)")
+    # Set materiality/complexity so the heatmap disagrees with the approved
+    # rag_rating (Amber cell), then request sign-off at the department meeting.
+    open_tab(page, "inventory")
+    open_model(page, "MKM-ESC-01")
+    from tests.e2e._flows import edit_model_field
+    edit_model_field(page, "materiality", "High", choice=True)
+    expect(page.locator("#row-materiality")).to_contain_text("High")
+    edit_model_field(page, "complexity", "Low", choice=True)
+    expect(page.locator("#row-complexity")).to_contain_text("Low")
+    page.click("[data-dtab='risk']")
+    page.click("#req-signoff")
+    page.select_option("#signoff-meeting-pick", "MRC-DEPT-ESC")
+    page.click("#signoff-submit")
+    confirm(page)
+    # Chair opens the Department meeting and escalates to Division.
+    open_tab(page, "mrc")
+    page.dblclick("tr.clickable[data-id='MRC-DEPT-ESC']")
+    page.click("[data-mtab='agenda']")
+    page.locator("[data-escalate]").first.click()
+    # The picker fetches meetings from the API before showing — wait for the
+    # target option to be populated before selecting.
+    expect(page.locator("#signoff-overlay")).to_be_visible()
+    expect(page.locator("#signoff-meeting-pick option", has_text="MRC-DIV-ESC")).to_have_count(1)
+    page.select_option("#signoff-meeting-pick", "MRC-DIV-ESC")
+    page.click("#signoff-submit")
+    confirm(page)
+    # The Division meeting now carries the escalated agenda item.
+    open_tab(page, "mrc")
+    page.dblclick("tr.clickable[data-id='MRC-DIV-ESC']")
+    page.click("[data-mtab='agenda']")
+    expect(page.locator("#mtd-content")).to_contain_text("[Escalated]")
+    expect(page.locator("#mtd-content")).to_contain_text("MKM-ESC-01")
