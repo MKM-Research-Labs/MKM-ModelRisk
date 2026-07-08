@@ -43,7 +43,7 @@ VALID_LIFECYCLE_STAGES = ("Development", "Validation", "Production", "Retired")
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 
 TIER_MIN = 1
-TIER_MAX = 5
+TIER_MAX = 3
 
 # Fields captured on the registration form (besides the mandatory id + name).
 # Company is NOT here — it comes from the org-scope selector in the header, so a
@@ -130,7 +130,8 @@ MODEL_FIELD_SPECS = {
 }
 
 # Human-readable tier descriptors (shown next to the tier badge).
-TIER_LABELS = {1: "Maximum", 2: "Substantial", 3: "Moderate", 4: "Minimal", 5: "Negligible"}
+# Three tiers by criticality (Tier 4/5 are not used).
+TIER_LABELS = {1: "Mission critical", 2: "Important", 3: "Not important"}
 
 # The nine SR 26-2 / Handbook validation questions seeded on registration.
 # (SR 26-2 supersedes SR 11-7; the questions are unchanged.)
@@ -172,11 +173,10 @@ RISK_CONDITIONAL_AT = 0.50
 #
 # The tier fixes how quickly the map escalates: Tier 1 (mission critical) hits
 # Red readily; Tier 2 (important) is the same shape pushed one step right; Tier 3
-# (not important) stays Green until the top-right corner. Tiers 4-5 (even lower
-# criticality) reuse the Tier 3 table.
+# (not important) stays Green until the top-right corner.
 MATERIALITY_ORDER = ("Low", "Medium", "High")
 COMPLEXITY_ORDER = ("Low", "Medium", "High")
-RISK_TIER_LABELS = {1: "Mission critical", 2: "Important", 3: "Not important"}
+RISK_TIER_LABELS = TIER_LABELS  # tier == heatmap band (1/2/3)
 RISK_HEATMAP_BY_TIER = {
     1: {  # Tier 1 — mission critical:  A R R / G A R / G G A
         ("High", "Low"): "Amber", ("High", "Medium"): "Red", ("High", "High"): "Red",

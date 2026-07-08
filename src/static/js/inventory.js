@@ -25,7 +25,8 @@ function inputControl(id, spec) {
     return '<select id="' + id + '">' + opts + "</select>";
   }
   if (spec.type === "tier") {
-    const opts = ["", 1, 2, 3, 4, 5].map((o) => "<option>" + esc(o) + "</option>").join("");
+    // Tiers 1-3 (mission critical / important / not important); mirrors TIER_MAX.
+    const opts = ["", 1, 2, 3].map((o) => "<option>" + esc(o) + "</option>").join("");
     return '<select id="' + id + '">' + opts + "</select>";
   }
   if (spec.type === "date") return '<input id="' + id + '" type="date">';

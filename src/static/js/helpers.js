@@ -54,7 +54,8 @@ function statusBadge(status) {
   return '<span class="badge" style="background:' + color + '">' + esc(status) + "</span>";
 }
 
-const TIER_DESCRIPTORS = { 1: "Maximum", 2: "Substantial", 3: "Moderate", 4: "Minimal", 5: "Negligible" };
+// Mirrors config TIER_LABELS (tiers 1-3 by criticality).
+const TIER_DESCRIPTORS = { 1: "Mission critical", 2: "Important", 3: "Not important" };
 
 // "Tier 2 - Substantial" descriptor.
 function tierFullLabel(tier) {

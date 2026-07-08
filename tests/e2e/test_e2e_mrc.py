@@ -267,3 +267,54 @@ def test_decision_linked_to_model_appears_on_model_detail(page: Page, base_url: 
     expect(box).to_contain_text("Linked Meeting")
     expect(box).to_contain_text("MRC-LINK")
     expect(page.locator("[data-dtab='decisions']")).to_contain_text("(1)")
+
+
+def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
+    """Phase MRC-3: a Department-level MRC's meeting only lists models in that
+    department; the "Show all" toggle escapes.
+
+    Seeds everything via the API — the UI paths for reference lists and model
+    registration are already covered elsewhere; this test is about the filter.
+    """
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    # Org tree
+    for value in ("Alpha Bank",):
+        page.request.post(base_url + "/api/reference/collections/company",
+                          data={"fields": {"value": value}, "confirmed": True}, headers=headers)
+    for name, company in (("Markets", "Alpha Bank"),):
+        page.request.post(base_url + "/api/reference/collections/division",
+                          data={"fields": {"value": name, "company": company},
+                                "confirmed": True}, headers=headers)
+    for name, division in (("Rates Trading", "Markets"), ("Equity Derivatives", "Markets")):
+        page.request.post(base_url + "/api/reference/collections/department",
+                          data={"fields": {"value": name, "division": division},
+                                "confirmed": True}, headers=headers)
+    # A Department-level MRC anchored to Rates Trading.
+    page.request.post(base_url + "/api/reference/collections/mrc",
+                      data={"fields": {"value": "MRC-DEPT-RATES", "name": "Rates MRC",
+                                       "level": "Department", "scope_value": "Rates Trading"},
+                            "confirmed": True}, headers=headers)
+    # Two models, one in Rates Trading, one in Equity Derivatives.
+    for model_id, dept in (("MRC-M-RATES", "Rates Trading"),
+                           ("MRC-M-EQD", "Equity Derivatives")):
+        page.request.post(base_url + "/api/models",
+                          data={"model_id": model_id, "name": model_id,
+                                "fields": {"company": "Alpha Bank", "division": "Markets",
+                                           "department": dept},
+                                "confirmed": True}, headers=headers)
+    # Schedule a meeting bound to the Department MRC.
+    page.request.post(base_url + "/api/meetings",
+                      data={"meeting_id": "MRC-M3", "title": "Rates review",
+                            "date": "2026-08-01", "fields": {"mrc": "MRC-DEPT-RATES"},
+                            "confirmed": True}, headers=headers)
+
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    page.dblclick("tr.clickable[data-id='MRC-M3']")
+    page.click("[data-mtab='models_in_scope']")
+    # Only the Rates Trading model is a candidate; the Equity Derivatives one is hidden.
+    expect(page.locator("[data-mscope='MRC-M-RATES']")).to_be_visible()
+    expect(page.locator("[data-mscope='MRC-M-EQD']")).to_have_count(0)
+    # Toggle "Show all" — both appear.
+    page.check("#mt-show-all")
+    expect(page.locator("[data-mscope='MRC-M-EQD']")).to_be_visible()
