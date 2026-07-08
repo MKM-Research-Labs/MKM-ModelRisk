@@ -88,50 +88,123 @@ const MeetingDetail = {
     const d = this._meeting.data || {};
     const box = document.getElementById("mtd-content");
     if (this._tab === "models_in_scope") { box.innerHTML = this._modelsTab(); this._bindModels(); return; }
+    // Agenda has a bespoke two-row layout (Title + Description on top, the rest
+    // below) with its own add/edit/remove + sign-off actions.
+    if (this._tab === "agenda") { box.innerHTML = this._agendaContent(); this._bindAgenda(); return; }
     if (this._tab === "documents") {
       box.innerHTML = '<div class="empty">Document uploads are coming next.</div>'; return;
     }
     const spec = this.collSpec(this._tab);
-    // Agenda / minutes / decisions / actions accept multiple new entries at
-    // once; participants stays single because one-at-a-time matches the way
-    // attendees are added in practice.
-    const bulk = ["agenda", "minutes", "decisions", "actions"].indexOf(this._tab) >= 0;
+    // Minutes / decisions / actions accept multiple new entries at once;
+    // participants stays single because one-at-a-time matches practice.
+    const bulk = ["minutes", "decisions", "actions"].indexOf(this._tab) >= 0;
     box.innerHTML = Collections.render(d, { collections: [spec] }, false, bulk);
     Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
       false, () => this.show(this._id, this._tab), d, bulk);
-    if (this._tab === "agenda") this._bindSignoffApprovals(d.agenda || []);
   },
 
-  // W4c — agenda items carrying subject_model_id + proposed_rag are sign-off
-  // requests. Add Approve + Escalate (Phase MRC-4) affordances on each Pending
-  // one; Completed / Escalated items get nothing (already resolved).
-  _bindSignoffApprovals(items) {
+  // Agenda: each item on two rows — Title + Description up top, the rest below —
+  // plus an add form. Hidden fields (e.g. the escalation back-pointers) never
+  // show. Sign-off items (subject model + proposed RAG) get Approve / Escalate.
+  _agendaVisible() {
+    return this.collSpec("agenda").fields.filter((f) => !f.hidden);
+  },
+
+  _agendaContent() {
+    const items = (this._meeting.data || {}).agenda || [];
+    const cards = items.length
+      ? items.map((it, i) => this._agendaCard(it, i)).join("")
+      : '<div class="empty">No agenda items yet.</div>';
+    const addInputs = this._agendaVisible().map((f) =>
+      '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
+      inputControl("ag-add-" + f.key, f) + "</div>").join("");
+    return '<div id="agenda-list">' + cards + "</div>" +
+      '<div class="section-header" style="margin-top:14px">Add agenda item</div>' +
+      '<div class="row" style="flex-wrap:wrap;align-items:flex-end">' + addInputs +
+      '<button class="btn small primary" id="ag-add">Add&hellip;</button></div>';
+  },
+
+  _agendaCard(item, idx) {
+    const signoff = item.subject_model_id && item.proposed_rag;
+    const meta = [];
+    if (item.presenter) meta.push("Presenter: <b>" + esc(item.presenter) + "</b>");
+    meta.push("Status: " + statusBadge(item.status));
+    if (signoff) {
+      meta.push('Sign-off: <span class="code">' + esc(item.subject_model_id) + "</span> &rarr; " +
+        ragBadge(item.proposed_rag));
+    }
+    const pending = signoff && item.status === "Pending";
+    const actions =
+      '<span class="edit-btn" data-aged="' + esc(item.item_id) + '">edit</span> ' +
+      '<span class="edit-btn" data-agrm="' + esc(item.item_id) + '">remove</span>' +
+      (pending
+        ? ' <span class="edit-btn" data-agapprove="' + esc(item.item_id) +
+          '" style="color:#388e3c;font-weight:600">approve sign-off</span>' +
+          ' <span class="edit-btn" data-agescalate="' + esc(item.item_id) +
+          '" style="color:#f57c00;font-weight:600">escalate</span>'
+        : "");
+    return '<div class="card" style="margin-bottom:8px" id="agrow-' + esc(item.item_id) + '">' +
+      '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
+      "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b>" +
+      (item.description ? '<div class="muted" style="margin-top:2px">' + esc(item.description) + "</div>" : "") +
+      '</div><div class="rowact">' + actions + "</div></div>" +
+      '<div class="muted" style="margin-top:8px">' + meta.join(" &nbsp;·&nbsp; ") + "</div></div>";
+  },
+
+  _bindAgenda() {
     const self = this;
-    items.forEach(function (item) {
-      if (!item.subject_model_id || !item.proposed_rag) return;
-      if (item.status !== "Pending") return;
-      const row = document.querySelector('[data-ed="agenda|' + item.item_id + '"]');
-      if (!row) return;
-      const cell = row.closest("tr").querySelector(".rowact");
-      const approve = document.createElement("span");
-      approve.className = "edit-btn";
-      approve.style = "color:#388e3c;font-weight:600;margin-left:10px";
-      approve.textContent = "Approve sign-off";
-      approve.onclick = function () {
-        App.amend("Approve sign-off for " + item.subject_model_id +
-          " → " + item.proposed_rag + ".", "POST",
-          "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff", {},
-          () => self.show(self._id, self._tab));
-      };
-      cell.appendChild(approve);
-      const escalate = document.createElement("span");
-      escalate.className = "edit-btn";
-      escalate.setAttribute("data-escalate", item.item_id);
-      escalate.style = "color:#f57c00;font-weight:600;margin-left:10px";
-      escalate.textContent = "Escalate";
-      escalate.onclick = function () { self._openEscalatePicker(item); };
-      cell.appendChild(escalate);
+    const visible = this._agendaVisible();
+    const items = (this._meeting.data || {}).agenda || [];
+    const byId = (attr, el) => items.find((i) => i.item_id === el.getAttribute(attr));
+    document.getElementById("ag-add").onclick = function () {
+      const fields = {};
+      visible.forEach((f) => { const v = val("ag-add-" + f.key); if (v !== "") fields[f.key] = v; });
+      if (!fields.title) { App.toast("Title is required", "error"); return; }
+      App.amend("Add an agenda item.", "POST",
+        "/api/meetings/" + self._id + "/collections/agenda", { fields: fields },
+        () => self.show(self._id, "agenda"));
+    };
+    document.querySelectorAll("[data-agrm]").forEach(function (btn) {
+      const id = btn.getAttribute("data-agrm");
+      btn.onclick = () => App.amend("Remove agenda item " + id + ".", "POST",
+        "/api/meetings/" + self._id + "/collections/agenda/" + id + "/delete", {},
+        () => self.show(self._id, "agenda"));
     });
+    document.querySelectorAll("[data-aged]").forEach(function (btn) {
+      btn.onclick = () => self._agendaEdit(byId("data-aged", btn), visible);
+    });
+    document.querySelectorAll("[data-agapprove]").forEach(function (btn) {
+      const item = byId("data-agapprove", btn);
+      btn.onclick = () => App.amend("Approve sign-off for " + item.subject_model_id +
+        " → " + item.proposed_rag + ".", "POST",
+        "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff", {},
+        () => self.show(self._id, "agenda"));
+    });
+    document.querySelectorAll("[data-agescalate]").forEach(function (btn) {
+      btn.onclick = () => self._openEscalatePicker(byId("data-agescalate", btn));
+    });
+  },
+
+  _agendaEdit(item, visible) {
+    const card = document.getElementById("agrow-" + item.item_id);
+    card.innerHTML =
+      '<div class="row" style="flex-wrap:wrap;align-items:flex-end">' +
+      visible.map((f) => '<div class="field"><label>' + esc(f.label) + "</label>" +
+        inputControl("ag-ed-" + f.key, f) + "</div>").join("") +
+      '<button class="btn small primary" id="ag-save">Save&hellip;</button>' +
+      '<button class="btn small" id="ag-cancel">Cancel</button></div>';
+    visible.forEach((f) => {
+      const el = document.getElementById("ag-ed-" + f.key);
+      if (item[f.key] !== null && item[f.key] !== undefined) el.value = item[f.key];
+    });
+    document.getElementById("ag-cancel").onclick = () => this.show(this._id, "agenda");
+    document.getElementById("ag-save").onclick = () => {
+      const fields = {};
+      visible.forEach((f) => { const v = val("ag-ed-" + f.key); if (v !== "") fields[f.key] = v; });
+      App.amend("Update agenda item " + item.item_id + ".", "POST",
+        "/api/meetings/" + this._id + "/collections/agenda/" + item.item_id, { fields: fields },
+        () => this.show(this._id, "agenda"));
+    };
   },
 
   // Phase MRC-4: reuse the sign-off picker overlay to choose which parent-MRC
