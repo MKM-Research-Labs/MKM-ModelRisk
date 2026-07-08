@@ -80,6 +80,7 @@ const ProductDetail = {
       ["assumptions", "Assumptions", n("assumptions")],
       ["remediation_steps", "Remediation", n("remediation_steps")],
       ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
+      ["danger", "Danger", null],
     ];
     return '<div class="dtabs">' + tabs.map((t) =>
       '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-ptab="' + t[0] + '">' +
@@ -90,6 +91,7 @@ const ProductDetail = {
     const d = this._product.data || {};
     const box = document.getElementById("pt-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
+    if (this._tab === "danger") { box.innerHTML = this._dangerContent(); this._bindDanger(); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [],
@@ -114,10 +116,10 @@ const ProductDetail = {
       this._section("Monitoring", PRODUCT_OVERVIEW_MONITORING, d);
     const right = this._section("Risk rating", ["rag_rating"], d) +
       this._section("Governance &amp; review", PRODUCT_OVERVIEW_GOV, d);
-    const retire = this._product.retired
-      ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>'
-      : '<div style="margin-top:14px"><button class="btn danger small" id="product-retire">Retire Product…</button></div>';
-    return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" + retire;
+    // Retire lives on the Danger tab; the Overview only flags a retired Product.
+    const status = this._product.retired
+      ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
+    return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" + status;
   },
 
   _editLink(key) {
@@ -140,7 +142,22 @@ const ProductDetail = {
       '</div><div class="v">' + value + "</div>" + this._editLink(key) + "</div>";
   },
 
-  _bindEdits() {
+  // Danger tab: retire the Product (mirrors the model's Danger zone).
+  _dangerContent() {
+    if (this._product.retired) {
+      return '<div class="empty">This Product is retired and read-only. Nothing further can be changed.</div>';
+    }
+    return '<div class="danger-zone">' +
+      '<div class="dz-header">Danger Zone</div>' +
+      '<div class="dz-row">' +
+      '<div class="dz-text"><b>Retire this Product</b>' +
+      '<p class="muted">Retired Products become read-only — no further amendments are accepted. ' +
+      "Existing data and audit trail are preserved.</p></div>" +
+      '<div class="dz-action"><button class="btn danger small" id="product-retire">Retire Product&hellip;</button></div>' +
+      "</div></div>";
+  },
+
+  _bindDanger() {
     const self = this;
     if (this._product.retired) return;
     const retire = document.getElementById("product-retire");
@@ -148,6 +165,11 @@ const ProductDetail = {
       App.amend("Retire Product " + self._id + " (it can no longer be edited).", "POST",
         "/api/products/" + self._id + "/retire", {}, function () { Product.render(); });
     };
+  },
+
+  _bindEdits() {
+    const self = this;
+    if (this._product.retired) return;
     document.querySelectorAll("[data-edit]").forEach(function (btn) {
       const key = btn.getAttribute("data-edit");
       btn.onclick = function () { self._editor(self.fieldSpec(key), "field", "/field", "Set"); };

@@ -371,3 +371,118 @@ def test_pending_signoff_is_none_without_request(client):
     _register_subject_model(client)
     payload = client.get("/api/models/M1/risk-rating").get_json()
     assert payload["pending_signoff"] is None
+
+
+# --- Phase MRC-4: escalate a sign-off to a parent MRC's meeting -------------
+
+def _seed_signoff_ready(client, meeting_id="MTG1", parent_id="MTG2"):
+    """Register a subject model, schedule two meetings, request a sign-off
+    on the first. Returns the agenda item id."""
+    _register_subject_model(client)
+    _schedule(client, meeting_id)
+    client.post(
+        "/api/meetings",
+        json={"meeting_id": parent_id, "title": "Parent MRC",
+              "date": "2026-10-15", "confirmed": True},
+        headers=HEADERS,
+    )
+    _request_signoff(client, model_id="M1", meeting_id=meeting_id)
+    agenda = client.get(f"/api/meetings/{meeting_id}").get_json()["data"]["agenda"]
+    return agenda[0]["item_id"]
+
+
+def test_escalate_signoff_copies_item_to_parent_meeting(client):
+    agenda_id = _seed_signoff_ready(client)
+    response = client.post(
+        f"/api/meetings/MTG1/agenda/{agenda_id}/escalate-signoff",
+        json={"parent_meeting_id": "MTG2", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 200
+    payload = response.get_json()
+    # Original marked Escalated.
+    original = payload["meeting"]["data"]["agenda"][0]
+    assert original["status"] == "Escalated"
+    # Parent gained a Pending sign-off item with the same subject_model_id +
+    # proposed_rag, back-pointing to the original.
+    parent_agenda = payload["parent"]["data"]["agenda"]
+    assert len(parent_agenda) == 1
+    new_item = parent_agenda[0]
+    assert new_item["status"] == "Pending"
+    assert new_item["subject_model_id"] == "M1"
+    assert new_item["proposed_rag"] == "Green"
+    assert new_item["escalated_from_meeting_id"] == "MTG1"
+    assert new_item["escalated_from_agenda_id"] == agenda_id
+
+
+def test_escalate_signoff_requires_parent_meeting_id(client):
+    agenda_id = _seed_signoff_ready(client)
+    response = client.post(
+        f"/api/meetings/MTG1/agenda/{agenda_id}/escalate-signoff",
+        json={"confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 400
+    assert "parent_meeting_id" in response.get_json()["error"]
+
+
+def test_escalate_signoff_unknown_meeting_is_404(client):
+    response = client.post(
+        "/api/meetings/NOPE/agenda/AG-001/escalate-signoff",
+        json={"parent_meeting_id": "MTG2", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 404
+
+
+def test_escalate_signoff_unknown_agenda_is_404(client):
+    _seed_signoff_ready(client)
+    response = client.post(
+        "/api/meetings/MTG1/agenda/AG-999/escalate-signoff",
+        json={"parent_meeting_id": "MTG2", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 404
+
+
+def test_escalate_signoff_rejects_non_signoff_agenda(client):
+    _schedule(client)
+    client.post("/api/meetings", json={"meeting_id": "MTG2", "title": "P",
+                                       "date": "2026-10-15", "confirmed": True},
+                headers=HEADERS)
+    _add(client, "agenda", {"title": "Regular agenda item"})
+    response = client.post(
+        "/api/meetings/MTG1/agenda/AG-001/escalate-signoff",
+        json={"parent_meeting_id": "MTG2", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 400
+
+
+def test_escalate_signoff_unknown_parent_is_404(client):
+    agenda_id = _seed_signoff_ready(client)
+    response = client.post(
+        f"/api/meetings/MTG1/agenda/{agenda_id}/escalate-signoff",
+        json={"parent_meeting_id": "NOPE", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 404
+
+
+def test_escalate_signoff_rejects_completed_parent(client):
+    agenda_id = _seed_signoff_ready(client)
+    client.post(
+        "/api/meetings/MTG2/field",
+        json={"field": "status", "value": "Completed", "confirmed": True},
+        headers=HEADERS,
+    )
+    response = client.post(
+        f"/api/meetings/MTG1/agenda/{agenda_id}/escalate-signoff",
+        json={"parent_meeting_id": "MTG2", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 400
+    assert "Scheduled" in response.get_json()["error"]
+
+
+def test_escalate_signoff_rejects_self(client):
+    agenda_id = _seed_signoff_ready(client)
+    response = client.post(
+        f"/api/meetings/MTG1/agenda/{agenda_id}/escalate-signoff",
+        json={"parent_meeting_id": "MTG1", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 400
+    assert "itself" in response.get_json()["error"]

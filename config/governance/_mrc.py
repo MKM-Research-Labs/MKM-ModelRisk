@@ -39,7 +39,9 @@ MRC_SETTINGS_DEFAULTS = {
 VALID_MEETING_STATUSES = ("Scheduled", "Completed")
 DEFAULT_MEETING_STATUS = "Scheduled"
 VALID_ACTION_STATUSES = ("Open", "Closed")
-VALID_AGENDA_STATUS = ("Pending", "Completed")
+# Phase MRC-4: an agenda item can be "Escalated" instead of Completed when the
+# chair can't approve a sign-off and passes it up to a higher-tier MRC.
+VALID_AGENDA_STATUS = ("Pending", "Completed", "Escalated")
 VALID_PARTICIPANT_STATUS = ("Invited", "Attended", "Apologies", "Declined")
 
 # Model review-status thresholds (days until next review), for the Models tab.
@@ -76,6 +78,13 @@ MRC_COLLECTION_SPECS = {
          "type": "text", "reference": "model_inventory"},
         {"key": "proposed_rag", "label": "Proposed RAG",
          "type": "choice", "options": VALID_RAG_RATINGS},
+        # Phase MRC-4: back-pointers on an escalation-child item — the child
+        # (on the parent MRC's meeting) knows which item it was escalated from.
+        # Not shown on the add form.
+        {"key": "escalated_from_meeting_id", "label": "Escalated from meeting",
+         "type": "text", "hidden": True},
+        {"key": "escalated_from_agenda_id", "label": "Escalated from item",
+         "type": "text", "hidden": True},
     ]},
     "minutes": {"label": "Minutes", "id_prefix": "MIN", "fields": [
         {"key": "title", "label": "Title", "type": "text", "required": True},
