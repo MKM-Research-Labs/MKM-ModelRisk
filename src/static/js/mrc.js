@@ -22,7 +22,10 @@ const MRC = {
   _specs: null,
 
   async specs() {
-    if (!this._specs) this._specs = await App.get("/api/meetings/fields");
+    // Always re-fetch: the MRC dropdown options come from the committees list,
+    // which changes as committees are added in Admin — a cached copy goes stale
+    // (and renders the MRC field as an empty text box).
+    this._specs = await App.get("/api/meetings/fields");
     return this._specs;
   },
 
@@ -81,12 +84,12 @@ const MRC = {
     }
     const fields = {};
     this._specs.fields.forEach(function (f) {
-      if (f.key === "title" || f.key === "date" || f.key === "status" || f.key === "company") return;
+      if (f.key === "title" || f.key === "date" || f.key === "status") return;
       const v = val("sc-" + f.key);
       if (v !== "") fields[f.key] = v;
     });
-    // Company comes from the header org-scope selector, like model registration.
-    Object.assign(fields, OrgScope.get());
+    // Company/division/department/chair are derived from the bound MRC committee,
+    // so the meeting stores only its own fields (mrc, title, date, time, location).
     App.amend('Schedule meeting "' + id + '".', "POST", "/api/meetings",
       { meeting_id: id, title: title, date: date, fields: fields }, () => this.render());
   },

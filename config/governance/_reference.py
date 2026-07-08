@@ -70,6 +70,11 @@ REFERENCE_SPECS = {
         {"key": "chair", "label": "Chair", "type": "text", "reference": "people"},
         {"key": "frequency", "label": "Frequency", "type": "choice",
          "options": VALID_MRC_FREQUENCIES},
+        # The committee's Terms of Reference document, uploaded per committee via
+        # the dedicated /tor endpoints. Hidden from the table/add form — the
+        # detail view renders an upload/download control instead.
+        {"key": "tor_filename", "label": "ToR file", "type": "text", "hidden": True},
+        {"key": "tor_original_name", "label": "ToR name", "type": "text", "hidden": True},
     ]},
     # --- Product reference data (platform) ---
     "calculating_agent": {"label": "Calculating Agent", "id_prefix": "CA", "display": "value",

@@ -20,7 +20,18 @@
 """Tests for the reference-data HTTP API and model-field dropdown enrichment."""
 from __future__ import annotations
 
+import io
+
 from tests.web.conftest import HEADERS
+
+
+def _add_committee(client, value="MRC-1", name="Markets MRC", level="Company"):
+    res = client.post(
+        "/api/reference/collections/mrc",
+        json={"fields": {"value": value, "name": name, "level": level}, "confirmed": True},
+        headers=HEADERS,
+    )
+    return res.get_json()["mrc"][0]["item_id"]
 
 
 def _model_field(client, key):
@@ -46,6 +57,44 @@ def test_get_reference_empty(client):
                            "calculating_agent": [], "mrc": [], "people": []}
     assert [c["key"] for c in res["collections"]] == [
         "company", "division", "department", "mrc", "calculating_agent", "people"]
+
+
+def test_mrc_tor_fields_are_hidden_in_specs(client):
+    # The ToR file metadata is stored on the committee but must not surface as
+    # table columns / add-form inputs.
+    res = client.get("/api/reference").get_json()
+    mrc = next(c for c in res["collections"] if c["key"] == "mrc")
+    hidden = {f["key"] for f in mrc["fields"] if f.get("hidden")}
+    assert hidden == {"tor_filename", "tor_original_name"}
+
+
+def test_mrc_committee_tor_upload_and_download(client):
+    item_id = _add_committee(client)
+    up = client.post(
+        "/api/reference/collections/mrc/" + item_id + "/tor",
+        data={"file": (io.BytesIO(b"%PDF-1.4 ToR"), "terms.pdf")},
+        content_type="multipart/form-data", headers=HEADERS,
+    )
+    assert up.status_code == 201
+    item = next(i for i in up.get_json()["mrc"] if i["item_id"] == item_id)
+    assert item["tor_original_name"] == "terms.pdf" and item["tor_filename"]
+
+    dl = client.get("/api/reference/collections/mrc/" + item_id + "/tor")
+    assert dl.status_code == 200 and dl.data == b"%PDF-1.4 ToR"
+
+
+def test_mrc_tor_download_missing_is_404(client):
+    item_id = _add_committee(client)
+    assert client.get("/api/reference/collections/mrc/" + item_id + "/tor").status_code == 404
+
+
+def test_mrc_tor_upload_unknown_committee_is_404(client):
+    res = client.post(
+        "/api/reference/collections/mrc/MRC-999/tor",
+        data={"file": (io.BytesIO(b"x"), "t.pdf")},
+        content_type="multipart/form-data", headers=HEADERS,
+    )
+    assert res.status_code == 404
 
 
 def test_update_company_via_api(client):
@@ -80,13 +129,17 @@ def test_add_and_remove_person(client):
     assert removed.get_json()["people"] == []
 
 
-def test_owner_and_chair_become_people_dropdowns(client):
+def test_owner_and_mrc_chair_become_people_dropdowns(client):
+    """Chair is now a field on the MRC committee (reference list), not on
+    individual meetings — a meeting's chair is derived from its bound MRC."""
     assert _model_field(client, "owner")["type"] == "text"
-    assert _meeting_field(client, "chair")["type"] == "text"
     _add_person(client, "Jane Doe")
     owner = _model_field(client, "owner")
-    chair = _meeting_field(client, "chair")
     assert owner["type"] == "choice" and owner["options"] == ["Jane Doe"]
+    # MRC reference spec's chair field lights up too.
+    ref = client.get("/api/reference").get_json()
+    mrc_spec = next(c for c in ref["collections"] if c["key"] == "mrc")
+    chair = next(f for f in mrc_spec["fields"] if f["key"] == "chair")
     assert chair["type"] == "choice" and chair["options"] == ["Jane Doe"]
 
 

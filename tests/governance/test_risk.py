@@ -139,6 +139,50 @@ def test_heatmap_response_includes_full_grid():
     assert len(grid) == 9
 
 
+def _hm(materiality, complexity, tier):
+    return compute_risk_rating(
+        {"materiality": materiality, "complexity": complexity, "tier": tier}, as_of=AS_OF,
+    )["heatmap"]
+
+
+def test_tier1_heatmap_is_the_critical_table():
+    # A R R / G A R / G G A
+    assert _hm("High", "Medium", 1)["rag"] == "Red"
+    assert _hm("High", "Low", 1)["rag"] == "Amber"
+    assert _hm("Low", "High", 1)["rag"] == "Amber"
+
+
+def test_tier2_heatmap_is_pushed_one_step_right():
+    # G A R / G G A / G G G
+    assert _hm("High", "Low", 2)["rag"] == "Green"
+    assert _hm("High", "Medium", 2)["rag"] == "Amber"
+    assert _hm("High", "High", 2)["rag"] == "Red"
+    assert _hm("Medium", "High", 2)["rag"] == "Amber"
+    assert _hm("Low", "High", 2)["rag"] == "Green"
+
+
+def test_tier3_heatmap_only_reddens_at_the_top_corner():
+    # G G A / G G G / G G G — no Red anywhere; only High×High is Amber
+    hm = _hm("High", "High", 3)
+    assert hm["rag"] == "Amber"
+    assert set(hm["grid"].values()) == {"Green", "Amber"}
+    assert _hm("High", "Medium", 3)["rag"] == "Green"
+    assert _hm("Medium", "High", 3)["rag"] == "Green"
+
+
+def test_tiers_beyond_three_reuse_the_tier3_table():
+    assert _hm("High", "High", 5)["rag"] == "Amber"
+    assert _hm("High", "Medium", 4)["rag"] == "Green"
+
+
+def test_heatmap_reports_its_tier_band_and_label():
+    hm = _hm("High", "High", 2)
+    assert hm["tier"] == 2 and hm["tier_band"] == 2 and hm["tier_label"] == "Important"
+    # Missing tier is treated as the most conservative band (Tier 1).
+    missing = compute_risk_rating({"materiality": "High", "complexity": "High"}, as_of=AS_OF)["heatmap"]
+    assert missing["tier_band"] == 1 and missing["rag"] == "Red"
+
+
 def test_events_counted_when_within_365_days():
     data = {"operational_failure_events": [
         {"date": "2026-05-01", "description": "recent"},

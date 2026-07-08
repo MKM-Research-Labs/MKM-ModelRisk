@@ -136,13 +136,8 @@ def _edit_meeting_field(page: Page, key: str, value: str) -> None:
     confirm(page)
 
 
-def test_edit_meeting_chair(page: Page, base_url: str):
-    open_app(page, base_url)
-    open_tab(page, "mrc")
-    _schedule(page, "MRC-EDIT-1", "Editable Meeting")
-    page.dblclick("tr.clickable[data-id='MRC-EDIT-1']")
-    _edit_meeting_field(page, "chair", "New Chair")
-    expect(page.locator("#minfo-chair")).to_contain_text("New Chair")
+# chair is no longer a scalar meeting field — it's derived from the meeting's
+# bound MRC. See test_derive_org_scope_* in tests/governance/test_mrc_projection.
 
 
 def test_edit_meeting_location(page: Page, base_url: str):

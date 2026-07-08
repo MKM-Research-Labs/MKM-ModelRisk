@@ -32,7 +32,8 @@ from config.governance import (
     EVENTS_WINDOW_DAYS,
     RISK_ACCEPTABLE_AT,
     RISK_CONDITIONAL_AT,
-    RISK_HEATMAP,
+    RISK_HEATMAP_BY_TIER,
+    RISK_TIER_LABELS,
     RISK_WEIGHTS,
 )
 
@@ -72,11 +73,23 @@ def _impact_health(items: list) -> float:
     return 1.0 - high / len(items)
 
 
-def _heatmap_rag(materiality: str | None, complexity: str | None) -> str | None:
-    """3×3 heatmap lookup: the owner-set Materiality × Complexity cell → RAG."""
+def _tier_band(tier: Any) -> int:
+    """Map a model tier to one of the three heatmap bands (1/2/3).
+
+    Tiers 1-3 map directly; tiers 4-5 fall back to Tier 3; anything missing or
+    unparseable is treated as Tier 1 (most conservative)."""
+    try:
+        return min(max(int(tier), 1), 3)
+    except (TypeError, ValueError):
+        return 1
+
+
+def _heatmap_rag(tier: Any, materiality: str | None, complexity: str | None) -> str | None:
+    """Heatmap lookup: the owner-set Materiality × Complexity cell for the
+    model's tier band → RAG."""
     if not materiality or not complexity:
         return None
-    return RISK_HEATMAP.get((materiality, complexity))
+    return RISK_HEATMAP_BY_TIER[_tier_band(tier)].get((materiality, complexity))
 
 
 def _events_in_window(data: dict[str, Any], as_of: str) -> int:
@@ -131,13 +144,19 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
     ]
     materiality = data.get("materiality")
     complexity = data.get("complexity")
+    tier = data.get("tier")
+    band = _tier_band(tier)
+    table = RISK_HEATMAP_BY_TIER[band]
     heatmap = {
+        "tier": tier,
+        "tier_band": band,
+        "tier_label": RISK_TIER_LABELS[band],
         "materiality": materiality,
         "complexity": complexity,
-        "rag": _heatmap_rag(materiality, complexity),
-        # Full lookup as pipe-joined keys so the UI can colour every cell
-        # without knowing the mapping itself (R1: config is the single truth).
-        "grid": {f"{m}|{c}": rag for (m, c), rag in RISK_HEATMAP.items()},
+        "rag": _heatmap_rag(tier, materiality, complexity),
+        # The tier's full lookup as pipe-joined keys so the UI can colour every
+        # cell without knowing the mapping itself (R1: config is the single truth).
+        "grid": {f"{m}|{c}": rag for (m, c), rag in table.items()},
     }
     return {
         "rating": rating,

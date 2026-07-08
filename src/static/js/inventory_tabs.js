@@ -67,9 +67,13 @@ const DetailTabs = {
       "</thead><tbody>" + rows + "</tbody></table>";
   },
 
-  // W4a: 3×3 heatmap grid (Materiality × Complexity → RAG). The current cell
-  // is highlighted; the rating headline is the cell's colour.
+  // W4a: 3×3 heatmap grid (Materiality × Complexity → RAG) for the model's
+  // tier. The current cell is highlighted; the rating headline is its colour.
   heatmap(hm) {
+    const tierCaption = hm.tier_band
+      ? '<div class="section-header">Tier ' + esc(hm.tier_band) +
+        ' heatmap &mdash; ' + esc(hm.tier_label || "") + "</div>"
+      : "";
     const rows = ["High", "Medium", "Low"];
     const cols = ["Low", "Medium", "High"];
     const grid = hm.grid || {};
@@ -89,7 +93,7 @@ const DetailTabs = {
     // Axis titles live outside the table so they can't stretch the row-label
     // column: materiality runs vertically down the left, complexity across
     // above the column headers.
-    return '<div class="heatmap-wrap">' +
+    return tierCaption + '<div class="heatmap-wrap">' +
       '<div class="hm-y-axis">Materiality</div>' +
       "<div>" +
       '<div class="hm-x-axis">Complexity &rarr;</div>' +
