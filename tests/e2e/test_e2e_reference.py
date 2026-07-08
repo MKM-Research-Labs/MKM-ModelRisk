@@ -17,9 +17,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Admin > reference data e2e: company / division / department / market data
-model / calculating agent / people — create, edit, delete each; plus the
-company logo upload."""
+"""Admin > reference data e2e: division / department / calculating agent /
+people — create, edit, delete each; plus the single institution's name and
+logo upload. Company is no longer a list (single institution per instance)."""
 from __future__ import annotations
 
 import base64
@@ -49,53 +49,24 @@ def _on(page: Page, base_url: str, sub_tab: str) -> None:
     open_admin_subtab(page, sub_tab)
 
 
-# ---------------------------------------------------------------- Company ----
-
-def test_company_create(page: Page, base_url: str):
-    _on(page, base_url, "company")
-    item_id = add_collection_item(page, "company", {"value": "Sterling Bank"})
-    expect(page.locator(f"[data-ed='company|{item_id}']")).to_be_visible()
-
-
-def test_company_edit(page: Page, base_url: str):
-    _on(page, base_url, "company")
-    item_id = add_collection_item(page, "company", {"value": "Sterling Bank"})
-    edit_collection_item(page, "company", item_id, {"value": "Sterling Bank PLC"})
-    expect(page.locator(f"[data-ed='company|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Sterling Bank PLC")
-
-
-def test_company_delete(page: Page, base_url: str):
-    _on(page, base_url, "company")
-    item_id = add_collection_item(page, "company", {"value": "Sterling Bank"})
-    remove_collection_item(page, "company", item_id)
-    expect(page.locator(f"[data-ed='company|{item_id}']")).to_have_count(0)
-
-
 # --------------------------------------------------------------- Division ----
 
 def test_division_create(page: Page, base_url: str):
-    _on(page, base_url, "company")
-    add_collection_item(page, "company", {"value": "Sterling Bank"})
-    open_admin_subtab(page, "division")
-    # The Company field is now a choice because companies exist.
-    item_id = add_collection_item(page, "division", {"value": "Markets", "company": "Sterling Bank"})
+    _on(page, base_url, "division")
+    item_id = add_collection_item(page, "division", {"value": "Markets"})
     expect(page.locator(f"[data-ed='division|{item_id}']")).to_be_visible()
 
 
 def test_division_edit(page: Page, base_url: str):
-    _on(page, base_url, "company")
-    add_collection_item(page, "company", {"value": "Sterling Bank"})
-    open_admin_subtab(page, "division")
-    item_id = add_collection_item(page, "division", {"value": "Markets", "company": "Sterling Bank"})
+    _on(page, base_url, "division")
+    item_id = add_collection_item(page, "division", {"value": "Markets"})
     edit_collection_item(page, "division", item_id, {"value": "Global Markets"})
     expect(page.locator(f"[data-ed='division|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Global Markets")
 
 
 def test_division_delete(page: Page, base_url: str):
-    _on(page, base_url, "company")
-    add_collection_item(page, "company", {"value": "Sterling Bank"})
-    open_admin_subtab(page, "division")
-    item_id = add_collection_item(page, "division", {"value": "Markets", "company": "Sterling Bank"})
+    _on(page, base_url, "division")
+    item_id = add_collection_item(page, "division", {"value": "Markets"})
     remove_collection_item(page, "division", item_id)
     expect(page.locator(f"[data-ed='division|{item_id}']")).to_have_count(0)
 
@@ -103,11 +74,9 @@ def test_division_delete(page: Page, base_url: str):
 # ------------------------------------------------------------- Department ----
 
 def _seed_division(page: Page) -> None:
-    """Seed Sterling Bank > Markets so a Department can choose its Division."""
-    open_admin_subtab(page, "company")
-    add_collection_item(page, "company", {"value": "Sterling Bank"})
+    """Seed Markets division so a Department can choose it."""
     open_admin_subtab(page, "division")
-    add_collection_item(page, "division", {"value": "Markets", "company": "Sterling Bank"})
+    add_collection_item(page, "division", {"value": "Markets"})
 
 
 def test_department_create(page: Page, base_url: str):
@@ -193,10 +162,11 @@ def test_company_logo_upload(page: Page, base_url: str, tmp_path):
     _on(page, base_url, "company")
     logo = tmp_path / "logo.png"
     logo.write_bytes(PNG_BYTES)
-    page.set_input_files("#logo-file", str(logo))
-    page.click("#logo-upload")
-    # The page re-renders with a logo <img> in the Company logo section.
-    expect(page.locator("img[alt='logo']")).to_be_visible()
+    page.set_input_files("#inst-logo-file", str(logo))
+    page.click("#inst-logo-upload")
+    # The page re-renders with a logo <img> in the Company logo section (the
+    # header logo also renders — scope to the admin body to avoid ambiguity).
+    expect(page.locator("#admin-body img[alt='logo']")).to_be_visible()
 
 
 # MRC committees are managed through a dedicated Admin > MRC panel with its own

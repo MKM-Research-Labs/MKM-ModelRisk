@@ -158,16 +158,19 @@ def test_events_counter_reflects_recent_event(page: Page, base_url: str):
 
 def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
     """Approved sign-offs surface as a chronological table on the Risk tab (W4c)."""
+    # Seed model + Company MRC + meeting via API (UI paths are covered elsewhere).
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    page.request.post(base_url + "/api/models",
+                      data={"model_id": "MKM-X1-SO-01", "name": "Signoff History Model",
+                            "confirmed": True}, headers=headers)
+    page.request.post(base_url + "/api/reference/collections/mrc",
+                      data={"fields": {"value": "MRC-X1-SO-CO", "name": "Company MRC",
+                                       "level": "Company"}, "confirmed": True}, headers=headers)
+    page.request.post(base_url + "/api/meetings",
+                      data={"meeting_id": "MRC-X1-SO", "title": "Signoff Meeting",
+                            "date": "2026-11-11", "fields": {"mrc": "MRC-X1-SO-CO"},
+                            "confirmed": True}, headers=headers)
     open_app(page, base_url)
-    register_model(page, "MKM-X1-SO-01", "Signoff History Model")
-    # Schedule + request + approve a sign-off; check history appears.
-    open_tab(page, "mrc")
-    page.fill("#sc-meeting_id", "MRC-X1-SO")
-    page.fill("#sc-title", "Signoff Meeting")
-    page.fill("#sc-date", "2026-11-11")
-    page.click("#mt-schedule")
-    confirm(page)
-    open_tab(page, "inventory")
     open_model(page, "MKM-X1-SO-01")
     edit_model_field(page, "materiality", "High", choice=True)
     expect(page.locator("#row-materiality")).to_contain_text("High")
@@ -178,11 +181,12 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
     page.select_option("#signoff-meeting-pick", "MRC-X1-SO")
     page.click("#signoff-submit")
     confirm(page)
-    # MRC approves.
+    # MRC approves via the agenda tab (bespoke renderer since the user's rewrite;
+    # sign-off items expose a data-agapprove hook).
     open_tab(page, "mrc")
     page.dblclick("tr.clickable[data-id='MRC-X1-SO']")
     page.click("[data-mtab='agenda']")
-    page.get_by_text("Approve sign-off").first.click()
+    page.locator("[data-agapprove]").first.click()
     confirm(page)
     # Back to the model — Risk tab now shows the history table.
     open_tab(page, "inventory")
@@ -194,24 +198,10 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
     expect(body).to_contain_text("Amber")  # the "To" column of the history row
 
 
-def test_register_with_company_assignment(page: Page, base_url: str):
-    """Once a Company exists, registration captures it and the model is stamped."""
-    open_app(page, base_url)
-    # Seed a Company so the form has something to pick.
-    from tests.e2e._flows import add_collection_item, open_admin_subtab
-    open_admin_subtab(page, "company")
-    add_collection_item(page, "company", {"value": "Sterling Bank plc"})
-    # Back to inventory, register with the new Company.
-    page.click(".tab[data-tab='inventory']")
-    page.click("#m-register")
-    page.fill("#reg-model_id", "MKM-E2E-CO-001")
-    page.fill("#reg-name", "Companied Model")
-    page.select_option("#reg-company", "Sterling Bank plc")
-    page.click("#reg-submit")
-    confirm(page)
-    # The inventory list row carries a Company column.
-    row = page.locator("tr.clickable[data-id='MKM-E2E-CO-001']")
-    expect(row).to_contain_text("Sterling Bank plc")
+# test_register_with_company_assignment — retired.
+# Phase MRC-5 removed the Company reference list and the Company field on the
+# register modal. The instance IS a single institution now; every model is
+# implicitly under it.
 
 
 # --- X2 coverage: retired read-only, org-scope filter, per-model audit ------
@@ -236,32 +226,10 @@ def test_retired_model_hides_edit_and_danger_zone(page: Page, base_url: str):
     expect(page.locator("#m-detail")).to_contain_text("retired")
 
 
-def test_org_scope_header_filters_inventory(page: Page, base_url: str):
-    """Setting the header Company filter narrows the inventory list."""
-    # Seed reference data + models directly via the API — the UI paths are
-    # already covered by test_company_create and test_register_with_company_assignment.
-    # Here we're isolating the header-scope filter.
-    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
-    for value in ("Alpha Bank", "Beta Bank"):
-        page.request.post(
-            base_url + "/api/reference/collections/company",
-            data={"fields": {"value": value}, "confirmed": True}, headers=headers,
-        )
-    for model_id, company in [("MKM-X2-FA", "Alpha Bank"), ("MKM-X2-FB", "Beta Bank")]:
-        page.request.post(
-            base_url + "/api/models",
-            data={"model_id": model_id, "name": model_id + " Model",
-                  "fields": {"company": company}, "confirmed": True},
-            headers=headers,
-        )
-    open_app(page, base_url)
-    # Both visible under "All companies".
-    expect(page.locator("tr.clickable[data-id='MKM-X2-FA']")).to_be_visible()
-    expect(page.locator("tr.clickable[data-id='MKM-X2-FB']")).to_be_visible()
-    # Narrow to Alpha Bank — only MKM-X2-FA remains.
-    page.select_option("#scope-company", "Alpha Bank")
-    expect(page.locator("tr.clickable[data-id='MKM-X2-FA']")).to_be_visible()
-    expect(page.locator("tr.clickable[data-id='MKM-X2-FB']")).to_have_count(0)
+# test_org_scope_header_filters_inventory — retired.
+# Phase MRC-5 replaced the header Company dropdown with a static institution
+# display. There is no filter to narrow — every inventory row belongs to the
+# one institution.
 
 
 def test_per_model_audit_tab_shows_recorded_events(page: Page, base_url: str):
