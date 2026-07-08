@@ -163,12 +163,15 @@ const DetailTabs = {
     const pending = rating.pending_signoff;
     const proposed = (rating.heatmap || {}).rag;
     if (pending) {
+      const detail = pending.status === "Attached"
+        ? 'on the agenda of <span class="code">' + esc(pending.meeting_id) + "</span> — " +
+          esc(pending.meeting_title || "") +
+          (pending.meeting_date ? " (" + esc(pending.meeting_date) + ")" : "")
+        : "queued for <b>" + esc(pending.target_mrc || "its MRC") +
+          "</b> — it will be added to that committee's next scheduled meeting";
       return '<div class="dz-row" style="border:1px solid #f57c00;background:#fff8e1;padding:10px 14px;border-radius:6px;margin:8px 0">' +
         '<div class="dz-text"><b>Pending MRC sign-off</b>' +
-        '<p class="muted">Proposed <b>' + esc(pending.proposed_rag) + "</b> awaiting sign-off at " +
-        '<span class="code">' + esc(pending.meeting_id) + "</span> — " +
-        esc(pending.meeting_title || "") + (pending.meeting_date ? " (" + esc(pending.meeting_date) + ")" : "") +
-        ".</p></div></div>";
+        '<p class="muted">Proposed <b>' + esc(pending.proposed_rag) + "</b> " + detail + ".</p></div></div>";
     }
     // Nothing to sign off until the owner has placed the model on the heatmap.
     if (!proposed || rating.signed_off) return "";

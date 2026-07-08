@@ -26,12 +26,13 @@ const PRODUCT_OVERVIEW_GOV = ["status", "owner", "mrc_signoff_date", "next_revie
   "last_review_date", "notes"];
 
 const ProductDetail = {
-  _id: null, _product: null, _specs: null, _audit: [], _tab: "overview",
+  _id: null, _product: null, _specs: null, _audit: [], _mrc: null, _tab: "overview",
 
   async show(productId, tab) {
     this._id = productId;
     this._specs = Product._specs || await Product.specs();
     this._product = await App.get("/api/products/" + productId);
+    this._mrc = await App.get("/api/products/" + productId + "/mrc");
     this._audit = (await App.get("/api/audit")).filter((e) => e.aggregate_id === productId);
     if (tab) this._tab = tab;
     this._render();
@@ -116,11 +117,30 @@ const ProductDetail = {
       this._section("Product", PRODUCT_OVERVIEW_PRODUCT, d) +
       this._section("Monitoring", PRODUCT_OVERVIEW_MONITORING, d);
     const right = this._section("Risk rating", ["rag_rating"], d) +
-      this._section("Governance &amp; review", PRODUCT_OVERVIEW_GOV, d);
+      this._section("Governance &amp; review", PRODUCT_OVERVIEW_GOV, d) + this._mrcRow(d);
     // Retire lives on the Danger tab; the Overview only flags a retired Product.
     const status = this._product.retired
       ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
     return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" + status;
+  },
+
+  // The MRC responsible for this product, inherited from its Analytics Model's
+  // org unit. Flags in red when the model (or its committee) is missing.
+  _mrcRow(d) {
+    const m = this._mrc || {};
+    const head = '<div class="section-header">MRC</div>';
+    if (m.mrc) {
+      const c = m.mrc;
+      return head + '<div class="inforow"><div class="k">Committee</div><div class="v">' +
+        esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
+        '<span class="muted" style="font-size:11px">' + esc(m.level || "") + "-level, via " +
+        esc(m.via_model || "?") + "</div></div>";
+    }
+    const reason = !d.analytics_model
+      ? "no Analytics Model bound"
+      : "no committee covers Analytics Model " + esc(m.via_model || d.analytics_model);
+    return head + '<div class="inforow"><div class="v" style="color:var(--red)">&#9888; ' +
+      reason + ". Bind a model / set up an MRC under Admin &rarr; MRC.</div></div>";
   },
 
   _editLink(key) {

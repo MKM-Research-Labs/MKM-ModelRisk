@@ -38,6 +38,10 @@ VALID_VERSION_LIFECYCLE = (
 # independent Yes/No because in practice an event may inform one and not the
 # other (e.g. internal noise that didn't reach the client).
 VALID_INFORMED = ("Yes", "No")
+# A queued Risk-rating sign-off request (owner-raised) as it moves from raised
+# to attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
+# MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
+VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Withdrawn")
 
 # Structured collections on a model: arrays of items. Each item is built from the
 # field specs below; ``id_prefix`` seeds generated item ids (e.g. AS-001). One
@@ -100,6 +104,20 @@ COLLECTION_SPECS = {
         {"key": "to_rating", "label": "To", "type": "choice",
          "options": VALID_RAG_RATINGS, "required": True},
         {"key": "meeting_id", "label": "Meeting", "type": "text"},
+        {"key": "note", "label": "Note", "type": "text"},
+    ]},
+    # The owner-raised sign-off queue: a request is routed to the model's
+    # responsible MRC (``target_mrc``) and waits as Pending until a meeting of
+    # that committee is scheduled, at which point it is pulled onto the agenda
+    # and marked Attached (recording the meeting + agenda item it landed on).
+    "rag_signoff_requests": {"label": "Sign-off requests", "id_prefix": "SR", "fields": [
+        {"key": "proposed_rag", "label": "Proposed RAG", "type": "choice",
+         "options": VALID_RAG_RATINGS, "required": True},
+        {"key": "target_mrc", "label": "Target MRC", "type": "text"},
+        {"key": "status", "label": "Status", "type": "choice",
+         "options": VALID_SIGNOFF_REQUEST_STATUS},
+        {"key": "meeting_id", "label": "Meeting", "type": "text"},
+        {"key": "agenda_item_id", "label": "Agenda item", "type": "text"},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
     # W4b — Operational Failure Events: post-mortems of incidents touching the

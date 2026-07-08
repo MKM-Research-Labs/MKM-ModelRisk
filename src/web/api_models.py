@@ -50,6 +50,7 @@ from src.web._helpers import (
     reference_options,
     request_actor,
     resolve_field,
+    resolve_mrc_for_org,
 )
 
 
@@ -102,6 +103,16 @@ def field_specs():
         "collections": _collection_specs(),
         "doc_categories": list(DOC_CATEGORIES),
     })
+
+
+@models_bp.get("/<model_id>/mrc")
+def model_mrc(model_id: str):
+    """The MRC committee responsible for this model, derived from its org unit."""
+    model = get_model(model_id)
+    if model is None:
+        return jsonify({"error": "model not found"}), 404
+    data = model["data"] or {}
+    return jsonify(resolve_mrc_for_org(data.get("division"), data.get("department")))
 
 
 @models_bp.post("/<model_id>/documents")
