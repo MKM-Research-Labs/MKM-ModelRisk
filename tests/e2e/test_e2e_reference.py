@@ -137,21 +137,23 @@ def test_people_create(page: Page, base_url: str):
     _on(page, base_url, "people")
     item_id = add_collection_item(
         page, "people",
-        {"name": "David Kerr Kelly", "email": "dkk@example.com", "role": "Head of Risk"},
+        {"name": "David Kerr Kelly", "email": "dkk@example.com", "level": "Company"},
     )
     expect(page.locator(f"[data-ed='people|{item_id}']")).to_be_visible()
 
 
 def test_people_edit(page: Page, base_url: str):
     _on(page, base_url, "people")
-    item_id = add_collection_item(page, "people", {"name": "D. Kelly", "role": "Analyst"})
-    edit_collection_item(page, "people", item_id, {"role": "Lead Analyst"})
-    expect(page.locator(f"[data-ed='people|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Lead Analyst")
+    item_id = add_collection_item(
+        page, "people",
+        {"name": "D. Kelly", "level": "Department", "scope_value": "Rates Trading"})
+    edit_collection_item(page, "people", item_id, {"scope_value": "Equity Derivatives"})
+    expect(page.locator(f"[data-ed='people|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Equity Derivatives")
 
 
 def test_people_delete(page: Page, base_url: str):
     _on(page, base_url, "people")
-    item_id = add_collection_item(page, "people", {"name": "D. Kelly"})
+    item_id = add_collection_item(page, "people", {"name": "D. Kelly", "level": "Company"})
     remove_collection_item(page, "people", item_id)
     expect(page.locator(f"[data-ed='people|{item_id}']")).to_have_count(0)
 
