@@ -17,17 +17,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""MRC settings e2e — retired.
+"""HTTP API for the MRC-meeting aggregate, split into focused submodules."""
+from src.web.api_mrc._bp import mrc_bp
 
-Phase MRC-2 moves the singleton MRC settings (chair, frequency) onto
-individual MRC committees in the Admin > MRC list. Org-wide branding
-(org_name, logo, ToR) is being reshaped alongside — the Admin sub-tab
-no longer mounts a Settings.render() card, so the ``#srow-<key>`` inforow
-selectors these tests relied on no longer exist. Fresh coverage will be
-added against the new committee-detail flow once it stabilises.
-"""
-from __future__ import annotations
+# Side-effect imports attach every endpoint to mrc_bp; import order doesn't
+# matter as long as the blueprint exists first.
+from src.web.api_mrc import lifecycle, collections, signoff  # noqa: F401
 
-import pytest
-
-pytestmark = pytest.mark.e2e
+__all__ = ["mrc_bp"]

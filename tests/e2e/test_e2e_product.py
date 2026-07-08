@@ -138,6 +138,7 @@ def test_product_retire(page: Page, base_url: str):
     register_model(page, "MKM-E2E-MD8", "Vol Surface", model_type="Market Data Model")
     _register_product(page, "Product-E2E-008", "Inflation Swap", "MKM-E2E-AN8", "MKM-E2E-MD8")
     page.click("tr.clickable[data-id='Product-E2E-008']")
+    page.click("[data-ptab='danger']")          # Retire now lives on the Danger tab
     page.click("#product-retire")
     confirm(page)
     expect(page.locator("tr.clickable[data-id='Product-E2E-008']")).to_contain_text("retired")

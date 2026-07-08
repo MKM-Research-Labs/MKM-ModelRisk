@@ -38,7 +38,7 @@ from src.web.api_models import models_bp
 def pending_signoff(model_id: str) -> dict | None:
     """The oldest unapproved sign-off agenda item pointing at this model, if any."""
     for item in meeting_items_for_model("agenda", model_id, field="subject_model_id"):
-        if item.get("proposed_rag") and item.get("status") != "Completed":
+        if item.get("proposed_rag") and item.get("status") == "Pending":
             return {
                 "meeting_id": item["meeting_id"],
                 "meeting_title": item.get("meeting_title"),
