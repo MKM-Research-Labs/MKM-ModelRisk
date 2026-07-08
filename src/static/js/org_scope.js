@@ -18,55 +18,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Header org-scope: the Company a model lives under. The selection filters the
-// inventory and is applied to newly registered models.
+// Header org-scope: there is a single institution (the backend allows only one
+// Company). Rather than a picker, the header shows that company's logo and name;
+// models are registered into it and the inventory is scoped to it.
 const OrgScope = {
   _onChange: null,
-  _KEY: "mkm-org-scope",
+  _company: "",
 
   async init() {
     const data = (await App.get("/api/reference")).data || {};
-    this._fill("scope-company", data.company, "All companies");
-    this._set("scope-company", this._saved().company);
-    document.getElementById("scope-company").onchange = () => this._changed();
-  },
-
-  _fill(id, items, allLabel) {
-    const sel = document.getElementById(id);
-    const opts = ['<option value="">' + allLabel + "</option>"]
-      .concat((items || []).map((it) => "<option>" + esc(it.value) + "</option>"));
-    sel.innerHTML = opts.join("");
-  },
-
-  _set(id, value) {
-    const sel = document.getElementById(id);
-    if (value && [...sel.options].some((o) => o.value === value)) sel.value = value;
-  },
-
-  _saved() {
+    const companies = data.company || [];
+    this._company = companies.length ? companies[0].value : "";
+    let logo = "";
     try {
-      return JSON.parse(localStorage.getItem(this._KEY)) || {};
-    } catch (e) {
-      return {};
-    }
+      const s = await App.get("/api/mrc/settings");
+      if (s && s.logo) {
+        logo = '<img src="/api/mrc/logo?ts=' + Date.now() + '" alt="logo" ' +
+          'style="max-height:28px;vertical-align:middle;margin-right:8px;border-radius:4px">';
+      }
+    } catch (e) { /* no branding logo set */ }
+    const name = this._company
+      ? '<b style="vertical-align:middle">' + esc(this._company) + "</b>"
+      : '<span class="muted">No company set</span>';
+    const el = document.getElementById("org-scope-display");
+    if (el) el.innerHTML = logo + name;
   },
 
-  _changed() {
-    try {
-      localStorage.setItem(this._KEY, JSON.stringify(this.get()));
-    } catch (e) { /* ignore storage failures */ }
-    if (this._onChange) this._onChange();
-  },
-
-  // {company} — only included when a company is selected.
+  // {company} — the single institution (empty before one is defined).
   get() {
-    const scope = {};
-    const company = document.getElementById("scope-company").value;
-    if (company) scope.company = company;
-    return scope;
+    return this._company ? { company: this._company } : {};
   },
 
-  // True if model data matches the current scope (a blank scope matches all).
+  // True if model data matches the current scope (empty scope matches all).
   matches(data) {
     const scope = this.get();
     return Object.keys(scope).every((k) => (data || {})[k] === scope[k]);

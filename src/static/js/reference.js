@@ -51,16 +51,69 @@ const Reference = {
       Committees.render(container, spec, res.data.mrc || []);
       return;
     }
+    // There is only ever one company: show it as a single editable record (name
+    // + owner) with the logo — no list/add/remove table.
+    if (this._tab === "company") {
+      await this._renderCompany(container, spec, res.data.company || []);
+      return;
+    }
     const specs = { collections: [spec] };
     const data = {};
     data[this._tab] = res.data[this._tab] || [];
-    let html = Collections.render(data, specs, false);
-    if (this._tab === "company") html += await this._logoSection();
-    container.innerHTML = html;
+    container.innerHTML = Collections.render(data, specs, false);
     Collections.bind("/api/reference/collections/", specs, false, () => this.render(), data);
-    if (this._tab === "company") {
+  },
+
+  // The company's "value" field is its name; label it as such.
+  _companyLabel(f) { return f.key === "value" ? "Company name" : f.label; },
+
+  async _renderCompany(container, spec, items) {
+    const logoHtml = await this._logoSection();
+    if (!items.length) {
+      // Bootstrap only: no company exists yet, so offer a one-time create form.
+      const inputs = spec.fields.map((f) =>
+        '<div class="field"><label>' + esc(this._companyLabel(f)) + (f.required ? " *" : "") +
+        "</label>" + inputControl("co-add-" + f.key, f) + "</div>").join("");
+      container.innerHTML = '<div class="section-header">Company</div>' +
+        '<p class="muted">Define the institution &mdash; everything else links to it.</p>' +
+        '<div class="row">' + inputs + '<button class="btn small" id="co-add">Create&hellip;</button></div>' +
+        logoHtml;
+      document.getElementById("co-add").onclick = () => {
+        const fields = {};
+        spec.fields.forEach((f) => { const v = val("co-add-" + f.key); if (v !== "") fields[f.key] = v; });
+        App.amend("Set the company.", "POST", "/api/reference/collections/company",
+          { fields: fields }, () => this.render());
+      };
       document.getElementById("logo-upload").onclick = () => this._uploadLogo();
+      return;
     }
+    const item = items[0];
+    const rows = spec.fields.map((f) =>
+      '<div class="inforow" id="corow-' + f.key + '"><div class="k">' + esc(this._companyLabel(f)) +
+      '</div><div class="v">' + fieldDisplay(item[f.key]) +
+      '</div><span class="edit-btn" data-coed="' + f.key + '">edit</span></div>').join("");
+    container.innerHTML = '<div class="section-header">Company</div>' + rows + logoHtml;
+    document.querySelectorAll("[data-coed]").forEach((btn) => {
+      const f = spec.fields.find((x) => x.key === btn.getAttribute("data-coed"));
+      btn.onclick = () => this._editCompanyField(item, f);
+    });
+    document.getElementById("logo-upload").onclick = () => this._uploadLogo();
+  },
+
+  _editCompanyField(item, f) {
+    const row = document.getElementById("corow-" + f.key);
+    row.innerHTML = '<div class="k">' + esc(this._companyLabel(f)) + '</div><div class="editor">' +
+      inputControl("coed-input", f) + '<button class="btn small primary" id="coed-save">Save&hellip;</button>' +
+      '<button class="btn small" id="coed-cancel">Cancel</button></div>';
+    const input = document.getElementById("coed-input");
+    if (item[f.key] !== null && item[f.key] !== undefined) input.value = item[f.key];
+    document.getElementById("coed-cancel").onclick = () => this.render();
+    document.getElementById("coed-save").onclick = () => {
+      const fields = {};
+      fields[f.key] = input.value.trim();
+      App.amend("Update the company.", "POST",
+        "/api/reference/collections/company/" + item.item_id, { fields: fields }, () => this.render());
+    };
   },
 
   // The (single) company's logo — used in the Meeting Pack & Model Risk Report

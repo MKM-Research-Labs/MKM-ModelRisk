@@ -158,13 +158,24 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
         # cell without knowing the mapping itself (R1: config is the single truth).
         "grid": {f"{m}|{c}": rag for (m, c), rag in table.items()},
     }
+    # A rating is "signed off" only once the MRC has approved the current heatmap
+    # RAG — i.e. the most recent sign-off recorded that exact rating. This holds
+    # even when the owner and heatmap already agree: agreement is not approval, so
+    # a never-signed-off model (or one whose heatmap has since moved) still needs
+    # MRC sign-off.
+    signoff_history = data.get("rag_signoff_history") or []
+    latest_signoff = signoff_history[-1] if signoff_history else None
+    signed_off = bool(
+        heatmap["rag"] and latest_signoff and latest_signoff.get("to_rating") == heatmap["rag"]
+    )
     return {
         "rating": rating,
         "score": round(composite, 4),
         "components": components,
         "heatmap": heatmap,
         "approved_rag": data.get("rag_rating"),
+        "signed_off": signed_off,
         "events_in_window": _events_in_window(data, as_of),
         "events_window_days": EVENTS_WINDOW_DAYS,
-        "signoff_history": data.get("rag_signoff_history") or [],
+        "signoff_history": signoff_history,
     }
