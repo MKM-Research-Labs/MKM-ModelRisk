@@ -48,6 +48,8 @@ PRODUCT_FIELD_SPECS = {
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
     "notes": {"label": "Notes", "type": "text", "group": "Governance"},
     "mrc_signoff_date": {"label": "MRC sign-off", "type": "date", "group": "Review dates"},
+    # The meeting that granted the sign-off — displayed as the MRC sign-off value.
+    "mrc_signoff_meeting": {"label": "MRC sign-off meeting", "type": "text", "group": "Review dates"},
     "next_review_date": {"label": "Next review", "type": "date", "group": "Review dates"},
     "last_review_date": {"label": "Last review", "type": "date", "group": "Review dates"},
     "monitoring_approach": {"label": "Monitoring approach", "type": "text", "group": "Monitoring"},
@@ -58,7 +60,7 @@ PRODUCT_FIELD_SPECS = {
 # they are changed via rebind; ``status`` Retired is reached via retire).
 PRODUCT_EDITABLE_FIELDS = (
     "product", "product_id", "description", "rag_rating", "status", "owner", "notes",
-    "mrc_signoff_date", "next_review_date", "last_review_date",
+    "mrc_signoff_date", "mrc_signoff_meeting", "next_review_date", "last_review_date",
     "monitoring_approach", "monitoring_results",
 )
 PRODUCT_FIELD_CHOICES = {"status": VALID_PRODUCT_STATUS, "rag_rating": VALID_RAG_RATINGS}
@@ -72,4 +74,7 @@ PRODUCT_COLLECTION_SPECS = {
     "limitations": COLLECTION_SPECS["limitations"],
     "assumptions": COLLECTION_SPECS["assumptions"],
     "remediation_steps": COLLECTION_SPECS["remediation_steps"],
+    # The MRC sign-off queue + history, shared shape with the model inventory.
+    "rag_signoff_requests": COLLECTION_SPECS["rag_signoff_requests"],
+    "rag_signoff_history": COLLECTION_SPECS["rag_signoff_history"],
 }

@@ -127,12 +127,13 @@ const MeetingDetail = {
   },
 
   _agendaCard(item, idx) {
-    const signoff = item.subject_model_id && item.proposed_rag;
+    const subjectId = item.subject_model_id || item.subject_product_id;
+    const signoff = subjectId && item.proposed_rag;
     const meta = [];
     if (item.presenter) meta.push("Presenter: <b>" + esc(item.presenter) + "</b>");
     meta.push("Status: " + statusBadge(item.status));
     if (signoff) {
-      meta.push('Sign-off: <span class="code">' + esc(item.subject_model_id) + "</span> &rarr; " +
+      meta.push('Sign-off: <span class="code">' + esc(subjectId) + "</span> &rarr; " +
         ragBadge(item.proposed_rag));
     }
     const pending = signoff && item.status === "Pending";
@@ -177,7 +178,8 @@ const MeetingDetail = {
     });
     document.querySelectorAll("[data-agapprove]").forEach(function (btn) {
       const item = byId("data-agapprove", btn);
-      btn.onclick = () => App.amend("Approve sign-off for " + item.subject_model_id +
+      btn.onclick = () => App.amend("Approve sign-off for " +
+        (item.subject_model_id || item.subject_product_id) +
         " → " + item.proposed_rag + ". Add any comments in the box below (optional).", "POST",
         "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff", {},
         () => self.show(self._id, "agenda"));
@@ -238,7 +240,7 @@ const MeetingDetail = {
         (m.data.date ? " (" + esc(m.data.date) + ")" : "") + "</option>";
     }).join("");
     document.getElementById("signoff-summary").innerHTML =
-      "Escalate sign-off for <b>" + esc(item.subject_model_id) +
+      "Escalate sign-off for <b>" + esc(item.subject_model_id || item.subject_product_id) +
       "</b> → proposed <b>" + esc(item.proposed_rag) +
       "</b> to another MRC. It lands on that committee's next Scheduled meeting.";
     const overlay = document.getElementById("signoff-overlay");

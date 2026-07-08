@@ -41,7 +41,7 @@ VALID_INFORMED = ("Yes", "No")
 # A queued Risk-rating sign-off request (owner-raised) as it moves from raised
 # to attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
 # MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
-VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Withdrawn")
+VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Withdrawn")
 
 # Structured collections on a model: arrays of items. Each item is built from the
 # field specs below; ``id_prefix`` seeds generated item ids (e.g. AS-001). One

@@ -23,12 +23,6 @@ from __future__ import annotations
 from flask import jsonify
 
 from src.command import dispatch
-from src.governance.model_inventory import (
-    add_collection_item as _model_add,
-    get_model,
-    rebuild_inventory_view,
-    update_model_field,
-)
 from src.governance.mrc import (
     add_collection_item,
     get_meeting_enriched as get_meeting,
@@ -36,16 +30,18 @@ from src.governance.mrc import (
     update_collection_item,
 )
 from src.web._helpers import context_from_request, json_body
+from src.web._signoff_routing import complete_request_for_agenda, subject_for_agenda_item
 from src.web.api_mrc._bp import mrc_bp
 
 
 @mrc_bp.post("/<meeting_id>/agenda/<item_id>/approve-signoff")
 def approve_signoff(meeting_id: str, item_id: str):
-    """Approve a Risk Rating sign-off agenda item.
+    """Approve a Risk Rating sign-off agenda item (model or product subject).
 
-    Snaps the subject model's rag_rating to the item's proposed_rag, stamps a
-    history entry on the model, and marks the agenda item Completed. All three
-    are separate events (auditable end-to-end); one confirm from the caller.
+    Snaps the subject's rag_rating to the proposed value, stamps its MRC sign-off
+    date + meeting, records a sign-off history entry, completes the subject's
+    queued request, and marks the agenda item Completed — each an auditable event
+    under one confirm from the caller.
     """
     body = json_body()
     meeting = get_meeting(meeting_id)
@@ -55,42 +51,43 @@ def approve_signoff(meeting_id: str, item_id: str):
     item = next((a for a in agenda if a.get("item_id") == item_id), None)
     if item is None:
         return jsonify({"error": "agenda item not found"}), 404
-    model_id = item.get("subject_model_id")
     proposed_rag = item.get("proposed_rag")
-    if not model_id or not proposed_rag:
+    subject, subject_id = subject_for_agenda_item(item)
+    if subject is None or not proposed_rag:
         return jsonify({"error": "agenda item is not a sign-off request"}), 400
-    model = get_model(model_id)
-    if model is None:
-        return jsonify({"error": f"subject model {model_id} not found"}), 404
+    record = subject.get(subject_id)
+    if record is None:
+        return jsonify({"error": f"subject {subject_id} not found"}), 404
     ctx = context_from_request(body)
-    from_rating = (model["data"] or {}).get("rag_rating")
-    dispatch(
-        "update_model_field", update_model_field, context=ctx,
-        model_id=model_id, field="rag_rating", value=proposed_rag,
-    )
+    from_rating = (record["data"] or {}).get("rag_rating")
+    meeting_date = meeting["data"].get("date")
+    subject.set_field(ctx, subject_id, "rag_rating", proposed_rag)
     history_fields = {"to_rating": proposed_rag, "meeting_id": meeting_id}
     if from_rating:
         history_fields["from_rating"] = from_rating
-    if meeting["data"].get("date"):
-        history_fields["date"] = meeting["data"]["date"]
+    if meeting_date:
+        history_fields["date"] = meeting_date
     # Approval comments: an explicit ``note`` wins, else fall back to the
-    # confirm-dialog ``reason`` so the chair's comment is captured on the model's
+    # confirm-dialog ``reason`` so the chair's comment is captured on the
     # sign-off history, not just the audit event.
     note = body.get("note") or body.get("reason")
     if note:
         history_fields["note"] = note
-    dispatch(
-        "add_collection_item", _model_add, context=ctx,
-        model_id=model_id, collection="rag_signoff_history", fields=history_fields,
-    )
+    subject.add_item(ctx, subject_id, "rag_signoff_history", history_fields)
+    # Stamp the MRC sign-off: the date, and the meeting it came from (shown as
+    # the "MRC sign-off" value in the overview).
+    if meeting_date:
+        subject.set_field(ctx, subject_id, "mrc_signoff_date", meeting_date)
+    subject.set_field(ctx, subject_id, "mrc_signoff_meeting", meeting_id)
+    complete_request_for_agenda(ctx, subject, subject_id, item_id)
     dispatch(
         "update_collection_item", update_collection_item, context=ctx,
         meeting_id=meeting_id, collection="agenda", item_id=item_id,
         fields={"status": "Completed"},
     )
-    rebuild_inventory_view()
     rebuild_meeting_view()
-    return jsonify({"meeting": get_meeting(meeting_id), "model": get_model(model_id)})
+    subject.rebuild()
+    return jsonify({"meeting": get_meeting(meeting_id), subject.kind: subject.get(subject_id)})
 
 
 @mrc_bp.post("/<meeting_id>/agenda/<item_id>/escalate-signoff")
@@ -112,7 +109,8 @@ def escalate_signoff(meeting_id: str, item_id: str):
     item = next((a for a in agenda if a.get("item_id") == item_id), None)
     if item is None:
         return jsonify({"error": "agenda item not found"}), 404
-    if not item.get("subject_model_id") or not item.get("proposed_rag"):
+    subject, subject_id = subject_for_agenda_item(item)
+    if subject is None or not item.get("proposed_rag"):
         return jsonify({"error": "agenda item is not a sign-off request"}), 400
     parent = get_meeting(parent_meeting_id)
     if parent is None:
@@ -126,9 +124,9 @@ def escalate_signoff(meeting_id: str, item_id: str):
         "add_collection_item", add_collection_item, context=ctx,
         meeting_id=parent_meeting_id, collection="agenda",
         fields={
-            "title": f"[Escalated] Risk rating sign-off: {item['subject_model_id']} "
+            "title": f"[Escalated] Risk rating sign-off: {subject_id} "
                      f"→ {item['proposed_rag']}",
-            "subject_model_id": item["subject_model_id"],
+            subject.agenda_id_field: subject_id,
             "proposed_rag": item["proposed_rag"],
             "status": "Pending",
             "escalated_from_meeting_id": meeting_id,

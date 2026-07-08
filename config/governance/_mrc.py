@@ -78,6 +78,9 @@ MRC_COLLECTION_SPECS = {
         # model's official rag_rating snaps to proposed_rag.
         {"key": "subject_model_id", "label": "Subject model",
          "type": "text", "reference": "model_inventory"},
+        # A sign-off item is raised for either a model or a product; the subject
+        # product id carries the latter. Hidden from the add form.
+        {"key": "subject_product_id", "label": "Subject product", "type": "text", "hidden": True},
         {"key": "proposed_rag", "label": "Proposed RAG",
          "type": "choice", "options": VALID_RAG_RATINGS},
         # Phase MRC-4: back-pointers on an escalation-child item — the child

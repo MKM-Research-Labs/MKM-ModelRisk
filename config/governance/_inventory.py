@@ -115,6 +115,9 @@ MODEL_FIELD_SPECS = {
     "last_review_date": {"label": "Last review", "type": "date", "group": "Review dates"},
     "next_review_date": {"label": "Next review", "type": "date", "group": "Review dates"},
     "mrc_signoff_date": {"label": "MRC sign-off", "type": "date", "group": "Review dates"},
+    # The meeting that granted the MRC sign-off — shown (in place of the date) as
+    # the "MRC sign-off" value once a committee approves the rating.
+    "mrc_signoff_meeting": {"label": "MRC sign-off meeting", "type": "text", "group": "Review dates"},
     "recertification_date": {"label": "Recertification", "type": "date", "group": "Review dates"},
     "validation_date": {"label": "Validation date", "type": "date", "group": "Review dates"},
     # --- Testing ---

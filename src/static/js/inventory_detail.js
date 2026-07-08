@@ -235,9 +235,14 @@ const Detail = {
         (tableRag ? ragBadge(tableRag) : '<span class="muted">&mdash;</span>');
     } else if (key === "source_module" && d[key]) {
       value = '<span class="code">' + esc(d[key]) + "</span>";
+    } else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
+      // MRC sign-off shows the granting meeting (not the raw date) once approved.
+      value = '<span class="code">' + esc(d.mrc_signoff_meeting) + "</span>";
     }
+    // The sign-off date/meeting are stamped by MRC approval, not edited by hand.
+    const editLink = key === "mrc_signoff_date" ? "" : this._editLink(key);
     return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
-      '</div><div class="v">' + value + "</div>" + this._editLink(key) + "</div>";
+      '</div><div class="v">' + value + "</div>" + editLink + "</div>";
   },
 
   _bindEdits() {
