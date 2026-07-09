@@ -336,3 +336,38 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
 # Escalation is retained as an API capability (see tests/web/test_mrc_signoff_api)
 # but is no longer surfaced on the agenda UI: a sign-off item now offers only
 # Sign off / Reject / Next review.
+
+
+def test_meeting_participants_roster_and_guests(page: Page, base_url: str):
+    """A meeting lists its committee's roster (read-only) and lets you add a
+    guest — a person from the register who is not a member of that committee."""
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    for name in ("David Kelly", "Sofia Castro", "Greg Guest"):
+        page.request.post(base_url + "/api/reference/collections/people",
+                          data={"fields": {"name": name}, "confirmed": True}, headers=headers)
+    page.request.post(base_url + "/api/reference/collections/mrc",
+                      data={"fields": {"value": "MRC-P", "name": "Participants MRC",
+                                       "level": "Company"}, "confirmed": True}, headers=headers)
+    ref = page.request.get(base_url + "/api/reference").json()
+    cid = next(c["item_id"] for c in ref["data"]["mrc"] if c["value"] == "MRC-P")
+    page.request.post(base_url + "/api/reference/collections/mrc/" + cid,
+                      data={"fields": {"chair": "David Kelly", "voting_members": ["Sofia Castro"]},
+                            "confirmed": True}, headers=headers)
+    page.request.post(base_url + "/api/meetings",
+                      data={"meeting_id": "MTG-P", "title": "Participants Meeting",
+                            "date": "2026-10-01", "fields": {"mrc": "MRC-P"},
+                            "confirmed": True}, headers=headers)
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    page.click("tr.clickable[data-id='MTG-P']")
+    page.click("[data-mtab='participants']")
+    content = page.locator("#mtd-content")
+    expect(content).to_contain_text("David Kelly")
+    expect(content).to_contain_text("Chair")
+    expect(content).to_contain_text("Sofia Castro")
+    expect(content).to_contain_text("Voting")
+    # Add a non-member as a guest.
+    page.select_option("#guest-pick", "Greg Guest")
+    page.click("#guest-add")
+    confirm(page)
+    expect(page.locator("#mtd-content")).to_contain_text("Greg Guest")

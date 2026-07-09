@@ -139,7 +139,9 @@ def derive_org_scope(mrc_value: str | None, refs: dict[str, list]) -> dict[str, 
     if not mrc:
         return {}
     result: dict[str, Any] = {}
-    for key in ("chair", "frequency"):
+    # Chair + frequency + the membership roster all carry through to the meeting,
+    # so a meeting knows its committee's members without a second lookup.
+    for key in ("chair", "secretary", "frequency", "voting_members", "non_voting_members"):
         if mrc.get(key):
             result[key] = mrc[key]
     level, scope = mrc.get("level"), mrc.get("scope_value")

@@ -31,6 +31,7 @@ const MeetingDetail = {
     this._meeting = await App.get("/api/meetings/" + meetingId);
     this._models = await App.get("/api/meetings/" + meetingId + "/models");
     this._inventory = await App.get("/api/models");
+    this._people = (await App.get("/api/reference")).data.people || [];
     if (tab) this._tab = tab;
     this._render();
     document.getElementById("mt-detail").scrollIntoView({ block: "start" });
@@ -96,6 +97,11 @@ const MeetingDetail = {
     if (this._tab === "documents") {
       box.innerHTML = '<div class="empty">Document uploads are coming next.</div>'; return;
     }
+    // Participants = the bound MRC's roster (read-only) + guests. Guests are
+    // people from the register who are not members of this committee.
+    if (this._tab === "participants") {
+      box.innerHTML = this._participantsTab(d); this._bindParticipants(d); return;
+    }
     const spec = this.collSpec(this._tab);
     // Minutes / decisions / actions accept multiple new entries at once;
     // participants stays single because one-at-a-time matches practice.
@@ -103,6 +109,71 @@ const MeetingDetail = {
     box.innerHTML = Collections.render(d, { collections: [spec] }, false, bulk);
     Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
       false, () => this.show(this._id, this._tab), d, bulk);
+  },
+
+  // The bound committee's roster, flattened to {name, role} rows.
+  _rosterMembers(d) {
+    const out = [];
+    if (d.chair) out.push({ name: d.chair, role: "Chair" });
+    if (d.secretary) out.push({ name: d.secretary, role: "Secretary" });
+    (d.voting_members || []).forEach((n) => out.push({ name: n, role: "Voting" }));
+    (d.non_voting_members || []).forEach((n) => out.push({ name: n, role: "Non-voting" }));
+    return out;
+  },
+
+  _participantsTab(d) {
+    const members = this._rosterMembers(d);
+    const isMember = {};
+    members.forEach((m) => { isMember[m.name] = true; });
+    const memberRows = members.length
+      ? members.map((m) => "<tr><td>" + esc(m.name) + "</td><td>" + esc(m.role) + "</td></tr>").join("")
+      : '<tr><td colspan="2" class="empty">This committee has no members yet — set them up under Admin &rarr; MRC.</td></tr>';
+    const guests = d.participants || [];
+    const guestRows = guests.length
+      ? guests.map((g) => "<tr><td>" + esc(g.name) + '</td><td>Guest</td><td class="rowact">' +
+          '<button class="btn small danger" data-guestrm="' + esc(g.item_id) + '">Remove</button></td></tr>').join("")
+      : '<tr><td colspan="3" class="empty">No guests.</td></tr>';
+    // Guest candidates: people in the register who are neither members nor
+    // already guests of this meeting.
+    const candidates = (this._people || []).filter((p) =>
+      !isMember[p.name] && !guests.some((g) => g.name === p.name));
+    const options = ['<option value=""></option>'].concat(
+      candidates.map((p) => "<option>" + esc(p.name) + "</option>")).join("");
+    const picker = candidates.length
+      ? '<div class="row" style="margin-top:8px;align-items:flex-end">' +
+        '<div class="field"><label>Add guest</label><select id="guest-pick">' + options + "</select></div>" +
+        '<button class="btn small" id="guest-add">Add guest&hellip;</button></div>'
+      : '<p class="muted" style="font-size:12px">Everyone in the register is already a member or guest.</p>';
+    return '<div class="section-header">Members</div>' +
+      '<p class="muted" style="font-size:12px">From the roster of ' + esc(d.mrc || "this committee") +
+      " (read-only — set under Admin &rarr; MRC).</p>" +
+      "<table><thead><tr><th>Name</th><th>Role</th></tr></thead><tbody>" + memberRows + "</tbody></table>" +
+      '<div class="section-header" style="margin-top:16px">Guests</div>' +
+      '<p class="muted" style="font-size:12px">People from the register who are not members of this committee.</p>' +
+      "<table><thead><tr><th>Name</th><th>Role</th><th></th></tr></thead><tbody>" + guestRows +
+      "</tbody></table>" + picker;
+  },
+
+  _bindParticipants(d) {
+    const self = this;
+    const add = document.getElementById("guest-add");
+    if (add) {
+      add.onclick = function () {
+        const name = document.getElementById("guest-pick").value;
+        if (!name) { App.toast("Pick a person to add as a guest", "error"); return; }
+        App.amend("Add guest " + name + " to " + self._id + ".", "POST",
+          "/api/meetings/" + self._id + "/collections/participants",
+          { fields: { name: name, role: "Guest" } }, () => self.show(self._id, "participants"));
+      };
+    }
+    document.querySelectorAll("[data-guestrm]").forEach(function (btn) {
+      const id = btn.getAttribute("data-guestrm");
+      btn.onclick = function () {
+        App.amend("Remove guest from " + self._id + ".", "POST",
+          "/api/meetings/" + self._id + "/collections/participants/" + id + "/delete", {},
+          () => self.show(self._id, "participants"));
+      };
+    });
   },
 
   // Agenda: each item on two rows — Title + Description up top, the rest below —
