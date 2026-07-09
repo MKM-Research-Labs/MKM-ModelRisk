@@ -140,10 +140,84 @@ const Committees = {
       '<span class="muted" style="margin-left:8px">' + esc(item.value) + "</span>" +
       (archived ? ' <span class="badge" style="background:var(--muted);margin-left:8px">Archived</span>' : "") +
       '<span style="flex:1"></span>' + archiveBtn + "</div>" + rows +
+      this._membershipSection(item) +
       '<div class="section-header" style="margin-top:16px">Terms of Reference</div>' + tor +
       '<div class="row" style="margin-top:6px"><input type="file" id="ctor-file">' +
       '<button class="btn small primary" id="ctor-upload">Upload ToR</button></div></div>';
     this._bindDetail(item);
+  },
+
+  // People eligible for this committee: those whose org unit matches its scope.
+  // Department-level → that department; Division-level → that division (any
+  // department); Company-level (or unset) → everyone.
+  _scopePeople(item) {
+    const people = this._ref.people || [];
+    if (item.level === "Department" && item.scope_value) {
+      return people.filter((p) => p.department === item.scope_value);
+    }
+    if (item.level === "Division" && item.scope_value) {
+      return people.filter((p) => p.division === item.scope_value);
+    }
+    return people;
+  },
+
+  _membershipSection(item) {
+    const single = (key, label) => {
+      const cur = item[key];
+      return '<div class="inforow" id="mrow-' + key + '"><div class="k">' + label +
+        '</div><div class="v">' + (cur ? esc(cur) : '<span class="muted">—</span>') +
+        '</div><span class="edit-btn" data-med="' + key + '">edit</span></div>';
+    };
+    const multi = (key, label) => {
+      const cur = item[key] || [];
+      const shown = cur.length ? esc(cur.join(", ")) : '<span class="muted">—</span>';
+      return '<div class="inforow" id="mrow-' + key + '"><div class="k">' + label +
+        '</div><div class="v">' + shown + '</div><span class="edit-btn" data-med="' + key + '">edit</span></div>';
+    };
+    const scope = item.level === "Company" || !item.level
+      ? "the institution"
+      : esc(item.level) + " (" + esc(item.scope_value || "—") + ")";
+    return '<div class="section-header" style="margin-top:16px">Membership</div>' +
+      '<p class="muted" style="font-size:12px">Members are people in ' + scope + ".</p>" +
+      single("chair", "Chair") + single("secretary", "Secretary") +
+      multi("voting_members", "Voting members") + multi("non_voting_members", "Non-voting members");
+  },
+
+  _editMember(item, key) {
+    const row = document.getElementById("mrow-" + key);
+    const people = this._scopePeople(item);
+    const isMulti = key === "voting_members" || key === "non_voting_members";
+    let control;
+    if (!people.length) {
+      control = '<span class="muted">No people in this committee\'s scope yet — add them under People.</span>';
+    } else if (isMulti) {
+      const cur = item[key] || [];
+      control = '<div class="row" style="flex-wrap:wrap;gap:10px;flex:1">' +
+        people.map((p) => '<label style="font-size:12px;font-weight:400"><input type="checkbox" class="mem-chk" value="' +
+          esc(p.name) + '"' + (cur.indexOf(p.name) >= 0 ? " checked" : "") + "> " + esc(p.name) + "</label>").join("") +
+        "</div>";
+    } else {
+      const cur = item[key] || "";
+      control = '<select id="med-input"><option value=""></option>' +
+        people.map((p) => "<option" + (p.name === cur ? " selected" : "") + ">" + esc(p.name) + "</option>").join("") +
+        "</select>";
+    }
+    const label = key.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+    row.innerHTML = '<div class="k">' + esc(label) + '</div><div class="editor" style="flex:1">' + control +
+      (people.length ? '<button class="btn small primary" id="med-save">Save&hellip;</button>' : "") +
+      '<button class="btn small" id="med-cancel">Cancel</button></div>';
+    document.getElementById("med-cancel").onclick = () => this._showDetail(item.item_id);
+    const save = document.getElementById("med-save");
+    if (save) {
+      save.onclick = () => {
+        const value = isMulti
+          ? [...document.querySelectorAll(".mem-chk:checked")].map((c) => c.value)
+          : document.getElementById("med-input").value;
+        App.amend("Set " + label + " on " + item.value + ".", "POST",
+          "/api/reference/collections/mrc/" + item.item_id, { fields: { [key]: value } },
+          () => Reference.render());
+      };
+    }
   },
 
   _bindDetail(item) {
@@ -152,6 +226,9 @@ const Committees = {
     this._spec.fields.forEach((f) => { byKey[f.key] = f; });
     document.querySelectorAll("[data-ced]").forEach((btn) => {
       btn.onclick = () => self._editField(item, byKey[btn.getAttribute("data-ced")]);
+    });
+    document.querySelectorAll("[data-med]").forEach((btn) => {
+      btn.onclick = () => self._editMember(item, btn.getAttribute("data-med"));
     });
     document.getElementById("carch").onclick = () => {
       const archived = self._isArchived(item);

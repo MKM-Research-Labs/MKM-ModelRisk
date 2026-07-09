@@ -61,9 +61,16 @@ REFERENCE_SPECS = {
         {"key": "level", "label": "Level", "type": "choice",
          "options": VALID_MRC_LEVELS, "required": True},
         {"key": "scope_value", "label": "Division / Department", "type": "text"},
-        {"key": "chair", "label": "Chair", "type": "text", "reference": "people"},
         {"key": "frequency", "label": "Frequency", "type": "choice",
          "options": VALID_MRC_FREQUENCIES},
+        # Membership roster — chosen from people within the committee's org scope.
+        # Hidden from the table/add form; the detail renders a Membership section.
+        # Chair + Secretary are single people; voting / non-voting are lists.
+        {"key": "chair", "label": "Chair", "type": "text", "reference": "people", "hidden": True},
+        {"key": "secretary", "label": "Secretary", "type": "text", "reference": "people",
+         "hidden": True},
+        {"key": "voting_members", "label": "Voting members", "type": "text", "hidden": True},
+        {"key": "non_voting_members", "label": "Non-voting members", "type": "text", "hidden": True},
         # The committee's Terms of Reference document, uploaded per committee via
         # the dedicated /tor endpoints. Hidden from the table/add form — the
         # detail view renders an upload/download control instead.

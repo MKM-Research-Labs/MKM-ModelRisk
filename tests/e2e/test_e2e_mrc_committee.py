@@ -74,6 +74,12 @@ def _edit_field(page: Page, key: str, value: str, *, choice: bool = False) -> No
     confirm(page)
 
 
+def _seed_person(page: Page, base_url: str, name: str, **fields) -> None:
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    page.request.post(base_url + "/api/reference/collections/people",
+                      data={"fields": {"name": name, **fields}, "confirmed": True}, headers=headers)
+
+
 _COMPANY_MRC = {
     "value": "MRC-EMEA",
     "name": "EMEA Model Risk Committee",
@@ -99,11 +105,33 @@ def test_committee_detail_opens_with_tor_section(page: Page, base_url: str):
 
 
 def test_committee_edit_chair(page: Page, base_url: str):
+    # Chair is now chosen in the Membership section from people in scope.
+    _seed_person(page, base_url, "David Kerr Kelly")
     _open_mrc_admin(page, base_url)
     item_id = _add_committee(page, _COMPANY_MRC)
     _open_detail(page, item_id)
-    _edit_field(page, "chair", "David Kerr Kelly")
-    expect(page.locator("#crow-chair .v")).to_contain_text("David Kerr Kelly")
+    page.click("[data-med='chair']")
+    page.select_option("#med-input", "David Kerr Kelly")
+    page.click("#med-save")
+    confirm(page)
+    expect(page.locator("#mrow-chair .v")).to_contain_text("David Kerr Kelly")
+
+
+def test_committee_edit_voting_members(page: Page, base_url: str):
+    # Voting members is a multi-select of in-scope people (checkboxes).
+    _seed_person(page, base_url, "Sofia Castro")
+    _seed_person(page, base_url, "Marcus Reid")
+    _open_mrc_admin(page, base_url)
+    item_id = _add_committee(page, _COMPANY_MRC)
+    _open_detail(page, item_id)
+    page.click("[data-med='voting_members']")
+    page.check("input.mem-chk[value='Sofia Castro']")
+    page.check("input.mem-chk[value='Marcus Reid']")
+    page.click("#med-save")
+    confirm(page)
+    row = page.locator("#mrow-voting_members .v")
+    expect(row).to_contain_text("Sofia Castro")
+    expect(row).to_contain_text("Marcus Reid")
 
 
 def test_committee_edit_frequency_choice(page: Page, base_url: str):
