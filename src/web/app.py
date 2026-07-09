@@ -34,6 +34,7 @@ from src.web import api_models_signoff  # noqa: F401 — attaches endpoints to m
 from src.web.api_mrc import mrc_bp
 from src.web.api_mrc_settings import settings_bp
 from src.web.api_product import product_bp
+from src.web import api_product_signoff  # noqa: F401 — attaches endpoints to product_bp
 from src.web.api_reference import reference_bp
 from src.web.views import views_bp
 

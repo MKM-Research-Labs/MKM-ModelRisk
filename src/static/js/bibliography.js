@@ -83,8 +83,8 @@ const Bibliography = {
       (r.url ? '<a href="' + esc(r.url) + '" target="_blank">' + fieldDisplay(r.title) + "</a>"
         : fieldDisplay(r.title)) + "</td><td>" + fieldDisplay(r.journal) + "</td><td>" +
       (r.category ? '<span class="badge" style="background:#1976d2">' + esc(r.category) + "</span>" : "—") +
-      '</td><td class="rowact"><span class="edit-btn" data-bibed="' + esc(r.item_id) + '">Edit</span>' +
-      '<span class="edit-btn" data-bibrm="' + esc(r.item_id) + '">Del</span></td></tr>').join("") :
+      '</td><td class="rowact"><button class="btn small" data-bibed="' + esc(r.item_id) + '">Edit</button>' +
+      ' <button class="btn small danger" data-bibrm="' + esc(r.item_id) + '">Remove</button></td></tr>').join("") :
       '<tr><td colspan="6" class="empty">No references.</td></tr>';
     document.getElementById("bib-rows").innerHTML = rows;
     const self = this;

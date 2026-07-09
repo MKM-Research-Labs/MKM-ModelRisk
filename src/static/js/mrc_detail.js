@@ -138,13 +138,13 @@ const MeetingDetail = {
     }
     const pending = signoff && item.status === "Pending";
     const actions =
-      '<span class="edit-btn" data-aged="' + esc(item.item_id) + '">edit</span> ' +
-      '<span class="edit-btn" data-agrm="' + esc(item.item_id) + '">remove</span>' +
+      '<button class="btn small" data-aged="' + esc(item.item_id) + '">Edit</button> ' +
+      '<button class="btn small danger" data-agrm="' + esc(item.item_id) + '">Remove</button>' +
       (pending
-        ? ' <span class="edit-btn" data-agapprove="' + esc(item.item_id) +
-          '" style="color:#388e3c;font-weight:600">approve sign-off</span>' +
-          ' <span class="edit-btn" data-agescalate="' + esc(item.item_id) +
-          '" style="color:#f57c00;font-weight:600">escalate</span>'
+        ? ' <button class="btn small primary" data-agapprove="' + esc(item.item_id) +
+          '">Approve sign-off</button>' +
+          ' <button class="btn small" data-agescalate="' + esc(item.item_id) +
+          '" style="color:#f57c00;border-color:#f0b46a">Escalate</button>'
         : "");
     return '<div class="card" style="margin-bottom:8px" id="agrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
