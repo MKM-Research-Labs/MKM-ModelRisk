@@ -89,8 +89,11 @@ tr.clickable:hover td { background: #f7fbff; }
 .inforow { display: flex; align-items: center; padding: 4px 0; font-size: 12px; border-bottom: 1px solid #f5f5f5; }
 .inforow .k { min-width: 170px; color: var(--muted); flex-shrink: 0; }
 .inforow .v { color: var(--text); flex: 1; }
-.inforow .edit-btn { margin-left: 8px; padding: 1px 7px; font-size: 10px; border: 1px solid var(--line); border-radius: 3px; background: #f9f9f9; color: var(--muted); cursor: pointer; }
-.inforow .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+/* Every .edit-btn renders as a small bordered button — never bare text, no
+   matter where it sits (field rows, table row-actions, date chips, cards). */
+.edit-btn { display: inline-block; padding: 1px 7px; font-size: 10px; border: 1px solid var(--line); border-radius: 3px; background: #f9f9f9; color: var(--muted); cursor: pointer; }
+.edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+.inforow .edit-btn { margin-left: 8px; }
 .inforow .editor { display: flex; gap: 6px; align-items: center; flex: 1; }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; background: #f0f0f0; padding: 2px 6px; border-radius: 3px; }

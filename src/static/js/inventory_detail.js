@@ -71,9 +71,13 @@ const Detail = {
   _header(d) {
     const warn = this._risk.rating === "Unacceptable" ? "&#9888; " : "";
     const sub = esc(this._id) + (d.version ? " · v" + esc(d.version) : "") + (d.category ? " · " + esc(d.category) : "");
-    const dates = HEADER_DATES.map((k) =>
-      '<span class="datechip"><span class="muted">' + esc(this.specByKey(k).label) + ":</span> <b>" +
-      fieldDisplay(d[k]) + "</b></span>").join("");
+    const dates = HEADER_DATES.map((k) => {
+      // MRC sign-off shows the granting meeting id (not the date) once approved.
+      const value = (k === "mrc_signoff_date" && d.mrc_signoff_meeting)
+        ? esc(d.mrc_signoff_meeting) : fieldDisplay(d[k]);
+      return '<span class="datechip"><span class="muted">' + esc(this.specByKey(k).label) +
+        ":</span> <b>" + value + "</b></span>";
+    }).join("");
     return '<div class="detail-header"><div>' +
       '<div class="name">' + warn + esc(d.name || this._id) + "</div>" +
       '<div class="sub">' + sub + "</div>" +
