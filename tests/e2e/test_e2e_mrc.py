@@ -338,6 +338,26 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
 # Sign off / Reject / Next review.
 
 
+def test_model_analysis_upload_on_models_tab(page: Page, base_url: str, tmp_path):
+    """The Models tab's Analysis column lets you upload a per-model analysis
+    document for an in-scope model."""
+    open_app(page, base_url)
+    register_model(page, "MKM-AN-01", "Analysis Model")
+    _schedule(page, base_url, "MRC-AN", "Analysis Meeting")
+    page.click("tr.clickable[data-id='MRC-AN']")
+    page.click("[data-mtab='models_in_scope']")
+    expect(page.locator("#mtd-content")).to_contain_text("Analysis")
+    # Put the model in scope so it can carry an analysis file.
+    page.check("[data-mscope='MKM-AN-01']")
+    page.click("#mt-save-models")
+    confirm(page)
+    analysis = tmp_path / "analysis.pdf"
+    analysis.write_bytes(b"%PDF-1.4 analysis")
+    page.set_input_files("#an-file-MKM-AN-01", str(analysis))
+    # The row re-renders with a download link to the uploaded document.
+    expect(page.locator("#mtd-content")).to_contain_text("analysis.pdf")
+
+
 def test_meeting_participants_roster_and_guests(page: Page, base_url: str):
     """A meeting lists its committee's roster (read-only) and lets you add a
     guest — a person from the register who is not a member of that committee."""

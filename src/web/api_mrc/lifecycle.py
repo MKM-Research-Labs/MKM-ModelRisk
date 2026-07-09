@@ -23,9 +23,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Response, jsonify
+from flask import Response, jsonify, request, send_file
 
 from src.command import dispatch
+from src.files import UploadError, save_upload, upload_path
 from src.governance.model_inventory import get_model
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.mrc import (
@@ -34,13 +35,19 @@ from src.governance.mrc import (
     list_meetings_enriched as list_meetings,
     rebuild_meeting_view,
     schedule_meeting,
+    update_collection_item,
     update_meeting_field,
 )
 from src.governance.mrc.pack import render_pack_pdf
 from src.governance.mrc_settings import get_settings
-from src.web._helpers import context_from_request, json_body
+from src.web._helpers import context_from_request, json_body, request_actor
 from src.web._signoff_routing import drain_pending_for_meeting
 from src.web.api_mrc._bp import mrc_bp
+
+
+def _in_scope_item(meeting: dict, model_id: str) -> dict | None:
+    return next((i for i in (meeting["data"].get("models_in_scope") or [])
+                 if i.get("model_id") == model_id), None)
 
 
 @mrc_bp.get("")
@@ -85,8 +92,48 @@ def models_in_scope(meeting_id: str):
             "tier": data.get("tier"),
             "rag_rating": data.get("rag_rating"),
             "review_status": compute_review_status(data.get("next_review_date"), today),
+            "analysis_original_name": item.get("analysis_original_name"),
         })
     return jsonify(rows)
+
+
+@mrc_bp.post("/<meeting_id>/models/<model_id>/analysis")
+def upload_model_analysis(meeting_id: str, model_id: str):
+    """Upload the analysis document for an in-scope model at this meeting."""
+    meeting = get_meeting_raw(meeting_id)
+    if meeting is None:
+        return jsonify({"error": "meeting not found"}), 404
+    item = _in_scope_item(meeting, model_id)
+    if item is None:
+        return jsonify({"error": "model is not in scope for this meeting"}), 400
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        meta = save_upload("meeting_analysis", file.filename, file.read())
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    update_collection_item(
+        meeting_id=meeting_id, collection="models_in_scope", item_id=item["item_id"],
+        fields={"analysis_filename": meta["filename"], "analysis_original_name": meta["original_name"]},
+        actor=request_actor(),
+    )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id)), 201
+
+
+@mrc_bp.get("/<meeting_id>/models/<model_id>/analysis")
+def download_model_analysis(meeting_id: str, model_id: str):
+    """Download a model's analysis document for this meeting, if uploaded."""
+    meeting = get_meeting_raw(meeting_id)
+    item = _in_scope_item(meeting, model_id) if meeting else None
+    if item is None or not item.get("analysis_filename"):
+        return jsonify({"error": "no analysis uploaded"}), 404
+    path = upload_path("meeting_analysis", item["analysis_filename"])
+    if not path.exists():
+        return jsonify({"error": "analysis file missing"}), 404
+    return send_file(str(path), as_attachment=True,
+                     download_name=item.get("analysis_original_name") or "analysis")
 
 
 @mrc_bp.post("")

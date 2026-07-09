@@ -104,6 +104,10 @@ MRC_COLLECTION_SPECS = {
     ]},
     "models_in_scope": {"label": "Models", "id_prefix": "MS", "fields": [
         {"key": "model_id", "label": "Model", "type": "text", "required": True},
+        # Per-model analysis document uploaded for this meeting. Hidden metadata;
+        # the Models tab renders an upload/download control per in-scope model.
+        {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
+        {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
     ]},
     "decisions": {"label": "Decisions", "id_prefix": "D", "fields": [
         {"key": "description", "label": "Decision", "type": "text", "required": True},
