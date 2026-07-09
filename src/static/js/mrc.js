@@ -168,8 +168,8 @@ const MRC = {
       "<th>Models</th><th>Agenda</th><th>Minutes</th><th>Docs</th></tr></thead><tbody>" +
       rows + "</tbody></table>";
     box.querySelectorAll("tr.clickable").forEach(function (tr) {
-      tr.title = "Double-click to open";
-      tr.ondblclick = function () { MeetingDetail.show(tr.getAttribute("data-id")); };
+      tr.title = "Open meeting";
+      tr.onclick = function () { MeetingDetail.show(tr.getAttribute("data-id")); };
     });
   },
 };

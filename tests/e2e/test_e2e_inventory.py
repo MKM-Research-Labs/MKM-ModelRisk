@@ -184,7 +184,7 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
     # MRC approves via the agenda tab (bespoke renderer since the user's rewrite;
     # sign-off items expose a data-agapprove hook).
     open_tab(page, "mrc")
-    page.dblclick("tr.clickable[data-id='MRC-X1-SO']")
+    page.click("tr.clickable[data-id='MRC-X1-SO']")
     page.click("[data-mtab='agenda']")
     page.locator("[data-agapprove]").first.click()
     confirm(page)
