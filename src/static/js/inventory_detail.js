@@ -102,8 +102,8 @@ const Detail = {
       ["validation_questions", "Validation & Assumptions", cov],
       ["operational_failure_events", "Events", n("operational_failure_events")],
       ["risk", "Risk Rating", null],
-      ["decisions", "Decisions", this._decisions.length],
-      ["actions", "Actions", this._actions.length],
+      ["decisions", "MRC linkage",
+        (d.rag_signoff_history || []).length + this._decisions.length + this._actions.length],
       ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
       ["danger", "Danger", null],
     ];
@@ -125,8 +125,7 @@ const Detail = {
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
-    if (this._tab === "decisions") { box.innerHTML = DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]); return; }
-    if (this._tab === "actions") { box.innerHTML = DetailTabs.linkedItems("Actions", this._actions, ["description", "owner", "target_date", "status"]); return; }
+    if (this._tab === "decisions") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "docs") {
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [], this._model.retired);
       return;
@@ -165,6 +164,23 @@ const Detail = {
 
   _collSection(key, d) {
     return Collections.render(d, { collections: [this.collSpec(key)] }, this._model.retired);
+  },
+
+  // The model's MRC record: granted rating sign-offs (which land here once a
+  // committee approves), plus decisions and actions linked from the meeting log.
+  _mrcLinkage(d) {
+    const signoffs = d.rag_signoff_history || [];
+    const soSection = signoffs.length
+      ? DetailTabs.signoffHistory(signoffs)
+      : '<div class="section-header">Sign-off history</div>' +
+        '<div class="empty">No MRC sign-offs granted yet.</div>';
+    return '<p class="muted">The model&rsquo;s MRC record — granted rating sign-offs, plus ' +
+      "decisions and actions linked from meetings (read-only, sourced from the meeting log).</p>" +
+      soSection +
+      '<div class="section-header">Decisions</div>' +
+      DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]) +
+      '<div class="section-header">Actions</div>' +
+      DetailTabs.linkedItems("Actions", this._actions, ["description", "owner", "target_date", "status"]);
   },
 
   _bindCollections(keys) {

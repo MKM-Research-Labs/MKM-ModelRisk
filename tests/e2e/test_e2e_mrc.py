@@ -258,6 +258,13 @@ def test_signoff_workflow_owner_requests_and_mrc_approves(page: Page, base_url: 
     open_tab(page, "inventory")
     row = page.locator("tr.clickable[data-id='MKM-SO-01']")
     expect(row).to_contain_text("Amber")
+    # The granted sign-off lands on the model's MRC linkage tab (the fact + the
+    # meeting it came from), alongside decisions and actions.
+    open_model(page, "MKM-SO-01")
+    page.click("[data-dtab='decisions']")
+    linkage = page.locator("#dt-content")
+    expect(linkage).to_contain_text("Sign-off history")
+    expect(linkage).to_contain_text("MRC-SO")
 
 
 def test_decision_linked_to_model_appears_on_model_detail(page: Page, base_url: str):
