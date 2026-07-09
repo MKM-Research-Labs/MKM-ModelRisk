@@ -72,17 +72,21 @@ MRC_COLLECTION_SPECS = {
         {"key": "title", "label": "Title", "type": "text", "required": True},
         {"key": "description", "label": "Description", "type": "text"},
         {"key": "presenter", "label": "Presenter", "type": "text"},
-        {"key": "status", "label": "Status", "type": "choice", "options": VALID_AGENDA_STATUS},
-        # W4c — sign-off agenda items link back to a model and carry the
-        # proposed RAG. When the item is Approved at the meeting, the linked
-        # model's official rag_rating snaps to proposed_rag.
+        # A manually-added agenda item is just Title / Description / Presenter
+        # (plus an optional document). Status + the sign-off routing fields are
+        # set by the workflow, not the add form, so they are hidden from it.
+        {"key": "status", "label": "Status", "type": "choice",
+         "options": VALID_AGENDA_STATUS, "hidden": True},
+        {"key": "document_filename", "label": "Document file", "type": "text", "hidden": True},
+        {"key": "document_original_name", "label": "Document", "type": "text", "hidden": True},
+        # W4c — sign-off agenda items link back to a model/product and carry the
+        # proposed RAG. When Approved at the meeting, the subject's official
+        # rag_rating snaps to proposed_rag. Set by request-signoff, not by hand.
         {"key": "subject_model_id", "label": "Subject model",
-         "type": "text", "reference": "model_inventory"},
-        # A sign-off item is raised for either a model or a product; the subject
-        # product id carries the latter. Hidden from the add form.
+         "type": "text", "reference": "model_inventory", "hidden": True},
         {"key": "subject_product_id", "label": "Subject product", "type": "text", "hidden": True},
         {"key": "proposed_rag", "label": "Proposed RAG",
-         "type": "choice", "options": VALID_RAG_RATINGS},
+         "type": "choice", "options": VALID_RAG_RATINGS, "hidden": True},
         # Phase MRC-4: back-pointers on an escalation-child item — the child
         # (on the parent MRC's meeting) knows which item it was escalated from.
         # Not shown on the add form.
@@ -104,6 +108,8 @@ MRC_COLLECTION_SPECS = {
     ]},
     "models_in_scope": {"label": "Models", "id_prefix": "MS", "fields": [
         {"key": "model_id", "label": "Model", "type": "text", "required": True},
+        # Who presents this model at the meeting (a person from the register).
+        {"key": "presenter", "label": "Presenter", "type": "text", "reference": "people"},
         # Per-model analysis document uploaded for this meeting. Hidden metadata;
         # the Models tab renders an upload/download control per in-scope model.
         {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},

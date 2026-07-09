@@ -110,6 +110,22 @@ def build_tex(
         ["#", "Title", "Presenter", "Status"],
         [[i + 1, a.get("title"), a.get("presenter"), a.get("status")]
          for i, a in enumerate(data.get("agenda", []))])) if data.get("agenda") else ""
+    # Sign-off agenda items (a model/product + a proposed RAG) called out on
+    # their own, with the outcome.
+    signoff_items = [
+        a for a in data.get("agenda", [])
+        if (a.get("subject_model_id") or a.get("subject_product_id")) and a.get("proposed_rag")
+    ]
+    signoffs = _section("Model Sign-offs", _table(
+        ["Subject", "Proposed RAG", "Status"],
+        [[a.get("subject_model_id") or a.get("subject_product_id"),
+          a.get("proposed_rag"), a.get("status")] for a in signoff_items])) if signoff_items else ""
+    # In-scope models with who presents and whether an analysis was attached.
+    in_scope = data.get("models_in_scope") or []
+    models_scope = _section("Models in Scope (Analysis)", _table(
+        ["Model", "Presenter", "Analysis"],
+        [[m.get("model_id"), m.get("presenter"), m.get("analysis_original_name") or "--"]
+         for m in in_scope])) if in_scope else ""
     minutes = ""
     if data.get("minutes"):
         body = "".join(
@@ -137,7 +153,7 @@ def build_tex(
         "\\pagestyle{plain}\n\\begin{document}\n"
         "\\begin{center}\n" + header + "\\end{center}\n"
         "{\\Large\\textbf{" + _esc(title) + "}}\\\\[4pt]\n" + info + "\\par\\bigskip\n" +
-        participants + agenda + minutes + decisions + actions + remediation +
+        participants + agenda + signoffs + models_scope + minutes + decisions + actions + remediation +
         "\\vfill\\begin{center}\\small\\textcolor{gray}{" + footer + "}\\end{center}\n"
         "\\end{document}\n"
     )
