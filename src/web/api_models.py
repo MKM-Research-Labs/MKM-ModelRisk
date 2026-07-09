@@ -29,7 +29,6 @@ from src.files import UploadError, upload_path
 from src.governance.documents import add_document, find_document, remove_document
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory.report import render_report_pdf
-from src.governance.model_inventory.review import compute_review_status
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import meeting_items_for_model
 from src.governance.mrc_settings import get_settings
@@ -185,11 +184,9 @@ def risk_rating(model_id: str):
     model = get_model(model_id)
     if model is None:
         return jsonify({"error": "model not found"}), 404
-    today = date.today().isoformat()
-    payload = compute_risk_rating(model["data"], as_of=today)
+    payload = compute_risk_rating(model["data"], as_of=date.today().isoformat())
     from src.web.api_models_signoff import pending_signoff  # avoids import cycle
     payload["pending_signoff"] = pending_signoff(model_id)
-    payload["review_status"] = compute_review_status((model["data"] or {}).get("next_review_date"), today)
     return jsonify(payload)
 
 

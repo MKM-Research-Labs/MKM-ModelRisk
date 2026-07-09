@@ -69,12 +69,13 @@ def test_edit_lifecycle_stage_choice(page: Page, base_url: str):
     expect(page.locator("#row-lifecycle_stage")).to_contain_text("Production")
 
 
-def test_edit_next_review_date(page: Page, base_url: str):
+def test_next_review_is_read_only(page: Page, base_url: str):
+    # Next review is set by the MRC at sign-off, not edited by hand on the overview.
     open_app(page, base_url)
     register_model(page, "MKM-E2E-005", "LGD Model")
     open_model(page, "MKM-E2E-005")
-    edit_model_field(page, "next_review_date", "2026-12-31")
-    expect(page.locator("#row-next_review_date")).to_contain_text("2026-12-31")
+    expect(page.locator("#row-next_review_date")).to_be_visible()
+    expect(page.locator("[data-edit='next_review_date']")).to_have_count(0)
 
 
 def test_edit_materiality_choice(page: Page, base_url: str):

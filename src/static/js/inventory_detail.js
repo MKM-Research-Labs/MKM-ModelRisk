@@ -28,10 +28,9 @@ const OVERVIEW_LEFT = ["division", "department", "methodology", "source_module",
 // Governance: MRC (derived) sits at the top; the MRC sets sign-off + next review
 // at sign-off, so recertification / review frequency / last review are dropped.
 // Review status (a derived badge) replaces the raw review-date clutter.
-const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "lifecycle_stage", "validation_status", "peer_reviewer"];
-const OVERVIEW_RIGHT_MRC = ["mrc_signoff_date", "next_review_date"];
+const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "lifecycle_stage", "review_status", "peer_reviewer"];
 const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
-const HEADER_DATES = ["mrc_signoff_date", "next_review_date"];
+const HEADER_DATES = ["next_review_date"];
 
 const Detail = {
   _id: null, _model: null, _specs: null, _risk: null, _audit: [], _mrc: null,
@@ -223,11 +222,11 @@ const Detail = {
 
   _overview(d) {
     const left = OVERVIEW_LEFT.map((k) => this._row(k, d)).join("");
-    // Governance: MRC first, then owner/rating/lifecycle, review status, and the
-    // MRC-set sign-off + next review.
+    // Governance: MRC first, then owner/rating/lifecycle/review-status, then the
+    // MRC status (a summary of the MRC linkage) and the MRC-set next review.
     const right = this._mrcRow() +
-      OVERVIEW_RIGHT_TOP.map((k) => this._row(k, d)).join("") + this._reviewStatusRow() +
-      OVERVIEW_RIGHT_MRC.map((k) => this._row(k, d)).join("");
+      OVERVIEW_RIGHT_TOP.map((k) => this._row(k, d)).join("") +
+      this._mrcStatusRow(d) + this._row("next_review_date", d);
     const status = this._model.retired
       ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
     // Full-width summary of what the model does, spanning both columns.
@@ -240,11 +239,28 @@ const Detail = {
       "</div></div>" + status;
   },
 
-  // Derived review currency (Overdue / Due Soon / Upcoming / On Track) from the
-  // risk-rating read; not an editable field.
-  _reviewStatusRow() {
-    return '<div class="inforow"><div class="k">Review status</div><div class="v">' +
-      reviewBadge((this._risk || {}).review_status) + "</div></div>";
+  // MRC status: a one-line summary of the model's MRC linkage — its latest
+  // sign-off decision (or a pending request), linking through to the full record.
+  _mrcStatusRow(d) {
+    const hist = d.rag_signoff_history || [];
+    const latest = hist.length ? hist[hist.length - 1] : null;
+    const pending = (this._risk || {}).pending_signoff;
+    let value;
+    if (latest) {
+      const outcome = latest.outcome || "Approved";
+      const color = outcome === "Rejected" ? "var(--red)" : "#388e3c";
+      value = '<span style="color:' + color + ';font-weight:600">' + esc(outcome) + "</span> at " +
+        '<span class="code">' + esc(latest.meeting_id) + "</span>" +
+        (latest.date ? " (" + esc(latest.date) + ")" : "");
+    } else if (pending) {
+      value = pending.status === "Attached"
+        ? 'Pending — on the agenda of <span class="code">' + esc(pending.meeting_id) + "</span>"
+        : "Pending — queued for " + esc(pending.target_mrc || "its MRC");
+    } else {
+      value = '<span class="muted">No MRC decision yet</span>';
+    }
+    return '<div class="inforow"><div class="k">MRC status</div><div class="v">' + value +
+      '</div><span class="edit-btn" data-open-linkage="1">view</span></div>';
   },
 
   // The MRC responsible for this model, derived from its division/department.
@@ -304,8 +320,9 @@ const Detail = {
       // MRC sign-off shows the granting meeting (not the raw date) once approved.
       value = '<span class="code">' + esc(d.mrc_signoff_meeting) + "</span>";
     }
-    // The sign-off date/meeting are stamped by MRC approval, not edited by hand.
-    const editLink = key === "mrc_signoff_date" ? "" : this._editLink(key);
+    // Sign-off + next review are set by the MRC at sign-off, not edited by hand.
+    const editLink = (key === "mrc_signoff_date" || key === "next_review_date")
+      ? "" : this._editLink(key);
     return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
       '</div><div class="v">' + value + "</div>" + editLink + "</div>";
   },
@@ -318,6 +335,9 @@ const Detail = {
         btn.onclick = function () { self._edit(self.specByKey(key), self._model.data[key]); };
       });
     }
+    // "MRC status" links through to the full MRC linkage record.
+    const linkage = document.querySelector("[data-open-linkage]");
+    if (linkage) linkage.onclick = function () { self._tab = "decisions"; self._render(); };
   },
 
   // W4c — open the sign-off picker, then hand the chosen meeting off to the

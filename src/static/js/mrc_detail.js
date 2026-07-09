@@ -137,15 +137,21 @@ const MeetingDetail = {
         ragBadge(item.proposed_rag));
     }
     const pending = signoff && item.status === "Pending";
-    const actions =
-      '<button class="btn small" data-aged="' + esc(item.item_id) + '">Edit</button> ' +
-      '<button class="btn small danger" data-agrm="' + esc(item.item_id) + '">Remove</button>' +
-      (pending
-        ? ' <button class="btn small primary" data-agapprove="' + esc(item.item_id) +
-          '">Approve sign-off</button>' +
-          ' <button class="btn small" data-agescalate="' + esc(item.item_id) +
-          '" style="color:#f57c00;border-color:#f0b46a">Escalate</button>'
-        : "");
+    // A sign-off item carries only the committee's decision — Sign off / Reject —
+    // and the next review date it sets; both are reflected back to the subject.
+    // Regular (non-sign-off) agenda items keep Edit / Remove.
+    const actions = signoff
+      ? (pending
+          ? '<span class="muted" style="font-size:11px">Next review</span> ' +
+            '<input type="date" id="ag-nextreview-' + esc(item.item_id) +
+            '" style="padding:3px 6px;font-size:11px"> ' +
+            '<button class="btn small primary" data-agapprove="' + esc(item.item_id) +
+            '">Sign off</button> ' +
+            '<button class="btn small danger" data-agreject="' + esc(item.item_id) +
+            '">Reject</button>'
+          : "")
+      : '<button class="btn small" data-aged="' + esc(item.item_id) + '">Edit</button> ' +
+        '<button class="btn small danger" data-agrm="' + esc(item.item_id) + '">Remove</button>';
     return '<div class="card" style="margin-bottom:8px" id="agrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b>" +
@@ -176,16 +182,28 @@ const MeetingDetail = {
     document.querySelectorAll("[data-aged]").forEach(function (btn) {
       btn.onclick = () => self._agendaEdit(byId("data-aged", btn), visible);
     });
+    const nextReview = (id) => (document.getElementById("ag-nextreview-" + id) || {}).value || null;
     document.querySelectorAll("[data-agapprove]").forEach(function (btn) {
       const item = byId("data-agapprove", btn);
-      btn.onclick = () => App.amend("Approve sign-off for " +
-        (item.subject_model_id || item.subject_product_id) +
-        " → " + item.proposed_rag + ". Add any comments in the box below (optional).", "POST",
-        "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff", {},
-        () => self.show(self._id, "agenda"));
+      const subj = item.subject_model_id || item.subject_product_id;
+      btn.onclick = () => {
+        const nr = nextReview(item.item_id);
+        App.amend("Sign off " + subj + " → " + item.proposed_rag +
+          ". Sets next review" + (nr ? " " + nr : "") + "; add any comments below.", "POST",
+          "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff",
+          { next_review_date: nr }, () => self.show(self._id, "agenda"));
+      };
     });
-    document.querySelectorAll("[data-agescalate]").forEach(function (btn) {
-      btn.onclick = () => self._openEscalatePicker(byId("data-agescalate", btn));
+    document.querySelectorAll("[data-agreject]").forEach(function (btn) {
+      const item = byId("data-agreject", btn);
+      const subj = item.subject_model_id || item.subject_product_id;
+      btn.onclick = () => {
+        const nr = nextReview(item.item_id);
+        App.amend("Reject sign-off for " + subj + " → " + item.proposed_rag +
+          " (rating not promoted). Add any comments below.", "POST",
+          "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/reject-signoff",
+          { next_review_date: nr }, () => self.show(self._id, "agenda"));
+      };
     });
   },
 

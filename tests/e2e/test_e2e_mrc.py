@@ -333,59 +333,6 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
     expect(page.locator("[data-mscope='MRC-M-EQD']")).to_be_visible()
 
 
-def test_escalate_signoff_moves_it_to_parent_meeting(page: Page, base_url: str):
-    """Phase MRC-4: the chair escalates a sign-off to a higher-tier meeting."""
-    # Seed the model, two MRC committees + two Scheduled meetings via API.
-    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
-    # A division so the model matches a Division-level committee specifically.
-    page.request.post(base_url + "/api/reference/collections/division",
-                      data={"fields": {"value": "Markets"}, "confirmed": True}, headers=headers)
-    page.request.post(base_url + "/api/models",
-                      data={"model_id": "MKM-ESC-01", "name": "Escalation Model",
-                            "fields": {"division": "Markets"}, "confirmed": True}, headers=headers)
-    # The child committee (Division-level — the model's responsible MRC) and the
-    # Company-level parent it escalates up to.
-    page.request.post(base_url + "/api/reference/collections/mrc",
-                      data={"fields": {"value": "MRC-ESC-DEPT", "name": "Dept MRC",
-                                       "level": "Division", "scope_value": "Markets"},
-                            "confirmed": True}, headers=headers)
-    page.request.post(base_url + "/api/reference/collections/mrc",
-                      data={"fields": {"value": "MRC-ESC-CO", "name": "Company MRC",
-                                       "level": "Company"}, "confirmed": True}, headers=headers)
-    for meeting_id, mrc in (("MRC-DEPT-ESC", "MRC-ESC-DEPT"),
-                             ("MRC-DIV-ESC", "MRC-ESC-CO")):
-        page.request.post(base_url + "/api/meetings",
-                          data={"meeting_id": meeting_id, "title": meeting_id,
-                                "date": "2026-11-01", "fields": {"mrc": mrc},
-                                "confirmed": True}, headers=headers)
-    open_app(page, base_url)
-    open_model(page, "MKM-ESC-01")
-    from tests.e2e._flows import edit_model_field
-    edit_model_field(page, "materiality", "High", choice=True)
-    expect(page.locator("#row-materiality")).to_contain_text("High")
-    edit_model_field(page, "complexity", "Low", choice=True)
-    expect(page.locator("#row-complexity")).to_contain_text("Low")
-    page.click("[data-dtab='risk']")
-    # Auto-routes to the model's Division-level committee (MRC-ESC-DEPT) and
-    # attaches to its Scheduled meeting MRC-DEPT-ESC.
-    page.click("#req-signoff")
-    confirm(page)
-    # The mrc.js meeting list is filtered by the currently-selected committee
-    # (top-of-page tabs). Switch to the Department committee first.
-    open_tab(page, "mrc")
-    page.click("[data-mrc='MRC-ESC-DEPT']")
-    page.dblclick("tr.clickable[data-id='MRC-DEPT-ESC']")
-    page.click("[data-mtab='agenda']")
-    page.locator("[data-agescalate]").first.click()
-    expect(page.locator("#signoff-overlay")).to_be_visible()
-    expect(page.locator("#signoff-meeting-pick option", has_text="MRC-DIV-ESC")).to_have_count(1)
-    page.select_option("#signoff-meeting-pick", "MRC-DIV-ESC")
-    page.click("#signoff-submit")
-    confirm(page)
-    # Switch to the parent committee and open its meeting.
-    open_tab(page, "mrc")
-    page.click("[data-mrc='MRC-ESC-CO']")
-    page.dblclick("tr.clickable[data-id='MRC-DIV-ESC']")
-    page.click("[data-mtab='agenda']")
-    expect(page.locator("#mtd-content")).to_contain_text("[Escalated]")
-    expect(page.locator("#mtd-content")).to_contain_text("MKM-ESC-01")
+# Escalation is retained as an API capability (see tests/web/test_mrc_signoff_api)
+# but is no longer surfaced on the agenda UI: a sign-off item now offers only
+# Sign off / Reject / Next review.
