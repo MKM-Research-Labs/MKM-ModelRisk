@@ -34,14 +34,15 @@ from src.web._signoff_routing import complete_request_for_agenda, subject_for_ag
 from src.web.api_mrc._bp import mrc_bp
 
 
-@mrc_bp.post("/<meeting_id>/agenda/<item_id>/approve-signoff")
-def approve_signoff(meeting_id: str, item_id: str):
-    """Approve a Risk Rating sign-off agenda item (model or product subject).
+def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
+    """Record the committee's decision on a sign-off item (Approved / Rejected)
+    for a model or product subject, and reflect it back onto that subject.
 
-    Snaps the subject's rag_rating to the proposed value, stamps its MRC sign-off
-    date + meeting, records a sign-off history entry, completes the subject's
-    queued request, and marks the agenda item Completed — each an auditable event
-    under one confirm from the caller.
+    Every decision records a sign-off history entry (with the outcome + any
+    next-review date the committee set) and moves the queued request + agenda
+    item to their terminal state. An approval additionally snaps the subject's
+    rag_rating and stamps its MRC sign-off date + meeting. All auditable events
+    under one confirm.
     """
     body = json_body()
     meeting = get_meeting(meeting_id)
@@ -59,35 +60,56 @@ def approve_signoff(meeting_id: str, item_id: str):
     if record is None:
         return jsonify({"error": f"subject {subject_id} not found"}), 404
     ctx = context_from_request(body)
+    approved = outcome == "Approved"
     from_rating = (record["data"] or {}).get("rag_rating")
     meeting_date = meeting["data"].get("date")
-    subject.set_field(ctx, subject_id, "rag_rating", proposed_rag)
-    history_fields = {"to_rating": proposed_rag, "meeting_id": meeting_id}
+    next_review = body.get("next_review_date")
+    # An approval promotes the proposed rating; a rejection leaves it untouched.
+    if approved:
+        subject.set_field(ctx, subject_id, "rag_rating", proposed_rag)
+    history_fields = {"to_rating": proposed_rag, "meeting_id": meeting_id, "outcome": outcome}
     if from_rating:
         history_fields["from_rating"] = from_rating
     if meeting_date:
         history_fields["date"] = meeting_date
-    # Approval comments: an explicit ``note`` wins, else fall back to the
-    # confirm-dialog ``reason`` so the chair's comment is captured on the
-    # sign-off history, not just the audit event.
+    if next_review:
+        history_fields["next_review_date"] = next_review
+    # Comments: an explicit ``note`` wins, else the confirm-dialog ``reason``.
     note = body.get("note") or body.get("reason")
     if note:
         history_fields["note"] = note
     subject.add_item(ctx, subject_id, "rag_signoff_history", history_fields)
-    # Stamp the MRC sign-off: the date, and the meeting it came from (shown as
-    # the "MRC sign-off" value in the overview).
-    if meeting_date:
-        subject.set_field(ctx, subject_id, "mrc_signoff_date", meeting_date)
-    subject.set_field(ctx, subject_id, "mrc_signoff_meeting", meeting_id)
-    complete_request_for_agenda(ctx, subject, subject_id, item_id)
+    # The committee sets the next review date on either outcome.
+    if next_review:
+        subject.set_field(ctx, subject_id, "next_review_date", next_review)
+    # An approval stamps the MRC sign-off (date + the meeting it came from).
+    if approved:
+        if meeting_date:
+            subject.set_field(ctx, subject_id, "mrc_signoff_date", meeting_date)
+        subject.set_field(ctx, subject_id, "mrc_signoff_meeting", meeting_id)
+    complete_request_for_agenda(ctx, subject, subject_id, item_id,
+                                status=("Completed" if approved else "Rejected"))
     dispatch(
         "update_collection_item", update_collection_item, context=ctx,
         meeting_id=meeting_id, collection="agenda", item_id=item_id,
-        fields={"status": "Completed"},
+        fields={"status": ("Completed" if approved else "Rejected")},
     )
     rebuild_meeting_view()
     subject.rebuild()
     return jsonify({"meeting": get_meeting(meeting_id), subject.kind: subject.get(subject_id)})
+
+
+@mrc_bp.post("/<meeting_id>/agenda/<item_id>/approve-signoff")
+def approve_signoff(meeting_id: str, item_id: str):
+    """Grant a Risk Rating sign-off (model or product subject)."""
+    return _decide_signoff(meeting_id, item_id, outcome="Approved")
+
+
+@mrc_bp.post("/<meeting_id>/agenda/<item_id>/reject-signoff")
+def reject_signoff(meeting_id: str, item_id: str):
+    """Reject a Risk Rating sign-off — the rating is not promoted; the request
+    and agenda item are marked Rejected and reflected back onto the subject."""
+    return _decide_signoff(meeting_id, item_id, outcome="Rejected")
 
 
 @mrc_bp.post("/<meeting_id>/agenda/<item_id>/escalate-signoff")

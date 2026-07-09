@@ -111,13 +111,20 @@ const DetailTabs = {
   signoffHistory(history) {
     const items = history || [];
     if (!items.length) return "";
-    const rows = items.map((s) => "<tr><td>" + fieldDisplay(s.date) + "</td><td>" +
-      (s.from_rating ? ragBadge(s.from_rating) : '<span class="muted">—</span>') +
-      "</td><td>" + ragBadge(s.to_rating) + "</td><td>" +
-      fieldDisplay(s.meeting_id) + "</td><td>" + fieldDisplay(s.note) + "</td></tr>").join("");
+    const rows = items.map(function (s) {
+      const outcome = s.outcome || "Approved";
+      const oColor = outcome === "Rejected" ? "#d32f2f" : "#388e3c";
+      return "<tr><td>" + fieldDisplay(s.date) + '</td><td style="color:' + oColor +
+        ';font-weight:600">' + esc(outcome) + "</td><td>" +
+        (s.from_rating ? ragBadge(s.from_rating) : '<span class="muted">—</span>') +
+        "</td><td>" + ragBadge(s.to_rating) + "</td><td>" +
+        fieldDisplay(s.meeting_id) + "</td><td>" + fieldDisplay(s.next_review_date) + "</td><td>" +
+        fieldDisplay(s.note) + "</td></tr>";
+    }).join("");
     return '<div class="section-header">Sign-off history</div>' +
-      '<table class="signoff-history"><thead><tr><th>Date</th><th>From</th><th>To</th>' +
-      "<th>Meeting</th><th>Note</th></tr></thead><tbody>" + rows + "</tbody></table>";
+      '<table class="signoff-history"><thead><tr><th>Date</th><th>Outcome</th><th>From</th><th>To</th>' +
+      "<th>Meeting</th><th>Next review</th><th>Note</th></tr></thead><tbody>" + rows +
+      "</tbody></table>";
   },
 
   risk(rating) {

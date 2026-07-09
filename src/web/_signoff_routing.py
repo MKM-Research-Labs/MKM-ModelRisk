@@ -189,8 +189,9 @@ def attach_request(ctx: CommandContext, subject: Subject, subject_id: str,
 
 
 def complete_request_for_agenda(ctx: CommandContext, subject: Subject, subject_id: str,
-                                agenda_item_id: str, config=None) -> None:
-    """Mark the subject's queued request Completed once its agenda item is approved."""
+                                agenda_item_id: str, status: str = "Completed", config=None) -> None:
+    """Move the subject's queued request to a terminal status (Completed /
+    Rejected) once the committee decides on its agenda item."""
     fresh = subject.get(subject_id) or {"data": {}}
     request = next(
         (r for r in (fresh["data"].get("rag_signoff_requests") or [])
@@ -199,7 +200,7 @@ def complete_request_for_agenda(ctx: CommandContext, subject: Subject, subject_i
     )
     if request is not None:
         subject.update_item(ctx, subject_id, "rag_signoff_requests",
-                            request["item_id"], {"status": "Completed"})
+                            request["item_id"], {"status": status})
         subject.rebuild()
 
 

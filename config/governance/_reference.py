@@ -79,16 +79,14 @@ REFERENCE_SPECS = {
                           "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
-    # People are anchored to the org hierarchy (same three tiers as an MRC): a
-    # Company-level person is firm-wide; Division/Department people are scoped to
-    # a specific unit named in ``scope_value``. This anchoring is what makes a
-    # person eligible to sit on a given MRC or own a model in that scope. Role
-    # and organisation are not tracked — every person belongs to this institution.
+    # People carry an org unit — Division + Department, backed by the admin lists,
+    # exactly like a model's org fields. This anchoring is what makes a person
+    # eligible to sit on a given MRC or own a model in that scope. Role and
+    # organisation are not tracked — every person belongs to this institution.
     "people": {"label": "People", "id_prefix": "PE", "display": "name", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},
         {"key": "email", "label": "Email", "type": "text"},
-        {"key": "level", "label": "Org level", "type": "choice",
-         "options": VALID_MRC_LEVELS, "required": True},
-        {"key": "scope_value", "label": "Division / Department", "type": "text"},
+        {"key": "division", "label": "Division", "type": "text", "reference": "division"},
+        {"key": "department", "label": "Department", "type": "text", "reference": "department"},
     ]},
 }

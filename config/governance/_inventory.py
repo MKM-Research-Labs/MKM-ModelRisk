@@ -41,6 +41,11 @@ VALID_COMPLEXITY = ("Low", "Medium", "High")
 VALID_MODEL_TYPES = ("Analytical Model", "Market Data Model", "Other")
 VALID_LIFECYCLE_STAGES = ("Development", "Validation", "Production", "Retired")
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
+# Stages of the model's MRC review workflow, from kick-off to sign-off.
+VALID_REVIEW_STATUSES = (
+    "Not Started", "First Meeting", "Full Review", "Feedback",
+    "Remediation", "Final Review", "Documentation Complete",
+)
 
 TIER_MIN = 1
 TIER_MAX = 3
@@ -105,6 +110,12 @@ MODEL_FIELD_SPECS = {
     "validation_status": {
         "label": "Validation status", "type": "choice",
         "options": VALID_VALIDATION_STATUSES, "group": "Governance",
+    },
+    # The MRC review workflow stage (owner-editable). Supersedes validation_status
+    # on the overview.
+    "review_status": {
+        "label": "Review status", "type": "choice",
+        "options": VALID_REVIEW_STATUSES, "group": "Governance",
     },
     "rag_rating": {
         "label": "RAG rating", "type": "choice",

@@ -41,7 +41,7 @@ DEFAULT_MEETING_STATUS = "Scheduled"
 VALID_ACTION_STATUSES = ("Open", "Closed")
 # Phase MRC-4: an agenda item can be "Escalated" instead of Completed when the
 # chair can't approve a sign-off and passes it up to a higher-tier MRC.
-VALID_AGENDA_STATUS = ("Pending", "Completed", "Escalated")
+VALID_AGENDA_STATUS = ("Pending", "Completed", "Escalated", "Rejected")
 VALID_PARTICIPANT_STATUS = ("Invited", "Attended", "Apologies", "Declined")
 
 # Model review-status thresholds (days until next review), for the Models tab.

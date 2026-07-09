@@ -186,6 +186,43 @@ def test_approve_signoff_records_confirm_reason_as_comment(client):
     assert history[0]["note"] == "Chair satisfied with validation"
 
 
+def test_approve_signoff_sets_next_review_from_mrc(client):
+    _seed_mrc(client)
+    _register_subject_model(client)
+    _schedule_meeting(client)
+    _request_signoff(client)
+    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    resp = client.post(
+        f"/api/meetings/MTG1/agenda/{agenda_id}/approve-signoff",
+        json={"confirmed": True, "next_review_date": "2027-01-31"}, headers=HEADERS,
+    )
+    assert resp.status_code == 200
+    model = resp.get_json()["model"]["data"]
+    assert model["next_review_date"] == "2027-01-31"
+    assert model["rag_signoff_history"][0]["outcome"] == "Approved"
+    assert model["rag_signoff_history"][0]["next_review_date"] == "2027-01-31"
+
+
+def test_reject_signoff_leaves_rating_and_marks_rejected(client):
+    _seed_mrc(client)
+    _register_subject_model(client)          # Amber
+    _schedule_meeting(client)
+    _request_signoff(client)                  # proposes Green
+    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    resp = client.post(
+        f"/api/meetings/MTG1/agenda/{agenda_id}/reject-signoff",
+        json={"confirmed": True, "next_review_date": "2027-03-31",
+              "reason": "insufficient evidence"}, headers=HEADERS,
+    )
+    assert resp.status_code == 200
+    model = resp.get_json()["model"]["data"]
+    assert model["rag_rating"] == "Amber"     # NOT promoted to the proposed Green
+    assert model["next_review_date"] == "2027-03-31"
+    assert model["rag_signoff_requests"][0]["status"] == "Rejected"
+    assert model["rag_signoff_history"][0]["outcome"] == "Rejected"
+    assert resp.get_json()["meeting"]["data"]["agenda"][0]["status"] == "Rejected"
+
+
 def test_approve_signoff_unknown_meeting_is_404(client):
     response = client.post(
         "/api/meetings/NOPE/agenda/AG-001/approve-signoff",

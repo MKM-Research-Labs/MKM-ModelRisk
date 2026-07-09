@@ -106,7 +106,7 @@ def test_events_tab_records_a_post_mortem_with_raci(page: Page, base_url: str):
     # Seed a Person so the People-referenced RACI fields render as choices.
     from tests.e2e._flows import add_collection_item, open_admin_subtab
     open_admin_subtab(page, "people")
-    add_collection_item(page, "people", {"name": "Lena Okafor", "level": "Company"})
+    add_collection_item(page, "people", {"name": "Lena Okafor"})
     page.click(".tab[data-tab='inventory']")
     register_model(page, "MKM-E2E-EV1", "Events Model")
     open_model(page, "MKM-E2E-EV1")

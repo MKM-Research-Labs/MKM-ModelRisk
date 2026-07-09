@@ -41,7 +41,9 @@ VALID_INFORMED = ("Yes", "No")
 # A queued Risk-rating sign-off request (owner-raised) as it moves from raised
 # to attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
 # MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
-VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Withdrawn")
+VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Rejected", "Withdrawn")
+# The committee's decision on a sign-off request.
+VALID_SIGNOFF_OUTCOME = ("Approved", "Rejected")
 
 # Structured collections on a model: arrays of items. Each item is built from the
 # field specs below; ``id_prefix`` seeds generated item ids (e.g. AS-001). One
@@ -106,10 +108,12 @@ COLLECTION_SPECS = {
     # which meeting rubber-stamped it.
     "rag_signoff_history": {"label": "Sign-off history", "id_prefix": "SO", "fields": [
         {"key": "date", "label": "Date", "type": "date", "required": True},
+        {"key": "outcome", "label": "Outcome", "type": "choice", "options": VALID_SIGNOFF_OUTCOME},
         {"key": "from_rating", "label": "From", "type": "choice", "options": VALID_RAG_RATINGS},
         {"key": "to_rating", "label": "To", "type": "choice",
          "options": VALID_RAG_RATINGS, "required": True},
         {"key": "meeting_id", "label": "Meeting", "type": "text"},
+        {"key": "next_review_date", "label": "Next review", "type": "date"},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
     # The owner-raised sign-off queue: a request is routed to the model's
