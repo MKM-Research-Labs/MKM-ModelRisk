@@ -65,7 +65,8 @@ def test_mrc_tor_fields_are_hidden_in_specs(client):
     res = client.get("/api/reference").get_json()
     mrc = next(c for c in res["collections"] if c["key"] == "mrc")
     hidden = {f["key"] for f in mrc["fields"] if f.get("hidden")}
-    assert hidden == {"tor_filename", "tor_original_name", "archived"}
+    assert hidden == {"tor_filename", "tor_original_name", "archived",
+                      "chair", "secretary", "voting_members", "non_voting_members"}
 
 
 def test_mrc_committee_tor_upload_and_download(client):
