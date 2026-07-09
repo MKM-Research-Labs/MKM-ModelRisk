@@ -22,12 +22,14 @@ from __future__ import annotations
 
 from config.audit import COVERAGE_MINIMUM
 
+from audit.data_access import data_access_findings
 from audit.duplication import duplication_report
 from audit.embedded_js import embedded_js_findings
 from audit.hardcoding import hardcoding_findings
 from audit.headers import header_findings
 from audit.init_files import init_file_findings
-from audit.large_files import large_source_files, large_test_files
+from audit.large_files import large_source_files, large_test_files, large_web_files
+from audit.path_definitions import path_definition_findings
 
 
 def _print_section(title: str, findings: list[dict], formatter) -> int:
@@ -42,11 +44,14 @@ def build_report() -> dict:
     """Collect every audit's findings into one dict (used by tests and the CLI)."""
     return {
         "large_source_files": large_source_files(),
+        "large_web_files": large_web_files(),
         "large_test_files": large_test_files(),
         "hardcoding": hardcoding_findings(),
         "embedded_js": embedded_js_findings(),
         "init_files": init_file_findings(),
         "headers": header_findings(),
+        "data_access": data_access_findings(),
+        "path_definitions": path_definition_findings(),
         "duplication": duplication_report(),
     }
 
@@ -68,8 +73,14 @@ def main() -> int:
                             lambda f: f["path"])
     total += _print_section("R7 embedded JavaScript / CSS", report["embedded_js"],
                             lambda f: f"{f['path']}:{f['line']}  {f['kind']} ({f['js_lines']} js lines)")
+    # Reported (non-gating) sections — visibility only, not counted in ``total``.
+    _print_section("R2 large web files (>300, reported)", report["large_web_files"],
+                   lambda f: f"{f['lines']:>4}  {f['path']}")
+    _print_section("R6 data access outside src/database (reported)", report["data_access"],
+                   lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
+    _print_section("R6 path definitions outside config (reported)", report["path_definitions"],
+                   lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     print(f"\n.. R3 — Coverage gate enforced at {COVERAGE_MINIMUM}% via pyproject fail_under")
-    print(".. R6 — Data-store access only via src/database (reviewed by hand)")
     dup = report["duplication"]
     if dup.get("available"):
         print(f".. R8 duplicate code — {dup['percentage']}% ({dup['clones']} clones, "

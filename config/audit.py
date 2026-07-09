@@ -50,6 +50,33 @@ MAX_TEST_FILE_LINES = 400
 SOURCE_DIRS = ("config", "src", "scripts", "app")
 CONFIG_DIR = "config"
 
+# Coding rule R2 — the "split rule". The modularisation scan is repo-wide: it
+# covers all non-test first-party code (root-level files like app.py plus these
+# sub-trees), not just SOURCE_DIRS, so the docs/ generators and web assets are
+# held to the same size limit. Tests are excluded — they carry their own,
+# higher limit and their own scan (large_test_files).
+REPO_SCAN_DIRS = ("config", "src", "scripts", "app", "docs")
+
+# Web assets (JS/CSS) are audited for over-length separately from Python: they
+# share the source line limit but are reported, not gated, so a long vendored or
+# generated bundle never fails the Python size gate.
+WEB_EXTENSIONS = (".js", ".css")
+
+# Coding rule R6 — data-store access. The one package allowed to hold SQL, ORM
+# sessions, DB drivers or connection/cursor handles; every other module reaches
+# the store through its public API. The data-access audit flags usage outside it.
+DATABASE_PACKAGE = "src/database"
+
+# Path-definition audit — the one package allowed to define filesystem paths
+# (the project root and the on-disk data trees). Modules elsewhere obtain
+# directories from it rather than hand-deriving the root or hard-coding paths.
+PATH_CONFIG_PACKAGE = "config"
+
+# On-disk data-tree directory names owned by config (MKM stores generated files
+# and uploads under uploads/). A path literal or segment naming one of these,
+# built outside PATH_CONFIG_PACKAGE, is a path-definition finding.
+DATA_TREE_NAMES = ("uploads",)
+
 # Directories never walked by any audit.
 EXCLUDE_DIRS = frozenset({
     "__pycache__", ".git", ".venv", "node_modules", "uploads",

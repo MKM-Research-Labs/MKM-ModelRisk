@@ -24,8 +24,9 @@ import audit.__main__ as cli
 from audit.__main__ import build_report, main
 
 _SECTIONS = {
-    "large_source_files", "large_test_files", "hardcoding",
-    "embedded_js", "init_files", "headers", "duplication",
+    "large_source_files", "large_web_files", "large_test_files", "hardcoding",
+    "embedded_js", "init_files", "headers", "data_access", "path_definitions",
+    "duplication",
 }
 
 
