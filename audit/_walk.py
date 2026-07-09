@@ -46,6 +46,39 @@ def py_files(*dirs: str):
         yield from walk(REPO_ROOT / name, ".py")
 
 
+def code_files(dirs, extensions):
+    """Yield first-party code files with the given extensions, repo-wide.
+
+    Covers root-level files (e.g. ``app.py``) plus every file under each named
+    top-level directory in ``dirs``, restricted to ``extensions`` and outside
+    the excluded dirs. This is the repo-wide counterpart to ``py_files`` — the
+    scope the modularisation ("split") rule measures.
+    """
+    suffixes = frozenset(extensions)
+    seen = set()
+
+    def _emit(path: Path):
+        if (path.is_file() and path.suffix in suffixes
+                and path not in seen
+                and not _excluded(path.relative_to(REPO_ROOT))):
+            seen.add(path)
+            return True
+        return False
+
+    # Root-level files (e.g. app.py) — not covered by any sub-tree walk.
+    for path in sorted(REPO_ROOT.glob("*")):
+        if _emit(path):
+            yield path
+    # Named sub-trees.
+    for name in dirs:
+        root = REPO_ROOT / name
+        if not root.exists():
+            continue
+        for path in sorted(root.rglob("*")):
+            if _emit(path):
+                yield path
+
+
 def rel(path: Path) -> str:
     """Repo-relative POSIX path, for stable reporting."""
     return path.relative_to(REPO_ROOT).as_posix()

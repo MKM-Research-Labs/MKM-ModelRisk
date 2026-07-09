@@ -36,6 +36,11 @@ def _result(findings: list) -> str:
     return "Pass" if not findings else str(len(findings)) + " finding(s)"
 
 
+def _reported(findings: list) -> str:
+    """A cell for a reported (non-gating) rule: clean, or a count for visibility."""
+    return "Clean" if not findings else str(len(findings)) + " reported"
+
+
 def build_audit_tex(report: dict, as_of: str) -> str:
     """Pure: render the LaTeX source for the coding-rule audit report."""
     dup = report["duplication"]
@@ -51,7 +56,8 @@ def build_audit_tex(report: dict, as_of: str) -> str:
              "enforced via pyproject"],
             ["R4", "No functions or logic in __init__.py", _result(report["init_files"])],
             ["R5", "Canonical copyright header on every file", _result(report["headers"])],
-            ["R6", "Data store reached only through src/database", "by code review"],
+            ["R6", "Data store reached only through src/database", _reported(report["data_access"])],
+            ["R6", "Filesystem paths defined only in config", _reported(report["path_definitions"])],
             ["R7", "No JavaScript or CSS embedded in .py files", _result(report["embedded_js"])],
             ["R8", "No duplicated code; shared logic extracted", dup_result],
         ],
@@ -66,6 +72,8 @@ def build_audit_tex(report: dict, as_of: str) -> str:
                             ["File", "Lines"], lambda f: [f["path"], f["lines"]])
         + _findings_section("R2 — Large test files (>400 lines)", report["large_test_files"],
                             ["File", "Lines"], lambda f: [f["path"], f["lines"]])
+        + _findings_section("R2 — Large web files (>300 lines, reported)", report["large_web_files"],
+                            ["File", "Lines"], lambda f: [f["path"], f["lines"]])
         + _findings_section("R4 — Substantive __init__.py", report["init_files"],
                             ["File", "Functions", "Classes"],
                             lambda f: [f["path"], ", ".join(f["functions"]), ", ".join(f["classes"])])
@@ -74,6 +82,14 @@ def build_audit_tex(report: dict, as_of: str) -> str:
         + _findings_section("R7 — Embedded JavaScript / CSS", report["embedded_js"],
                             ["File", "Line", "Kind", "JS lines"],
                             lambda f: [f["path"], f["line"], f["kind"], f["js_lines"]])
+        + _findings_section("R6 — Data access outside src/database (reported)",
+                            report["data_access"],
+                            ["File", "Line", "Kind", "Snippet"],
+                            lambda f: [f["path"], f["line"], f["kind"], f["snippet"]])
+        + _findings_section("R6 — Path definitions outside config (reported)",
+                            report["path_definitions"],
+                            ["File", "Line", "Kind", "Snippet"],
+                            lambda f: [f["path"], f["line"], f["kind"], f["snippet"]])
     )
 
     return (

@@ -24,17 +24,22 @@ from audit.pdf import build_audit_tex, render_audit_pdf
 from src.governance.mrc import pack
 
 _CLEAN = {
-    "large_source_files": [], "large_test_files": [], "hardcoding": [],
-    "embedded_js": [], "init_files": [], "headers": [],
+    "large_source_files": [], "large_web_files": [], "large_test_files": [],
+    "hardcoding": [], "embedded_js": [], "init_files": [], "headers": [],
+    "data_access": [], "path_definitions": [],
     "duplication": {"available": True, "percentage": 0.5, "clones": 3},
 }
 _FINDINGS = {
     "large_source_files": [{"path": "x.py", "lines": 350}],
+    "large_web_files": [{"path": "w.js", "lines": 534}],
     "large_test_files": [],
     "hardcoding": [{"path": "y.py", "line": 4, "kind": "allcaps", "name": "MAXN"}],
     "embedded_js": [{"path": "z.py", "line": 9, "kind": "script", "js_lines": 5}],
     "init_files": [{"path": "p.py", "functions": ["f"], "classes": ["C"]}],
     "headers": [{"path": "h.py"}],
+    "data_access": [{"path": "d.py", "line": 7, "kind": "sql", "snippet": "SELECT 1 FROM t"}],
+    "path_definitions": [{"path": "q.py", "line": 3, "kind": "root_walk",
+                          "snippet": "Path(__file__).parents[1]"}],
     "duplication": {"available": False},
 }
 
@@ -55,16 +60,20 @@ def test_summary_table_lists_every_rule_in_order():
                "copyright header", "src/database", "embedded in", "duplicated code"]
     positions = [tex.index(m) for m in markers]
     assert positions == sorted(positions)
-    assert "by code review" in tex          # R6 result
+    assert "Filesystem paths defined only in config" in tex   # R6 path row
+    assert "Clean" in tex                    # reported-rule result (no findings)
     assert "Pass" in tex                     # mechanical-rule result
 
 
 def test_build_audit_tex_with_findings():
     tex = build_audit_tex(_FINDINGS, "2026-06-25")
     assert "x.py" in tex and "350" in tex
+    assert "w.js" in tex and "534" in tex     # R2 large web file (reported)
     assert "y.py" in tex
     assert "z.py" in tex and "script" in tex
     assert "h.py" in tex                      # R5 missing-header finding
+    assert "d.py" in tex                      # R6 data-access finding
+    assert "q.py" in tex                      # R6 path-definition finding
     assert "not measured" in tex
 
 
