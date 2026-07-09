@@ -92,6 +92,7 @@ def models_in_scope(meeting_id: str):
             "tier": data.get("tier"),
             "rag_rating": data.get("rag_rating"),
             "review_status": compute_review_status(data.get("next_review_date"), today),
+            "presenter": item.get("presenter"),
             "analysis_original_name": item.get("analysis_original_name"),
         })
     return jsonify(rows)
@@ -134,6 +135,48 @@ def download_model_analysis(meeting_id: str, model_id: str):
         return jsonify({"error": "analysis file missing"}), 404
     return send_file(str(path), as_attachment=True,
                      download_name=item.get("analysis_original_name") or "analysis")
+
+
+def _agenda_item(meeting: dict, item_id: str) -> dict | None:
+    return next((a for a in (meeting["data"].get("agenda") or [])
+                 if a.get("item_id") == item_id), None)
+
+
+@mrc_bp.post("/<meeting_id>/agenda/<item_id>/document")
+def upload_agenda_document(meeting_id: str, item_id: str):
+    """Attach a supporting document to an agenda item."""
+    meeting = get_meeting_raw(meeting_id)
+    item = _agenda_item(meeting, item_id) if meeting else None
+    if item is None:
+        return jsonify({"error": "agenda item not found"}), 404
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        meta = save_upload("meeting_agenda", file.filename, file.read())
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    update_collection_item(
+        meeting_id=meeting_id, collection="agenda", item_id=item_id,
+        fields={"document_filename": meta["filename"], "document_original_name": meta["original_name"]},
+        actor=request_actor(),
+    )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id)), 201
+
+
+@mrc_bp.get("/<meeting_id>/agenda/<item_id>/document")
+def download_agenda_document(meeting_id: str, item_id: str):
+    """Download an agenda item's supporting document, if uploaded."""
+    meeting = get_meeting_raw(meeting_id)
+    item = _agenda_item(meeting, item_id) if meeting else None
+    if item is None or not item.get("document_filename"):
+        return jsonify({"error": "no document uploaded"}), 404
+    path = upload_path("meeting_agenda", item["document_filename"])
+    if not path.exists():
+        return jsonify({"error": "document file missing"}), 404
+    return send_file(str(path), as_attachment=True,
+                     download_name=item.get("document_original_name") or "document")
 
 
 @mrc_bp.post("")

@@ -341,16 +341,25 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
 def test_model_analysis_upload_on_models_tab(page: Page, base_url: str, tmp_path):
     """The Models tab's Analysis column lets you upload a per-model analysis
     document for an in-scope model."""
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    page.request.post(base_url + "/api/reference/collections/people",
+                      data={"fields": {"name": "Pat Presenter"}, "confirmed": True}, headers=headers)
     open_app(page, base_url)
     register_model(page, "MKM-AN-01", "Analysis Model")
     _schedule(page, base_url, "MRC-AN", "Analysis Meeting")
     page.click("tr.clickable[data-id='MRC-AN']")
     page.click("[data-mtab='models_in_scope']")
     expect(page.locator("#mtd-content")).to_contain_text("Analysis")
-    # Put the model in scope so it can carry an analysis file.
+    expect(page.locator("#mtd-content")).to_contain_text("Presenter")
+    # Put the model in scope so it can carry a presenter + analysis file.
     page.check("[data-mscope='MKM-AN-01']")
     page.click("#mt-save-models")
     confirm(page)
+    # Assign a presenter (dropdown of people).
+    page.select_option("[data-presenter='MKM-AN-01']", "Pat Presenter")
+    confirm(page)
+    expect(page.locator("[data-presenter='MKM-AN-01']")).to_have_value("Pat Presenter")
+    # Upload the analysis document.
     analysis = tmp_path / "analysis.pdf"
     analysis.write_bytes(b"%PDF-1.4 analysis")
     page.set_input_files("#an-file-MKM-AN-01", str(analysis))

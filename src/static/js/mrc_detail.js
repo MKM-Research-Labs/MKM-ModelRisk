@@ -223,12 +223,20 @@ const MeetingDetail = {
           : "")
       : '<button class="btn small" data-aged="' + esc(item.item_id) + '">Edit</button> ' +
         '<button class="btn small danger" data-agrm="' + esc(item.item_id) + '">Remove</button>';
+    const doc = '<input type="file" id="agdoc-file-' + esc(item.item_id) + '" style="display:none">' +
+      (item.document_original_name
+        ? '<a href="/api/meetings/' + esc(this._id) + "/agenda/" + esc(item.item_id) +
+          '/document" target="_blank">' + esc(item.document_original_name) + "</a> "
+        : '<span class="muted">No document. </span>') +
+      '<button class="btn small" data-agdoc="' + esc(item.item_id) + '">' +
+      (item.document_original_name ? "Replace" : "Attach") + " document&hellip;</button>";
     return '<div class="card" style="margin-bottom:8px" id="agrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b>" +
       (item.description ? '<div class="muted" style="margin-top:2px">' + esc(item.description) + "</div>" : "") +
       '</div><div class="rowact">' + actions + "</div></div>" +
-      '<div class="muted" style="margin-top:8px">' + meta.join(" &nbsp;·&nbsp; ") + "</div></div>";
+      '<div class="muted" style="margin-top:8px">' + meta.join(" &nbsp;·&nbsp; ") + "</div>" +
+      '<div style="margin-top:6px;font-size:12px">' + doc + "</div></div>";
   },
 
   _bindAgenda() {
@@ -252,6 +260,23 @@ const MeetingDetail = {
     });
     document.querySelectorAll("[data-aged]").forEach(function (btn) {
       btn.onclick = () => self._agendaEdit(byId("data-aged", btn), visible);
+    });
+    document.querySelectorAll("[data-agdoc]").forEach(function (btn) {
+      const id = btn.getAttribute("data-agdoc");
+      const fileInput = document.getElementById("agdoc-file-" + id);
+      btn.onclick = function () { fileInput.click(); };
+      fileInput.onchange = function () {
+        if (!fileInput.files.length) return;
+        const form = new FormData();
+        form.append("file", fileInput.files[0]);
+        fetch("/api/meetings/" + self._id + "/agenda/" + id + "/document", {
+          method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
+        }).then(async (res) => {
+          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "upload failed"); }
+          App.toast("Document attached", "ok");
+          self.show(self._id, "agenda");
+        }).catch((e) => App.toast(e.message, "error"));
+      };
     });
     const nextReview = (id) => (document.getElementById("ag-nextreview-" + id) || {}).value || null;
     document.querySelectorAll("[data-agapprove]").forEach(function (btn) {
@@ -376,28 +401,40 @@ const MeetingDetail = {
         (this._showAll ? " checked" : "") + "> Show all models</label></div>"
       : '<div class="muted" style="margin-bottom:6px">Company-wide MRC' + mrcNote +
         " — every inventory model is a candidate.</div>";
-    const analysisByModel = {};
+    const analysisByModel = {}, presenterByModel = {};
     this._models.forEach((r) => {
       if (r.analysis_original_name) analysisByModel[r.model_id] = r.analysis_original_name;
+      if (r.presenter) presenterByModel[r.model_id] = r.presenter;
     });
     const rows = candidates.length ? candidates.map((m) => {
       const d = m.data || {};
-      const checked = inScope.has(m.model_id) ? " checked" : "";
+      const inS = inScope.has(m.model_id);
+      const checked = inS ? " checked" : "";
       return '<tr><td><input type="checkbox" data-mscope="' + esc(m.model_id) + '"' + checked +
         '></td><td class="modelid">' + esc(m.model_id) + "</td><td>" + fieldDisplay(d.name) +
         "</td><td>" + tierBadge(d.tier) + "</td><td>" + ragBadge(d.rag_rating) +
-        "</td><td>" + this._analysisCell(m.model_id, inScope.has(m.model_id), analysisByModel) +
+        "</td><td>" + this._presenterCell(m.model_id, inS, presenterByModel) +
+        "</td><td>" + this._analysisCell(m.model_id, inS, analysisByModel) +
         "</td></tr>";
     }).join("") :
-      '<tr><td colspan="6" class="empty">No models match this scope.</td></tr>';
+      '<tr><td colspan="7" class="empty">No models match this scope.</td></tr>';
     return banner +
       "<table><thead><tr><th></th><th>Model ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
-      "<th>Analysis</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+      "<th>Presenter</th><th>Analysis</th></tr></thead><tbody>" + rows + "</tbody></table>" +
       '<div class="row" style="margin-top:10px">' +
       '<button class="btn small primary" id="mt-save-models">Save selection&hellip;</button>' +
       '<span class="muted" id="mt-models-summary" style="margin-left:8px">' +
       inScope.size + " model" + (inScope.size === 1 ? "" : "s") + " currently in scope." +
       "</span></div>";
+  },
+
+  // Presenter per in-scope model: a dropdown of people from the register.
+  _presenterCell(modelId, inScope, byModel) {
+    if (!inScope) return '<span class="muted">—</span>';
+    const cur = byModel[modelId] || "";
+    const opts = ['<option value=""></option>'].concat((this._people || []).map((p) =>
+      "<option" + (p.name === cur ? " selected" : "") + ">" + esc(p.name) + "</option>")).join("");
+    return '<select data-presenter="' + esc(modelId) + '">' + opts + "</select>";
   },
 
   // Analysis document per in-scope model: a download link (if uploaded) plus an
@@ -421,6 +458,16 @@ const MeetingDetail = {
     if (toggle) toggle.onchange = function () {
       self._showAll = toggle.checked; self._render();
     };
+    const itemByModel = {};
+    self._models.forEach((r) => { itemByModel[r.model_id] = r.item_id; });
+    document.querySelectorAll("[data-presenter]").forEach(function (sel) {
+      const modelId = sel.getAttribute("data-presenter");
+      sel.onchange = function () {
+        App.amend("Set presenter for " + modelId + ".", "POST",
+          "/api/meetings/" + self._id + "/collections/models_in_scope/" + itemByModel[modelId],
+          { fields: { presenter: sel.value } }, () => self.show(self._id, "models_in_scope"));
+      };
+    });
     document.querySelectorAll("[data-an-upload]").forEach(function (btn) {
       const modelId = btn.getAttribute("data-an-upload");
       const fileInput = document.getElementById("an-file-" + modelId);
