@@ -57,10 +57,10 @@ def test_schedule_meeting_appears(page: Page, base_url: str):
     expect(page.locator("tr.clickable[data-id='MRC-2026-Q3']")).to_contain_text("Q3 Model Risk Committee")
 
 
-def test_double_click_opens_meeting_detail(page: Page, base_url: str):
+def test_click_opens_meeting_detail(page: Page, base_url: str):
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-2026-Q4", "Q4 Model Risk Committee")
-    page.dblclick("tr.clickable[data-id='MRC-2026-Q4']")
+    page.click("tr.clickable[data-id='MRC-2026-Q4']")
     detail = page.locator("#mt-detail")
     expect(detail).to_contain_text("Q4 Model Risk Committee")
     expect(detail).to_contain_text("Agenda")
@@ -71,7 +71,7 @@ def test_bulk_add_minutes(page: Page, base_url: str):
     """Fill three of the five minutes rows and save them in one go."""
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-2026-BLK", "Bulk Minutes")
-    page.dblclick("tr.clickable[data-id='MRC-2026-BLK']")
+    page.click("tr.clickable[data-id='MRC-2026-BLK']")
     page.click("[data-mtab='minutes']")
     expect(page.locator("[data-bulk-add='minutes']")).to_be_visible()
 
@@ -99,7 +99,7 @@ def test_models_multi_select_saves_selection(page: Page, base_url: str):
     register_model(page, "MKM-MS-003", "Liquidity")
 
     _schedule(page, base_url, "MRC-MS", "Multi-select")
-    page.dblclick("tr.clickable[data-id='MRC-MS']")
+    page.click("tr.clickable[data-id='MRC-MS']")
     page.click("[data-mtab='models_in_scope']")
 
     # No org scope on the meeting, so all inventory models are candidates.
@@ -154,7 +154,7 @@ def test_meeting_date_time_location_are_read_only(page: Page, base_url: str):
     # Only Status stays editable (see test_edit_meeting_status_choice).
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-EDIT-2", "Editable Meeting")
-    page.dblclick("tr.clickable[data-id='MRC-EDIT-2']")
+    page.click("tr.clickable[data-id='MRC-EDIT-2']")
     expect(page.locator("#minfo-location")).to_be_visible()
     expect(page.locator("[data-minfo='location']")).to_have_count(0)
     expect(page.locator("[data-minfo='date']")).to_have_count(0)
@@ -165,7 +165,7 @@ def test_meeting_date_time_location_are_read_only(page: Page, base_url: str):
 def test_edit_meeting_status_choice(page: Page, base_url: str):
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-EDIT-3", "Editable Meeting")
-    page.dblclick("tr.clickable[data-id='MRC-EDIT-3']")
+    page.click("tr.clickable[data-id='MRC-EDIT-3']")
     _edit_meeting_field(page, "status", "Completed")
     expect(page.locator("#minfo-status")).to_contain_text("Completed")
 
@@ -177,7 +177,7 @@ def test_add_agenda_items(page: Page, base_url: str):
     not the shared Collections bulk-add — add items one at a time."""
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-BULK-AG", "Bulk Agenda")
-    page.dblclick("tr.clickable[data-id='MRC-BULK-AG']")
+    page.click("tr.clickable[data-id='MRC-BULK-AG']")
     page.click("[data-mtab='agenda']")
     for i, title in enumerate(("Item A", "Item B"), start=1):
         page.fill("#ag-add-title", title)
@@ -191,7 +191,7 @@ def test_add_agenda_items(page: Page, base_url: str):
 def test_bulk_add_decisions(page: Page, base_url: str):
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-BULK-DC", "Bulk Decisions")
-    page.dblclick("tr.clickable[data-id='MRC-BULK-DC']")
+    page.click("tr.clickable[data-id='MRC-BULK-DC']")
     page.click("[data-mtab='decisions']")
     page.fill("#badd-decisions-0-description", "Decision one")
     page.fill("#badd-decisions-1-description", "Decision two")
@@ -204,7 +204,7 @@ def test_bulk_add_decisions(page: Page, base_url: str):
 def test_bulk_add_actions(page: Page, base_url: str):
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-BULK-AC", "Bulk Actions")
-    page.dblclick("tr.clickable[data-id='MRC-BULK-AC']")
+    page.click("tr.clickable[data-id='MRC-BULK-AC']")
     page.click("[data-mtab='actions']")
     page.fill("#badd-actions-0-description", "Follow up with Priya")
     page.fill("#badd-actions-1-description", "Schedule validation review")
@@ -248,7 +248,7 @@ def test_signoff_workflow_owner_requests_and_mrc_approves(page: Page, base_url: 
     expect(page.locator("#dt-content")).to_contain_text("MRC-SO")
     # MRC approves via the agenda tab.
     open_tab(page, "mrc")
-    page.dblclick("tr.clickable[data-id='MRC-SO']")
+    page.click("tr.clickable[data-id='MRC-SO']")
     page.click("[data-mtab='agenda']")
     approve = page.locator("[data-agapprove]").first
     expect(approve).to_be_visible()
@@ -273,7 +273,7 @@ def test_decision_linked_to_model_appears_on_model_detail(page: Page, base_url: 
     register_model(page, "MKM-LINK-001", "Linked Model")
 
     _schedule(page, base_url, "MRC-LINK", "Linked Meeting")
-    page.dblclick("tr.clickable[data-id='MRC-LINK']")
+    page.click("tr.clickable[data-id='MRC-LINK']")
     _bulk_add_decision(page, "Approve recalibration", "MKM-LINK-001")
 
     # Back to the inventory, open the model, switch to Decisions tab.
@@ -323,7 +323,7 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
 
     open_app(page, base_url)
     open_tab(page, "mrc")
-    page.dblclick("tr.clickable[data-id='MRC-M3']")
+    page.click("tr.clickable[data-id='MRC-M3']")
     page.click("[data-mtab='models_in_scope']")
     # Only the Rates Trading model is a candidate; the Equity Derivatives one is hidden.
     expect(page.locator("[data-mscope='MRC-M-RATES']")).to_be_visible()
