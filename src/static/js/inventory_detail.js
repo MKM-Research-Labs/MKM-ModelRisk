@@ -21,7 +21,10 @@
 // Model detail: a PhysicalRisk-style header card + tabbed detail (Overview,
 // Remediation, Versions, Limitations, Assumptions, Changes, Validation, Risk
 // Rating, Audit).
-const OVERVIEW_LEFT = ["division", "department", "description", "methodology", "tier_rationale", "source_module", "materiality", "complexity"];
+// Description is promoted to a full-width summary band above the two columns.
+// Tier + its rating rationale sit at the foot of Model Details, below Complexity.
+const OVERVIEW_LEFT = ["division", "department", "methodology", "source_module",
+  "materiality", "complexity", "tier", "rating_rationale"];
 const OVERVIEW_RIGHT = ["rag_rating", "owner", "lifecycle_stage", "validation_status",
   "last_review_date", "mrc_signoff_date", "next_review_date", "recertification_date", "review_frequency", "peer_reviewer"];
 const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
@@ -96,8 +99,7 @@ const Detail = {
     const tabs = [
       ["overview", "Overview", null], ["remediation_steps", "Remediation", n("remediation_steps")],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
-      ["assumptions", "Assumptions", n("assumptions")], ["change_history", "Changes", null],
-      ["validation_questions", "Validation", cov],
+      ["validation_questions", "Validation & Assumptions", cov],
       ["operational_failure_events", "Events", n("operational_failure_events")],
       ["risk", "Risk Rating", null],
       ["decisions", "Decisions", this._decisions.length],
@@ -129,18 +131,46 @@ const Detail = {
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [], this._model.retired);
       return;
     }
+    // Validation & Assumptions overlap — one tab: the SR 26-2 questions plus
+    // the assumptions register.
     if (this._tab === "validation_questions") {
-      box.innerHTML = DetailTabs.validation(d, this._model.retired);
-      this._bindValidationSaves(); return;
+      box.innerHTML = DetailTabs.validation(d, this._model.retired) +
+        this._collSection("assumptions", d);
+      this._bindValidationSaves();
+      this._bindCollections(["assumptions"]); return;
     }
+    // Versions & Changes overlap — one tab: the version timeline plus the
+    // change-history register.
     if (this._tab === "version_history") {
-      box.innerHTML = DetailTabs.versions(d, this.collSpec("version_history"), this._model.retired);
-      this._bindCollection("version_history"); return;
+      box.innerHTML = DetailTabs.versions(d, this.collSpec("version_history"), this._model.retired) +
+        this._collSection("change_history", d);
+      this._bindCollections(["version_history", "change_history"]); return;
+    }
+    // Limitations tab: Testing (scalar fields) + Model weaknesses + Limitations.
+    if (this._tab === "limitations") {
+      const testing = '<div class="section-header">Testing</div>' +
+        TESTING_FIELDS.map((k) =>
+          '<div class="inforow" id="row-' + k + '"><div class="k">' + esc(this.specByKey(k).label) +
+          '</div><div class="v">' + yesNo(d[k]) + "</div>" + this._editLink(k) + "</div>").join("");
+      box.innerHTML = testing + this._collSection("model_weaknesses", d) +
+        this._collSection("limitations", d);
+      this._bindEdits();
+      this._bindCollections(["model_weaknesses", "limitations"]); return;
     }
     const spec = this.collSpec(this._tab);
     box.innerHTML = Collections.render(d, { collections: [spec] }, this._model.retired);
     this._bindCollection(this._tab);
     if (this._tab === "operational_failure_events") this._defaultAccountable(d);
+  },
+
+  _collSection(key, d) {
+    return Collections.render(d, { collections: [this.collSpec(key)] }, this._model.retired);
+  },
+
+  _bindCollections(keys) {
+    Collections.bind("/api/models/" + this._id + "/collections/",
+      { collections: keys.map((k) => this.collSpec(k)) },
+      this._model.retired, () => this.show(this._id, this._tab), this._model.data);
   },
 
   // Pre-fill an Event's Accountable field with the model's owner so the chair
@@ -152,10 +182,7 @@ const Detail = {
     }
   },
 
-  _bindCollection(key) {
-    Collections.bind("/api/models/" + this._id + "/collections/", { collections: [this.collSpec(key)] },
-      this._model.retired, () => this.show(this._id, this._tab), this._model.data);
-  },
+  _bindCollection(key) { this._bindCollections([key]); },
 
   _bindValidationSaves() {
     if (this._model.retired) return;
@@ -178,14 +205,16 @@ const Detail = {
   _overview(d) {
     const left = OVERVIEW_LEFT.map((k) => this._row(k, d)).join("");
     const right = OVERVIEW_RIGHT.map((k) => this._row(k, d)).join("");
-    const testing = TESTING_FIELDS.map((k) =>
-      '<div class="inforow" id="row-' + k + '"><div class="k">' + esc(this.specByKey(k).label) +
-      '</div><div class="v">' + yesNo(d[k]) + "</div>" + this._editLink(k) + "</div>").join("");
     const status = this._model.retired
       ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
-    return '<div class="grid2"><div><div class="section-header">Model Details</div>' + left + "</div>" +
+    // Full-width summary of what the model does, spanning both columns.
+    const summary = '<div class="inforow" id="row-description" style="margin-bottom:14px">' +
+      '<div class="k">Summary</div><div class="v">' + fieldDisplay(d.description) + "</div>" +
+      this._editLink("description") + "</div>";
+    return summary +
+      '<div class="grid2"><div><div class="section-header">Model Details</div>' + left + "</div>" +
       '<div><div class="section-header">Governance Status</div>' + right + this._mrcRow() +
-      '<div class="section-header">Testing</div>' + testing + "</div></div>" + status;
+      "</div></div>" + status;
   },
 
   // The MRC responsible for this model, derived from its division/department.
@@ -237,6 +266,8 @@ const Detail = {
       value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key]) +
         '<span class="muted" style="font-size:11px;margin-left:12px">Table</span> ' +
         (tableRag ? ragBadge(tableRag) : '<span class="muted">&mdash;</span>');
+    } else if (key === "tier" && (d[key] || d[key] === 0)) {
+      value = tierBadge(d[key]) + ' <span class="muted">' + esc(tierFullLabel(d[key])) + "</span>";
     } else if (key === "source_module" && d[key]) {
       value = '<span class="code">' + esc(d[key]) + "</span>";
     } else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
@@ -299,13 +330,13 @@ const Detail = {
       '<button class="btn small" id="ed-cancel">Cancel</button></div>';
     const input = document.getElementById("ed-input");
     if (current !== null && current !== undefined) input.value = current;
-    document.getElementById("ed-cancel").onclick = () => this.show(this._id, "overview");
+    document.getElementById("ed-cancel").onclick = () => this.show(this._id, this._tab);
     document.getElementById("ed-save").onclick = () => {
       let value = input.value.trim();
       if (f.type === "tier") value = parseInt(value, 10);
       App.amend("Set " + f.label + ' = "' + input.value + '" on ' + this._id + ".", "POST",
         "/api/models/" + this._id + "/field", { field: f.key, value: value },
-        () => { this.show(this._id, "overview"); Inventory.loadList(); });
+        () => { this.show(this._id, this._tab); Inventory.loadList(); });
     };
   },
 };

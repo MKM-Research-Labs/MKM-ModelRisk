@@ -83,6 +83,36 @@ export and one extra audit check.
 
 ## Getting started
 
+### Quick start — the demo in one command
+
+From the repo root after cloning, this prompts for your **host id** (the identity
+your changes are attributed to — the "Acting as" author), then sets up the virtual
+environment, the local database cluster, and launches the pre-seeded demo. It is
+safe to re-run.
+
+```bash
+# Prompt for the identity recorded as the author of your changes.
+read -rp "Host id (author of your changes) [dev@localhost]: " HOST_ID
+export MKM_IDENTITY_DEV_FALLBACK="${HOST_ID:-dev@localhost}"
+
+# Python venv + dependencies (runtime + dev tooling).
+[ -d .venv ] || python3.13 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+# Local PostgreSQL cluster: initialise on first run, otherwise just start it.
+if [ -d .pgdata ]; then scripts/pg.sh start 2>/dev/null || true; else scripts/pg.sh init; fi
+
+# Create, migrate, seed and serve the demo database.
+python app.py demo
+```
+
+Then open **http://127.0.0.1:5015** — the **Acting as** field is pre-filled with
+the host id you entered. (Prerequisites: **PostgreSQL 16** and **Python 3.13**; see
+[Prerequisites](#prerequisites) above.)
+
+### Full setup, step by step
+
 Run these steps in order from a terminal. Steps 1–6 are a one-off; after that you
 only need `scripts/pg.sh start` and `python app.py` to run the app again.
 

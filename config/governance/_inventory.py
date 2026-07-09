@@ -73,6 +73,9 @@ MODEL_FIELD_SPECS = {
     "category": {"label": "Category", "type": "text", "group": "Classification"},
     "tier": {"label": "Tier", "type": "tier", "group": "Classification"},
     "tier_rationale": {"label": "Tier rationale", "type": "text", "group": "Classification"},
+    # The model owner's narrative for the overall risk rating (materiality +
+    # complexity + tier), shown beneath Tier on the overview.
+    "rating_rationale": {"label": "Rating rationale", "type": "text", "group": "Classification"},
     "materiality": {
         "label": "Materiality", "type": "choice",
         "options": VALID_MATERIALITY, "group": "Classification",

@@ -59,6 +59,12 @@ COLLECTION_SPECS = {
         {"key": "monitoring_trigger", "label": "Monitoring trigger", "type": "text"},
         {"key": "compensating_control", "label": "Compensating control", "type": "text"},
     ]},
+    # Known model weaknesses — a lighter register than Limitations (no monitoring
+    # / compensating control), sitting alongside it on the Limitations tab.
+    "model_weaknesses": {"label": "Model weaknesses", "id_prefix": "MW", "fields": [
+        {"key": "description", "label": "Description", "type": "text", "required": True},
+        {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT},
+    ]},
     "validation_questions": {"label": "Validation questions", "id_prefix": "VQ", "fields": [
         {"key": "short_label", "label": "Topic", "type": "text"},
         {"key": "question", "label": "Question", "type": "text", "required": True},
