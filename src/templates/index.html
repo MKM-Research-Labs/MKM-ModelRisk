@@ -17,7 +17,7 @@
     </div>
     <div class="actor">
       <label for="actor-input">Acting as</label>
-      <input id="actor-input" value="dev@localhost" spellcheck="false" />
+      <input id="actor-input" value="{{ actor_default | default('dev@localhost', true) }}" spellcheck="false" />
       <span class="hint" title="In production this is set by the client's SSO. Here you can change it to see attribution in the audit trail.">simulated SSO identity</span>
     </div>
   </header>

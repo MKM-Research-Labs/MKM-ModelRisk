@@ -36,6 +36,18 @@ def test_index_serves_html(client):
     assert b"Model Risk Governance" in response.data
 
 
+def test_index_actor_field_prefills_from_sso_header(client):
+    # The "Acting as" field defaults to the resolved principal.
+    html = client.get("/", headers={"X-Auth-Request-User": "alice@bank.com"}).get_data(as_text=True)
+    assert 'id="actor-input" value="alice@bank.com"' in html
+
+
+def test_index_actor_field_falls_back_when_no_header(client):
+    # With no SSO header, it falls back to the configured dev identity.
+    html = client.get("/").get_data(as_text=True)
+    assert 'id="actor-input" value="dev@localhost"' in html
+
+
 def test_create_app_runs_migrations_by_default():
     # Default path applies migrations (idempotent); the app builds successfully.
     app = create_app()
