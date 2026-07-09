@@ -51,10 +51,11 @@ from src.governance.mrc_settings import set_field, set_logo
 from src.governance.product import add_collection_item as _product_add
 from src.governance.product import list_products, rebuild_product_view, register_product
 from src.governance.product.commands import AGGREGATE_TYPE as PRODUCT_AGGREGATE
-from src.governance.reference import add_option
+from src.governance.reference import add_option, get_reference_lists, update_option
 
 DEMO_DB = "mkm_modelrisk_demo"
 _DATA = Path(__file__).resolve().parent / "demo_data.json"
+_ASSETS = Path(__file__).resolve().parent / "demo_assets"
 _LOGO = Path(__file__).resolve().parents[1] / "docs" / "shared" / "moodys.jpeg"
 _ACTOR = "demo@modelrisk"
 
@@ -78,6 +79,22 @@ def _seed_logo() -> None:
         return
     meta = save_upload("mrc", _LOGO.name, _LOGO.read_bytes())
     set_logo(filename=meta["filename"], original_name=_LOGO.name, actor=_ACTOR)
+
+
+def _seed_committee_tors(mapping: dict) -> None:
+    """Re-upload each committee's Terms of Reference from ``demo_assets/`` and
+    point the (already-seeded) committee at it."""
+    if not mapping:
+        return
+    by_value = {c["value"]: c["item_id"] for c in get_reference_lists().get("mrc", [])}
+    for value, info in mapping.items():
+        item_id, asset = by_value.get(value), _ASSETS / info["file"]
+        if not item_id or not asset.exists():
+            continue
+        meta = save_upload("mrc", info.get("original_name") or info["file"], asset.read_bytes())
+        update_option(list_name="mrc", item_id=item_id,
+                      fields={"tor_filename": meta["filename"],
+                              "tor_original_name": meta["original_name"]}, actor=_ACTOR)
 
 
 def _demo_pdf() -> bytes | None:
@@ -123,6 +140,7 @@ def seed() -> None:
     for list_name, items in data["reference"].items():
         for item in items:
             add_option(list_name=list_name, fields=item, actor=_ACTOR)
+    _seed_committee_tors(data.get("committee_tors") or {})
     for model in data["models"]:
         register_model(model_id=model["model_id"], name=model["name"],
                        fields=model.get("fields", {}), actor=_ACTOR)

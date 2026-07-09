@@ -195,9 +195,11 @@ UI, capture it back into `demo_data.json` so a fresh clone reproduces it:
 MKM_DB_NAME=mkm_modelrisk_demo python scripts/export_demo.py
 ```
 
-(Uploaded files — extra logos, Terms-of-Reference / analysis documents — live under
-`uploads/`, which is gitignored; only the seed logo in `docs/shared/` travels with
-the repo. Commit others explicitly if a clone must reproduce them.)
+(The seed logo (`docs/shared/moodys.jpeg`) and committee Terms-of-Reference
+(`scripts/demo_assets/`, wired up via `committee_tors` in `demo_data.json`) are
+committed and re-uploaded on seed. Other in-app uploads — analysis / agenda
+documents — live under `uploads/`, which is gitignored, so they don't travel with
+a clone.)
 
 ---
 

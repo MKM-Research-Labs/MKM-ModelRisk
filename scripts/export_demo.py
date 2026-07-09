@@ -30,6 +30,7 @@ live outside git) — so the result re-seeds cleanly on a fresh clone.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from config.governance import (
@@ -50,6 +51,23 @@ from src.governance.product import list_products
 from src.governance.reference import get_reference_lists
 
 _OUT = Path(__file__).resolve().parent / "demo_data.json"
+_ASSETS = Path(__file__).resolve().parent / "demo_assets"
+_UPLOADS_MRC = Path(__file__).resolve().parents[1] / "uploads" / "mrc"
+
+
+def _capture_committee_tors(mrc_items: list[dict]) -> dict:
+    """Copy each committee's ToR out of gitignored uploads/ into demo_assets/
+    (committed) and return a {committee value -> {file, original_name}} map so
+    the seed can re-upload them on a fresh clone."""
+    tors = {}
+    for c in mrc_items:
+        filename = c.get("tor_filename")
+        src = _UPLOADS_MRC / filename if filename else None
+        if src and src.exists():
+            _ASSETS.mkdir(exist_ok=True)
+            shutil.copy(src, _ASSETS / filename)
+            tors[c["value"]] = {"file": filename, "original_name": c.get("tor_original_name") or filename}
+    return tors
 
 
 def _keep(key: str) -> bool:
@@ -111,6 +129,7 @@ def export() -> None:
     out = {
         "settings": dict(get_settings().get("fields", {})),
         "reference": reference,
+        "committee_tors": _capture_committee_tors(refs.get("mrc", [])),
         "models": models,
         "products": products,
         "meetings": meetings,

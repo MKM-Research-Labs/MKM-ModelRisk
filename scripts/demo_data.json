@@ -104,6 +104,16 @@
    }
   ]
  },
+ "committee_tors": {
+  "MRC-ANALYTICS": {
+   "file": "Moodys_AM_MRC_ToR.docx",
+   "original_name": "Moodys AM MRC ToR.docx"
+  },
+  "MRC-AM": {
+   "file": "Moodys_AM_MRC_ToR.docx",
+   "original_name": "Moodys AM MRC ToR.docx"
+  }
+ },
  "models": [
   {
    "model_id": "STB-BND-001",
@@ -126,6 +136,7 @@
     "lifecycle_stage": "Production",
     "mrc_signoff_date": "2026-07-09",
     "next_review_date": "2026-09-30",
+    "rating_rationale": "Industry standard and well-established model.",
     "mrc_signoff_meeting": "MRC-2026-July"
    },
    "collections": {
