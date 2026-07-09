@@ -376,23 +376,43 @@ const MeetingDetail = {
         (this._showAll ? " checked" : "") + "> Show all models</label></div>"
       : '<div class="muted" style="margin-bottom:6px">Company-wide MRC' + mrcNote +
         " — every inventory model is a candidate.</div>";
+    const analysisByModel = {};
+    this._models.forEach((r) => {
+      if (r.analysis_original_name) analysisByModel[r.model_id] = r.analysis_original_name;
+    });
     const rows = candidates.length ? candidates.map((m) => {
       const d = m.data || {};
       const checked = inScope.has(m.model_id) ? " checked" : "";
       return '<tr><td><input type="checkbox" data-mscope="' + esc(m.model_id) + '"' + checked +
         '></td><td class="modelid">' + esc(m.model_id) + "</td><td>" + fieldDisplay(d.name) +
         "</td><td>" + tierBadge(d.tier) + "</td><td>" + ragBadge(d.rag_rating) +
-        "</td><td>" + fieldDisplay(d.division) + "</td></tr>";
+        "</td><td>" + this._analysisCell(m.model_id, inScope.has(m.model_id), analysisByModel) +
+        "</td></tr>";
     }).join("") :
       '<tr><td colspan="6" class="empty">No models match this scope.</td></tr>';
     return banner +
       "<table><thead><tr><th></th><th>Model ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
-      "<th>Division</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+      "<th>Analysis</th></tr></thead><tbody>" + rows + "</tbody></table>" +
       '<div class="row" style="margin-top:10px">' +
       '<button class="btn small primary" id="mt-save-models">Save selection&hellip;</button>' +
       '<span class="muted" id="mt-models-summary" style="margin-left:8px">' +
       inScope.size + " model" + (inScope.size === 1 ? "" : "s") + " currently in scope." +
       "</span></div>";
+  },
+
+  // Analysis document per in-scope model: a download link (if uploaded) plus an
+  // upload control. Only in-scope models can carry one (nothing to attach to
+  // until the model set is saved).
+  _analysisCell(modelId, inScope, byModel) {
+    if (!inScope) return '<span class="muted" style="font-size:11px">add to scope first</span>';
+    const name = byModel[modelId];
+    const link = name
+      ? '<a href="/api/meetings/' + esc(this._id) + "/models/" + esc(modelId) +
+        '/analysis" target="_blank">' + esc(name) + "</a> "
+      : "";
+    return link + '<input type="file" id="an-file-' + esc(modelId) + '" style="display:none">' +
+      '<button class="btn small" data-an-upload="' + esc(modelId) + '">' +
+      (name ? "Replace" : "Upload") + "&hellip;</button>";
   },
 
   _bindModels() {
@@ -401,6 +421,23 @@ const MeetingDetail = {
     if (toggle) toggle.onchange = function () {
       self._showAll = toggle.checked; self._render();
     };
+    document.querySelectorAll("[data-an-upload]").forEach(function (btn) {
+      const modelId = btn.getAttribute("data-an-upload");
+      const fileInput = document.getElementById("an-file-" + modelId);
+      btn.onclick = function () { fileInput.click(); };
+      fileInput.onchange = function () {
+        if (!fileInput.files.length) return;
+        const form = new FormData();
+        form.append("file", fileInput.files[0]);
+        fetch("/api/meetings/" + self._id + "/models/" + modelId + "/analysis", {
+          method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
+        }).then(async (res) => {
+          if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "upload failed"); }
+          App.toast("Analysis uploaded", "ok");
+          self.show(self._id, "models_in_scope");
+        }).catch((e) => App.toast(e.message, "error"));
+      };
+    });
     document.getElementById("mt-save-models").onclick = function () {
       const selected = [];
       document.querySelectorAll("[data-mscope]").forEach(function (cb) {
