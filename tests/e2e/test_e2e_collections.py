@@ -59,13 +59,13 @@ def test_add_remediation_step(page: Page, base_url: str):
 
 
 def test_add_assumption(page: Page, base_url: str):
-    _setup(page, base_url, "MKM-E2E-011", "assumptions")
+    # Assumptions now live under the merged "Validation & Assumptions" tab.
+    _setup(page, base_url, "MKM-E2E-011", "validation_questions")
     add_collection_item(
         page, "assumptions",
         {"description": "Returns are i.i.d. Gaussian", "impact": "Medium"},
     )
     expect(page.locator("#dt-content")).to_contain_text("Returns are i.i.d. Gaussian")
-    expect(page.locator("[data-dtab='assumptions']")).to_contain_text("1")
 
 
 def test_add_limitation(page: Page, base_url: str):
@@ -125,7 +125,8 @@ def test_events_tab_records_a_post_mortem_with_raci(page: Page, base_url: str):
 
 
 def test_add_change_history(page: Page, base_url: str):
-    _setup(page, base_url, "MKM-E2E-014", "change_history")
+    # Change history now lives under the merged "Versions" tab.
+    _setup(page, base_url, "MKM-E2E-014", "version_history")
     add_collection_item(
         page, "change_history",
         {"version": "1.2.0", "date": "2026-05-01", "description": "Methodology refresh"},
