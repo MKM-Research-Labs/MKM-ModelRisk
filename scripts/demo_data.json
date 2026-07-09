@@ -5,9 +5,6 @@
     "frequency": "Quarterly"
   },
   "reference": {
-    "company": [
-      {"value": "Sterling Bank plc", "owner": "David K Kelly"}
-    ],
     "division": [
       {"value": "Markets"},
       {"value": "Treasury"}
@@ -40,7 +37,7 @@
       "fields": {"type": "Analytical Model", "category": "Pricing", "tier": 1, "owner": "Priya Anand", "rag_rating": "Green",
                  "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
                  "version": "3.2.0", "next_review_date": "2026-09-30",
-                 "company": "Sterling Bank plc", "division": "Markets", "department": "Rates Trading",
+                 "division": "Markets", "department": "Rates Trading",
                  "description": "Discounted-cashflow pricer for government and corporate bonds.",
                  "methodology": "Deterministic cashflow discounting off a fitted yield curve."},
       "collections": {
@@ -63,7 +60,7 @@
       "fields": {"type": "Analytical Model", "category": "Pricing", "tier": 1, "owner": "Sofia Castro", "rag_rating": "Green",
                  "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
                  "version": "2.4.0", "next_review_date": "2026-08-15",
-                 "company": "Sterling Bank plc", "division": "Markets", "department": "Equity Derivatives",
+                 "division": "Markets", "department": "Equity Derivatives",
                  "description": "Closed-form European option pricer.",
                  "methodology": "Black-Scholes-Merton with continuous dividend yield."},
       "collections": {
@@ -77,7 +74,7 @@
       "fields": {"type": "Analytical Model", "category": "Volatility", "tier": 2, "owner": "Priya Anand", "rag_rating": "Amber",
                  "lifecycle_stage": "Validation", "materiality": "High", "complexity": "High",
                  "version": "1.1.0", "next_review_date": "2026-05-31",
-                 "company": "Sterling Bank plc", "division": "Markets", "department": "Rates Trading",
+                 "division": "Markets", "department": "Rates Trading",
                  "description": "SABR model for the swaption volatility smile.",
                  "methodology": "SABR with Hagan expansion; calibrated per-expiry."},
       "collections": {
@@ -94,7 +91,7 @@
       "fields": {"type": "Analytical Model", "category": "Rates", "tier": 2, "owner": "Marcus Reid", "rag_rating": "Green",
                  "lifecycle_stage": "Production", "materiality": "Medium", "complexity": "High",
                  "version": "2.0.1", "next_review_date": "2026-11-20",
-                 "company": "Sterling Bank plc", "division": "Treasury", "department": "Funding & Liquidity",
+                 "division": "Treasury", "department": "Funding & Liquidity",
                  "description": "Short-rate model for Bermudan and exotic rates products.",
                  "methodology": "Hull-White 1F calibrated to the swaption grid."},
       "collections": {
@@ -110,7 +107,6 @@
       "fields": {"type": "Analytical Model", "category": "Counterparty Risk", "tier": 1, "owner": "Johnny Mattimore", "rag_rating": "Amber",
                  "lifecycle_stage": "Validation", "materiality": "High", "complexity": "High",
                  "version": "1.0.0", "next_review_date": "2026-04-30",
-                 "company": "Sterling Bank plc",
                  "description": "Monte-Carlo PFE engine for counterparty credit exposure.",
                  "methodology": "Path simulation with netting and collateral."},
       "collections": {
@@ -123,7 +119,6 @@
       "fields": {"type": "Analytical Model", "category": "Market Risk", "tier": 1, "owner": "Johnny Mattimore", "rag_rating": "Green",
                  "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
                  "version": "4.1.0", "next_review_date": "2026-07-01",
-                 "company": "Sterling Bank plc",
                  "description": "1-day 99% historical-simulation VaR.",
                  "methodology": "Full-revaluation historical simulation, 2-year window."},
       "collections": {
@@ -136,7 +131,7 @@
       "fields": {"type": "Market Data Model", "category": "Market Data", "tier": 2, "owner": "Lena Okafor", "rag_rating": "Green",
                  "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
                  "version": "2.1.0", "next_review_date": "2026-10-31",
-                 "company": "Sterling Bank plc", "division": "Markets", "department": "Rates Trading",
+                 "division": "Markets", "department": "Rates Trading",
                  "description": "Nelson-Siegel-Svensson government-bond discount curve (vendor source: ICE).",
                  "methodology": "NSS least-squares fit over a filtered subset of government bonds; daily refresh."},
       "collections": {
@@ -150,7 +145,7 @@
       "fields": {"type": "Market Data Model", "category": "Market Data", "tier": 2, "owner": "Lena Okafor", "rag_rating": "Amber",
                  "lifecycle_stage": "Production", "materiality": "High", "complexity": "High",
                  "version": "1.3.0", "next_review_date": "2026-05-31",
-                 "company": "Sterling Bank plc", "division": "Markets", "department": "Rates Trading",
+                 "division": "Markets", "department": "Rates Trading",
                  "description": "SABR-calibrated swaption implied-volatility cube (vendor source: Bloomberg).",
                  "methodology": "SABR calibration per expiry/tenor; intraday refresh."},
       "collections": {
@@ -163,7 +158,7 @@
       "fields": {"type": "Market Data Model", "category": "Market Data", "tier": 2, "owner": "Lena Okafor", "rag_rating": "Green",
                  "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
                  "version": "3.0.0", "next_review_date": "2026-08-15",
-                 "company": "Sterling Bank plc", "division": "Markets", "department": "Equity Derivatives",
+                 "division": "Markets", "department": "Equity Derivatives",
                  "description": "Arbitrage-free SVI equity implied-volatility surface (vendor source: Murex).",
                  "methodology": "SVI interpolation with no-arbitrage constraints; intraday refresh."},
       "collections": {
