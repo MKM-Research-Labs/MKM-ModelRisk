@@ -167,14 +167,37 @@ python app.py demo
 ```
 
 Serves a separate, pre-seeded **`mkm_modelrisk_demo`** database (created, migrated
-and seeded on first run; never touches your dev data). It loads a worked
-"Sterling Bank" scenario — a branded company logo, divisions/departments, people,
-six vendor models, Market Data Models, Calculating Agents, PVMs, an MRC meeting,
-and a bibliography. The company logo is read from `docs/shared/model_risk_front.png`.
+and seeded on first run; never touches your dev data). It loads a worked **Moody's**
+scenario from `scripts/demo_data.json` — the branded company logo, divisions and
+departments, people (each anchored to an org unit), MRC committees with their
+membership rosters, models, Products, scheduled MRC meetings with agendas and
+sign-offs, and a bibliography. The company logo is read from
+`docs/shared/moodys.jpeg`.
 
 > **Tip:** the database is the only stateful piece. It lives in the cluster's data
 > directory (`./.pgdata` by default, gitignored). Manage it with
 > `scripts/pg.sh start|stop|status`; the data persists across stop/start.
+
+**Re-seed from scratch.** The demo seeds **only when the database is empty**, so
+your in-app edits persist across restarts. To rebuild it fresh from
+`demo_data.json` (e.g. after pulling new demo content), drop it first:
+
+```bash
+scripts/pg.sh start
+dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk_demo
+python app.py demo        # recreates + re-seeds, then serves
+```
+
+**Update the seed from your running demo.** After tailoring the demo through the
+UI, capture it back into `demo_data.json` so a fresh clone reproduces it:
+
+```bash
+MKM_DB_NAME=mkm_modelrisk_demo python scripts/export_demo.py
+```
+
+(Uploaded files — extra logos, Terms-of-Reference / analysis documents — live under
+`uploads/`, which is gitignored; only the seed logo in `docs/shared/` travels with
+the repo. Commit others explicitly if a clone must reproduce them.)
 
 ---
 

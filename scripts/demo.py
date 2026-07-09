@@ -55,7 +55,7 @@ from src.governance.reference import add_option
 
 DEMO_DB = "mkm_modelrisk_demo"
 _DATA = Path(__file__).resolve().parent / "demo_data.json"
-_LOGO = Path(__file__).resolve().parents[1] / "docs" / "shared" / "model_risk_front.png"
+_LOGO = Path(__file__).resolve().parents[1] / "docs" / "shared" / "moodys.jpeg"
 _ACTOR = "demo@modelrisk"
 
 

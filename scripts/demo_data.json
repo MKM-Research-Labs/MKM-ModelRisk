@@ -1,288 +1,1164 @@
 {
-  "settings": {
-    "org_name": "Sterling Bank plc",
+ "settings": {
+  "frequency": "Quarterly",
+  "org_name": "Moodys",
+  "chair": "David K Kelly"
+ },
+ "reference": {
+  "division": [
+   {
+    "value": "ANALYTICS"
+   },
+   {
+    "value": "RATINGS"
+   }
+  ],
+  "department": [
+   {
+    "value": "Asset Management",
+    "division": "ANALYTICS"
+   },
+   {
+    "value": "Insurance",
+    "division": "ANALYTICS"
+   },
+   {
+    "value": "Sustainability",
+    "division": "RATINGS"
+   },
+   {
+    "value": "Private Credit",
+    "division": "RATINGS"
+   }
+  ],
+  "mrc": [
+   {
+    "name": "Central MRC",
     "chair": "David K Kelly",
-    "frequency": "Quarterly"
-  },
-  "reference": {
-    "division": [
-      {"value": "Markets"},
-      {"value": "Treasury"}
+    "level": "Division",
+    "value": "MRC-ANALYTICS",
+    "frequency": "Quarterly",
+    "scope_value": "ANALYTICS"
+   },
+   {
+    "name": "Asset Management",
+    "chair": "Johnny Mattimore",
+    "level": "Department",
+    "value": "MRC-AM",
+    "frequency": "Quarterly",
+    "scope_value": "Asset Management",
+    "secretary": "David K Kelly",
+    "voting_members": [
+     "Priya Anand"
     ],
-    "department": [
-      {"value": "Rates Trading", "division": "Markets"},
-      {"value": "Equity Derivatives", "division": "Markets"},
-      {"value": "Funding & Liquidity", "division": "Treasury"}
-    ],
-    "people": [
-      {"name": "David K Kelly", "email": "david.kelly@sterlingbank.com", "level": "Company"},
-      {"name": "Johnny Mattimore", "email": "johnny.mattimore@sterlingbank.com", "level": "Company"},
-      {"name": "Priya Anand", "email": "priya.anand@sterlingbank.com", "level": "Department", "scope_value": "Rates Trading"},
-      {"name": "Sofia Castro", "email": "sofia.castro@sterlingbank.com", "level": "Department", "scope_value": "Equity Derivatives"},
-      {"name": "Marcus Reid", "email": "marcus.reid@sterlingbank.com", "level": "Division", "scope_value": "Treasury"},
-      {"name": "Lena Okafor", "email": "lena.okafor@sterlingbank.com", "level": "Division", "scope_value": "Markets"}
-    ],
-    "calculating_agent": [
-      {"value": "Murex"},
-      {"value": "Calypso"},
-      {"value": "AM"}
-    ],
-    "mrc": [
-      {"value": "MRC-MARKETS", "name": "Markets Model Risk Committee", "level": "Division", "scope_value": "Markets", "chair": "David K Kelly", "frequency": "Quarterly"}
+    "non_voting_members": [
+     "Sofia Castro"
     ]
-  },
-  "models": [
-    {
-      "model_id": "STB-BND-001", "name": "Bond Pricer",
-      "fields": {"type": "Analytical Model", "category": "Pricing", "tier": 1, "owner": "Priya Anand", "rag_rating": "Green",
-                 "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
-                 "version": "3.2.0", "next_review_date": "2026-09-30",
-                 "division": "Markets", "department": "Rates Trading",
-                 "description": "Discounted-cashflow pricer for government and corporate bonds.",
-                 "methodology": "Deterministic cashflow discounting off a fitted yield curve."},
-      "collections": {
-        "assumptions": [{"description": "Cashflows are known and deterministic", "impact": "Low"}],
-        "limitations": [{"description": "No optionality (callable bonds unsupported)", "impact": "Medium"}],
-        "version_history": [
-          {"version": "3.0.0", "date": "2024-11-04", "description": "Move to NSS-fitted curve discounting; deprecate flat-rate path.", "author": "Priya Anand", "lifecycle": "No New Development"},
-          {"version": "3.1.0", "date": "2025-04-15", "description": "Add corporate-bond OAS adjustment and credit spread overlay.", "author": "Priya Anand", "lifecycle": "No New Development"},
-          {"version": "3.2.0", "date": "2025-12-08", "description": "Current production version. Performance tuned; settlement-date handling cleaned up.", "author": "Priya Anand", "lifecycle": "Being Enhanced"}
-        ],
-        "rag_signoff_history": [
-          {"date": "2024-11-15", "from_rating": "Amber", "to_rating": "Green", "meeting_id": "MRC-2024-Q4", "note": "Post-NSS refresh sign-off — model back within tolerance."},
-          {"date": "2025-06-18", "from_rating": "Green", "to_rating": "Green", "meeting_id": "MRC-2025-Q2", "note": "Annual review — no change to approved rating."}
-        ]
-      },
-      "validation": {"VQ-001": "Addressed", "VQ-002": "Addressed", "VQ-009": "Addressed"}
-    },
-    {
-      "model_id": "STB-BS-001", "name": "Black-Scholes Option Pricer",
-      "fields": {"type": "Analytical Model", "category": "Pricing", "tier": 1, "owner": "Sofia Castro", "rag_rating": "Green",
-                 "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
-                 "version": "2.4.0", "next_review_date": "2026-08-15",
-                 "division": "Markets", "department": "Equity Derivatives",
-                 "description": "Closed-form European option pricer.",
-                 "methodology": "Black-Scholes-Merton with continuous dividend yield."},
-      "collections": {
-        "assumptions": [{"description": "Constant volatility and interest rate", "impact": "Medium"}],
-        "limitations": [{"description": "No path-dependence; barriers/Americans unsupported", "impact": "High"}]
-      },
-      "validation": {"VQ-001": "Addressed", "VQ-007": "Addressed"}
-    },
-    {
-      "model_id": "STB-SABR-001", "name": "SABR Stochastic Volatility",
-      "fields": {"type": "Analytical Model", "category": "Volatility", "tier": 2, "owner": "Priya Anand", "rag_rating": "Amber",
-                 "lifecycle_stage": "Validation", "materiality": "High", "complexity": "High",
-                 "version": "1.1.0", "next_review_date": "2026-05-31",
-                 "division": "Markets", "department": "Rates Trading",
-                 "description": "SABR model for the swaption volatility smile.",
-                 "methodology": "SABR with Hagan expansion; calibrated per-expiry."},
-      "collections": {
-        "assumptions": [{"description": "Beta fixed at 0.5 across the surface", "impact": "Medium"}],
-        "limitations": [{"description": "Hagan expansion unstable for very low strikes", "impact": "High"}],
-        "operational_failure_events": [
-          {"date": "2026-02-12", "description": "Pricing instability on deep-OTM low-strike swaptions; Hagan expansion blew up on a 25y EUR receiver.", "remediation": "Fall-back to flat-vol pricing engaged; trade re-quoted under approved override. SABR recalibration plan opened for Q2.", "responsible": "Priya Anand", "accountable": "Priya Anand", "consulted": "Johnny Mattimore", "informed_client": "Yes", "informed_senior_mgmt": "Yes"}
-        ]
-      },
-      "validation": {"VQ-001": "Partially Addressed"}
-    },
-    {
-      "model_id": "STB-HW-001", "name": "Hull-White One-Factor",
-      "fields": {"type": "Analytical Model", "category": "Rates", "tier": 2, "owner": "Marcus Reid", "rag_rating": "Green",
-                 "lifecycle_stage": "Production", "materiality": "Medium", "complexity": "High",
-                 "version": "2.0.1", "next_review_date": "2026-11-20",
-                 "division": "Treasury", "department": "Funding & Liquidity",
-                 "description": "Short-rate model for Bermudan and exotic rates products.",
-                 "methodology": "Hull-White 1F calibrated to the swaption grid."},
-      "collections": {
-        "limitations": [{"description": "Single-factor; cannot capture curve twists", "impact": "Medium"}],
-        "version_history": [
-          {"version": "1.0.0", "date": "2022-09-12", "description": "Initial Hull-White 1F implementation for exotic rates.", "author": "Marcus Reid", "lifecycle": "New"},
-          {"version": "2.0.0", "date": "2024-06-30", "description": "Calibration overhaul against the swaption grid; speed-up.", "author": "Marcus Reid", "lifecycle": "Marked for Removal"}
-        ]
-      }
-    },
-    {
-      "model_id": "STB-PFE-001", "name": "Potential Future Exposure",
-      "fields": {"type": "Analytical Model", "category": "Counterparty Risk", "tier": 1, "owner": "Johnny Mattimore", "rag_rating": "Amber",
-                 "lifecycle_stage": "Validation", "materiality": "High", "complexity": "High",
-                 "version": "1.0.0", "next_review_date": "2026-04-30",
-                 "description": "Monte-Carlo PFE engine for counterparty credit exposure.",
-                 "methodology": "Path simulation with netting and collateral."},
-      "collections": {
-        "assumptions": [{"description": "Gaussian copula dependence between risk factors", "impact": "High"}],
-        "limitations": [{"description": "Wrong-way risk not modelled", "impact": "High"}]
-      }
-    },
-    {
-      "model_id": "STB-VAR-001", "name": "Historical Value-at-Risk",
-      "fields": {"type": "Analytical Model", "category": "Market Risk", "tier": 1, "owner": "Johnny Mattimore", "rag_rating": "Green",
-                 "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
-                 "version": "4.1.0", "next_review_date": "2026-07-01",
-                 "description": "1-day 99% historical-simulation VaR.",
-                 "methodology": "Full-revaluation historical simulation, 2-year window."},
-      "collections": {
-        "limitations": [{"description": "Backward-looking; slow to react to regime change", "impact": "Medium"}]
-      },
-      "validation": {"VQ-001": "Addressed", "VQ-002": "Addressed", "VQ-004": "Addressed", "VQ-009": "Addressed"}
-    },
-    {
-      "model_id": "STB-MD-001", "name": "NSS bond curve",
-      "fields": {"type": "Market Data Model", "category": "Market Data", "tier": 2, "owner": "Lena Okafor", "rag_rating": "Green",
-                 "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
-                 "version": "2.1.0", "next_review_date": "2026-10-31",
-                 "division": "Markets", "department": "Rates Trading",
-                 "description": "Nelson-Siegel-Svensson government-bond discount curve (vendor source: ICE).",
-                 "methodology": "NSS least-squares fit over a filtered subset of government bonds; daily refresh."},
-      "collections": {
-        "assumptions": [{"description": "Filtered bond universe is representative of the on-the-run curve", "impact": "Medium"}],
-        "limitations": [{"description": "NSS struggles to fit the very short end in stressed markets", "impact": "Medium"}]
-      },
-      "validation": {"VQ-005": "Addressed"}
-    },
-    {
-      "model_id": "STB-MD-002", "name": "SABR swaption vol",
-      "fields": {"type": "Market Data Model", "category": "Market Data", "tier": 2, "owner": "Lena Okafor", "rag_rating": "Amber",
-                 "lifecycle_stage": "Production", "materiality": "High", "complexity": "High",
-                 "version": "1.3.0", "next_review_date": "2026-05-31",
-                 "division": "Markets", "department": "Rates Trading",
-                 "description": "SABR-calibrated swaption implied-volatility cube (vendor source: Bloomberg).",
-                 "methodology": "SABR calibration per expiry/tenor; intraday refresh."},
-      "collections": {
-        "limitations": [{"description": "Calibration unstable in the low-strike wing (consumed by STB-SABR-001)", "impact": "High"}]
-      },
-      "validation": {"VQ-005": "Partially Addressed"}
-    },
-    {
-      "model_id": "STB-MD-003", "name": "Equity vol surface",
-      "fields": {"type": "Market Data Model", "category": "Market Data", "tier": 2, "owner": "Lena Okafor", "rag_rating": "Green",
-                 "lifecycle_stage": "Production", "materiality": "High", "complexity": "Medium",
-                 "version": "3.0.0", "next_review_date": "2026-08-15",
-                 "division": "Markets", "department": "Equity Derivatives",
-                 "description": "Arbitrage-free SVI equity implied-volatility surface (vendor source: Murex).",
-                 "methodology": "SVI interpolation with no-arbitrage constraints; intraday refresh."},
-      "collections": {
-        "limitations": [{"description": "SVI can admit calendar arbitrage near dividend dates without extra constraints", "impact": "Medium"}]
-      },
-      "validation": {"VQ-005": "Addressed"}
-    }
+   }
   ],
-  "products": [
-    {
-      "product_id": "Product-0001", "product": "Government Bond",
-      "fields": {"product_id": "GILT-2034", "analytics_model": "STB-BND-001",
-                 "market_data_model": "STB-MD-001", "calculating_agent": "Murex",
-                 "status": "Active", "owner": "Priya Anand", "rag_rating": "Green",
-                 "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-06-30",
-                 "description": "Vanilla fixed-coupon gilt priced by discounting known cashflows off the fitted NSS curve.",
-                 "monitoring_approach": "Daily P&L backtest vs Taylor approximation; notional outstanding and maturity profile reviewed weekly.",
-                 "monitoring_results": "P&L explained within tolerance for Q1; no exceptions."}
-    },
-    {
-      "product_id": "Product-0002", "product": "Interest Rate Swaption",
-      "fields": {"product_id": "GBP-SWPTN", "analytics_model": "STB-SABR-001",
-                 "market_data_model": "STB-MD-002", "calculating_agent": "Murex",
-                 "status": "Active", "owner": "Priya Anand", "rag_rating": "Amber",
-                 "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-05-31",
-                 "description": "European swaption priced on the SABR smile; sensitive to low-strike wing behaviour.",
-                 "monitoring_approach": "Vega ladder and low-strike behaviour monitored intraday.",
-                 "monitoring_results": "Low-strike instability observed on 12 Feb; escalated to validation."},
-      "collections": {
-        "limitations": [{"description": "Pricing unreliable for deep-OTM low-strike swaptions", "impact": "High"}],
-        "remediation_steps": [{"description": "Recalibrate the low-strike wing / cap Hagan expansion", "owner": "Priya Anand", "priority": "High", "due_date": "2026-05-31", "status": "In Progress"}]
-      }
-    },
-    {
-      "product_id": "Product-0003", "product": "Equity Option",
-      "fields": {"product_id": "FTSE-EUOPT", "analytics_model": "STB-BS-001",
-                 "market_data_model": "STB-MD-003", "calculating_agent": "Murex",
-                 "status": "Active", "owner": "Sofia Castro", "rag_rating": "Green",
-                 "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-08-15",
-                 "description": "Plain European equity option priced on the SVI vol surface.",
-                 "monitoring_approach": "Delta/vega behaviour and P&L backtest, daily.",
-                 "monitoring_results": "Stable; within expectation."}
-    },
-    {
-      "product_id": "Product-0004", "product": "Equity Barrier Option",
-      "fields": {"product_id": "FTSE-BARR", "analytics_model": "STB-BS-001",
-                 "market_data_model": "STB-MD-003", "calculating_agent": "Calypso",
-                 "status": "Suspended", "owner": "Sofia Castro", "rag_rating": "Red",
-                 "mrc_signoff_date": "2025-06-30", "next_review_date": "2026-04-30",
-                 "description": "Knock-out barrier option currently shoehorned onto the plain Black-Scholes engine.",
-                 "monitoring_approach": "Compare hedges vs a barrier-aware benchmark where available.",
-                 "monitoring_results": "Barrier risk not captured by the Black-Scholes engine; Product suspended pending a local-vol framework."},
-      "collections": {
-        "limitations": [{"description": "Shoehorning: barrier valued on plain Black-Scholes, missing barrier risk that should drive hedging", "impact": "High"}],
-        "remediation_steps": [{"description": "Deliver a barrier-aware local-volatility framework", "owner": "Sofia Castro", "priority": "High", "due_date": "2026-04-30", "status": "Open"}]
-      }
-    }
+  "calculating_agent": [
+   {
+    "value": "Murex"
+   },
+   {
+    "value": "Calypso"
+   },
+   {
+    "value": "AM"
+   }
   ],
-  "meetings": [
-    {
-      "meeting_id": "MRC-2026-Q1", "title": "Q1 Model Risk Committee",
-      "fields": {"mrc": "MRC-MARKETS", "date": "2026-03-18", "time": "14:00", "location": "Boardroom, 1 Lombard Court",
-                 "status": "Completed"},
-      "collections": {
-        "agenda": [
-          {"title": "SABR validation status", "presenter": "Johnny Mattimore", "status": "Completed"},
-          {"title": "Barrier-option Product suspension", "presenter": "Sofia Castro", "status": "Completed"},
-          {"title": "PFE wrong-way risk remediation", "presenter": "Johnny Mattimore", "status": "Pending"}
-        ],
-        "minutes": [
-          {"title": "Welcome and apologies", "presenter": "David K Kelly", "text": "Chair welcomed attendees and noted apologies from Sofia Castro (Equity Derivatives)."},
-          {"title": "Q1 model risk dashboard", "presenter": "David K Kelly", "text": "Inventory at 9 models (6 analytical, 3 market data), 4 Products. Two amber items: SABR (validation) and Barrier Option Product (suspended)."},
-          {"title": "SABR validation status", "presenter": "Johnny Mattimore", "text": "Low-strike Hagan expansion instability confirmed; partial coverage on VQ-001. Recalibration plan tabled for Q2."},
-          {"title": "Barrier-option Product suspension", "presenter": "Priya Anand", "text": "Reported on Sofia's behalf: Product-0004 suspended; barrier risk not captured by the Black-Scholes engine. Local-vol framework scoped for delivery by end of April."},
-          {"title": "AOB", "presenter": "David K Kelly", "text": "No other business; meeting closed at 15:30."}
-        ],
-        "participants": [
-          {"name": "David K Kelly", "role": "Chief Risk Officer", "organisation": "Sterling Bank plc", "status": "Attended"},
-          {"name": "Johnny Mattimore", "role": "Head of Model Validation", "organisation": "Sterling Bank plc", "status": "Attended"},
-          {"name": "Priya Anand", "role": "Head of Rates", "organisation": "Sterling Bank plc", "status": "Attended"},
-          {"name": "Sofia Castro", "role": "Head of Equity Derivatives", "organisation": "Sterling Bank plc", "status": "Apologies"}
-        ],
-        "models_in_scope": [
-          {"model_id": "STB-BND-001"},
-          {"model_id": "STB-BS-001"},
-          {"model_id": "STB-SABR-001"}
-        ],
-        "decisions": [
-          {"description": "Suspend Product-0004 (Equity Barrier Option) until a barrier-aware framework is delivered.", "date": "2026-03-18", "model_id": "STB-BS-001"},
-          {"description": "Escalate SABR low-strike instability; target remediation by Q2.", "date": "2026-03-18", "model_id": "STB-SABR-001"},
-          {"description": "Endorse the framework refresh and continue current MRC cadence (quarterly).", "date": "2026-03-18"}
-        ],
-        "actions": [
-          {"description": "Deliver a barrier-aware local-volatility framework for equity options.", "owner": "Sofia Castro", "target_date": "2026-04-30", "status": "Open", "model_id": "STB-BS-001"},
-          {"description": "Recalibrate SABR low-strike wing and cap Hagan expansion at the trouble points.", "owner": "Priya Anand", "target_date": "2026-05-31", "status": "Open", "model_id": "STB-SABR-001"},
-          {"description": "Refresh validation question coverage on STB-BND-001 ahead of next review.", "owner": "Johnny Mattimore", "target_date": "2026-09-30", "status": "Open", "model_id": "STB-BND-001"},
-          {"description": "Publish the updated Model Risk Handbook to the document store.", "owner": "David K Kelly", "target_date": "2026-04-15", "status": "Open"}
-        ]
-      }
-    },
-    {
-      "meeting_id": "MRC-2026-Q2", "title": "Q2 Model Risk Committee",
-      "fields": {"mrc": "MRC-MARKETS", "date": "2026-06-24", "time": "14:00", "location": "Boardroom, 1 Lombard Court"},
-      "collections": {
-        "agenda": [
-          {"title": "Risk rating sign-off: STB-BND-001 → Red", "presenter": "Priya Anand", "status": "Pending", "subject_model_id": "STB-BND-001", "proposed_rag": "Red", "description": "Owner requests promotion from Green to Red — heatmap (High × Medium) crossed threshold after Q1 events."},
-          {"title": "Risk rating sign-off: STB-SABR-001 → Red", "presenter": "Priya Anand", "status": "Pending", "subject_model_id": "STB-SABR-001", "proposed_rag": "Red", "description": "Escalate to Red pending completion of Hagan-wing recalibration; validation still Partial."},
-          {"title": "Q1 action review", "presenter": "David K Kelly", "status": "Pending", "description": "Review of open actions carried over from Q1: local-vol framework, SABR recalibration, VQ refresh."}
-        ],
-        "participants": [
-          {"name": "David K Kelly", "role": "Chief Risk Officer", "organisation": "Sterling Bank plc", "status": "Invited"},
-          {"name": "Johnny Mattimore", "role": "Head of Model Validation", "organisation": "Sterling Bank plc", "status": "Invited"},
-          {"name": "Priya Anand", "role": "Head of Rates", "organisation": "Sterling Bank plc", "status": "Invited"},
-          {"name": "Sofia Castro", "role": "Head of Equity Derivatives", "organisation": "Sterling Bank plc", "status": "Invited"}
-        ],
-        "models_in_scope": [
-          {"model_id": "STB-BND-001"},
-          {"model_id": "STB-SABR-001"}
-        ]
-      }
-    }
-  ],
-  "bibliography": [
-    {"authors": "David K Kelly", "year": "2026", "title": "Handbook of Model Risk Management for Vendors", "journal": "MKM Research Labs", "category": "Governance"},
-    {"authors": "Board of Governors of the Federal Reserve System", "year": "2021", "title": "SR 11-7: Guidance on Model Risk Management", "journal": "Federal Reserve", "category": "Regulation"}
+  "people": [
+   {
+    "name": "David K Kelly",
+    "email": "david.kelly@sterlingbank.com",
+    "division": "ANALYTICS",
+    "department": "Asset Management"
+   },
+   {
+    "name": "Johnny Mattimore",
+    "email": "johnny.mattimore@sterlingbank.com",
+    "division": "ANALYTICS",
+    "department": "Asset Management"
+   },
+   {
+    "name": "Priya Anand",
+    "email": "priya.anand@sterlingbank.com",
+    "division": "ANALYTICS",
+    "department": "Asset Management"
+   },
+   {
+    "name": "Sofia Castro",
+    "email": "sofia.castro@sterlingbank.com",
+    "division": "ANALYTICS",
+    "department": "Asset Management"
+   },
+   {
+    "name": "Marcus Reid",
+    "email": "marcus.reid@sterlingbank.com",
+    "division": "RATINGS"
+   },
+   {
+    "name": "Lena Okafor",
+    "email": "lena.okafor@sterlingbank.com",
+    "division": "RATINGS"
+   }
   ]
+ },
+ "models": [
+  {
+   "model_id": "STB-BND-001",
+   "name": "Bond Pricer",
+   "fields": {
+    "tier": 1,
+    "type": "Analytical Model",
+    "owner": "Priya Anand",
+    "version": "3.2.0",
+    "category": "Pricing",
+    "division": "ANALYTICS",
+    "complexity": "Low",
+    "department": "Asset Management",
+    "rag_rating": "Amber",
+    "description": "Discounted-cashflow pricer for government and corporate bonds.",
+    "materiality": "High",
+    "methodology": "Deterministic cashflow discounting off a fitted yield curve.",
+    "peer_reviewer": "David K Kelly",
+    "review_status": "Documentation Complete",
+    "lifecycle_stage": "Production",
+    "mrc_signoff_date": "2026-07-09",
+    "next_review_date": "2026-09-30",
+    "mrc_signoff_meeting": "MRC-2026-July"
+   },
+   "collections": {
+    "assumptions": [
+     {
+      "impact": "Low",
+      "description": "Cashflows are known and deterministic"
+     }
+    ],
+    "limitations": [
+     {
+      "impact": "Medium",
+      "description": "No optionality (callable bonds unsupported)"
+     }
+    ],
+    "version_history": [
+     {
+      "date": "2024-11-04",
+      "author": "Priya Anand",
+      "version": "3.0.0",
+      "lifecycle": "No New Development",
+      "description": "Move to NSS-fitted curve discounting; deprecate flat-rate path."
+     },
+     {
+      "date": "2025-04-15",
+      "author": "Priya Anand",
+      "version": "3.1.0",
+      "lifecycle": "No New Development",
+      "description": "Add corporate-bond OAS adjustment and credit spread overlay."
+     },
+     {
+      "date": "2025-12-08",
+      "author": "Priya Anand",
+      "version": "3.2.0",
+      "lifecycle": "Being Enhanced",
+      "description": "Current production version. Performance tuned; settlement-date handling cleaned up."
+     }
+    ],
+    "rag_signoff_history": [
+     {
+      "date": "2024-11-15",
+      "note": "Post-NSS refresh sign-off — model back within tolerance.",
+      "to_rating": "Green",
+      "meeting_id": "MRC-2024-Q4",
+      "from_rating": "Amber"
+     },
+     {
+      "date": "2025-06-18",
+      "note": "Annual review — no change to approved rating.",
+      "to_rating": "Green",
+      "meeting_id": "MRC-2025-Q2",
+      "from_rating": "Green"
+     },
+     {
+      "date": "2026-07-09",
+      "to_rating": "Red",
+      "meeting_id": "MRC-2026-July",
+      "from_rating": "Green"
+     }
+    ],
+    "rag_signoff_requests": [
+     {
+      "status": "Completed",
+      "meeting_id": "MRC-2026-July",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Red",
+      "agenda_item_id": "AG-001"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Addressed",
+    "VQ-002": "Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Not Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Addressed"
+   }
+  },
+  {
+   "model_id": "STB-BS-001",
+   "name": "Black-Scholes Option Pricer",
+   "fields": {
+    "tier": 1,
+    "type": "Analytical Model",
+    "owner": "Sofia Castro",
+    "version": "2.4.0",
+    "category": "Pricing",
+    "division": "ANALYTICS",
+    "complexity": "Medium",
+    "department": "Asset Management",
+    "rag_rating": "Red",
+    "description": "Closed-form European option pricer.",
+    "materiality": "High",
+    "methodology": "Black-Scholes-Merton with continuous dividend yield.",
+    "lifecycle_stage": "Production",
+    "mrc_signoff_date": "2026-07-09",
+    "next_review_date": "2026-08-15",
+    "mrc_signoff_meeting": "MRC-2026-July"
+   },
+   "collections": {
+    "assumptions": [
+     {
+      "impact": "Medium",
+      "description": "Constant volatility and interest rate"
+     }
+    ],
+    "limitations": [
+     {
+      "impact": "High",
+      "description": "No path-dependence; barriers/Americans unsupported"
+     }
+    ],
+    "rag_signoff_history": [
+     {
+      "date": "2026-07-09",
+      "to_rating": "Red",
+      "meeting_id": "MRC-2026-July",
+      "from_rating": "Green"
+     }
+    ],
+    "rag_signoff_requests": [
+     {
+      "status": "Completed",
+      "meeting_id": "MRC-2026-July",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Red",
+      "agenda_item_id": "AG-002"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Addressed",
+    "VQ-002": "Not Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Not Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Not Addressed"
+   }
+  },
+  {
+   "model_id": "STB-HW-001",
+   "name": "Hull-White One-Factor",
+   "fields": {
+    "tier": 2,
+    "type": "Analytical Model",
+    "owner": "Marcus Reid",
+    "version": "2.0.1",
+    "category": "Rates",
+    "division": "ANALYTICS",
+    "complexity": "High",
+    "department": "Asset Management",
+    "rag_rating": "Amber",
+    "description": "Short-rate model for Bermudan and exotic rates products.",
+    "materiality": "Medium",
+    "methodology": "Hull-White 1F calibrated to the swaption grid.",
+    "lifecycle_stage": "Production",
+    "mrc_signoff_date": "2026-07-09",
+    "next_review_date": "2026-11-20",
+    "mrc_signoff_meeting": "MRC-2026-July"
+   },
+   "collections": {
+    "assumptions": [
+     {
+      "impact": "Low",
+      "mitigation": "none",
+      "monitoring": "None",
+      "description": "24hr trading"
+     }
+    ],
+    "limitations": [
+     {
+      "impact": "Medium",
+      "description": "Single-factor; cannot capture curve twists",
+      "monitoring_trigger": "Less than 70%",
+      "compensating_control": "deal isolation"
+     }
+    ],
+    "version_history": [
+     {
+      "date": "2022-09-12",
+      "author": "Marcus Reid",
+      "version": "1.0.0",
+      "lifecycle": "New",
+      "description": "Initial Hull-White 1F implementation for exotic rates."
+     },
+     {
+      "date": "2024-06-30",
+      "author": "Marcus Reid",
+      "version": "2.0.0",
+      "lifecycle": "Marked for Removal",
+      "description": "Calibration overhaul against the swaption grid; speed-up."
+     }
+    ],
+    "rag_signoff_history": [
+     {
+      "date": "2026-07-09",
+      "to_rating": "Amber",
+      "meeting_id": "MRC-2026-July",
+      "from_rating": "Green"
+     }
+    ],
+    "rag_signoff_requests": [
+     {
+      "status": "Completed",
+      "meeting_id": "MRC-2026-July",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Amber",
+      "agenda_item_id": "AG-003"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Addressed",
+    "VQ-002": "Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Not Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Not Addressed"
+   }
+  },
+  {
+   "model_id": "STB-MD-001",
+   "name": "NSS bond curve",
+   "fields": {
+    "tier": 2,
+    "type": "Market Data Model",
+    "owner": "Lena Okafor",
+    "version": "2.1.0",
+    "category": "Market Data",
+    "division": "ANALYTICS",
+    "complexity": "Low",
+    "department": "Asset Management",
+    "rag_rating": "Green",
+    "description": "Nelson-Siegel-Svensson government-bond discount curve (vendor source: ICE).",
+    "materiality": "High",
+    "methodology": "NSS least-squares fit over a filtered subset of government bonds; daily refresh.",
+    "lifecycle_stage": "Production",
+    "next_review_date": "2026-10-31"
+   },
+   "collections": {
+    "assumptions": [
+     {
+      "impact": "Medium",
+      "description": "Filtered bond universe is representative of the on-the-run curve"
+     }
+    ],
+    "limitations": [
+     {
+      "impact": "Medium",
+      "description": "NSS struggles to fit the very short end in stressed markets"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Addressed",
+    "VQ-002": "Not Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Not Addressed"
+   }
+  },
+  {
+   "model_id": "STB-MD-002",
+   "name": "SABR swaption vol",
+   "fields": {
+    "tier": 2,
+    "type": "Market Data Model",
+    "owner": "Lena Okafor",
+    "version": "1.3.0",
+    "category": "Market Data",
+    "division": "ANALYTICS",
+    "complexity": "High",
+    "department": "Asset Management",
+    "rag_rating": "Red",
+    "description": "SABR-calibrated swaption implied-volatility cube (vendor source: Bloomberg).",
+    "materiality": "High",
+    "methodology": "SABR calibration per expiry/tenor; intraday refresh.",
+    "lifecycle_stage": "Production",
+    "mrc_signoff_date": "2026-07-09",
+    "next_review_date": "2026-05-31",
+    "mrc_signoff_meeting": "MRC-2026-July"
+   },
+   "collections": {
+    "limitations": [
+     {
+      "impact": "High",
+      "description": "Calibration unstable in the low-strike wing (consumed by STB-SABR-001)"
+     }
+    ],
+    "rag_signoff_history": [
+     {
+      "date": "2026-07-09",
+      "to_rating": "Red",
+      "meeting_id": "MRC-2026-July",
+      "from_rating": "Amber"
+     }
+    ],
+    "rag_signoff_requests": [
+     {
+      "status": "Completed",
+      "meeting_id": "MRC-2026-July",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Red",
+      "agenda_item_id": "AG-004"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Not Addressed",
+    "VQ-002": "Not Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Partially Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Not Addressed"
+   }
+  },
+  {
+   "model_id": "STB-MD-003",
+   "name": "Equity vol surface",
+   "fields": {
+    "tier": 2,
+    "type": "Market Data Model",
+    "owner": "Lena Okafor",
+    "version": "3.0.0",
+    "category": "Market Data",
+    "division": "ANALYTICS",
+    "complexity": "Medium",
+    "department": "Asset Management",
+    "rag_rating": "Green",
+    "description": "Arbitrage-free SVI equity implied-volatility surface (vendor source: Murex).",
+    "materiality": "High",
+    "methodology": "SVI interpolation with no-arbitrage constraints; intraday refresh.",
+    "lifecycle_stage": "Production",
+    "next_review_date": "2026-08-15"
+   },
+   "collections": {
+    "limitations": [
+     {
+      "impact": "Medium",
+      "description": "SVI can admit calendar arbitrage near dividend dates without extra constraints"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Not Addressed",
+    "VQ-002": "Not Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Not Addressed"
+   }
+  },
+  {
+   "model_id": "STB-PFE-001",
+   "name": "Potential Future Exposure",
+   "fields": {
+    "tier": 1,
+    "type": "Analytical Model",
+    "owner": "Johnny Mattimore",
+    "version": "1.0.0",
+    "category": "Counterparty Risk",
+    "division": "ANALYTICS",
+    "complexity": "High",
+    "department": "Asset Management",
+    "rag_rating": "Amber",
+    "description": "Monte-Carlo PFE engine for counterparty credit exposure.",
+    "materiality": "High",
+    "methodology": "Path simulation with netting and collateral.",
+    "lifecycle_stage": "Validation",
+    "next_review_date": "2026-04-30"
+   },
+   "collections": {
+    "assumptions": [
+     {
+      "impact": "High",
+      "description": "Gaussian copula dependence between risk factors"
+     }
+    ],
+    "limitations": [
+     {
+      "impact": "High",
+      "description": "Wrong-way risk not modelled"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Not Addressed",
+    "VQ-002": "Not Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Not Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Not Addressed"
+   }
+  },
+  {
+   "model_id": "STB-SABR-001",
+   "name": "SABR Stochastic Volatility",
+   "fields": {
+    "tier": 2,
+    "type": "Analytical Model",
+    "owner": "Priya Anand",
+    "version": "1.1.0",
+    "category": "Volatility",
+    "division": "ANALYTICS",
+    "complexity": "High",
+    "department": "Asset Management",
+    "rag_rating": "Amber",
+    "description": "SABR model for the swaption volatility smile.",
+    "materiality": "High",
+    "methodology": "SABR with Hagan expansion; calibrated per-expiry.",
+    "lifecycle_stage": "Validation",
+    "next_review_date": "2026-05-31"
+   },
+   "collections": {
+    "assumptions": [
+     {
+      "impact": "Medium",
+      "description": "Beta fixed at 0.5 across the surface"
+     }
+    ],
+    "limitations": [
+     {
+      "impact": "High",
+      "description": "Hagan expansion unstable for very low strikes"
+     }
+    ],
+    "operational_failure_events": [
+     {
+      "date": "2026-02-12",
+      "consulted": "Johnny Mattimore",
+      "accountable": "Priya Anand",
+      "description": "Pricing instability on deep-OTM low-strike swaptions; Hagan expansion blew up on a 25y EUR receiver.",
+      "remediation": "Fall-back to flat-vol pricing engaged; trade re-quoted under approved override. SABR recalibration plan opened for Q2.",
+      "responsible": "Priya Anand",
+      "informed_client": "Yes",
+      "informed_senior_mgmt": "Yes"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Partially Addressed",
+    "VQ-002": "Not Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Not Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Not Addressed"
+   }
+  },
+  {
+   "model_id": "STB-VAR-001",
+   "name": "Historical Value-at-Risk",
+   "fields": {
+    "tier": 1,
+    "type": "Analytical Model",
+    "owner": "Johnny Mattimore",
+    "version": "4.1.0",
+    "category": "Market Risk",
+    "division": "ANALYTICS",
+    "complexity": "Medium",
+    "department": "Asset Management",
+    "rag_rating": "Green",
+    "description": "1-day 99% historical-simulation VaR.",
+    "materiality": "High",
+    "methodology": "Full-revaluation historical simulation, 2-year window.",
+    "lifecycle_stage": "Production",
+    "next_review_date": "2026-07-01",
+    "review_frequency": "Annual"
+   },
+   "collections": {
+    "limitations": [
+     {
+      "impact": "Medium",
+      "description": "Backward-looking; slow to react to regime change"
+     }
+    ]
+   },
+   "validation": {
+    "VQ-001": "Addressed",
+    "VQ-002": "Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Addressed",
+    "VQ-005": "Not Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Addressed"
+   }
+  }
+ ],
+ "products": [
+  {
+   "product_id": "Product-0001",
+   "product": "Government Bond",
+   "fields": {
+    "owner": "Priya Anand",
+    "status": "Active",
+    "product_id": "GILT-2034",
+    "rag_rating": "Green",
+    "description": "Vanilla fixed-coupon gilt priced by discounting known cashflows off the fitted NSS curve.",
+    "analytics_model": "STB-BND-001",
+    "mrc_signoff_date": "2025-06-30",
+    "next_review_date": "2026-06-30",
+    "calculating_agent": "Murex",
+    "market_data_model": "STB-MD-001",
+    "monitoring_results": "P&L explained within tolerance for Q1; no exceptions.",
+    "monitoring_approach": "Daily P&L backtest vs Taylor approximation; notional outstanding and maturity profile reviewed weekly."
+   },
+   "collections": {
+    "limitations": [
+     {
+      "impact": "High",
+      "description": "Limit",
+      "monitoring_trigger": "Limit again",
+      "compensating_control": "monitor"
+     }
+    ],
+    "assumptions": [
+     {
+      "impact": "Medium",
+      "mitigation": "Alot",
+      "monitoring": "Keep an eye",
+      "description": "I dont kno"
+     }
+    ],
+    "remediation_steps": [
+     {
+      "owner": "David K Kelly",
+      "status": "Open",
+      "due_date": "2026-07-22",
+      "priority": "Low",
+      "description": "Try and fix"
+     }
+    ]
+   }
+  },
+  {
+   "product_id": "Product-0002",
+   "product": "Interest Rate Swaption",
+   "fields": {
+    "owner": "Priya Anand",
+    "status": "Active",
+    "product_id": "GBP-SWPTN",
+    "rag_rating": "Amber",
+    "description": "European swaption priced on the SABR smile; sensitive to low-strike wing behaviour.",
+    "analytics_model": "STB-SABR-001",
+    "mrc_signoff_date": "2026-10-09",
+    "next_review_date": "2027-07-09",
+    "calculating_agent": "Murex",
+    "market_data_model": "STB-MD-002",
+    "monitoring_results": "Low-strike instability observed on 12 Feb; escalated to validation.",
+    "monitoring_approach": "Vega ladder and low-strike behaviour monitored intraday.",
+    "mrc_signoff_meeting": "MRC-2026-Oct"
+   },
+   "collections": {
+    "limitations": [
+     {
+      "impact": "High",
+      "description": "Pricing unreliable for deep-OTM low-strike swaptions"
+     }
+    ],
+    "remediation_steps": [
+     {
+      "owner": "Priya Anand",
+      "status": "In Progress",
+      "due_date": "2026-05-31",
+      "priority": "High",
+      "description": "Recalibrate the low-strike wing / cap Hagan expansion"
+     }
+    ],
+    "rag_signoff_requests": [
+     {
+      "status": "Completed",
+      "meeting_id": "MRC-2026-Oct",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Amber",
+      "agenda_item_id": "AG-001"
+     }
+    ],
+    "rag_signoff_history": [
+     {
+      "date": "2026-10-09",
+      "outcome": "Approved",
+      "to_rating": "Amber",
+      "meeting_id": "MRC-2026-Oct",
+      "from_rating": "Amber",
+      "next_review_date": "2027-07-09"
+     }
+    ]
+   }
+  },
+  {
+   "product_id": "Product-0003",
+   "product": "Equity Option",
+   "fields": {
+    "owner": "Sofia Castro",
+    "status": "Active",
+    "product_id": "FTSE-EUOPT",
+    "rag_rating": "Green",
+    "description": "Plain European equity option priced on the SVI vol surface.",
+    "analytics_model": "STB-BS-001",
+    "last_review_date": "2026-07-16",
+    "mrc_signoff_date": "2026-10-09",
+    "next_review_date": "2027-05-13",
+    "calculating_agent": "Murex",
+    "market_data_model": "STB-MD-003",
+    "monitoring_results": "Stable; within expectation.",
+    "monitoring_approach": "Delta/vega behaviour and P&L backtest, daily.",
+    "mrc_signoff_meeting": "MRC-2026-Oct"
+   },
+   "collections": {
+    "rag_signoff_requests": [
+     {
+      "status": "Completed",
+      "meeting_id": "MRC-2026-Oct",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Green",
+      "agenda_item_id": "AG-002"
+     }
+    ],
+    "rag_signoff_history": [
+     {
+      "date": "2026-10-09",
+      "outcome": "Approved",
+      "to_rating": "Green",
+      "meeting_id": "MRC-2026-Oct",
+      "from_rating": "Green",
+      "next_review_date": "2027-05-13"
+     }
+    ]
+   }
+  },
+  {
+   "product_id": "Product-0004",
+   "product": "Equity Barrier Option",
+   "fields": {
+    "owner": "Sofia Castro",
+    "status": "Suspended",
+    "product_id": "FTSE-BARR",
+    "rag_rating": "Amber",
+    "description": "Knock-out barrier option currently shoehorned onto the plain Black-Scholes engine.",
+    "analytics_model": "STB-BS-001",
+    "mrc_signoff_date": "2026-10-09",
+    "next_review_date": "2027-06-11",
+    "calculating_agent": "Calypso",
+    "market_data_model": "STB-MD-003",
+    "monitoring_results": "Barrier risk not captured by the Black-Scholes engine; Product suspended pending a local-vol framework.",
+    "monitoring_approach": "Compare hedges vs a barrier-aware benchmark where available.",
+    "mrc_signoff_meeting": "MRC-2026-Oct"
+   },
+   "collections": {
+    "limitations": [
+     {
+      "impact": "High",
+      "description": "Shoehorning: barrier valued on plain Black-Scholes, missing barrier risk that should drive hedging"
+     }
+    ],
+    "remediation_steps": [
+     {
+      "owner": "Sofia Castro",
+      "status": "Open",
+      "due_date": "2026-04-30",
+      "priority": "High",
+      "description": "Deliver a barrier-aware local-volatility framework"
+     }
+    ],
+    "rag_signoff_requests": [
+     {
+      "status": "Completed",
+      "meeting_id": "MRC-2026-Oct",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Amber",
+      "agenda_item_id": "AG-003"
+     }
+    ],
+    "rag_signoff_history": [
+     {
+      "date": "2026-10-09",
+      "outcome": "Approved",
+      "to_rating": "Amber",
+      "meeting_id": "MRC-2026-Oct",
+      "from_rating": "Amber",
+      "next_review_date": "2027-06-11"
+     }
+    ]
+   }
+  }
+ ],
+ "meetings": [
+  {
+   "meeting_id": "MRC-2026-July",
+   "title": "Model Signoff",
+   "fields": {
+    "mrc": "MRC-AM",
+    "date": "2026-07-09",
+    "time": "12:00",
+    "status": "Completed",
+    "location": "Zoom"
+   },
+   "collections": {
+    "agenda": [
+     {
+      "title": "Risk rating sign-off: STB-BND-001 → Red",
+      "status": "Completed",
+      "proposed_rag": "Red",
+      "subject_model_id": "STB-BND-001"
+     },
+     {
+      "title": "Risk rating sign-off: STB-BS-001 → Red",
+      "status": "Completed",
+      "proposed_rag": "Red",
+      "subject_model_id": "STB-BS-001"
+     },
+     {
+      "title": "Risk rating sign-off: STB-HW-001 → Amber",
+      "status": "Completed",
+      "proposed_rag": "Amber",
+      "subject_model_id": "STB-HW-001"
+     },
+     {
+      "title": "Risk rating sign-off: STB-MD-002 → Red",
+      "status": "Completed",
+      "proposed_rag": "Red",
+      "subject_model_id": "STB-MD-002"
+     }
+    ],
+    "models_in_scope": [
+     {
+      "model_id": "STB-BND-001"
+     },
+     {
+      "model_id": "STB-HW-001"
+     },
+     {
+      "model_id": "STB-BS-001"
+     }
+    ]
+   }
+  },
+  {
+   "meeting_id": "MRC-2026-Oct",
+   "title": "Model Signoff",
+   "fields": {
+    "mrc": "MRC-AM",
+    "date": "2026-10-09",
+    "time": "11:00",
+    "status": "Scheduled",
+    "location": "Zoom"
+   },
+   "collections": {
+    "agenda": [
+     {
+      "title": "Risk rating sign-off: Product-0002 → Amber",
+      "status": "Completed",
+      "proposed_rag": "Amber",
+      "subject_product_id": "Product-0002"
+     },
+     {
+      "title": "Risk rating sign-off: Product-0003 → Green",
+      "status": "Completed",
+      "proposed_rag": "Green",
+      "subject_product_id": "Product-0003"
+     },
+     {
+      "title": "Risk rating sign-off: Product-0004 → Amber",
+      "status": "Completed",
+      "proposed_rag": "Amber",
+      "subject_product_id": "Product-0004"
+     }
+    ],
+    "participants": [
+     {
+      "name": "Marcus Reid",
+      "role": "Guest"
+     }
+    ],
+    "models_in_scope": [
+     {
+      "model_id": "STB-HW-001"
+     }
+    ]
+   }
+  },
+  {
+   "meeting_id": "MRC-2026-Q1",
+   "title": "Q1 Model Risk Committee",
+   "fields": {
+    "mrc": "MRC-MARKETS",
+    "date": "2026-03-18",
+    "time": "14:00",
+    "status": "Completed",
+    "location": "Boardroom, 1 Lombard Court"
+   },
+   "collections": {
+    "agenda": [
+     {
+      "title": "SABR validation status",
+      "status": "Completed",
+      "presenter": "Johnny Mattimore"
+     },
+     {
+      "title": "Barrier-option Product suspension",
+      "status": "Completed",
+      "presenter": "Sofia Castro"
+     },
+     {
+      "title": "PFE wrong-way risk remediation",
+      "status": "Pending",
+      "presenter": "Johnny Mattimore"
+     }
+    ],
+    "minutes": [
+     {
+      "text": "Chair welcomed attendees and noted apologies from Sofia Castro (Equity Derivatives).",
+      "title": "Welcome and apologies",
+      "presenter": "David K Kelly"
+     },
+     {
+      "text": "Inventory at 9 models (6 analytical, 3 market data), 4 Products. Two amber items: SABR (validation) and Barrier Option Product (suspended).",
+      "title": "Q1 model risk dashboard",
+      "presenter": "David K Kelly"
+     },
+     {
+      "text": "Low-strike Hagan expansion instability confirmed; partial coverage on VQ-001. Recalibration plan tabled for Q2.",
+      "title": "SABR validation status",
+      "presenter": "Johnny Mattimore"
+     },
+     {
+      "text": "Reported on Sofia's behalf: Product-0004 suspended; barrier risk not captured by the Black-Scholes engine. Local-vol framework scoped for delivery by end of April.",
+      "title": "Barrier-option Product suspension",
+      "presenter": "Priya Anand"
+     },
+     {
+      "text": "No other business; meeting closed at 15:30.",
+      "title": "AOB",
+      "presenter": "David K Kelly"
+     }
+    ],
+    "participants": [
+     {
+      "name": "David K Kelly",
+      "role": "Chief Risk Officer",
+      "status": "Attended",
+      "organisation": "Sterling Bank plc"
+     },
+     {
+      "name": "Johnny Mattimore",
+      "role": "Head of Model Validation",
+      "status": "Attended",
+      "organisation": "Sterling Bank plc"
+     },
+     {
+      "name": "Priya Anand",
+      "role": "Head of Rates",
+      "status": "Attended",
+      "organisation": "Sterling Bank plc"
+     },
+     {
+      "name": "Sofia Castro",
+      "role": "Head of Equity Derivatives",
+      "status": "Apologies",
+      "organisation": "Sterling Bank plc"
+     }
+    ],
+    "models_in_scope": [
+     {
+      "model_id": "STB-BND-001"
+     },
+     {
+      "model_id": "STB-BS-001"
+     },
+     {
+      "model_id": "STB-SABR-001"
+     }
+    ],
+    "decisions": [
+     {
+      "date": "2026-03-18",
+      "model_id": "STB-BS-001",
+      "description": "Suspend Product-0004 (Equity Barrier Option) until a barrier-aware framework is delivered."
+     },
+     {
+      "date": "2026-03-18",
+      "model_id": "STB-SABR-001",
+      "description": "Escalate SABR low-strike instability; target remediation by Q2."
+     },
+     {
+      "date": "2026-03-18",
+      "description": "Endorse the framework refresh and continue current MRC cadence (quarterly)."
+     }
+    ],
+    "actions": [
+     {
+      "owner": "Sofia Castro",
+      "status": "Open",
+      "model_id": "STB-BS-001",
+      "description": "Deliver a barrier-aware local-volatility framework for equity options.",
+      "target_date": "2026-04-30"
+     },
+     {
+      "owner": "Priya Anand",
+      "status": "Open",
+      "model_id": "STB-SABR-001",
+      "description": "Recalibrate SABR low-strike wing and cap Hagan expansion at the trouble points.",
+      "target_date": "2026-05-31"
+     },
+     {
+      "owner": "Johnny Mattimore",
+      "status": "Open",
+      "model_id": "STB-BND-001",
+      "description": "Refresh validation question coverage on STB-BND-001 ahead of next review.",
+      "target_date": "2026-09-30"
+     },
+     {
+      "owner": "David K Kelly",
+      "status": "Open",
+      "description": "Publish the updated Model Risk Handbook to the document store.",
+      "target_date": "2026-04-15"
+     }
+    ]
+   }
+  },
+  {
+   "meeting_id": "MRC-2026-Q2",
+   "title": "Q2 Model Risk Committee",
+   "fields": {
+    "mrc": "MRC-MARKETS",
+    "date": "2026-06-24",
+    "time": "14:00",
+    "status": "Scheduled",
+    "location": "Boardroom, 1 Lombard Court"
+   },
+   "collections": {
+    "agenda": [
+     {
+      "title": "Risk rating sign-off: STB-BND-001 → Red",
+      "status": "Pending",
+      "presenter": "Priya Anand",
+      "description": "Owner requests promotion from Green to Red — heatmap (High × Medium) crossed threshold after Q1 events.",
+      "proposed_rag": "Red",
+      "subject_model_id": "STB-BND-001"
+     },
+     {
+      "title": "Risk rating sign-off: STB-SABR-001 → Red",
+      "status": "Pending",
+      "presenter": "Priya Anand",
+      "description": "Escalate to Red pending completion of Hagan-wing recalibration; validation still Partial.",
+      "proposed_rag": "Red",
+      "subject_model_id": "STB-SABR-001"
+     },
+     {
+      "title": "Q1 action review",
+      "status": "Pending",
+      "presenter": "David K Kelly",
+      "description": "Review of open actions carried over from Q1: local-vol framework, SABR recalibration, VQ refresh."
+     }
+    ],
+    "participants": [
+     {
+      "name": "David K Kelly",
+      "role": "Chief Risk Officer",
+      "status": "Invited",
+      "organisation": "Sterling Bank plc"
+     },
+     {
+      "name": "Johnny Mattimore",
+      "role": "Head of Model Validation",
+      "status": "Invited",
+      "organisation": "Sterling Bank plc"
+     },
+     {
+      "name": "Priya Anand",
+      "role": "Head of Rates",
+      "status": "Invited",
+      "organisation": "Sterling Bank plc"
+     },
+     {
+      "name": "Sofia Castro",
+      "role": "Head of Equity Derivatives",
+      "status": "Invited",
+      "organisation": "Sterling Bank plc"
+     }
+    ],
+    "models_in_scope": [
+     {
+      "model_id": "STB-BND-001"
+     },
+     {
+      "model_id": "STB-SABR-001"
+     }
+    ]
+   }
+  }
+ ],
+ "bibliography": [
+  {
+   "year": "2026",
+   "title": "Handbook of Model Risk Management for Vendors",
+   "authors": "David K Kelly",
+   "journal": "MKM Research Labs",
+   "category": "Governance"
+  },
+  {
+   "year": "2021",
+   "title": "SR 11-7: Guidance on Model Risk Management",
+   "authors": "Board of Governors of the Federal Reserve System",
+   "journal": "Federal Reserve",
+   "category": "Regulation"
+  }
+ ]
 }
