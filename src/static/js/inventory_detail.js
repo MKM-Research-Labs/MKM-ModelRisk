@@ -25,10 +25,13 @@
 // Tier + its rating rationale sit at the foot of Model Details, below Complexity.
 const OVERVIEW_LEFT = ["division", "department", "methodology", "source_module",
   "materiality", "complexity", "tier", "rating_rationale"];
-const OVERVIEW_RIGHT = ["rag_rating", "owner", "lifecycle_stage", "validation_status",
-  "last_review_date", "mrc_signoff_date", "next_review_date", "recertification_date", "review_frequency", "peer_reviewer"];
+// Governance: MRC (derived) sits at the top; the MRC sets sign-off + next review
+// at sign-off, so recertification / review frequency / last review are dropped.
+// Review status (a derived badge) replaces the raw review-date clutter.
+const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "lifecycle_stage", "validation_status", "peer_reviewer"];
+const OVERVIEW_RIGHT_MRC = ["mrc_signoff_date", "next_review_date"];
 const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
-const HEADER_DATES = ["last_review_date", "mrc_signoff_date", "next_review_date", "recertification_date"];
+const HEADER_DATES = ["mrc_signoff_date", "next_review_date"];
 
 const Detail = {
   _id: null, _model: null, _specs: null, _risk: null, _audit: [], _mrc: null,
@@ -220,7 +223,11 @@ const Detail = {
 
   _overview(d) {
     const left = OVERVIEW_LEFT.map((k) => this._row(k, d)).join("");
-    const right = OVERVIEW_RIGHT.map((k) => this._row(k, d)).join("");
+    // Governance: MRC first, then owner/rating/lifecycle, review status, and the
+    // MRC-set sign-off + next review.
+    const right = this._mrcRow() +
+      OVERVIEW_RIGHT_TOP.map((k) => this._row(k, d)).join("") + this._reviewStatusRow() +
+      OVERVIEW_RIGHT_MRC.map((k) => this._row(k, d)).join("");
     const status = this._model.retired
       ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
     // Full-width summary of what the model does, spanning both columns.
@@ -229,8 +236,15 @@ const Detail = {
       this._editLink("description") + "</div>";
     return summary +
       '<div class="grid2"><div><div class="section-header">Model Details</div>' + left + "</div>" +
-      '<div><div class="section-header">Governance Status</div>' + right + this._mrcRow() +
+      '<div><div class="section-header">Governance</div>' + right +
       "</div></div>" + status;
+  },
+
+  // Derived review currency (Overdue / Due Soon / Upcoming / On Track) from the
+  // risk-rating read; not an editable field.
+  _reviewStatusRow() {
+    return '<div class="inforow"><div class="k">Review status</div><div class="v">' +
+      reviewBadge((this._risk || {}).review_status) + "</div></div>";
   },
 
   // The MRC responsible for this model, derived from its division/department.
