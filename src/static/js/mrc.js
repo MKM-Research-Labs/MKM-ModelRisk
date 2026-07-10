@@ -44,9 +44,11 @@ const MRC = {
   async render() {
     const specs = await this.specs();
     // Archived committees are retained for history but never offered for
-    // scheduling new meetings — filter them out of the selector.
-    this._ref = (await App.get("/api/reference")).data || {};
-    this._committees = (this._ref.mrc || []).filter((c) => c.archived !== "true");
+    // scheduling new meetings — filter them out of the selector. Reference data
+    // is shared/cached via MrcNav so switching tabs doesn't re-fetch it.
+    const nav = await MrcNav.load();
+    this._ref = nav.ref;
+    this._committees = nav.committees;
     const el = document.getElementById("tab-mrc");
     if (!this._committees.length) {
       el.innerHTML = '<div class="card"><div class="empty">No MRC committees yet. ' +
