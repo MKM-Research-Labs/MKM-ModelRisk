@@ -34,6 +34,9 @@
   </nav>
 
   <main>
+    <!-- Persistent MRC-region bar, shared by the MRC / Models / Products / Audit
+         tabs. It lives outside the panels so switching tabs never rebuilds it. -->
+    <div id="region-nav" style="display:none"></div>
     <section id="tab-inventory" class="panel active"></section>
     <section id="tab-product" class="panel"></section>
     <section id="tab-mrc" class="panel"></section>

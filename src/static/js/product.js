@@ -49,8 +49,7 @@ const Product = {
     await this.specs();
     // List and detail are siblings; opening a Product hides the list view (master-detail).
     document.getElementById("tab-product").innerHTML =
-      '<div id="product-listview"><div id="product-mrcnav">' + MrcNav.cachedHtml() +
-      '</div><div id="product-summary"></div>' +
+      '<div id="product-listview"><div id="product-summary"></div>' +
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Product Valuation Models</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="product-register">+ Register Product</button></div>' +
@@ -104,19 +103,10 @@ const Product = {
       "</div>";
   },
 
-  // Render the shared MRC-region navigator and wire it to re-filter the list.
-  _renderNav() {
-    const nav = document.getElementById("product-mrcnav");
-    MrcNav.normalize(this._committees, this._ref);
-    nav.innerHTML = MrcNav.html(this._committees, this._ref);
-    MrcNav.bind(nav, this._committees, this._ref, () => this.loadList());
-  },
-
   async loadList() {
     const nav = await MrcNav.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
-    this._renderNav();
     const all = await App.get("/api/products");
     const products = all.filter((p) => MrcNav.inScope(this._committees, this._ref, p.data));
     document.getElementById("product-summary").innerHTML = this._summary(products);

@@ -114,11 +114,8 @@ const Audit = {
         ? "No model or product events for this MRC scope."
         : "No events yet. Every change you make appears here, in order, immutably.") + "</div>";
     el.innerHTML =
-      '<div id="audit-mrcnav">' + MrcNav.html(this._committees, this._ref) + "</div>" +
       '<div class="card"><h3>Audit trail — the immutable event log</h3>' +
       '<p class="muted">Every recorded change, newest first. This is the source of truth; ' +
       "the inventory and meeting views above are projections of it.</p>" + body + "</div>";
-    const nav = document.getElementById("audit-mrcnav");
-    MrcNav.bind(nav, this._committees, this._ref, () => this._draw());
   },
 };

@@ -23,6 +23,15 @@ const TABS = {
   audit: Audit, reports: AuditReports, reference: Reference,
 };
 
+// Tabs that share the persistent MRC-region bar, and how each re-filters when the
+// region selection changes (without rebuilding the bar).
+const REGION_RELOADERS = {
+  mrc: () => MRC.render(),
+  inventory: () => Inventory.loadList(),
+  product: () => Product.loadList(),
+  audit: () => Audit._draw(),
+};
+
 async function showTab(name) {
   document.querySelectorAll(".tab").forEach(function (b) {
     b.classList.toggle("active", b.getAttribute("data-tab") === name);
@@ -30,6 +39,12 @@ async function showTab(name) {
   document.querySelectorAll(".panel").forEach(function (p) {
     p.classList.toggle("active", p.id === "tab-" + name);
   });
+  if (REGION_RELOADERS[name]) {
+    MrcNav.setReload(REGION_RELOADERS[name]);
+    await MrcNav.showFor();
+  } else {
+    MrcNav.hide();
+  }
   try {
     await TABS[name].render();
   } catch (e) {

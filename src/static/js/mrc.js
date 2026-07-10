@@ -55,55 +55,19 @@ const MRC = {
         "Create one under Admin &rarr; MRC, then schedule meetings against it.</div></div>";
       return;
     }
-    // The active committee follows the shared MRC-region selection (persisted
-    // across the Models/Products/Audit tabs); the page always resolves to one.
+    // The active committee follows the shared MRC-region bar (persisted across
+    // the Models/Products/Audit tabs); the page always resolves to one.
     this._mrc = MrcNav.activeCommittee(this._committees, this._ref);
     const committee = this._committee();
     el.innerHTML =
-      this._selector() +
       this._headerCards(committee) +
       this._torCard(committee) +
       this._scheduleCard(specs, committee) +
       '<div id="mt-summary"></div>' +
       '<div class="card"><h3>Meetings</h3><div id="mt-list"></div></div>' +
       '<div id="mt-detail"></div>';
-    // Picking a division jumps to its first committee; selections update the
-    // shared MRC-region state so the choice carries to the other tabs.
-    el.querySelectorAll("[data-div]").forEach((btn) => {
-      btn.onclick = () => {
-        const group = MrcNav.groups(this._committees, this._ref)[btn.getAttribute("data-div")] || [];
-        if (group.length) {
-          MrcNav.selectCommittee(this._committees, this._ref, group[0].value);
-          this.render();
-        }
-      };
-    });
-    el.querySelectorAll("[data-mrc]").forEach((btn) => {
-      btn.onclick = () => {
-        MrcNav.selectCommittee(this._committees, this._ref, btn.getAttribute("data-mrc"));
-        this.render();
-      };
-    });
     document.getElementById("mt-schedule").onclick = () => this._schedule();
     await this.loadList();
-  },
-
-  // Two-tier selector: divisions on top; the active division's committees below.
-  // Division grouping is shared with the Models/Products pages via MrcNav; here a
-  // committee is always selected (the page needs one to show its cards/schedule).
-  _selector() {
-    const groups = MrcNav.groups(this._committees, this._ref);
-    const activeDiv = MrcNav.divisionOf(this._committee(), this._ref);
-    const divTabs = MrcNav.orderedDivisions(groups, this._ref).map((dv) =>
-      '<button class="dtab' + (dv === activeDiv ? " active" : "") + '" data-div="' + esc(dv) +
-      '">' + esc(dv) + "</button>").join("");
-    const committeeTabs = (groups[activeDiv] || []).map((c) =>
-      '<button class="dtab' + (c.value === this._mrc ? " active" : "") + '" data-mrc="' + esc(c.value) +
-      '">' + esc(c.name || c.value) + "</button>").join("");
-    return '<div class="card" style="padding:8px 12px;margin-bottom:12px">' +
-      '<div class="dtabs">' + divTabs + "</div>" +
-      '<div class="dtabs" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">' +
-      committeeTabs + "</div></div>";
   },
 
   _headerCards(c) {
