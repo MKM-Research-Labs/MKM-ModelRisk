@@ -34,6 +34,28 @@ from src.web._signoff_routing import complete_request_for_agenda, subject_for_ag
 from src.web.api_mrc._bp import mrc_bp
 
 
+def _auto_minute(ctx, meeting_id: str, meeting: dict, subject, subject_id: str,
+                 record: dict, next_review):
+    """Record an approved sign-off as a meeting minute, so the decision lands in
+    the log without re-typing. References the subject and the review date set."""
+    owner = (record["data"] or {}).get("owner")
+    review = next_review or "not set"
+    text = (
+        f"MRC has reviewed the sign-off request from the {subject.kind} owner"
+        + (f" ({owner})" if owner else "")
+        + f" and has granted approval and has set a date of next review on {review}."
+    )
+    fields = {"title": f"Sign-off approved — {subject_id}", "text": text,
+              subject.id_key: subject_id}
+    chair = meeting["data"].get("chair")
+    if chair:
+        fields["presenter"] = chair
+    dispatch(
+        "add_collection_item", add_collection_item, context=ctx,
+        meeting_id=meeting_id, collection="minutes", fields=fields,
+    )
+
+
 def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     """Record the committee's decision on a sign-off item (Approved / Rejected)
     for a model or product subject, and reflect it back onto that subject.
@@ -87,6 +109,7 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
         if meeting_date:
             subject.set_field(ctx, subject_id, "mrc_signoff_date", meeting_date)
         subject.set_field(ctx, subject_id, "mrc_signoff_meeting", meeting_id)
+        _auto_minute(ctx, meeting_id, meeting, subject, subject_id, record, next_review)
     complete_request_for_agenda(ctx, subject, subject_id, item_id,
                                 status=("Completed" if approved else "Rejected"))
     dispatch(
