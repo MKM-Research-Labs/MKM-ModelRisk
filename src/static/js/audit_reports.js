@@ -40,8 +40,39 @@ const AuditReports = {
       '<p class="muted">Generate produces one PDF per audit rule (R1&ndash;R8), plus a ' +
       "consolidated coding-rule audit and the Model Risk Report. Files are written to " +
       "uploads/audit/ (gitignored).</p>" +
+      '<p class="muted" id="ar-cov-note"></p>' +
       '<div class="rgrid" style="margin-top:12px">' + cards + "</div></div>";
     document.getElementById("ar-generate").onclick = () => this._generate();
+    this._resumeCoverage();          // reflect an in-flight coverage refresh, if any
+  },
+
+  // Poll the background coverage refresh: show progress, and re-render (so the
+  // R3 report picks up its new timestamp/coverage) once it finishes.
+  _resumeCoverage() {
+    fetch("/api/audit-reports/coverage-status").then((r) => r.json()).then((s) => {
+      if (s.running) { this._covActive = true; this._pollCoverage(); }
+    }).catch(() => {});
+  },
+
+  _pollCoverage() {
+    const tick = () => {
+      fetch("/api/audit-reports/coverage-status").then((r) => r.json()).then((s) => {
+        const note = document.getElementById("ar-cov-note");
+        if (s.running) {
+          if (note) note.textContent = "Coverage refreshing (running the test suite, ~1 min)…";
+          setTimeout(tick, 3000);
+        } else if (this._covActive) {
+          this._covActive = false;
+          if (s.error) {
+            if (note) note.textContent = "Coverage refresh failed: " + s.error;
+          } else {
+            App.toast("Coverage report updated", "ok");
+            this.render();
+          }
+        }
+      }).catch(() => {});
+    };
+    tick();
   },
 
   _generate() {
@@ -56,7 +87,9 @@ const AuditReports = {
         throw new Error(e.error || "generation failed");
       }
       App.toast("Reports generated", "ok");
+      this._covActive = true;          // generate() kicked off a coverage refresh
       this.render();
+      this._pollCoverage();
     }).catch((e) => {
       App.toast(e.message, "error");
       btn.disabled = false;
