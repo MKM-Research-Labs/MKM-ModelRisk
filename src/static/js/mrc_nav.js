@@ -25,6 +25,26 @@
 // the whole division; div + mrc = one committee's scope.
 const MrcNav = {
   state: { div: null, mrc: null },
+  _cache: null,             // {ref, committees} — shared so tab switches don't re-fetch
+
+  // Reference data for the nav, fetched once and reused across tabs. Any mutation
+  // (via App.confirmPending) invalidates it, so committee/division edits show up.
+  async load() {
+    if (!this._cache) {
+      const ref = (await App.get("/api/reference")).data || {};
+      const committees = (ref.mrc || []).filter((c) => c.archived !== "true");
+      this._cache = { ref, committees };
+    }
+    return this._cache;
+  },
+
+  invalidate() { this._cache = null; },
+
+  // The nav HTML from cache (empty before the first load) — lets a tab paint the
+  // region bar immediately, before its list data arrives, so it doesn't blank.
+  cachedHtml() {
+    return this._cache ? this.html(this._cache.committees, this._cache.ref) : "";
+  },
 
   // The division a committee rolls up to: a Division-level MRC's scope is itself
   // a division; a Department-level one inherits its department's division;

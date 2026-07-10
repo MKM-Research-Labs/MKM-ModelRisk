@@ -101,6 +101,9 @@ const App = {
     const payload = Object.assign({}, p.body, { confirmed: true, reason: reason });
     try {
       await this.send(p.method, p.path, payload);
+      // A mutation may change committees/divisions/departments — drop the cached
+      // region nav so the next render reflects it.
+      if (typeof MrcNav !== "undefined") MrcNav.invalidate();
       this.closeConfirm();
       this.toast("Change recorded in the audit trail", "ok");
       if (p.onDone) p.onDone();

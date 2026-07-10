@@ -71,12 +71,12 @@ const Audit = {
   },
 
   async render() {
-    const [ref, models, products, events] = await Promise.all([
-      App.get("/api/reference"), App.get("/api/models"),
+    const [nav, models, products, events] = await Promise.all([
+      MrcNav.load(), App.get("/api/models"),
       App.get("/api/products"), App.get("/api/audit"),
     ]);
-    this._ref = ref.data || {};
-    this._committees = (this._ref.mrc || []).filter((c) => c.archived !== "true");
+    this._ref = nav.ref;
+    this._committees = nav.committees;
     this._events = events;
     this._modelMap = {};
     models.forEach((m) => { this._modelMap[m.model_id] = m.data || {}; });

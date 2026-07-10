@@ -30,6 +30,7 @@ function inputControl(id, spec) {
     return '<select id="' + id + '">' + opts + "</select>";
   }
   if (spec.type === "date") return '<input id="' + id + '" type="date">';
+  if (spec.type === "textarea") return '<textarea id="' + id + '" rows="4"></textarea>';
   return '<input id="' + id + '">';
 }
 
@@ -54,7 +55,7 @@ const Inventory = {
     await this.specs();
     const el = document.getElementById("tab-inventory");
     el.innerHTML =
-      '<div id="m-mrcnav"></div>' +
+      '<div id="m-mrcnav">' + MrcNav.cachedHtml() + "</div>" +
       '<div id="m-summary"></div>' +
       '<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Models</h3>' +
       '<span style="flex:1"></span>' +
@@ -146,8 +147,9 @@ const Inventory = {
   },
 
   async loadList() {
-    this._ref = (await App.get("/api/reference")).data || {};
-    this._committees = (this._ref.mrc || []).filter((c) => c.archived !== "true");
+    const nav = await MrcNav.load();
+    this._ref = nav.ref;
+    this._committees = nav.committees;
     this._renderNav();
     const all = await App.get("/api/models");
     const models = all.filter((m) => MrcNav.inScope(this._committees, this._ref, m.data));
