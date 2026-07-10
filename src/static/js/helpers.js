@@ -106,6 +106,18 @@ function lifecycleBadge(lifecycle) {
   return ' <span class="badge" style="background:' + color + '">' + esc(lifecycle) + "</span>";
 }
 
+// MRC status for a list row: the latest sign-off outcome (green, or red if
+// rejected), or a dash when the MRC has not yet ruled. The detail view also
+// surfaces pending requests; the list keeps to the decided outcome.
+function mrcStatusBadge(data) {
+  const hist = (data && data.rag_signoff_history) || [];
+  const latest = hist.length ? hist[hist.length - 1] : null;
+  if (!latest) return '<span class="muted">—</span>';
+  const outcome = latest.outcome || "Approved";
+  const color = outcome === "Rejected" ? "var(--red)" : "#388e3c";
+  return '<span style="color:' + color + ';font-weight:600">' + esc(outcome) + "</span>";
+}
+
 // Human-readable file size.
 function fmtSize(bytes) {
   if (bytes === null || bytes === undefined) return "—";

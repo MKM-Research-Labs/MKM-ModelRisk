@@ -23,12 +23,12 @@
   </header>
 
   <nav class="tabs">
-    <button class="tab active" data-tab="inventory">Model Inventory</button>
-    <button class="tab" data-tab="product">Products</button>
     <button class="tab" data-tab="mrc">MRC</button>
+    <button class="tab active" data-tab="inventory">Models</button>
+    <button class="tab" data-tab="product">Products</button>
+    <button class="tab" data-tab="audit">Audit Trail</button>
     <button class="tab" data-tab="documents">Documents</button>
     <button class="tab" data-tab="bibliography">Bibliography</button>
-    <button class="tab" data-tab="audit">Audit Trail</button>
     <button class="tab" data-tab="reports">Audit Reports</button>
     <button class="tab" data-tab="reference">Admin</button>
   </nav>
@@ -114,6 +114,7 @@
 
   <script src="{{ url_for('static', filename='js/api.js') }}"></script>
   <script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/mrc_nav.js') }}"></script>
   <script src="{{ url_for('static', filename='js/org_scope.js') }}"></script>
   <script src="{{ url_for('static', filename='js/inventory.js') }}"></script>
   <script src="{{ url_for('static', filename='js/inventory_tabs.js') }}"></script>
