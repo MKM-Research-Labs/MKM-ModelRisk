@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from config.governance._collections import COLLECTION_SPECS
-from config.governance._inventory import VALID_RAG_RATINGS
+from config.governance._inventory import VALID_COMPLEXITY, VALID_MATERIALITY, VALID_RAG_RATINGS
 
 VALID_PRODUCT_STATUS = ("Proposed", "Active", "Suspended", "Retired")
 
@@ -44,6 +44,14 @@ PRODUCT_FIELD_SPECS = {
     # responsible MRC committee (matching_mrc on division/department).
     "division": {"label": "Division", "type": "text", "group": "Organisation", "reference": "division"},
     "department": {"label": "Department", "type": "text", "group": "Organisation", "reference": "department"},
+    # --- Classification (drives the risk-rating heatmap, identical to a model's:
+    # tier band × Materiality × Complexity → RAG). Owner-set; the composite risk
+    # rating and heatmap are computed from these plus the register collections.
+    "tier": {"label": "Tier", "type": "tier", "group": "Classification"},
+    "materiality": {"label": "Materiality", "type": "choice", "options": VALID_MATERIALITY,
+                    "group": "Classification"},
+    "complexity": {"label": "Complexity", "type": "choice", "options": VALID_COMPLEXITY,
+                   "group": "Classification"},
     "analytics_model": {"label": "Analytics Model", "type": "text", "group": "Bindings"},
     "market_data_model": {"label": "Market Data Model", "type": "text", "group": "Bindings"},
     "calculating_agent": {"label": "Calculating Agent", "type": "text", "group": "Bindings",
@@ -66,11 +74,15 @@ PRODUCT_FIELD_SPECS = {
 # they are changed via rebind; ``status`` Retired is reached via retire).
 PRODUCT_EDITABLE_FIELDS = (
     "product", "product_id", "description", "division", "department",
+    "tier", "materiality", "complexity",
     "rag_rating", "status", "owner", "notes",
     "mrc_signoff_date", "mrc_signoff_meeting", "next_review_date", "last_review_date",
     "monitoring_approach", "monitoring_results",
 )
-PRODUCT_FIELD_CHOICES = {"status": VALID_PRODUCT_STATUS, "rag_rating": VALID_RAG_RATINGS}
+PRODUCT_FIELD_CHOICES = {
+    "status": VALID_PRODUCT_STATUS, "rag_rating": VALID_RAG_RATINGS,
+    "materiality": VALID_MATERIALITY, "complexity": VALID_COMPLEXITY,
+}
 
 # The register form's minimum (besides the mandatory Product ID).
 PRODUCT_REGISTER_FIELDS = ("product", "analytics_model", "market_data_model", "calculating_agent")
@@ -81,6 +93,11 @@ PRODUCT_COLLECTION_SPECS = {
     "limitations": COLLECTION_SPECS["limitations"],
     "assumptions": COLLECTION_SPECS["assumptions"],
     "remediation_steps": COLLECTION_SPECS["remediation_steps"],
+    # Composite risk-rating inputs, shared shape with the model inventory: the
+    # validation-question tracker (coverage) and the operational-event log
+    # (impact). Give the product the same risk assessment as a model.
+    "validation_questions": COLLECTION_SPECS["validation_questions"],
+    "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     # The MRC sign-off queue + history, shared shape with the model inventory.
     "rag_signoff_requests": COLLECTION_SPECS["rag_signoff_requests"],
     "rag_signoff_history": COLLECTION_SPECS["rag_signoff_history"],
