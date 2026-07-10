@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """Coding-rule audit suite (large files, hardcoding, embedded JS, __init__, duplication)."""
+from audit.coverage import coverage_summary, low_coverage_packages
 from audit.data_access import data_access_findings
 from audit.duplication import duplication_report, jscpd_available
 from audit.embedded_js import embedded_js_findings
@@ -35,6 +36,8 @@ __all__ = [
     "init_file_findings",
     "data_access_findings",
     "path_definition_findings",
+    "coverage_summary",
+    "low_coverage_packages",
     "duplication_report",
     "jscpd_available",
 ]

@@ -37,8 +37,9 @@ const AuditReports = {
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Audit reports</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="ar-generate">Generate reports</button></div>' +
-      '<p class="muted">Generated PDFs: the coding-rule audit (R1&ndash;R6) and the Model Risk ' +
-      "Report. Files are written to uploads/audit/ (gitignored).</p>" +
+      '<p class="muted">Generate produces one PDF per audit rule (R1&ndash;R8), plus a ' +
+      "consolidated coding-rule audit and the Model Risk Report. Files are written to " +
+      "uploads/audit/ (gitignored).</p>" +
       '<div class="rgrid" style="margin-top:12px">' + cards + "</div></div>";
     document.getElementById("ar-generate").onclick = () => this._generate();
   },

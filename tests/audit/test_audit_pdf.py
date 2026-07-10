@@ -20,13 +20,17 @@
 """Tests for the coding-rule audit PDF builder."""
 from __future__ import annotations
 
-from audit.pdf import build_audit_tex, render_audit_pdf
+from audit.pdf import (REPORTS, build_audit_tex, build_report_tex, render_audit_pdf,
+                       render_report_pdf)
 from src.governance.mrc import pack
+from src.governance.mrc.pack import _esc
 
 _CLEAN = {
     "large_source_files": [], "large_web_files": [], "large_test_files": [],
     "hardcoding": [], "embedded_js": [], "init_files": [], "headers": [],
     "data_access": [], "path_definitions": [],
+    "coverage": {"available": True, "line_rate": 0.995, "lines_valid": 1000,
+                 "lines_covered": 995, "by_package": []},
     "duplication": {"available": True, "percentage": 0.5, "clones": 3},
 }
 _FINDINGS = {
@@ -40,6 +44,10 @@ _FINDINGS = {
     "data_access": [{"path": "d.py", "line": 7, "kind": "sql", "snippet": "SELECT 1 FROM t"}],
     "path_definitions": [{"path": "q.py", "line": 3, "kind": "root_walk",
                           "snippet": "Path(__file__).parents[1]"}],
+    "coverage": {"available": True, "line_rate": 0.90, "lines_valid": 200,
+                 "lines_covered": 180,
+                 "by_package": [{"package": "src.models", "rate": 60.0, "valid": 50,
+                                 "covered": 30, "gap": 20}]},
     "duplication": {"available": False},
 }
 
@@ -50,6 +58,7 @@ def test_build_audit_tex_clean():
     assert "2026-06-25" in tex
     assert "No findings." in tex
     assert "0.5\\%" in tex
+    assert "99.5\\% achieved" in tex          # R3 achieved coverage in summary
     assert tex.strip().endswith("\\end{document}")
 
 
@@ -74,9 +83,44 @@ def test_build_audit_tex_with_findings():
     assert "h.py" in tex                      # R5 missing-header finding
     assert "d.py" in tex                      # R6 data-access finding
     assert "q.py" in tex                      # R6 path-definition finding
+    assert "src.models" in tex and "60.0\\%" in tex   # R3 below-threshold package
     assert "not measured" in tex
 
 
 def test_render_audit_pdf(monkeypatch):
     monkeypatch.setattr(pack, "compile_tex", lambda tex, assets=None: b"%PDF-stub")
     assert render_audit_pdf(_CLEAN, "2026-06-25") == b"%PDF-stub"
+
+
+def test_one_report_per_audit_rule():
+    # Every R1–R8 rule gets its own standalone report, each with a stable filename.
+    rules = {spec["filename"].split("_")[1] for spec in REPORTS}
+    assert rules == {"r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8"}
+    assert all(spec["filename"].endswith(".pdf") for spec in REPORTS)
+    assert len({spec["filename"] for spec in REPORTS}) == len(REPORTS)
+
+
+def test_each_report_builds_a_standalone_document():
+    for spec in REPORTS:
+        tex = build_report_tex(_FINDINGS, spec, "2026-06-25")
+        assert tex.startswith("\\documentclass")
+        assert tex.strip().endswith("\\end{document}")
+        assert _esc(spec["title"]) in tex             # page title rendered
+        assert _esc(spec["subtitle"]) in tex          # page subtitle rendered
+
+
+def test_per_rule_report_carries_only_its_own_findings():
+    # The R1 report shows the hardcoding finding but not, say, the data-access one.
+    r1 = next(s for s in REPORTS if s["filename"].startswith("audit_r1"))
+    tex = build_report_tex(_FINDINGS, r1, "2026-06-25")
+    assert "y.py" in tex and "MAXN" in tex
+    assert "d.py" not in tex
+
+    r3 = next(s for s in REPORTS if s["filename"].startswith("audit_r3"))
+    cov_tex = build_report_tex(_FINDINGS, r3, "2026-06-25")
+    assert "src.models" in cov_tex and "60.0\\%" in cov_tex
+
+
+def test_render_report_pdf_compiles_a_spec(monkeypatch):
+    monkeypatch.setattr(pack, "compile_tex", lambda tex, assets=None: b"%PDF-rule")
+    assert render_report_pdf(_CLEAN, REPORTS[0], "2026-06-25") == b"%PDF-rule"
