@@ -24,6 +24,7 @@
 const MRC = {
   _specs: null,
   _committees: [],
+  _ref: {},         // reference data (mrc / division / department) for the org tree
   _mrc: null,       // the selected committee's id (value), survives re-renders
 
   async specs() {
@@ -44,8 +45,8 @@ const MRC = {
     const specs = await this.specs();
     // Archived committees are retained for history but never offered for
     // scheduling new meetings — filter them out of the selector.
-    this._committees = ((await App.get("/api/reference")).data.mrc || [])
-      .filter((c) => c.archived !== "true");
+    this._ref = (await App.get("/api/reference")).data || {};
+    this._committees = (this._ref.mrc || []).filter((c) => c.archived !== "true");
     const el = document.getElementById("tab-mrc");
     if (!this._committees.length) {
       el.innerHTML = '<div class="card"><div class="empty">No MRC committees yet. ' +
@@ -63,6 +64,14 @@ const MRC = {
       '<div id="mt-summary"></div>' +
       '<div class="card"><h3>Meetings</h3><div id="mt-list"></div></div>' +
       '<div id="mt-detail"></div>';
+    // Picking a division jumps to its first committee; the active division is
+    // derived from the selected committee, so it stays consistent on re-render.
+    el.querySelectorAll("[data-div]").forEach((btn) => {
+      btn.onclick = () => {
+        const group = this._groups()[btn.getAttribute("data-div")] || [];
+        if (group.length) { this._mrc = group[0].value; this.render(); }
+      };
+    });
     el.querySelectorAll("[data-mrc]").forEach((btn) => {
       btn.onclick = () => { this._mrc = btn.getAttribute("data-mrc"); this.render(); };
     });
@@ -70,13 +79,50 @@ const MRC = {
     await this.loadList();
   },
 
-  // One tab per committee, so you can switch between them.
+  // The division a committee rolls up to: a Division-level MRC's scope is itself
+  // a division; a Department-level MRC inherits its department's division;
+  // Company-level (or unresolved) MRCs fall into a shared "Company" bucket.
+  _divisionOf(c) {
+    if (!c) return "Company";
+    if (c.level === "Division") return c.scope_value || "Company";
+    if (c.level === "Department") {
+      const dept = (this._ref.department || []).find((d) => d.value === c.scope_value);
+      return (dept && dept.division) || "Other";
+    }
+    return "Company";
+  },
+
+  // committees grouped by division: { divisionValue: [committee, …] }.
+  _groups() {
+    const groups = {};
+    this._committees.forEach((c) => {
+      const dv = this._divisionOf(c);
+      (groups[dv] = groups[dv] || []).push(c);
+    });
+    return groups;
+  },
+
+  // Divisions in reference order first, then any extra buckets (Company/Other).
+  _orderedDivisions(groups) {
+    const refOrder = (this._ref.division || []).map((d) => d.value).filter((dv) => groups[dv]);
+    const extras = Object.keys(groups).filter((dv) => !refOrder.includes(dv));
+    return refOrder.concat(extras);
+  },
+
+  // Two-tier selector: divisions on top; the active division's committees below.
   _selector() {
-    const tabs = this._committees.map((c) =>
+    const groups = this._groups();
+    const activeDiv = this._divisionOf(this._committee());
+    const divTabs = this._orderedDivisions(groups).map((dv) =>
+      '<button class="dtab' + (dv === activeDiv ? " active" : "") + '" data-div="' + esc(dv) +
+      '">' + esc(dv) + "</button>").join("");
+    const committeeTabs = (groups[activeDiv] || []).map((c) =>
       '<button class="dtab' + (c.value === this._mrc ? " active" : "") + '" data-mrc="' + esc(c.value) +
       '">' + esc(c.name || c.value) + "</button>").join("");
     return '<div class="card" style="padding:8px 12px;margin-bottom:12px">' +
-      '<div class="dtabs">' + tabs + "</div></div>";
+      '<div class="dtabs">' + divTabs + "</div>" +
+      '<div class="dtabs" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">' +
+      committeeTabs + "</div></div>";
   },
 
   _headerCards(c) {
