@@ -44,12 +44,18 @@ def test_fields_endpoint(client):
     _live_model(client)
     client.post("/api/reference/collections/people",
                 json={"fields": {"name": "Jane"}, "confirmed": True}, headers=HEADERS)
+    client.post("/api/reference/collections/division",
+                json={"fields": {"value": "Markets"}, "confirmed": True}, headers=HEADERS)
     specs = client.get("/api/products/fields").get_json()
     assert "product" in specs["register"]
     assert specs["bindings"] == ["analytics_model", "market_data_model", "calculating_agent"]
     fields = {f["key"]: f for g in specs["groups"] for f in g["fields"]}
     assert fields["analytics_model"]["type"] == "choice" and "MKM-AN-001" in fields["analytics_model"]["options"]
     assert fields["owner"]["type"] == "choice" and "Jane" in fields["owner"]["options"]
+    # Org fields resolve to reference-backed dropdowns once the list is populated,
+    # exactly like a model's (department stays text here — none seeded yet).
+    assert fields["division"]["type"] == "choice" and "Markets" in fields["division"]["options"]
+    assert "department" in fields
     assert fields["notes"]["type"] == "text"
     assert any(c["key"] == "limitations" for c in specs["collections"])
 

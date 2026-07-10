@@ -21,6 +21,7 @@
 // Product detail: header + tabbed detail (Overview with component bindings/rebind,
 // Limitations, Assumptions, Audit). The identifier is derived from the bindings.
 const PRODUCT_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
+const PRODUCT_OVERVIEW_ORG = ["division", "department"];
 const PRODUCT_OVERVIEW_MONITORING = ["monitoring_approach", "monitoring_results"];
 const PRODUCT_OVERVIEW_GOV = ["status", "owner", "mrc_signoff_date", "next_review_date",
   "last_review_date", "notes"];
@@ -117,6 +118,7 @@ const ProductDetail = {
     const bindings = this._specs.bindings.map((k) => this._bindingRow(k, d)).join("");
     const left = '<div class="section-header">Components</div>' + bindings +
       this._section("Product", PRODUCT_OVERVIEW_PRODUCT, d) +
+      this._section("Organisation", PRODUCT_OVERVIEW_ORG, d) +
       this._section("Monitoring", PRODUCT_OVERVIEW_MONITORING, d);
     const right = this._section("Risk rating", ["rag_rating"], d) + this._signoffPanel(d) +
       this._section("Governance &amp; review", PRODUCT_OVERVIEW_GOV, d) + this._mrcRow(d);
@@ -126,8 +128,8 @@ const ProductDetail = {
     return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" + status;
   },
 
-  // The MRC responsible for this product, inherited from its Analytics Model's
-  // org unit. Flags in red when the model (or its committee) is missing.
+  // The MRC responsible for this product, derived from its Division/Department
+  // (Department-level → Division-level → Company). Flags red when none covers it.
   _mrcRow(d) {
     const m = this._mrc || {};
     const head = '<div class="section-header">MRC</div>';
@@ -135,14 +137,12 @@ const ProductDetail = {
       const c = m.mrc;
       return head + '<div class="inforow"><div class="k">Committee</div><div class="v">' +
         esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
-        '<span class="muted" style="font-size:11px">' + esc(m.level || "") + "-level, via " +
-        esc(m.via_model || "?") + "</div></div>";
+        '<span class="muted" style="font-size:11px">' + esc(m.level || "") + "-level</div></div>";
     }
-    const reason = !d.analytics_model
-      ? "no Analytics Model bound"
-      : "no committee covers Analytics Model " + esc(m.via_model || d.analytics_model);
+    const org = [d.division, d.department].filter(Boolean).join(" / ") || "no division/department set";
     return head + '<div class="inforow"><div class="v" style="color:var(--red)">&#9888; ' +
-      reason + ". Bind a model / set up an MRC under Admin &rarr; MRC.</div></div>";
+      "No committee covers this product (" + esc(org) + "). Set its Division/Department, " +
+      "or configure an MRC under Admin &rarr; MRC.</div></div>";
   },
 
   _editLink(key) {

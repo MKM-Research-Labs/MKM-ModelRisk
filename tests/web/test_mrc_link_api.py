@@ -41,8 +41,8 @@ def _register_model(client, model_id="M1", **fields):
     )
 
 
-def _register_product(client, product_id="P-1", analytics_model="M1"):
-    return client.post(
+def _register_product(client, product_id="P-1", analytics_model="M1", **org):
+    resp = client.post(
         "/api/products",
         json={"product_id": product_id, "product": "Bond",
               "fields": {"analytics_model": analytics_model,
@@ -50,6 +50,11 @@ def _register_product(client, product_id="P-1", analytics_model="M1"):
               "confirmed": True},
         headers=HEADERS,
     )
+    # Org fields (division/department) are set via the detail field editor.
+    for field, value in org.items():
+        client.post(f"/api/products/{product_id}/field",
+                    json={"field": field, "value": value, "confirmed": True}, headers=HEADERS)
+    return resp
 
 
 # ------------------------------------------------------------- model /mrc ----
@@ -81,18 +86,20 @@ def test_model_mrc_unknown_model_is_404(client):
 
 # ----------------------------------------------------------- product /mrc ----
 
-def test_product_inherits_mrc_from_analytics_model(client):
+def test_product_mrc_from_own_division(client):
+    # The product's own Division drives its MRC — the analytics model's org is
+    # irrelevant (here the model has none).
     _seed_mrc(client, "MRC-CO", "Company")
-    _register_model(client, model_id="M1", division="Markets")
-    _register_product(client, analytics_model="M1")
+    _seed_mrc(client, "MRC-MKT", "Division", scope_value="Markets")
+    _register_model(client, model_id="M1")
+    _register_product(client, analytics_model="M1", division="Markets")
     res = client.get("/api/products/P-1/mrc").get_json()
-    assert res["mrc"]["value"] == "MRC-CO"
-    assert res["level"] == "Company"
-    assert res["via_model"] == "M1"
+    assert res["mrc"]["value"] == "MRC-MKT"
+    assert res["level"] == "Division"
 
 
-def test_product_mrc_none_when_model_unmatched(client):
-    _register_model(client, model_id="M1", division="Nowhere")
-    _register_product(client, analytics_model="M1")
+def test_product_mrc_none_when_org_unmatched(client):
+    _register_model(client, model_id="M1")
+    _register_product(client, analytics_model="M1", division="Nowhere")
     res = client.get("/api/products/P-1/mrc").get_json()
-    assert res["mrc"] is None and res["via_model"] == "M1"
+    assert res["mrc"] is None and res["level"] is None
