@@ -95,10 +95,16 @@ MRC_COLLECTION_SPECS = {
         {"key": "escalated_from_agenda_id", "label": "Escalated from item",
          "type": "text", "hidden": True},
     ]},
+    # Presenter is picked from the meeting's participants and the minute may
+    # reference the model or product it concerns; the UI renders both (plus the
+    # expandable text box) from meeting context. A model sign-off auto-creates a
+    # minute here. model_id/product_id are mutually exclusive.
     "minutes": {"label": "Minutes", "id_prefix": "MIN", "fields": [
         {"key": "title", "label": "Title", "type": "text", "required": True},
         {"key": "presenter", "label": "Presenter", "type": "text"},
-        {"key": "text", "label": "Minutes", "type": "text"},
+        {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
+        {"key": "product_id", "label": "Product", "type": "text"},
+        {"key": "text", "label": "Minutes", "type": "textarea"},
     ]},
     "participants": {"label": "Participants", "id_prefix": "P", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},

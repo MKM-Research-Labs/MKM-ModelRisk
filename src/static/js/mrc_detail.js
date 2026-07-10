@@ -22,7 +22,7 @@
 // Decisions / Actions / Documents. The collection tabs reuse the shared
 // Collections renderer (add/edit/remove); Models joins the inventory.
 const MeetingDetail = {
-  _id: null, _meeting: null, _specs: null, _models: [], _inventory: [],
+  _id: null, _meeting: null, _specs: null, _models: [], _inventory: [], _products: [],
   _tab: "agenda", _showAll: false,
 
   async show(meetingId, tab) {
@@ -31,6 +31,7 @@ const MeetingDetail = {
     this._meeting = await App.get("/api/meetings/" + meetingId);
     this._models = await App.get("/api/meetings/" + meetingId + "/models");
     this._inventory = await App.get("/api/models");
+    this._products = await App.get("/api/products");
     this._people = (await App.get("/api/reference")).data.people || [];
     if (tab) this._tab = tab;
     this._render();
@@ -102,10 +103,13 @@ const MeetingDetail = {
     if (this._tab === "participants") {
       box.innerHTML = this._participantsTab(d); this._bindParticipants(d); return;
     }
+    // Minutes has a bespoke form: presenter from the participants, a related
+    // model/product picker, and an expandable text box.
+    if (this._tab === "minutes") { box.innerHTML = this._minutesContent(); this._bindMinutes(); return; }
     const spec = this.collSpec(this._tab);
-    // Minutes / decisions / actions accept multiple new entries at once;
-    // participants stays single because one-at-a-time matches practice.
-    const bulk = ["minutes", "decisions", "actions"].indexOf(this._tab) >= 0;
+    // Decisions / actions accept multiple new entries at once; participants and
+    // minutes have their own bespoke tabs.
+    const bulk = ["decisions", "actions"].indexOf(this._tab) >= 0;
     box.innerHTML = Collections.render(d, { collections: [spec] }, false, bulk);
     Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
       false, () => this.show(this._id, this._tab), d, bulk);
@@ -173,6 +177,134 @@ const MeetingDetail = {
           "/api/meetings/" + self._id + "/collections/participants/" + id + "/delete", {},
           () => self.show(self._id, "participants"));
       };
+    });
+  },
+
+  // The meeting's participants (roster + guests) — the presenter menu source.
+  _participantNames(d) {
+    const names = this._rosterMembers(d).map((m) => m.name);
+    (d.participants || []).forEach((g) => { if (g.name) names.push(g.name); });
+    return [...new Set(names)];
+  },
+
+  // A minute may reference the model or product it concerns: in-scope models and
+  // all products, grouped, with values tagged m:<id> / p:<id>.
+  _relatedOptions(selected) {
+    const nameById = {};
+    this._inventory.forEach((m) => { nameById[m.model_id] = (m.data || {}).name; });
+    const opt = (v, label) =>
+      '<option value="' + esc(v) + '"' + (v === selected ? " selected" : "") + ">" + esc(label) + "</option>";
+    let html = '<option value=""></option>';
+    const modelIds = this._models.map((r) => r.model_id);
+    if (modelIds.length) {
+      html += '<optgroup label="Models">' + modelIds.map((id) =>
+        opt("m:" + id, id + (nameById[id] ? " — " + nameById[id] : ""))).join("") + "</optgroup>";
+    }
+    const products = this._products || [];
+    if (products.length) {
+      html += '<optgroup label="Products">' + products.map((p) =>
+        opt("p:" + p.product_id, p.product_id +
+          ((p.data || {}).product ? " — " + p.data.product : ""))).join("") + "</optgroup>";
+    }
+    return html;
+  },
+
+  // The add/edit form: Title, Presenter (participants), Related model/product,
+  // and an expandable Minutes text box.
+  _minuteForm(prefix, item) {
+    item = item || {};
+    const names = this._participantNames(this._meeting.data || {});
+    const presenterOpts = ['<option value=""></option>'].concat(names.map((n) =>
+      "<option" + (n === item.presenter ? " selected" : "") + ">" + esc(n) + "</option>")).join("");
+    const related = item.model_id ? "m:" + item.model_id : (item.product_id ? "p:" + item.product_id : "");
+    return '<div class="row" style="flex-wrap:wrap;align-items:flex-end">' +
+      '<div class="field"><label>Title *</label><input id="' + prefix + '-title" value="' +
+      esc(item.title || "") + '"></div>' +
+      '<div class="field"><label>Presenter</label><select id="' + prefix + '-presenter">' +
+      presenterOpts + "</select></div>" +
+      '<div class="field"><label>Related model / product</label><select id="' + prefix + '-related">' +
+      this._relatedOptions(related) + "</select></div></div>" +
+      '<div class="field" style="margin-top:8px"><label>Minutes</label>' +
+      '<textarea id="' + prefix + '-text" rows="5" style="width:100%;box-sizing:border-box">' +
+      esc(item.text || "") + "</textarea></div>";
+  },
+
+  _minutesContent() {
+    const items = (this._meeting.data || {}).minutes || [];
+    const cards = items.length
+      ? items.map((it, i) => this._minuteCard(it, i)).join("")
+      : '<div class="empty">No minutes yet.</div>';
+    return '<div id="minutes-list">' + cards + "</div>" +
+      '<div class="section-header" style="margin-top:14px">Add minute</div>' +
+      this._minuteForm("madd", null) +
+      '<div class="row" style="margin-top:8px"><button class="btn small primary" id="madd-btn">Add&hellip;</button></div>';
+  },
+
+  _minuteCard(item, idx) {
+    const related = item.model_id || item.product_id;
+    const meta = [];
+    if (item.presenter) meta.push("Presenter: <b>" + esc(item.presenter) + "</b>");
+    meta.push("Related: " + (related ? '<span class="code">' + esc(related) + "</span>" : '<span class="muted">—</span>'));
+    return '<div class="card" style="margin-bottom:8px" id="minrow-' + esc(item.item_id) + '">' +
+      '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
+      "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b></div>" +
+      '<div class="rowact"><button class="btn small" data-mined="' + esc(item.item_id) + '">Edit</button> ' +
+      '<button class="btn small danger" data-minrm="' + esc(item.item_id) + '">Remove</button></div></div>' +
+      '<div class="muted" style="margin-top:6px">' + meta.join(" &nbsp;·&nbsp; ") + "</div>" +
+      (item.text ? '<div style="margin-top:6px;white-space:pre-wrap">' + esc(item.text) + "</div>" : "") +
+      "</div>";
+  },
+
+  // Split the tagged related-item value back into its model_id / product_id.
+  _relatedFields(value) {
+    return {
+      model_id: value && value.slice(0, 2) === "m:" ? value.slice(2) : "",
+      product_id: value && value.slice(0, 2) === "p:" ? value.slice(2) : "",
+    };
+  },
+
+  _minuteEdit(item) {
+    const card = document.getElementById("minrow-" + item.item_id);
+    card.innerHTML = this._minuteForm("med", item) +
+      '<div class="row" style="margin-top:8px">' +
+      '<button class="btn small primary" id="med-save">Save&hellip;</button> ' +
+      '<button class="btn small" id="med-cancel">Cancel</button></div>';
+    document.getElementById("med-cancel").onclick = () => this.show(this._id, "minutes");
+    document.getElementById("med-save").onclick = () => {
+      const fields = { title: val("med-title") || item.title, presenter: val("med-presenter"),
+        text: val("med-text") };
+      Object.assign(fields, this._relatedFields(val("med-related")));
+      App.amend("Update minute " + item.item_id + ".", "POST",
+        "/api/meetings/" + this._id + "/collections/minutes/" + item.item_id, { fields: fields },
+        () => this.show(this._id, "minutes"));
+    };
+  },
+
+  _bindMinutes() {
+    const self = this;
+    document.getElementById("madd-btn").onclick = function () {
+      const fields = {};
+      const t = val("madd-title"); if (t) fields.title = t;
+      const p = val("madd-presenter"); if (p) fields.presenter = p;
+      const x = val("madd-text"); if (x) fields.text = x;
+      const rel = self._relatedFields(val("madd-related"));
+      if (rel.model_id) fields.model_id = rel.model_id;
+      if (rel.product_id) fields.product_id = rel.product_id;
+      if (!fields.title) { App.toast("Title is required", "error"); return; }
+      App.amend("Add a minute.", "POST",
+        "/api/meetings/" + self._id + "/collections/minutes", { fields: fields },
+        () => self.show(self._id, "minutes"));
+    };
+    const items = (self._meeting.data || {}).minutes || [];
+    document.querySelectorAll("[data-mined]").forEach(function (btn) {
+      const item = items.find((m) => m.item_id === btn.getAttribute("data-mined"));
+      btn.onclick = () => self._minuteEdit(item);
+    });
+    document.querySelectorAll("[data-minrm]").forEach(function (btn) {
+      const id = btn.getAttribute("data-minrm");
+      btn.onclick = () => App.amend("Remove minute " + id + ".", "POST",
+        "/api/meetings/" + self._id + "/collections/minutes/" + id + "/delete", {},
+        () => self.show(self._id, "minutes"));
     });
   },
 
