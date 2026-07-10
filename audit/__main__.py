@@ -20,8 +20,14 @@
 """Console coding-rule audit report: ``python -m audit``."""
 from __future__ import annotations
 
-from config.audit import COVERAGE_MINIMUM
+import sys
+from datetime import date
+from pathlib import Path
 
+from config.audit import AUDIT_OUTPUT_DIR, COVERAGE_MINIMUM
+from src.governance.mrc.pack import TectonicNotFound
+
+from audit.coverage import coverage_summary, low_coverage_packages
 from audit.data_access import data_access_findings
 from audit.duplication import duplication_report
 from audit.embedded_js import embedded_js_findings
@@ -30,6 +36,11 @@ from audit.headers import header_findings
 from audit.init_files import init_file_findings
 from audit.large_files import large_source_files, large_test_files, large_web_files
 from audit.path_definitions import path_definition_findings
+from audit.pdf import REPORTS, render_audit_pdf, render_report_pdf
+
+_USAGE = ("usage: python -m audit [--pdf]\n\n"
+          "  --pdf   also render the audit reports (one PDF per rule R1–R8 plus a\n"
+          "          consolidated overview) into the audit output directory")
 
 
 def _print_section(title: str, findings: list[dict], formatter) -> int:
@@ -52,11 +63,50 @@ def build_report() -> dict:
         "headers": header_findings(),
         "data_access": data_access_findings(),
         "path_definitions": path_definition_findings(),
+        "coverage": coverage_summary(),
         "duplication": duplication_report(),
     }
 
 
-def main() -> int:
+def write_audit_reports(report: dict, as_of: str, output_dir: Path) -> list[Path]:
+    """Render every per-rule PDF plus the consolidated overview into ``output_dir``.
+
+    Shared by the CLI ``--pdf`` flag and the Audit Reports web endpoint so both
+    emit exactly the same set. Returns the written paths; propagates
+    ``TectonicNotFound`` if the LaTeX engine is unavailable (the failing report
+    leaves no partial file behind).
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    written = []
+    for spec in REPORTS:
+        dest = output_dir / spec["filename"]
+        dest.write_bytes(render_report_pdf(report, spec, as_of))
+        written.append(dest)
+    dest = output_dir / "coding_rule_audit.pdf"
+    dest.write_bytes(render_audit_pdf(report, as_of))
+    written.append(dest)
+    return written
+
+
+def _write_pdfs(report: dict) -> int:
+    """Render the audit PDFs for ``--pdf``; return a process exit code."""
+    try:
+        written = write_audit_reports(report, date.today().isoformat(), AUDIT_OUTPUT_DIR)
+    except TectonicNotFound as exc:
+        print(f"\n!! PDF generation skipped — {exc}")
+        return 1
+    print(f"\nGenerated {len(written)} PDF(s) in {AUDIT_OUTPUT_DIR}:")
+    for path in written:
+        print("     " + path.name)
+    return 0
+
+
+def main(argv=None) -> int:
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if "-h" in argv or "--help" in argv:
+        print(_USAGE)
+        return 0
     report = build_report()
     print("MKM-ModelRisk — coding-rule audit")
     print("=" * 50)
@@ -80,7 +130,16 @@ def main() -> int:
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     _print_section("R6 path definitions outside config (reported)", report["path_definitions"],
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
-    print(f"\n.. R3 — Coverage gate enforced at {COVERAGE_MINIMUM}% via pyproject fail_under")
+    cov = report["coverage"]
+    if cov["available"]:
+        pct = cov["line_rate"] * 100
+        print(f"\n.. R3 coverage — {pct:.2f}% ({cov['lines_covered']:,} of "
+              f"{cov['lines_valid']:,} lines); gate {COVERAGE_MINIMUM}% via pyproject fail_under")
+        for r in low_coverage_packages(cov):
+            print(f"     {r['rate']:5.1f}%  {r['package']}  (gap {r['gap']})")
+    else:
+        print(f"\n.. R3 — Coverage gate enforced at {COVERAGE_MINIMUM}% via pyproject "
+              "fail_under (coverage.xml not found — run pytest --cov --cov-report=xml)")
     dup = report["duplication"]
     if dup.get("available"):
         print(f".. R8 duplicate code — {dup['percentage']}% ({dup['clones']} clones, "
@@ -89,7 +148,10 @@ def main() -> int:
         print(".. R8 duplicate code — jscpd not installed, skipped")
     print("=" * 50)
     print(f"{'PASS' if total == 0 else 'FINDINGS'}: {total} gated finding(s)")
-    return 1 if total else 0
+    exit_code = 1 if total else 0
+    if "--pdf" in argv:
+        exit_code = exit_code or _write_pdfs(report)
+    return exit_code
 
 
 if __name__ == "__main__":

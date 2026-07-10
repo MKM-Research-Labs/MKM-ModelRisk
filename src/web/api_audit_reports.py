@@ -26,8 +26,8 @@ from datetime import date, datetime
 
 from flask import Blueprint, abort, jsonify, send_from_directory
 
-from audit.__main__ import build_report
-from audit.pdf import render_audit_pdf
+from audit.__main__ import build_report, write_audit_reports
+from audit.pdf import REPORT_LABELS
 from config.audit import AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS, USER_GUIDE_MD
 from src.governance.model_inventory import list_models
 from src.governance.model_inventory.report import render_report_pdf
@@ -40,6 +40,10 @@ OUTPUT_DIR = AUDIT_OUTPUT_DIR
 audit_reports_bp = Blueprint("audit_reports", __name__, url_prefix="/api/audit-reports")
 
 
+# Filename -> human label: the fixed reports plus every generated per-rule PDF.
+_LABELS = {**AUDIT_REPORT_LABELS, **REPORT_LABELS}
+
+
 def _catalogue() -> list[dict]:
     if not OUTPUT_DIR.is_dir():
         return []
@@ -48,7 +52,7 @@ def _catalogue() -> list[dict]:
         stat = path.stat()
         reports.append({
             "filename": path.name,
-            "label": AUDIT_REPORT_LABELS.get(path.name, path.stem.replace("_", " ").title()),
+            "label": _LABELS.get(path.name, path.stem.replace("_", " ").title()),
             "size": stat.st_size,
             "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
         })
@@ -83,7 +87,9 @@ def generate():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     as_of = date.today().isoformat()
     try:
-        (OUTPUT_DIR / "coding_rule_audit.pdf").write_bytes(render_audit_pdf(build_report(), as_of))
+        # One standalone PDF per audit function (R1–R8) plus the consolidated
+        # overview — the same set the ``python -m audit --pdf`` CLI emits.
+        write_audit_reports(build_report(), as_of, OUTPUT_DIR)
         (OUTPUT_DIR / "model_risk_report.pdf").write_bytes(
             render_report_pdf(list_models(), get_settings(), as_of))
     except TectonicNotFound as exc:
