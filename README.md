@@ -71,7 +71,7 @@ export and one extra audit check.
 |---|---|---|
 | **PostgreSQL 16** | **Yes** — the database, run natively (no Docker). | `brew install postgresql@16` |
 | **Python 3.13** | **Yes** — the application runtime. | `brew install python@3.13` |
-| **tectonic** | Optional — LaTeX engine for the Meeting Pack, Model Risk Report, and Audit Report PDFs. Without it, those exports return a 503; everything else works. | `brew install tectonic` |
+| **tectonic** | Optional — LaTeX engine for the Meeting Pack, Model Risk Report, and the Audit Report PDFs (one per audit rule R1–R8 plus the consolidated coding-rule audit). Without it, those exports return a 503; everything else works. | `brew install tectonic` |
 | **pandoc** | Optional — renders the User Guide PDF in the Audit Reports tab. | `brew install pandoc` |
 | **Node + jscpd** | Optional — only the duplicate-code section of `python -m audit`. | `brew install node` |
 
