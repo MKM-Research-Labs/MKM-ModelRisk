@@ -41,7 +41,7 @@ def test_main_prints_report_and_returns_code(monkeypatch, capsys):
     code = main()
     out = capsys.readouterr().out
     assert "coding-rule audit" in out
-    assert "Coverage gate" in out
+    assert "pyproject fail_under" in out       # R3 line, live or gate-only
     assert "jscpd not installed" in out
     assert code in (0, 1)
 

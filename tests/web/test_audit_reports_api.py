@@ -40,6 +40,7 @@ def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
     monkeypatch.setattr(pack, "compile_tex", _stub_pdf)             # no tectonic
     monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})  # no jscpd
     monkeypatch.setattr(mod, "_render_user_guide", lambda dest: dest.write_bytes(b"%PDF ug"))  # no pandoc
+    monkeypatch.setattr(mod, "_start_coverage_refresh", lambda output_dir: True)  # no test-suite run
 
     generated = client.post("/api/audit-reports/generate", headers=HEADERS)
     assert generated.status_code == 200
@@ -87,6 +88,50 @@ def test_user_guide_runs_pandoc_when_available(tmp_path, monkeypatch):
     monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: calls.append(cmd))
     mod._render_user_guide(tmp_path / "user_guide.pdf")
     assert calls and calls[0][0] == "pandoc" and "--pdf-engine=tectonic" in calls[0]
+
+
+def test_coverage_run_pins_the_test_database(monkeypatch):
+    # The refresh must run pytest against the dedicated test DB — never whatever
+    # database the live server is pointed at.
+    captured = {}
+
+    def _fake_run(cmd, **kw):
+        captured["cmd"], captured["env"], captured["cwd"] = cmd, kw.get("env"), kw.get("cwd")
+
+    monkeypatch.setattr(mod.subprocess, "run", _fake_run)
+    mod._run_pytest_coverage()
+    assert "pytest" in captured["cmd"] and "--cov-report=xml" in captured["cmd"]
+    assert captured["env"]["MKM_DB_NAME"] == "mkm_modelrisk_test"
+    assert captured["cwd"] == str(mod.REPO_ROOT)
+
+
+def test_coverage_refresh_rebuilds_reports_and_clears_running(tmp_path, monkeypatch):
+    monkeypatch.setattr(mod, "_run_pytest_coverage", lambda: None)     # skip the 1-min suite
+    monkeypatch.setattr(pack, "compile_tex", _stub_pdf)
+    monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})
+    monkeypatch.setitem(mod._cov_state, "running", True)
+
+    mod._run_coverage_and_rebuild(tmp_path)
+
+    assert mod._cov_state["running"] is False and mod._cov_state["error"] is None
+    assert (tmp_path / "audit_r3_test_coverage.pdf").exists()
+    assert (tmp_path / "coding_rule_audit.pdf").exists()
+
+
+def test_coverage_refresh_records_error(tmp_path, monkeypatch):
+    def _boom():
+        raise RuntimeError("pytest exploded")
+
+    monkeypatch.setattr(mod, "_run_pytest_coverage", _boom)
+    monkeypatch.setitem(mod._cov_state, "running", True)
+    mod._run_coverage_and_rebuild(tmp_path)
+    assert mod._cov_state["running"] is False
+    assert "pytest exploded" in mod._cov_state["error"]
+
+
+def test_coverage_status_endpoint_shape(client):
+    body = client.get("/api/audit-reports/coverage-status").get_json()
+    assert set(body) == {"running", "error"}
 
 
 def test_serve_missing_dir_is_404(client, tmp_path, monkeypatch):
