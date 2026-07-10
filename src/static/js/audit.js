@@ -31,6 +31,21 @@ function auditValue(v) {
 }
 
 const Audit = {
+  _ref: {},                       // reference data (mrc / division / department)
+  _committees: [],
+  _events: [],
+  _modelMap: {},                  // model_id   -> model data (for MRC scoping)
+  _productMap: {},                // product_id -> product data
+
+  // The division/department of the entity an event touched, for MRC scoping.
+  // Model and Product events map to their record; every other event (MRC
+  // meetings, reference, settings) is unscoped and appears only under "All".
+  _scopeData(e) {
+    if (e.aggregate_type === "ModelInventoryEntry") return this._modelMap[e.aggregate_id] || {};
+    if (e.aggregate_type === "Product") return this._productMap[e.aggregate_id] || {};
+    return {};
+  },
+
   // Which record a change touched: the reference/collection item where known,
   // otherwise the raw aggregate (for events that aren't collection changes).
   _record(e) {
@@ -56,10 +71,29 @@ const Audit = {
   },
 
   async render() {
+    const [ref, models, products, events] = await Promise.all([
+      App.get("/api/reference"), App.get("/api/models"),
+      App.get("/api/products"), App.get("/api/audit"),
+    ]);
+    this._ref = ref.data || {};
+    this._committees = (this._ref.mrc || []).filter((c) => c.archived !== "true");
+    this._events = events;
+    this._modelMap = {};
+    models.forEach((m) => { this._modelMap[m.model_id] = m.data || {}; });
+    this._productMap = {};
+    products.forEach((p) => { this._productMap[p.product_id] = p.data || {}; });
+    this._draw();
+  },
+
+  // Render the log filtered to the shared MRC region; re-drawn (no re-fetch) as
+  // the region selection changes.
+  _draw() {
     const el = document.getElementById("tab-audit");
-    const events = await App.get("/api/audit");
-    let rows = "";
+    MrcNav.normalize(this._committees, this._ref);
     const self = this;
+    const events = this._events.filter((e) =>
+      MrcNav.inScope(this._committees, this._ref, self._scopeData(e)));
+    let rows = "";
     events.forEach(function (e) {
       const when = e.recorded_at.replace("T", " ").slice(0, 19);
       const c = self._cells(e);
@@ -76,10 +110,15 @@ const Audit = {
       ? "<table><thead><tr><th>#</th><th>When (UTC)</th><th>Who</th><th>Record</th>" +
         "<th>Field</th><th>Old</th><th>New</th><th>Reason</th></tr></thead><tbody>" +
         rows + "</tbody></table>"
-      : '<div class="empty">No events yet. Every change you make appears here, in order, immutably.</div>';
+      : '<div class="empty">' + (MrcNav.state.div
+        ? "No model or product events for this MRC scope."
+        : "No events yet. Every change you make appears here, in order, immutably.") + "</div>";
     el.innerHTML =
+      '<div id="audit-mrcnav">' + MrcNav.html(this._committees, this._ref) + "</div>" +
       '<div class="card"><h3>Audit trail — the immutable event log</h3>' +
       '<p class="muted">Every recorded change, newest first. This is the source of truth; ' +
       "the inventory and meeting views above are projections of it.</p>" + body + "</div>";
+    const nav = document.getElementById("audit-mrcnav");
+    MrcNav.bind(nav, this._committees, this._ref, () => this._draw());
   },
 };

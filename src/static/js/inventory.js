@@ -35,6 +35,8 @@ function inputControl(id, spec) {
 
 const Inventory = {
   _specs: null,
+  _ref: {},                       // reference data (mrc / division / department)
+  _committees: [],
 
   async specs() {
     // Always re-fetch so admin changes to the reference menus show up promptly.
@@ -52,8 +54,9 @@ const Inventory = {
     await this.specs();
     const el = document.getElementById("tab-inventory");
     el.innerHTML =
+      '<div id="m-mrcnav"></div>' +
       '<div id="m-summary"></div>' +
-      '<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Inventory</h3>' +
+      '<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Models</h3>' +
       '<span style="flex:1"></span>' +
       '<button class="btn small primary" id="m-register">+ Register model</button>' +
       '<a class="btn small" href="/api/models/risk-report.pdf" target="_blank" ' +
@@ -134,31 +137,47 @@ const Inventory = {
       "</div>";
   },
 
+  // Render the shared MRC-region navigator and wire it to re-filter the list.
+  _renderNav() {
+    const nav = document.getElementById("m-mrcnav");
+    MrcNav.normalize(this._committees, this._ref);
+    nav.innerHTML = MrcNav.html(this._committees, this._ref);
+    MrcNav.bind(nav, this._committees, this._ref, () => this.loadList());
+  },
+
   async loadList() {
+    this._ref = (await App.get("/api/reference")).data || {};
+    this._committees = (this._ref.mrc || []).filter((c) => c.archived !== "true");
+    this._renderNav();
     const all = await App.get("/api/models");
-    const models = all.filter((m) => OrgScope.matches(m.data));
+    const models = all.filter((m) => MrcNav.inScope(this._committees, this._ref, m.data));
     document.getElementById("m-summary").innerHTML = this._summary(models);
     const box = document.getElementById("m-list");
     if (!models.length) {
-      box.innerHTML = '<div class="empty">No models yet. Register one above.</div>';
+      box.innerHTML = '<div class="empty">' +
+        (MrcNav.state.div ? "No models in this MRC scope." : "No models yet. Register one above.") +
+        "</div>";
       return;
     }
     let rows = "";
     models.forEach(function (m) {
       const d = m.data || {};
+      const lifecycle = m.retired
+        ? '<span class="pill">retired</span>'
+        : fieldDisplay(d.lifecycle_stage || d.status);
       rows +=
         '<tr class="clickable" data-id="' + esc(m.model_id) + '">' +
         '<td class="modelid">' + esc(m.model_id) + "</td>" +
         "<td>" + fieldDisplay(d.name) + "</td>" +
-        "<td>" + fieldDisplay(d.division) + "</td>" +
-        "<td>" + fieldDisplay(d.department) + "</td>" +
         "<td>" + tierBadge(d.tier) + "</td>" +
         "<td>" + ragBadge(d.rag_rating) + "</td>" +
-        "<td>" + fieldDisplay(d.owner) + "</td></tr>";
+        "<td>" + fieldDisplay(d.owner) + "</td>" +
+        "<td>" + mrcStatusBadge(d) + "</td>" +
+        "<td>" + lifecycle + "</td></tr>";
     });
     box.innerHTML =
-      "<table><thead><tr><th>ID</th><th>Name</th><th>Division</th><th>Department</th><th>Tier</th>" +
-      "<th>RAG</th><th>Owner</th></tr></thead><tbody>" + rows + "</tbody></table>";
+      "<table><thead><tr><th>ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
+      "<th>Owner</th><th>MRC Status</th><th>Lifecycle</th></tr></thead><tbody>" + rows + "</tbody></table>";
     box.querySelectorAll("tr.clickable").forEach(function (tr) {
       tr.onclick = function () { Detail.show(tr.getAttribute("data-id")); };
     });

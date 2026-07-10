@@ -30,6 +30,8 @@ function productStatusBadge(status, retired) {
 // Products (Product Valuation Models): one Analytics Model can underpin many Products.
 const Product = {
   _specs: null,
+  _ref: {},                       // reference data (mrc / division / department)
+  _committees: [],
 
   async specs() {
     // Re-fetch so new inventory models / reference values populate the dropdowns.
@@ -47,7 +49,7 @@ const Product = {
     await this.specs();
     // List and detail are siblings; opening a Product hides the list view (master-detail).
     document.getElementById("tab-product").innerHTML =
-      '<div id="product-listview"><div id="product-summary"></div>' +
+      '<div id="product-listview"><div id="product-mrcnav"></div><div id="product-summary"></div>' +
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Product Valuation Models</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="product-register">+ Register Product</button></div>' +
@@ -101,12 +103,26 @@ const Product = {
       "</div>";
   },
 
+  // Render the shared MRC-region navigator and wire it to re-filter the list.
+  _renderNav() {
+    const nav = document.getElementById("product-mrcnav");
+    MrcNav.normalize(this._committees, this._ref);
+    nav.innerHTML = MrcNav.html(this._committees, this._ref);
+    MrcNav.bind(nav, this._committees, this._ref, () => this.loadList());
+  },
+
   async loadList() {
-    const products = await App.get("/api/products");
+    this._ref = (await App.get("/api/reference")).data || {};
+    this._committees = (this._ref.mrc || []).filter((c) => c.archived !== "true");
+    this._renderNav();
+    const all = await App.get("/api/products");
+    const products = all.filter((p) => MrcNav.inScope(this._committees, this._ref, p.data));
     document.getElementById("product-summary").innerHTML = this._summary(products);
     const box = document.getElementById("product-list");
     if (!products.length) {
-      box.innerHTML = '<div class="empty">No Products yet. Register one above.</div>';
+      box.innerHTML = '<div class="empty">' +
+        (MrcNav.state.div ? "No products in this MRC scope." : "No Products yet. Register one above.") +
+        "</div>";
       return;
     }
     let rows = "";
@@ -117,15 +133,13 @@ const Product = {
         '<td class="modelid">' + esc(p.product_id) + "</td>" +
         '<td><span class="code">' + fieldDisplay(d.identifier) + "</span></td>" +
         "<td>" + fieldDisplay(d.product) + "</td>" +
-        "<td>" + fieldDisplay(d.division) + "</td>" +
-        "<td>" + fieldDisplay(d.department) + "</td>" +
         "<td>" + fieldDisplay(d.analytics_model) + "</td>" +
+        "<td>" + mrcStatusBadge(d) + "</td>" +
         "<td>" + productStatusBadge(d.status, p.retired) + "</td></tr>";
     });
     box.innerHTML =
       "<table><thead><tr><th>ID</th><th>Identifier</th><th>Product</th>" +
-      "<th>Division</th><th>Department</th>" +
-      "<th>Analytics Model</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>";
+      "<th>Analytics Model</th><th>MRC Status</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>";
     box.querySelectorAll("tr.clickable").forEach(function (tr) {
       tr.onclick = function () { ProductDetail.show(tr.getAttribute("data-id")); };
     });
