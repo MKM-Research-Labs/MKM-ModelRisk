@@ -117,11 +117,14 @@ const Product = {
         '<td class="modelid">' + esc(p.product_id) + "</td>" +
         '<td><span class="code">' + fieldDisplay(d.identifier) + "</span></td>" +
         "<td>" + fieldDisplay(d.product) + "</td>" +
+        "<td>" + fieldDisplay(d.division) + "</td>" +
+        "<td>" + fieldDisplay(d.department) + "</td>" +
         "<td>" + fieldDisplay(d.analytics_model) + "</td>" +
         "<td>" + productStatusBadge(d.status, p.retired) + "</td></tr>";
     });
     box.innerHTML =
       "<table><thead><tr><th>ID</th><th>Identifier</th><th>Product</th>" +
+      "<th>Division</th><th>Department</th>" +
       "<th>Analytics Model</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>";
     box.querySelectorAll("tr.clickable").forEach(function (tr) {
       tr.onclick = function () { ProductDetail.show(tr.getAttribute("data-id")); };

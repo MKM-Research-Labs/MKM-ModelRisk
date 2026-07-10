@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Product MRC sign-off: request → route via the analytics model's MRC → approve."""
+"""Product MRC sign-off: request → route via the product's Division/Department → approve."""
 from __future__ import annotations
 
 from tests.web.conftest import HEADERS
@@ -37,12 +37,16 @@ def _model(client, model_id="M1", **fields):
                              "confirmed": True}, headers=HEADERS)
 
 
-def _product(client, product_id="P1", analytics_model="M1", rag="Amber"):
+def _product(client, product_id="P1", analytics_model="M1", rag="Amber", **org):
     client.post("/api/products",
                 json={"product_id": product_id, "product": "Bond",
                       "fields": {"analytics_model": analytics_model,
                                  "market_data_model": "m", "calculating_agent": "c"},
                       "confirmed": True}, headers=HEADERS)
+    # Org fields (division/department) are set via the detail field editor.
+    for field, value in org.items():
+        client.post(f"/api/products/{product_id}/field",
+                    json={"field": field, "value": value, "confirmed": True}, headers=HEADERS)
     if rag:
         client.post(f"/api/products/{product_id}/field",
                     json={"field": "rag_rating", "value": rag, "confirmed": True}, headers=HEADERS)
@@ -95,11 +99,24 @@ def test_pending_request_drains_onto_new_meeting(client):
 
 
 def test_request_blocked_without_mrc(client):
-    _model(client, division="Nowhere")   # a live analytics model, but no committee covers it
-    _product(client)
+    _model(client)
+    _product(client, division="Nowhere")   # a product org that no committee covers
     resp = _request(client)
     assert resp.status_code == 400
     assert "MRC" in resp.get_json()["error"]
+
+
+def test_routing_uses_product_org_not_model(client):
+    # A Division-level committee for Markets. The product sits in Markets; its
+    # analytics model has no org — routing must follow the product, not the model.
+    _seed_mrc(client, value="MRC-MKTS", level="Division", scope_value="Markets")
+    _model(client)
+    _product(client, division="Markets")
+    mrc = client.get("/api/products/P1/mrc").get_json()
+    assert mrc["mrc"]["value"] == "MRC-MKTS" and mrc["level"] == "Division"
+    resp = _request(client)
+    assert resp.status_code == 201
+    assert resp.get_json()["data"]["rag_signoff_requests"][0]["target_mrc"] == "MRC-MKTS"
 
 
 def test_request_blocked_without_rag_rating(client):

@@ -38,6 +38,12 @@ PRODUCT_FIELD_SPECS = {
     "product": {"label": "Product", "type": "text", "group": "Product"},
     "product_id": {"label": "Product ID", "type": "text", "group": "Product"},
     "description": {"label": "Description", "type": "text", "group": "Product"},
+    # --- Organisation (division/department backed by the admin-managed reference
+    # lists, exactly like a model's org fields). A product may be allocated at
+    # Division only — Department is optional. These drive the product's
+    # responsible MRC committee (matching_mrc on division/department).
+    "division": {"label": "Division", "type": "text", "group": "Organisation", "reference": "division"},
+    "department": {"label": "Department", "type": "text", "group": "Organisation", "reference": "department"},
     "analytics_model": {"label": "Analytics Model", "type": "text", "group": "Bindings"},
     "market_data_model": {"label": "Market Data Model", "type": "text", "group": "Bindings"},
     "calculating_agent": {"label": "Calculating Agent", "type": "text", "group": "Bindings",
@@ -59,7 +65,8 @@ PRODUCT_FIELD_SPECS = {
 # Fields editable through the generic field-edit command (the bindings are not —
 # they are changed via rebind; ``status`` Retired is reached via retire).
 PRODUCT_EDITABLE_FIELDS = (
-    "product", "product_id", "description", "rag_rating", "status", "owner", "notes",
+    "product", "product_id", "description", "division", "department",
+    "rag_rating", "status", "owner", "notes",
     "mrc_signoff_date", "mrc_signoff_meeting", "next_review_date", "last_review_date",
     "monitoring_approach", "monitoring_results",
 )
