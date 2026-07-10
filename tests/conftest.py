@@ -22,8 +22,26 @@ from __future__ import annotations
 
 import os
 
-# Run tests against a dedicated database so they never touch dev/demo data.
-os.environ.setdefault("MKM_DB_NAME", "mkm_modelrisk_test")
+# Run tests against a dedicated database so they never touch dev/demo data, and
+# give *every pytest process its own* database. The autouse ``_clean_event_log``
+# fixture TRUNCATEs the shared ``events`` table before each test; if two pytest
+# processes (two terminals, an IDE runner, xdist workers, a background agent)
+# pointed at the same database, one's truncate would wipe the other's data
+# mid-test. That cross-process race — not any connection pool or MVCC/cache bug —
+# is what makes the suite flaky, surfacing as ConcurrencyError "expected version
+# N, found 0", tamper-evidence and sign-off failures. Isolating the database per
+# process makes concurrent runs impossible to corrupt (and serial runs unchanged).
+_TEST_DB_BASE = (
+    os.environ.get("MKM_TEST_DB_BASE")
+    or os.environ.get("MKM_DB_NAME")
+    or "mkm_modelrisk_test"
+)
+if _TEST_DB_BASE != "mkm_modelrisk":  # never shadow the dev database
+    # Worker id is stable per xdist worker; PID isolates independent invocations.
+    _suffix = os.environ.get("PYTEST_XDIST_WORKER") or f"p{os.getpid()}"
+    # Keep a stable base so xdist workers don't double-suffix the mutated name.
+    os.environ["MKM_TEST_DB_BASE"] = _TEST_DB_BASE
+    os.environ["MKM_DB_NAME"] = f"{_TEST_DB_BASE}_{_suffix}"
 
 import time  # noqa: E402
 
@@ -34,19 +52,38 @@ from config import DatabaseConfig  # noqa: E402
 from src.database import owner_connection, run_migrations  # noqa: E402
 
 
+def _admin_cursor(cfg: DatabaseConfig):
+    """Autocommit connection to the dev database, used to (re)create/drop the test DB."""
+    return psycopg.connect(
+        host=cfg.host, port=cfg.port, dbname="mkm_modelrisk",
+        user=cfg.owner_user, password=cfg.owner_password, autocommit=True,
+    )
+
+
 def _ensure_test_database() -> None:
     cfg = DatabaseConfig.from_env()
     if cfg.name == "mkm_modelrisk":  # never auto-create the dev database
         return
-    admin = psycopg.connect(
-        host=cfg.host, port=cfg.port, dbname="mkm_modelrisk",
-        user=cfg.owner_user, password=cfg.owner_password, autocommit=True,
-    )
+    # Drop first so a database leaked by an earlier SIGKILLed run with the same
+    # name starts clean. Names are unique per *live* process, so FORCE only ever
+    # evicts a dead process's stragglers — never a concurrent run's connections.
+    admin = _admin_cursor(cfg)
     try:
         with admin.cursor() as cur:
-            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (cfg.name,))
-            if cur.fetchone() is None:
-                cur.execute(f'CREATE DATABASE "{cfg.name}" OWNER {cfg.owner_user}')
+            cur.execute(f'DROP DATABASE IF EXISTS "{cfg.name}" WITH (FORCE)')
+            cur.execute(f'CREATE DATABASE "{cfg.name}" OWNER {cfg.owner_user}')
+    finally:
+        admin.close()
+
+
+def _drop_test_database() -> None:
+    cfg = DatabaseConfig.from_env()
+    if cfg.name == "mkm_modelrisk":  # never drop the dev database
+        return
+    admin = _admin_cursor(cfg)
+    try:
+        with admin.cursor() as cur:
+            cur.execute(f'DROP DATABASE IF EXISTS "{cfg.name}" WITH (FORCE)')
     finally:
         admin.close()
 
@@ -69,6 +106,8 @@ def _database_ready():
     _ensure_test_database()
     _wait_for_db()
     run_migrations()
+    yield
+    _drop_test_database()
 
 
 @pytest.fixture(autouse=True)
