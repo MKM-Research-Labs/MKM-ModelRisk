@@ -55,7 +55,6 @@ const Inventory = {
     await this.specs();
     const el = document.getElementById("tab-inventory");
     el.innerHTML =
-      '<div id="m-mrcnav">' + MrcNav.cachedHtml() + "</div>" +
       '<div id="m-summary"></div>' +
       '<div class="card"><div class="row" style="align-items:center"><h3 style="margin:0">Models</h3>' +
       '<span style="flex:1"></span>' +
@@ -138,19 +137,10 @@ const Inventory = {
       "</div>";
   },
 
-  // Render the shared MRC-region navigator and wire it to re-filter the list.
-  _renderNav() {
-    const nav = document.getElementById("m-mrcnav");
-    MrcNav.normalize(this._committees, this._ref);
-    nav.innerHTML = MrcNav.html(this._committees, this._ref);
-    MrcNav.bind(nav, this._committees, this._ref, () => this.loadList());
-  },
-
   async loadList() {
     const nav = await MrcNav.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
-    this._renderNav();
     const all = await App.get("/api/models");
     const models = all.filter((m) => MrcNav.inScope(this._committees, this._ref, m.data));
     document.getElementById("m-summary").innerHTML = this._summary(models);

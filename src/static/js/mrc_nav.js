@@ -38,12 +38,39 @@ const MrcNav = {
     return this._cache;
   },
 
-  invalidate() { this._cache = null; },
+  invalidate() { this._cache = null; this._key = null; },
 
-  // The nav HTML from cache (empty before the first load) — lets a tab paint the
-  // region bar immediately, before its list data arrives, so it doesn't blank.
-  cachedHtml() {
-    return this._cache ? this.html(this._cache.committees, this._cache.ref) : "";
+  // --- the single persistent bar (#region-nav), shared across the four tabs ---
+  _reload: null,            // the active tab's re-filter callback
+  _key: null,               // render signature, so tab switches don't rebuild it
+
+  // Route region selections to the active tab's list.
+  setReload(fn) { this._reload = fn; },
+
+  hide() {
+    const el = document.getElementById("region-nav");
+    if (el) el.style.display = "none";
+  },
+
+  // Show the bar for a region tab and render it (from cache) if not already
+  // current. Merely switching tabs leaves the existing DOM in place — no rebuild,
+  // so no flicker.
+  async showFor() {
+    const el = document.getElementById("region-nav");
+    if (!el) return;
+    el.style.display = "";
+    const { committees, ref } = await this.load();
+    this.normalize(committees, ref);
+    const key = JSON.stringify(this.state) + "|" +
+      committees.map((c) => c.value).join(",");
+    if (key === this._key && el.firstChild) return;   // unchanged → leave as-is
+    this._key = key;
+    el.innerHTML = this.html(committees, ref);
+    this.bind(el, committees, ref, () => {
+      this._key = null;                 // selection changed → allow re-render
+      this.showFor();
+      if (this._reload) this._reload();
+    });
   },
 
   // The division a committee rolls up to: a Division-level MRC's scope is itself
