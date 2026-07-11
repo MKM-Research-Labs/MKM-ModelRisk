@@ -29,12 +29,20 @@ from tests.e2e._flows import open_app, open_tab, register_model
 
 pytestmark = pytest.mark.e2e
 
+# Rendering PDFs with tectonic is CPU-heavy and easily exceeds Playwright's 30s
+# default request timeout on a busy dev machine (generating every audit report
+# is slower still). Give these requests plenty of headroom so a slow render is
+# not mistaken for a failure.
+_PDF_TIMEOUT_MS = 120_000
+
 
 @pytest.mark.skipif(shutil.which("tectonic") is None, reason="tectonic not installed (optional)")
 def test_model_risk_report_is_pdf(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-020", "Valuation Model")
-    response = page.request.get(base_url + "/api/models/risk-report.pdf")
+    response = page.request.get(
+        base_url + "/api/models/risk-report.pdf", timeout=_PDF_TIMEOUT_MS
+    )
     assert response.ok
     assert response.headers["content-type"].startswith("application/pdf")
     assert response.body()[:5] == b"%PDF-"
@@ -48,6 +56,7 @@ def test_generate_audit_reports_never_500s(page: Page, base_url: str):
     response = page.request.post(
         base_url + "/api/audit-reports/generate",
         headers={"X-Auth-Request-User": "risk@kerrshearer.co.uk"},
+        timeout=_PDF_TIMEOUT_MS,
     )
     if shutil.which("tectonic") is None:
         assert response.status == 503
