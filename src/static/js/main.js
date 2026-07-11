@@ -25,32 +25,52 @@ const TABS = {
 
 // Tabs that share the persistent MRC-region bar, and how each re-filters when the
 // region selection changes (without rebuilding the bar).
-const REGION_RELOADERS = {
+const REGION_TABS = ["mrc", "inventory", "product", "audit"];
+const REGION_RELOAD = {
   mrc: () => MRC.render(),
   inventory: () => Inventory.loadList(),
   product: () => Product.loadList(),
   audit: () => Audit._draw(),
 };
 
-async function showTab(name) {
-  document.querySelectorAll(".tab").forEach(function (b) {
-    b.classList.toggle("active", b.getAttribute("data-tab") === name);
-  });
-  document.querySelectorAll(".panel").forEach(function (p) {
-    p.classList.toggle("active", p.id === "tab-" + name);
-  });
-  if (REGION_RELOADERS[name]) {
-    MrcNav.setReload(REGION_RELOADERS[name]);
-    await MrcNav.showFor();
-  } else {
-    MrcNav.hide();
-  }
-  try {
-    await TABS[name].render();
-  } catch (e) {
-    App.toast(e.message, "error");
-  }
-}
+// Render each panel once, then just re-show it on later visits so switching tabs
+// is instant. A panel re-renders only when marked dirty — by any mutation (data
+// changed) or a region-bar selection (which changes what the lists show).
+const Nav = {
+  _dirty: new Set(Object.keys(TABS)),   // all need a first render
+
+  markAllDirty() { Object.keys(TABS).forEach((t) => this._dirty.add(t)); },
+
+  // A region selection: refresh the visible tab now; re-render the rest lazily.
+  onRegionChange(active) {
+    REGION_TABS.forEach((t) => { if (t !== active) this._dirty.add(t); });
+    if (REGION_RELOAD[active]) REGION_RELOAD[active]();
+  },
+
+  async show(name) {
+    document.querySelectorAll(".tab").forEach((b) =>
+      b.classList.toggle("active", b.getAttribute("data-tab") === name));
+    document.querySelectorAll(".panel").forEach((p) =>
+      p.classList.toggle("active", p.id === "tab-" + name));
+    if (REGION_TABS.indexOf(name) >= 0) {
+      MrcNav.setReload(() => this.onRegionChange(name));
+      await MrcNav.showFor();
+    } else {
+      MrcNav.hide();
+    }
+    if (this._dirty.has(name)) {
+      this._dirty.delete(name);
+      try {
+        await TABS[name].render();
+      } catch (e) {
+        this._dirty.add(name);            // render failed → try again next visit
+        App.toast(e.message, "error");
+      }
+    }
+  },
+};
+
+function showTab(name) { return Nav.show(name); }
 
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".tab").forEach(function (btn) {

@@ -102,8 +102,10 @@ const App = {
     try {
       await this.send(p.method, p.path, payload);
       // A mutation may change committees/divisions/departments — drop the cached
-      // region nav so the next render reflects it.
+      // region nav, and mark tabs stale so they re-render with fresh data on the
+      // next visit (the current tab is refreshed immediately by onDone below).
       if (typeof MrcNav !== "undefined") MrcNav.invalidate();
+      if (typeof Nav !== "undefined") Nav.markAllDirty();
       this.closeConfirm();
       this.toast("Change recorded in the audit trail", "ok");
       if (p.onDone) p.onDone();
