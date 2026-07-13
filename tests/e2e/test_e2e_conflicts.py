@@ -58,6 +58,7 @@ def test_duplicate_registration_is_rejected(page: Page, base_url: str):
     page.click("#m-register")
     page.fill("#reg-model_id", "DUP-001")
     page.fill("#reg-name", "Second Attempt")
+    page.select_option("#reg-owner", "E2E Owner")   # owner is mandatory
     page.click("#reg-submit")
     expect(page.locator("#confirm-overlay")).to_be_visible()
     page.click("#confirm-ok")
