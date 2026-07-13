@@ -152,7 +152,7 @@ Object.assign(Committees, {
   // The quorum rule: minimum attendance for a meeting of this committee to be
   // quorate. Each row reuses the generic field editor (data-ced) — the fields
   // live on the mrc spec. Unset values fall back to the sensible defaults
-  // (Chair + Secretary + 3 non-voting), which is also what the meeting assumes.
+  // (Chair + Secretary + 2 voting), which is also what the meeting assumes.
   _quorumSection(item) {
     const row = (key, label, dflt) => {
       const set = item[key] !== undefined && item[key] !== null && item[key] !== "";
@@ -164,11 +164,10 @@ Object.assign(Committees, {
     };
     return '<div class="section-header" style="margin-top:16px">Quorum</div>' +
       '<p class="muted" style="font-size:12px">Minimum attendance for a meeting to be quorate and ' +
-      'proceed. Default: Chair + Secretary + 3 non-voting members.</p>' +
+      'proceed. Default: Chair + Secretary + 2 voting members (non-voting members do not count).</p>' +
       row("quorum_require_chair", "Requires chair", "Yes") +
       row("quorum_require_secretary", "Requires secretary", "Yes") +
-      row("quorum_min_voting", "Min voting members", "0") +
-      row("quorum_min_non_voting", "Min non-voting members", "3");
+      row("quorum_min_voting", "Min voting members", "2");
   },
 
   _editField(item, f) {

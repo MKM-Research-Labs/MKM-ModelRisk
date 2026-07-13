@@ -72,15 +72,15 @@ REFERENCE_SPECS = {
         {"key": "voting_members", "label": "Voting members", "type": "text", "hidden": True},
         {"key": "non_voting_members", "label": "Non-voting members", "type": "text", "hidden": True},
         # Quorum rule — the minimum attendance for the meeting to be quorate and
-        # able to proceed. Defaults: Chair + Secretary + 3 non-voting members.
-        # Hidden from the table/add form; the committee detail renders a Quorum
-        # section. Evaluated per meeting against who is marked Attended.
+        # able to proceed. Defaults: Chair + Secretary + 2 voting members
+        # (non-voting members do not count towards quorum). Hidden from the
+        # table/add form; the committee detail renders a Quorum section.
+        # Evaluated per meeting against who is marked Attended.
         {"key": "quorum_require_chair", "label": "Quorum requires chair",
          "type": "choice", "options": ("Yes", "No"), "hidden": True},
         {"key": "quorum_require_secretary", "label": "Quorum requires secretary",
          "type": "choice", "options": ("Yes", "No"), "hidden": True},
         {"key": "quorum_min_voting", "label": "Quorum min voting", "type": "text", "hidden": True},
-        {"key": "quorum_min_non_voting", "label": "Quorum min non-voting", "type": "text", "hidden": True},
         # The committee's Terms of Reference document, uploaded per committee via
         # the dedicated /tor endpoints. Hidden from the table/add form — the
         # detail view renders an upload/download control instead.

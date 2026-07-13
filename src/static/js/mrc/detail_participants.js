@@ -58,7 +58,8 @@ Object.assign(MeetingDetail, {
 
   // Is the meeting quorate? Evaluate who is marked "Attended" against the
   // committee's quorum rule (carried onto the meeting from the MRC). Defaults
-  // when unset: require Chair + Secretary + 3 non-voting members.
+  // when unset: require Chair + Secretary + 2 voting members (non-voting members
+  // do not count towards quorum).
   _quorum(d) {
     d = d || {};
     const attended = this._invitees(d).filter((i) => i.status === "Attended");
@@ -71,15 +72,12 @@ Object.assign(MeetingDetail, {
     };
     const reqChair = (d.quorum_require_chair || "Yes") !== "No";
     const reqSec = (d.quorum_require_secretary || "Yes") !== "No";
-    const minVoting = num(d.quorum_min_voting, 0);
-    const minNonVoting = num(d.quorum_min_non_voting, 3);
+    const minVoting = num(d.quorum_min_voting, 2);
     const missing = [];
     if (reqChair && !has("Chair")) missing.push("Chair");
     if (reqSec && !has("Secretary")) missing.push("Secretary");
     const votingShort = minVoting - count("Voting");
     if (votingShort > 0) missing.push(votingShort + " more voting");
-    const nonVotingShort = minNonVoting - count("Non-voting");
-    if (nonVotingShort > 0) missing.push(nonVotingShort + " more non-voting");
     return { met: missing.length === 0, missing };
   },
 

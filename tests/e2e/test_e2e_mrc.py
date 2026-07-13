@@ -41,7 +41,7 @@ def _seed_default_mrc(page: Page, base_url: str) -> None:
         base_url + "/api/reference/collections/mrc",
         data={"fields": {"value": "MRC-DEFAULT", "name": "Default MRC", "level": "Company",
                          "quorum_require_chair": "No", "quorum_require_secretary": "No",
-                         "quorum_min_voting": "0", "quorum_min_non_voting": "0"},
+                         "quorum_min_voting": "0"},
               "confirmed": True},
         headers={"X-Auth-Request-User": "e2e", "Content-Type": "application/json"},
     )
