@@ -180,8 +180,16 @@ const DetailTabs = {
         '<div class="dz-text"><b>Pending MRC sign-off</b>' +
         '<p class="muted">Proposed <b>' + esc(pending.proposed_rag) + "</b> " + detail + ".</p></div></div>";
     }
+    // Once the MRC has signed the current rating off, offer to revoke it (which
+    // keeps the rating but returns the subject to needing sign-off).
+    if (rating.signed_off) {
+      return '<div class="dz-row" style="border:1px solid #388e3c;background:#e8f5e9;padding:10px 14px;border-radius:6px;margin:8px 0">' +
+        '<div class="dz-text"><b>MRC signed off — ' + esc(proposed) + "</b>" +
+        '<p class="muted">This rating has current MRC sign-off. Revoking keeps the rating but returns it to needing sign-off.</p></div>' +
+        '<div class="dz-action"><button class="btn small danger" id="revoke-signoff">Revoke sign-off&hellip;</button></div></div>';
+    }
     // Nothing to sign off until the owner has placed the model on the heatmap.
-    if (!proposed || rating.signed_off) return "";
+    if (!proposed) return "";
     const differs = proposed !== rating.approved_rag;
     const headline = differs
       ? "Heatmap " + esc(proposed) + " differs from approved " + esc(rating.approved_rag || "—")

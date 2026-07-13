@@ -72,6 +72,15 @@ Object.assign(ProductDetail, {
         "</b> " + detail + ".</p></div></div>";
     }
     if (this._product.retired) return "";
+    // Once signed off, offer to revoke (keeps the rating, returns to needing sign-off).
+    if ((this._risk || {}).signed_off) {
+      return '<div class="dz-row" style="border:1px solid #388e3c;background:#e8f5e9;' +
+        'padding:10px 14px;border-radius:6px;margin:8px 0"><div class="dz-text">' +
+        '<b>MRC signed off — ' + esc(d.rag_rating) + "</b>" +
+        '<p class="muted">This rating has current MRC sign-off. Revoking keeps the rating ' +
+        'but returns it to needing sign-off.</p></div>' +
+        '<div class="dz-action"><button class="btn small danger" id="prevoke-signoff">Revoke sign-off&hellip;</button></div></div>';
+    }
     if (!d.rag_rating) {
       return '<p class="muted" style="font-size:12px;margin:6px 0">Set a RAG rating to request MRC sign-off.</p>';
     }
@@ -85,9 +94,16 @@ Object.assign(ProductDetail, {
   },
 
   _bindSignoffRequest() {
+    const self = this;
+    const revoke = document.getElementById("prevoke-signoff");
+    if (revoke) revoke.onclick = function () {
+      App.amend("Revoke the MRC sign-off for " + self._id +
+        " — the rating is kept but returns to needing sign-off.", "POST",
+        "/api/products/" + self._id + "/revoke-signoff", {},
+        () => self.show(self._id, "overview"));
+    };
     const btn = document.getElementById("preq-signoff");
     if (!btn) return;
-    const self = this;
     btn.onclick = function () {
       const mrc = (self._mrc || {}).mrc;
       if (!mrc) {

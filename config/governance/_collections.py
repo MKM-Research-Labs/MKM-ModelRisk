@@ -44,7 +44,7 @@ VALID_INFORMED = ("Yes", "No")
 # MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
 VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Rejected", "Withdrawn")
 # The committee's decision on a sign-off request.
-VALID_SIGNOFF_OUTCOME = ("Approved", "Rejected")
+VALID_SIGNOFF_OUTCOME = ("Approved", "Rejected", "Revoked")
 
 # Structured collections on a model: arrays of items. Each item is built from the
 # field specs below; ``id_prefix`` seeds generated item ids (e.g. AS-001). One
