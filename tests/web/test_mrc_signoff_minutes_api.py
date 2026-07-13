@@ -26,11 +26,13 @@ from tests.web.test_mrc_signoff_api import (
     _request_signoff,
     _schedule_meeting,
     _seed_mrc,
+    _signoff_item,
 )
 
 
 def _agenda_id(client, meeting_id="MTG1"):
-    return client.get(f"/api/meetings/{meeting_id}").get_json()["data"]["agenda"][0]["item_id"]
+    # The sign-off item, not agenda[0] — every meeting also seeds standing items.
+    return _signoff_item(client, meeting_id)["item_id"]
 
 
 def test_approve_signoff_auto_creates_a_minute(client):

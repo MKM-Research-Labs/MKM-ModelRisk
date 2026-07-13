@@ -101,8 +101,10 @@ const ProductDetail = {
       ["validation_questions", "Validation", n("validation_questions")],
       ["operational_failure_events", "Events", n("operational_failure_events")],
       ["risk", "Risk Rating", null], ["actions", "Actions", n("actions")], ["linkage", "MRC", null],
-      ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
-      ["danger", "Danger", null],
+      ["docs", "Docs", n("documents")],
+      // Audit is the final tab — the complete, read-only record of every change,
+      // entry and upload, so it always sits last after Danger.
+      ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
     ];
     return '<div class="dtabs">' + tabs.map((t) =>
       '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-ptab="' + t[0] + '"' +

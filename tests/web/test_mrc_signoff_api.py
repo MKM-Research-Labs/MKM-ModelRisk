@@ -76,6 +76,17 @@ def _request_signoff(client, model_id="M1", proposed_rag="Green"):
     )
 
 
+def _signoff_agenda_items(agenda):
+    """The sign-off items on a meeting's agenda — every meeting also seeds the
+    five standing agenda items, so a sign-off is never alone or necessarily first."""
+    return [a for a in agenda if a.get("subject_model_id") or a.get("subject_product_id")]
+
+
+def _signoff_item(client, meeting_id="MTG1"):
+    agenda = client.get(f"/api/meetings/{meeting_id}").get_json()["data"]["agenda"]
+    return _signoff_agenda_items(agenda)[0]
+
+
 def test_request_signoff_attaches_to_scheduled_meeting_of_matching_mrc(client):
     _seed_mrc(client)
     _register_subject_model(client)
@@ -83,10 +94,11 @@ def test_request_signoff_attaches_to_scheduled_meeting_of_matching_mrc(client):
     response = _request_signoff(client)
     assert response.status_code == 201
     agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
-    assert len(agenda) == 1
-    assert agenda[0]["subject_model_id"] == "M1"
-    assert agenda[0]["proposed_rag"] == "Green"
-    assert agenda[0]["status"] == "Pending"
+    items = _signoff_agenda_items(agenda)
+    assert len(items) == 1
+    assert items[0]["subject_model_id"] == "M1"
+    assert items[0]["proposed_rag"] == "Green"
+    assert items[0]["status"] == "Pending"
     # The model-side request is now Attached to that meeting.
     req = response.get_json()["data"]["rag_signoff_requests"][0]
     assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
@@ -108,7 +120,8 @@ def test_pending_request_drains_onto_newly_scheduled_meeting(client):
     _request_signoff(client)          # queued — no meeting yet
     _schedule_meeting(client)          # scheduling drains the queue onto the agenda
     agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
-    assert len(agenda) == 1 and agenda[0]["subject_model_id"] == "M1"
+    items = _signoff_agenda_items(agenda)
+    assert len(items) == 1 and items[0]["subject_model_id"] == "M1"
     req = client.get("/api/models/M1").get_json()["data"]["rag_signoff_requests"][0]
     assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
 
@@ -147,7 +160,8 @@ def test_request_signoff_ignores_completed_meeting_and_stays_pending(client):
     assert response.status_code == 201
     # A Completed meeting is not a valid target — the request waits as Pending.
     assert response.get_json()["data"]["rag_signoff_requests"][0]["status"] == "Pending"
-    assert not client.get("/api/meetings/MTG1").get_json()["data"].get("agenda")
+    agenda = client.get("/api/meetings/MTG1").get_json()["data"].get("agenda") or []
+    assert not _signoff_agenda_items(agenda)   # no sign-off attached (standing items aside)
 
 
 def test_approve_signoff_snaps_model_rating_and_records_history(client):
@@ -155,7 +169,7 @@ def test_approve_signoff_snaps_model_rating_and_records_history(client):
     _register_subject_model(client)  # Amber
     _schedule_meeting(client)
     _request_signoff(client)  # proposes Green
-    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    agenda_id = _signoff_item(client)["item_id"]
     response = client.post(
         f"/api/meetings/MTG1/agenda/{agenda_id}/approve-signoff",
         json={"confirmed": True, "note": "MRC signed off after review"}, headers=HEADERS,
@@ -166,7 +180,7 @@ def test_approve_signoff_snaps_model_rating_and_records_history(client):
     history = payload["model"]["data"]["rag_signoff_history"]
     assert len(history) == 1 and history[0]["from_rating"] == "Amber" and history[0]["to_rating"] == "Green"
     # The agenda item is now marked Completed.
-    assert payload["meeting"]["data"]["agenda"][0]["status"] == "Completed"
+    assert _signoff_agenda_items(payload["meeting"]["data"]["agenda"])[0]["status"] == "Completed"
 
 
 def test_approve_signoff_records_confirm_reason_as_comment(client):
@@ -176,7 +190,7 @@ def test_approve_signoff_records_confirm_reason_as_comment(client):
     _register_subject_model(client)
     _schedule_meeting(client)
     _request_signoff(client)
-    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    agenda_id = _signoff_item(client)["item_id"]
     response = client.post(
         f"/api/meetings/MTG1/agenda/{agenda_id}/approve-signoff",
         json={"confirmed": True, "reason": "Chair satisfied with validation"}, headers=HEADERS,
@@ -191,7 +205,7 @@ def test_approve_signoff_sets_next_review_from_mrc(client):
     _register_subject_model(client)
     _schedule_meeting(client)
     _request_signoff(client)
-    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    agenda_id = _signoff_item(client)["item_id"]
     resp = client.post(
         f"/api/meetings/MTG1/agenda/{agenda_id}/approve-signoff",
         json={"confirmed": True, "next_review_date": "2027-01-31"}, headers=HEADERS,
@@ -208,7 +222,7 @@ def test_reject_signoff_leaves_rating_and_marks_rejected(client):
     _register_subject_model(client)          # Amber
     _schedule_meeting(client)
     _request_signoff(client)                  # proposes Green
-    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    agenda_id = _signoff_item(client)["item_id"]
     resp = client.post(
         f"/api/meetings/MTG1/agenda/{agenda_id}/reject-signoff",
         json={"confirmed": True, "next_review_date": "2027-03-31",
@@ -220,7 +234,7 @@ def test_reject_signoff_leaves_rating_and_marks_rejected(client):
     assert model["next_review_date"] == "2027-03-31"
     assert model["rag_signoff_requests"][0]["status"] == "Rejected"
     assert model["rag_signoff_history"][0]["outcome"] == "Rejected"
-    assert resp.get_json()["meeting"]["data"]["agenda"][0]["status"] == "Rejected"
+    assert _signoff_agenda_items(resp.get_json()["meeting"]["data"]["agenda"])[0]["status"] == "Rejected"
 
 
 def test_approve_signoff_unknown_meeting_is_404(client):
@@ -279,8 +293,7 @@ def _seed_signoff_ready(client, meeting_id="MTG1", parent_id="MTG2"):
     _schedule(client, meeting_id, date="2026-06-30")           # earliest → attach target
     _schedule(client, parent_id, date="2026-10-15")            # later parent meeting
     _request_signoff(client, model_id="M1")
-    agenda = client.get(f"/api/meetings/{meeting_id}").get_json()["data"]["agenda"]
-    return agenda[0]["item_id"]
+    return _signoff_item(client, meeting_id)["item_id"]
 
 
 def test_escalate_signoff_copies_item_to_parent_meeting(client):
@@ -292,13 +305,13 @@ def test_escalate_signoff_copies_item_to_parent_meeting(client):
     assert response.status_code == 200
     payload = response.get_json()
     # Original marked Escalated.
-    original = payload["meeting"]["data"]["agenda"][0]
+    original = _signoff_agenda_items(payload["meeting"]["data"]["agenda"])[0]
     assert original["status"] == "Escalated"
     # Parent gained a Pending sign-off item with the same subject_model_id +
     # proposed_rag, back-pointing to the original.
-    parent_agenda = payload["parent"]["data"]["agenda"]
-    assert len(parent_agenda) == 1
-    new_item = parent_agenda[0]
+    parent_signoffs = _signoff_agenda_items(payload["parent"]["data"]["agenda"])
+    assert len(parent_signoffs) == 1
+    new_item = parent_signoffs[0]
     assert new_item["status"] == "Pending"
     assert new_item["subject_model_id"] == "M1"
     assert new_item["proposed_rag"] == "Green"

@@ -63,6 +63,13 @@ def _request(client, product_id="P1"):
                        json={"confirmed": True}, headers=HEADERS)
 
 
+def _signoff_items(client, meeting_id="MTG1"):
+    """Sign-off items on a meeting's agenda (every meeting also seeds the five
+    standing items, so a sign-off is never alone or necessarily first)."""
+    agenda = client.get(f"/api/meetings/{meeting_id}").get_json()["data"]["agenda"]
+    return [a for a in agenda if a.get("subject_product_id") or a.get("subject_model_id")]
+
+
 def test_request_attaches_to_scheduled_meeting(client):
     _seed_mrc(client)
     _model(client)
@@ -70,10 +77,10 @@ def test_request_attaches_to_scheduled_meeting(client):
     _schedule(client)
     resp = _request(client)
     assert resp.status_code == 201
-    agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
-    assert len(agenda) == 1
-    assert agenda[0]["subject_product_id"] == "P1"
-    assert agenda[0]["proposed_rag"] == "Amber"
+    items = _signoff_items(client)
+    assert len(items) == 1
+    assert items[0]["subject_product_id"] == "P1"
+    assert items[0]["proposed_rag"] == "Amber"
     req = resp.get_json()["data"]["rag_signoff_requests"][0]
     assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
 
@@ -94,8 +101,8 @@ def test_pending_request_drains_onto_new_meeting(client):
     _product(client)
     _request(client)
     _schedule(client)
-    agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
-    assert len(agenda) == 1 and agenda[0]["subject_product_id"] == "P1"
+    items = _signoff_items(client)
+    assert len(items) == 1 and items[0]["subject_product_id"] == "P1"
 
 
 def test_request_blocked_without_mrc(client):
@@ -134,7 +141,7 @@ def test_approve_stamps_signoff_date_meeting_and_history(client):
     _product(client, rag="Green")
     _schedule(client)
     _request(client)
-    agenda_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    agenda_id = _signoff_items(client)[0]["item_id"]
     resp = client.post(f"/api/meetings/MTG1/agenda/{agenda_id}/approve-signoff",
                        json={"confirmed": True, "reason": "committee satisfied"}, headers=HEADERS)
     assert resp.status_code == 200
@@ -144,7 +151,9 @@ def test_approve_stamps_signoff_date_meeting_and_history(client):
     assert product["mrc_signoff_meeting"] == "MTG1"
     assert product["rag_signoff_history"][0]["to_rating"] == "Green"
     assert product["rag_signoff_requests"][0]["status"] == "Completed"
-    assert resp.get_json()["meeting"]["data"]["agenda"][0]["status"] == "Completed"
+    signoff = next(a for a in resp.get_json()["meeting"]["data"]["agenda"]
+                   if a.get("subject_product_id"))
+    assert signoff["status"] == "Completed"
 
 
 def test_product_mrc_endpoint_surfaces_pending(client):
