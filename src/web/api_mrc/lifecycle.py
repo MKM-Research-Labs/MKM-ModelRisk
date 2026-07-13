@@ -193,11 +193,11 @@ def schedule():
     rebuild_meeting_view()
     # Seed the standard high-level agenda. The detail of model sign-offs and
     # analysis lives in the Models tab, so the agenda stays a running order.
-    for title, desc in _DEFAULT_AGENDA:
+    for kind, title, desc in _DEFAULT_AGENDA:
         dispatch(
             "add_collection_item", add_collection_item, context=ctx,
             meeting_id=meeting_id, collection="agenda",
-            fields={"title": title, "description": desc},
+            fields={"title": title, "description": desc, "kind": kind},
         )
     rebuild_meeting_view()
     # Pull any queued sign-off requests for this committee onto the new agenda.
@@ -206,17 +206,18 @@ def schedule():
     return jsonify(get_meeting(meeting_id)), 201
 
 
-# The standing MRC agenda seeded on every new meeting.
+# The standing MRC agenda seeded on every new meeting: (kind, title, description).
+# The UI renders each kind bespoke; AOB always sorts last.
 _DEFAULT_AGENDA = (
-    ("Rollcall and Confirmation of Quorum",
+    ("rollcall", "Rollcall and Confirmation of Quorum",
      "Confirm attendance in the participants panel; the meeting may proceed only once quorate."),
-    ("Sign-off of the previous MRM minutes",
+    ("minutes_signoff", "Sign-off of the previous MRM minutes",
      "Proposed by the chair."),
-    ("Review model sign-off",
+    ("review_signoff", "Review model sign-off",
      "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."),
-    ("Review model analysis",
+    ("review_analysis", "Review model analysis",
      "Model analyses are reviewed in the Models tab (Analysis) — confirmation to proceed and any actions."),
-    ("Any Other Business (AOB)", ""),
+    ("aob", "Any Other Business (AOB)", ""),
 )
 
 

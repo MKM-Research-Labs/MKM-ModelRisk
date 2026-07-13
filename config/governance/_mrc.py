@@ -75,6 +75,10 @@ MRC_COLLECTION_SPECS = {
         {"key": "title", "label": "Title", "type": "text", "required": True},
         {"key": "description", "label": "Description", "type": "text"},
         {"key": "presenter", "label": "Presenter", "type": "text"},
+        # A standing template item's role (rollcall / minutes_signoff /
+        # review_signoff / review_analysis / aob), so the UI renders it bespoke
+        # rather than as a generic card. Blank for manually-added items. Hidden.
+        {"key": "kind", "label": "Kind", "type": "text", "hidden": True},
         # A manually-added agenda item is just Title / Description / Presenter
         # (plus an optional document). Status + the sign-off routing fields are
         # set by the workflow, not the add form, so they are hidden from it.
