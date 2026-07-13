@@ -101,4 +101,6 @@ PRODUCT_COLLECTION_SPECS = {
     # The MRC sign-off queue + history, shared shape with the model inventory.
     "rag_signoff_requests": COLLECTION_SPECS["rag_signoff_requests"],
     "rag_signoff_history": COLLECTION_SPECS["rag_signoff_history"],
+    # Product-owned action items with an update history (same shape as a model's).
+    "actions": COLLECTION_SPECS["actions"],
 }

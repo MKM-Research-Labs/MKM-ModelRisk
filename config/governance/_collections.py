@@ -24,6 +24,7 @@ from config.governance._inventory import VALID_RAG_RATINGS
 VALID_IMPACT = ("Low", "Medium", "High")
 VALID_PRIORITY = ("Low", "Medium", "High")
 VALID_REMEDIATION_STATUS = ("Open", "In Progress", "Closed")
+VALID_ACTION_STATUS = ("Open", "Closed")
 VALID_VQ_STATUSES = (
     "Addressed", "Partially Addressed", "Not Addressed", "Not Applicable",
 )
@@ -148,5 +149,17 @@ COLLECTION_SPECS = {
          "type": "choice", "options": VALID_INFORMED},
         {"key": "informed_senior_mgmt", "label": "Informed: Senior management",
          "type": "choice", "options": VALID_INFORMED},
+    ]},
+    # Outstanding action items owned by the model — the MRC revisits and updates
+    # these at committee level. Each action carries a history of dated updates to
+    # its expected completion (the ``updates`` list, rendered bespoke); the
+    # top-level target_date/status track the latest update.
+    "actions": {"label": "Actions", "id_prefix": "ACT", "fields": [
+        {"key": "description", "label": "Action", "type": "text", "required": True},
+        {"key": "owner", "label": "Owner", "type": "text", "reference": "people"},
+        {"key": "target_date", "label": "Target date", "type": "date"},
+        {"key": "status", "label": "Status", "type": "choice", "options": VALID_ACTION_STATUS},
+        {"key": "raised_meeting", "label": "Raised at", "type": "text", "hidden": True},
+        {"key": "updates", "label": "Updates", "type": "text", "hidden": True},
     ]},
 }
