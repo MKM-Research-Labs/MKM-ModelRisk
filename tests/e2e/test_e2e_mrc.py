@@ -31,10 +31,17 @@ pytestmark = pytest.mark.e2e
 
 def _seed_default_mrc(page: Page, base_url: str) -> None:
     """Seed a Company-level MRC committee via API. mrc.js hides the schedule
-    form until at least one committee exists (Phase MRC-5)."""
+    form until at least one committee exists (Phase MRC-5).
+
+    The quorum rule is set to require nothing (no chair/secretary, zero members)
+    so meetings of this bare committee are quorate with no attendance — the
+    quorum gate (which disables sign-off and status changes until quorate) is
+    covered on its own in test_e2e_mrc_meeting.py."""
     page.request.post(
         base_url + "/api/reference/collections/mrc",
-        data={"fields": {"value": "MRC-DEFAULT", "name": "Default MRC", "level": "Company"},
+        data={"fields": {"value": "MRC-DEFAULT", "name": "Default MRC", "level": "Company",
+                         "quorum_require_chair": "No", "quorum_require_secretary": "No",
+                         "quorum_min_voting": "0", "quorum_min_non_voting": "0"},
               "confirmed": True},
         headers={"X-Auth-Request-User": "e2e", "Content-Type": "application/json"},
     )
@@ -43,6 +50,10 @@ def _seed_default_mrc(page: Page, base_url: str) -> None:
 def _schedule(page: Page, base_url: str, meeting_id: str, title: str):
     """Seed a default committee, open the MRC tab, fill the schedule form."""
     _seed_default_mrc(page, base_url)
+    # The committee was seeded via the API, bypassing the app's own cache
+    # invalidation — drop MrcNav's cached reference data so the MRC tab sees it
+    # (otherwise the schedule form stays hidden behind "No committees yet").
+    page.evaluate("typeof MrcNav !== 'undefined' && MrcNav.invalidate()")
     open_tab(page, "mrc")
     page.fill("#sc-meeting_id", meeting_id)
     page.fill("#sc-title", title)
@@ -67,25 +78,19 @@ def test_click_opens_meeting_detail(page: Page, base_url: str):
     expect(detail).to_contain_text("Meeting Pack PDF")
 
 
-def test_bulk_add_minutes(page: Page, base_url: str):
-    """Fill three of the five minutes rows and save them in one go."""
+def test_add_minutes(page: Page, base_url: str):
+    """Minutes use a bespoke single-add form (title / presenter / related model /
+    text), not the shared bulk grid — add them one at a time."""
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-2026-BLK", "Bulk Minutes")
     page.click("tr.clickable[data-id='MRC-2026-BLK']")
     page.click("[data-mtab='minutes']")
-    expect(page.locator("[data-bulk-add='minutes']")).to_be_visible()
-
-    page.fill("#badd-minutes-0-title", "Welcome")
-    page.fill("#badd-minutes-1-title", "Approvals")
-    page.fill("#badd-minutes-1-text", "Two models approved.")
-    page.fill("#badd-minutes-2-title", "AOB")
-
-    page.click("[data-bulk-add='minutes']")
-    confirm(page)
-
+    for title in ("Welcome", "Approvals", "AOB"):
+        page.fill("#madd-title", title)
+        page.click("#madd-btn")
+        confirm(page)
     expect(page.locator("[data-mtab='minutes']")).to_contain_text("(3)")
-    # First tbody is the existing items; the second is the empty bulk-add form.
-    body = page.locator("#mtd-content tbody").first
+    body = page.locator("#minutes-list")
     expect(body).to_contain_text("Welcome")
     expect(body).to_contain_text("Approvals")
     expect(body).to_contain_text("AOB")
@@ -174,7 +179,10 @@ def test_edit_meeting_status_choice(page: Page, base_url: str):
 
 def test_add_agenda_items(page: Page, base_url: str):
     """Agenda uses a bespoke card-per-item renderer (per-item approve/escalate),
-    not the shared Collections bulk-add — add items one at a time."""
+    not the shared Collections bulk-add — add items one at a time.
+
+    A new meeting is seeded with a five-item standing agenda, so the tab count
+    starts at 5 and each added item increments from there."""
     open_app(page, base_url)
     _schedule(page, base_url, "MRC-BULK-AG", "Bulk Agenda")
     page.click("tr.clickable[data-id='MRC-BULK-AG']")
@@ -183,7 +191,7 @@ def test_add_agenda_items(page: Page, base_url: str):
         page.fill("#ag-add-title", title)
         page.click("#ag-add")
         confirm(page)
-        expect(page.locator("[data-mtab='agenda']")).to_contain_text(f"({i})")
+        expect(page.locator("[data-mtab='agenda']")).to_contain_text(f"({5 + i})")
     expect(page.locator("#agenda-list")).to_contain_text("Item A")
     expect(page.locator("#agenda-list")).to_contain_text("Item B")
 
@@ -246,10 +254,11 @@ def test_signoff_workflow_owner_requests_and_mrc_approves(page: Page, base_url: 
     # Pending-signoff panel shows on the model, attached to the meeting.
     expect(page.locator("#dt-content")).to_contain_text("Pending MRC sign-off")
     expect(page.locator("#dt-content")).to_contain_text("MRC-SO")
-    # MRC approves via the agenda tab.
+    # MRC approves via the Models tab — sign-offs live under Models → Approvals
+    # now, no longer as agenda lines.
     open_tab(page, "mrc")
     page.click("tr.clickable[data-id='MRC-SO']")
-    page.click("[data-mtab='agenda']")
+    page.click("[data-mtab='models_in_scope']")
     approve = page.locator("[data-agapprove]").first
     expect(approve).to_be_visible()
     approve.click()
