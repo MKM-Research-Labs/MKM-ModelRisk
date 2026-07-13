@@ -59,13 +59,34 @@ Object.assign(MeetingDetail, {
     if (kind === "minutes_signoff") {
       const actions = done ? statusBadge("Completed")
         : '<button class="btn small primary" data-ag-confirm="minutes" data-ag-id="' + esc(item.item_id) + '">Sign off</button>';
-      const body = '<div style="margin-top:8px;font-size:12px">' + this._agendaDoc(item) + "</div>";
+      const body = '<div style="margin-top:8px;font-size:12px">' + this._prevMinutesPicker(item) +
+        '<div style="margin-top:6px">' + this._agendaDoc(item) + "</div></div>";
       return this._agendaShell(item, idx, body, actions);
     }
-    if (kind === "review_signoff") return this._agendaShell(item, idx, this._signoffStatusList(), "");
-    if (kind === "review_analysis") return this._agendaShell(item, idx, this._analysisStatusList(), "");
+    const complete = (label) => done ? statusBadge("Completed")
+      : '<button class="btn small primary" data-ag-confirm="' + kind + '" data-ag-id="' +
+        esc(item.item_id) + '">' + label + "</button>";
+    if (kind === "review_signoff") return this._agendaShell(item, idx, this._signoffStatusList(), complete("Mark reviewed"));
+    if (kind === "review_analysis") return this._agendaShell(item, idx, this._analysisStatusList(), complete("Mark reviewed"));
     return this._agendaShell(item, idx,   // aob
-      '<div class="muted" style="margin-top:8px;font-size:12px">Any other business raised by members.</div>', "");
+      '<div class="muted" style="margin-top:8px;font-size:12px">Any other business raised by members.</div>',
+      complete("Complete"));
+  },
+
+  // The previous-minutes chooser on the minutes sign-off item: pick a prior
+  // closed meeting (from /prior-minutes) whose saved minutes are under review,
+  // then download them. Selecting stores the reference on the agenda item.
+  _prevMinutesPicker(item) {
+    const prior = this._priorMinutes || [];
+    if (!prior.length) return '<span class="muted">No prior meeting minutes on file.</span>';
+    const opts = ['<option value="">&mdash; select previous meeting &mdash;</option>'].concat(
+      prior.map((p) => '<option value="' + esc(p.meeting_id) + '"' +
+        (p.meeting_id === item.prev_minutes_meeting ? " selected" : "") + ">" +
+        esc((p.title || p.meeting_id) + (p.date ? " (" + p.date + ")" : "")) + "</option>")).join("");
+    const dl = item.prev_minutes_meeting
+      ? ' <a href="/api/meetings/' + esc(item.prev_minutes_meeting) +
+        '/minutes.pdf" target="_blank">&darr; Previous minutes</a>' : "";
+    return '<select data-prevmin="' + esc(item.item_id) + '">' + opts + "</select>" + dl;
   },
 
   // Read-only list of the meeting's sign-offs and their status (decisions taken
@@ -103,6 +124,29 @@ Object.assign(MeetingDetail, {
       const id = btn.getAttribute("data-ag-id");
       btn.onclick = () => self._confirmStanding(kind, id);
     });
+    document.querySelectorAll("[data-prevmin]").forEach(function (sel) {
+      const id = sel.getAttribute("data-prevmin");
+      sel.onchange = function () {
+        App.amend("Reference the previous minutes under review.", "POST",
+          "/api/meetings/" + self._id + "/collections/agenda/" + id,
+          { fields: { prev_minutes_meeting: sel.value } },
+          () => self.show(self._id, "agenda"));
+      };
+    });
+  },
+
+  // The minute recorded when a standing agenda item is confirmed complete.
+  _standingMinute(kind, d) {
+    if (kind === "rollcall") return { title: "Meeting opened",
+      text: "Meeting called to order by the chair" + (d.chair ? " (" + d.chair + ")" : "") +
+        "; quorum confirmed by the secretary" + (d.secretary ? " (" + d.secretary + ")" : "") + "." };
+    if (kind === "minutes") return { title: "Previous minutes signed off",
+      text: "The minutes of the previous MRM were reviewed and signed off." };
+    if (kind === "review_signoff") return { title: "Model sign-offs reviewed",
+      text: "The committee reviewed the model risk-rating sign-offs tabled at this meeting (see the Models tab, Approvals)." };
+    if (kind === "review_analysis") return { title: "Model analyses reviewed",
+      text: "The committee reviewed the model analyses tabled at this meeting and confirmed the outcomes (see the Models tab, Analysis)." };
+    return { title: "Any other business", text: "Any other business was invited by the chair." };
   },
 
   // Confirming a rollcall / minutes item records a minute, then marks the agenda
@@ -110,18 +154,10 @@ Object.assign(MeetingDetail, {
   _confirmStanding(kind, id) {
     const d = this._meeting.data || {};
     const self = this;
-    let title, text;
-    if (kind === "rollcall") {
-      title = "Meeting opened";
-      text = "Meeting called to order by the chair" + (d.chair ? " (" + d.chair + ")" : "") +
-        "; quorum confirmed by the secretary" + (d.secretary ? " (" + d.secretary + ")" : "") + ".";
-    } else {
-      title = "Previous minutes signed off";
-      text = "The minutes of the previous MRM were reviewed and signed off.";
-    }
-    App.amend("Confirm — " + title + ".", "POST",
+    const minute = this._standingMinute(kind, d);
+    App.amend("Confirm — " + minute.title + ".", "POST",
       "/api/meetings/" + this._id + "/collections/minutes",
-      { fields: { title: title, text: text, agenda_item_id: id } },
+      { fields: { title: minute.title, text: minute.text, agenda_item_id: id } },
       () => {
         App.send("POST", "/api/meetings/" + self._id + "/collections/agenda/" + id,
           { fields: { status: "Completed" }, confirmed: true })

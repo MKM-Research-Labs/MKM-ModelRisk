@@ -43,6 +43,9 @@ const MeetingDetail = {
     this._inventory = await App.get("/api/models");
     this._products = await App.get("/api/products");
     this._people = (await App.get("/api/reference")).data.people || [];
+    // Prior closed meetings (same MRC) with saved minutes — offered on the
+    // previous-minutes sign-off item.
+    this._priorMinutes = await App.get("/api/meetings/" + meetingId + "/prior-minutes");
     if (tab) this._tab = tab;
     this._render();
     document.getElementById("mt-detail").scrollIntoView({ block: "start" });
@@ -74,11 +77,34 @@ const MeetingDetail = {
   },
 
   _header(m, d) {
+    // Right-hand actions: the pack PDF is always available; once the meeting is
+    // closed its saved minutes download; while Scheduled the chair can Close it
+    // (gated until quorate + every agenda item is resolved).
+    const right = ['<button class="btn small" id="mt-pdf">&darr; Meeting Pack PDF</button>'];
+    if (d.minutes_filename) {
+      right.push('<a class="btn small" href="/api/meetings/' + esc(m.meeting_id) +
+        '/minutes.pdf" target="_blank">&darr; Minutes</a>');
+    }
+    if (m.status !== "Completed") {
+      const block = this._closeBlockers(d);
+      right.push('<button class="btn small primary" id="mt-close"' +
+        (block ? ' disabled title="' + esc(block) + '"' : "") + ">Close meeting&hellip;</button>");
+    }
     return '<div class="detail-header"><div>' +
       '<button class="btn small" id="mt-back">&larr; Back</button> ' +
       '<span class="name" style="margin-left:8px">' + esc(d.title || m.meeting_id) + "</span> " +
       statusBadge(m.status) + "</div>" +
-      '<div class="right"><button class="btn small" id="mt-pdf">&darr; Meeting Pack PDF</button></div></div>';
+      '<div class="right">' + right.join(" ") + "</div></div>";
+  },
+
+  // Why the meeting can't be closed yet, or "" when it can. Closing needs a
+  // quorate meeting whose agenda has been fully worked through.
+  _closeBlockers(d) {
+    if (!this._quorum(d).met) return "Quorum not met";
+    const open = (d.agenda || []).filter((a) => (a.status || "Pending") === "Pending");
+    if (open.length) return "Agenda items still open: " +
+      open.map((a) => a.title || a.item_id).join(", ");
+    return "";
   },
 
   _info(d) {
@@ -145,6 +171,14 @@ const MeetingDetail = {
     document.getElementById("mt-pdf").onclick = function () {
       window.open("/api/meetings/" + self._id + "/pack.pdf", "_blank");
     };
+    const closeBtn = document.getElementById("mt-close");
+    if (closeBtn && !closeBtn.disabled) {
+      closeBtn.onclick = function () {
+        App.amend("Close " + self._id + " — this generates and files the minutes.",
+          "POST", "/api/meetings/" + self._id + "/close", {},
+          () => self.show(self._id, self._tab));
+      };
+    }
     document.querySelectorAll("[data-minfo]").forEach(function (btn) {
       const key = btn.getAttribute("data-minfo");
       btn.onclick = function () { self._editField(key, d[key]); };
