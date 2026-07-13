@@ -112,6 +112,9 @@ MRC_COLLECTION_SPECS = {
         {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
         {"key": "product_id", "label": "Product", "type": "text"},
         {"key": "text", "label": "Minutes", "type": "textarea"},
+        # The agenda item this minute is filed under, so the Minutes tab reads as
+        # a walk-through of the agenda. Blank = general/unfiled. Hidden.
+        {"key": "agenda_item_id", "label": "Agenda item", "type": "text", "hidden": True},
     ]},
     "participants": {"label": "Participants", "id_prefix": "P", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},

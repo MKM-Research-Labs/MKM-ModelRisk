@@ -121,7 +121,7 @@ Object.assign(MeetingDetail, {
     }
     App.amend("Confirm — " + title + ".", "POST",
       "/api/meetings/" + this._id + "/collections/minutes",
-      { fields: { title: title, text: text } },
+      { fields: { title: title, text: text, agenda_item_id: id } },
       () => {
         App.send("POST", "/api/meetings/" + self._id + "/collections/agenda/" + id,
           { fields: { status: "Completed" }, confirmed: true })
