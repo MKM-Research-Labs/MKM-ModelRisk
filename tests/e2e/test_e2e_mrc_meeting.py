@@ -32,10 +32,17 @@ _HEADERS = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
 
 
 def _schedule(page: Page, base_url: str, meeting_id: str, title: str) -> None:
-    """Seed a Company-level committee and schedule a meeting bound to it."""
+    """Seed a Company-level committee (quorum requirements off, so meetings are
+    quorate with no attendance) and schedule a meeting bound to it."""
     page.request.post(base_url + "/api/reference/collections/mrc",
                       data={"fields": {"value": "MRC-DEFAULT", "name": "Default MRC",
-                                       "level": "Company"}, "confirmed": True}, headers=_HEADERS)
+                                       "level": "Company", "quorum_require_chair": "No",
+                                       "quorum_require_secretary": "No", "quorum_min_voting": "0",
+                                       "quorum_min_non_voting": "0"}, "confirmed": True},
+                      headers=_HEADERS)
+    # Seeded via the API — drop MrcNav's cached reference data so the MRC tab
+    # sees the new committee and renders the schedule form.
+    page.evaluate("typeof MrcNav !== 'undefined' && MrcNav.invalidate()")
     open_tab(page, "mrc")
     page.fill("#sc-meeting_id", meeting_id)
     page.fill("#sc-title", title)
@@ -72,8 +79,8 @@ def test_model_analysis_upload_on_models_tab(page: Page, base_url: str, tmp_path
 
 
 def test_meeting_participants_roster_and_guests(page: Page, base_url: str):
-    """A meeting lists its committee's roster (read-only) and lets you add a
-    guest — a person from the register who is not a member of that committee."""
+    """A meeting lists its committee's roster (in the persistent left panel) and
+    lets you add a guest — a person from the register who is not a member."""
     for name in ("David Kelly", "Sofia Castro", "Greg Guest"):
         page.request.post(base_url + "/api/reference/collections/people",
                           data={"fields": {"name": name}, "confirmed": True}, headers=_HEADERS)
@@ -92,14 +99,14 @@ def test_meeting_participants_roster_and_guests(page: Page, base_url: str):
     open_app(page, base_url)
     open_tab(page, "mrc")
     page.click("tr.clickable[data-id='MTG-P']")
-    page.click("[data-mtab='participants']")
-    content = page.locator("#mtd-content")
-    expect(content).to_contain_text("David Kelly")
-    expect(content).to_contain_text("Chair")
-    expect(content).to_contain_text("Sofia Castro")
-    expect(content).to_contain_text("Voting")
+    # Participants are shown in the persistent left panel, not a tab.
+    panel = page.locator(".mtd-left")
+    expect(panel).to_contain_text("David Kelly")
+    expect(panel).to_contain_text("Chair")
+    expect(panel).to_contain_text("Sofia Castro")
+    expect(panel).to_contain_text("Voting")
     # Add a non-member as a guest.
     page.select_option("#guest-pick", "Greg Guest")
     page.click("#guest-add")
     confirm(page)
-    expect(page.locator("#mtd-content")).to_contain_text("Greg Guest")
+    expect(page.locator(".mtd-left")).to_contain_text("Greg Guest")

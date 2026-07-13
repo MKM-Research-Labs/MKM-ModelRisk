@@ -191,20 +191,33 @@ def schedule():
         fields=body.get("fields") or {},
     )
     rebuild_meeting_view()
-    # Every meeting opens with a roll call: confirm attendance and that the
-    # committee is quorate before any business. Seeded as agenda item 1, ahead
-    # of any queued sign-offs.
-    dispatch(
-        "add_collection_item", add_collection_item, context=ctx,
-        meeting_id=meeting_id, collection="agenda",
-        fields={"title": "Rollcall and Confirmation of Quorum",
-                "description": "Confirm attendance in the participants panel; the "
-                               "meeting may proceed only once quorate."},
-    )
+    # Seed the standard high-level agenda. The detail of model sign-offs and
+    # analysis lives in the Models tab, so the agenda stays a running order.
+    for title, desc in _DEFAULT_AGENDA:
+        dispatch(
+            "add_collection_item", add_collection_item, context=ctx,
+            meeting_id=meeting_id, collection="agenda",
+            fields={"title": title, "description": desc},
+        )
     rebuild_meeting_view()
     # Pull any queued sign-off requests for this committee onto the new agenda.
+    # (They carry the subject id + proposed RAG but render in the Models tab.)
     drain_pending_for_meeting(ctx, get_meeting_raw(meeting_id) or {"meeting_id": meeting_id, "data": {}})
     return jsonify(get_meeting(meeting_id)), 201
+
+
+# The standing MRC agenda seeded on every new meeting.
+_DEFAULT_AGENDA = (
+    ("Rollcall and Confirmation of Quorum",
+     "Confirm attendance in the participants panel; the meeting may proceed only once quorate."),
+    ("Sign-off of the previous MRM minutes",
+     "Proposed by the chair."),
+    ("Review model sign-off",
+     "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."),
+    ("Review model analysis",
+     "Model analyses are reviewed in the Models tab (Analysis) — confirmation to proceed and any actions."),
+    ("Any Other Business (AOB)", ""),
+)
 
 
 @mrc_bp.post("/<meeting_id>/field")

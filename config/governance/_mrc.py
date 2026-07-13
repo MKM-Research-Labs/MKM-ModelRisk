@@ -43,6 +43,9 @@ VALID_ACTION_STATUSES = ("Open", "Closed")
 # chair can't approve a sign-off and passes it up to a higher-tier MRC.
 VALID_AGENDA_STATUS = ("Pending", "Completed", "Escalated", "Rejected")
 VALID_PARTICIPANT_STATUS = ("Invited", "Attended", "Apologies", "Declined")
+# A model's analysis review at the MRC is a "confirmation to proceed" — that it
+# was reviewed, discussed and agreed to proceed — not a formal risk sign-off.
+VALID_ANALYSIS_STATUS = ("Pending", "Reviewed — agreed to proceed")
 
 # Model review-status thresholds (days until next review), for the Models tab.
 REVIEW_DUE_SOON_DAYS = 30
@@ -116,6 +119,11 @@ MRC_COLLECTION_SPECS = {
         {"key": "model_id", "label": "Model", "type": "text", "required": True},
         # Who presents this model at the meeting (a person from the register).
         {"key": "presenter", "label": "Presenter", "type": "text", "reference": "people"},
+        # The MRC's confirmation to proceed on the model's analysis (reviewed,
+        # discussed, agreed) plus an optional discussion note. Not a sign-off.
+        {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
+         "options": VALID_ANALYSIS_STATUS},
+        {"key": "analysis_note", "label": "Analysis note", "type": "text"},
         # Per-model analysis document uploaded for this meeting. Hidden metadata;
         # the Models tab renders an upload/download control per in-scope model.
         {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},

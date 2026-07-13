@@ -43,11 +43,25 @@ def confirm(page: Page) -> None:
 
 
 def register_model(page: Page, model_id: str, name: str, model_type: str | None = None) -> None:
+    # A model owner is required at registration. Seed a person via the API and
+    # refresh the cached reference data so the owner picker (populated on modal
+    # open) offers them.
+    page.evaluate(
+        """async () => {
+          await fetch('/api/reference/collections/people', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-Auth-Request-User': 'e2e'},
+            body: JSON.stringify({fields: {name: 'E2E Owner'}, confirmed: true}),
+          });
+          if (typeof MrcNav !== 'undefined') MrcNav.invalidate();
+        }"""
+    )
     page.click("#m-register")          # open the registration modal
     page.fill("#reg-model_id", model_id)
     page.fill("#reg-name", name)
     if model_type is not None:
         page.select_option("#reg-type", model_type)   # e.g. "Market Data Model"
+    page.select_option("#reg-owner", "E2E Owner")     # owner is mandatory
     page.click("#reg-submit")          # submit -> confirm-to-amend
     confirm(page)
     expect(page.locator(f"tr.clickable[data-id='{model_id}']")).to_be_visible()

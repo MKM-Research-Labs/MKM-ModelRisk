@@ -418,8 +418,16 @@ const MeetingDetail = {
     return this.collSpec("agenda").fields.filter((f) => !f.hidden);
   },
 
+  // Sign-off items live in the Models tab (Approvals), so the agenda shows only
+  // the high-level running order.
+  _signoffItems() {
+    return ((this._meeting.data || {}).agenda || []).filter(
+      (a) => a.subject_model_id || a.subject_product_id);
+  },
+
   _agendaContent() {
-    const items = (this._meeting.data || {}).agenda || [];
+    const items = ((this._meeting.data || {}).agenda || []).filter(
+      (it) => !(it.subject_model_id || it.subject_product_id));
     const cards = items.length
       ? items.map((it, i) => this._agendaCard(it, i)).join("")
       : '<div class="empty">No agenda items yet.</div>';
@@ -514,6 +522,45 @@ const MeetingDetail = {
         }).catch((e) => App.toast(e.message, "error"));
       };
     });
+  },
+
+  // A sign-off (Approvals) row for the Models tab: subject → proposed RAG, with
+  // the committee's decision (Sign off / Reject + next review). Keeps the
+  // data-agapprove/data-agreject attrs so the not-quorate lock still applies.
+  _signoffRow(item) {
+    const subjectId = item.subject_model_id || item.subject_product_id;
+    const pending = item.status === "Pending";
+    const decision = pending
+      ? '<span class="muted" style="font-size:11px">Next review</span> ' +
+        '<input type="date" id="ag-nextreview-' + esc(item.item_id) + '" value="' + oneYearAhead() +
+        '" style="padding:3px 6px;font-size:11px"> ' +
+        '<button class="btn small primary" data-agapprove="' + esc(item.item_id) + '">Sign off</button> ' +
+        '<button class="btn small danger" data-agreject="' + esc(item.item_id) + '">Reject</button>'
+      : statusBadge(item.status);
+    const doc = item.document_original_name
+      ? ' &nbsp;·&nbsp; <a href="/api/meetings/' + esc(this._id) + "/agenda/" + esc(item.item_id) +
+        '/document" target="_blank">' + esc(item.document_original_name) + "</a>"
+      : "";
+    return '<div class="card" style="margin-bottom:8px"><div class="row" ' +
+      'style="justify-content:space-between;align-items:center">' +
+      '<div><span class="code">' + esc(subjectId) + "</span> &rarr; " + ragBadge(item.proposed_rag) +
+      doc + '</div><div class="rowact">' + decision + "</div></div></div>";
+  },
+
+  _approvalsSection() {
+    const items = this._signoffItems();
+    const rows = items.length
+      ? items.map((it) => this._signoffRow(it)).join("")
+      : '<div class="empty">No sign-offs routed to this meeting.</div>';
+    return '<div class="section-header">Approvals — risk-rating sign-offs</div>' +
+      '<p class="muted" style="font-size:12px">Owner-raised sign-offs routed to this committee. ' +
+      "Signing off stamps the subject's rating and records a minute.</p>" + rows;
+  },
+
+  _bindSignoffs() {
+    const self = this;
+    const items = this._signoffItems();
+    const byId = (attr, el) => items.find((i) => i.item_id === el.getAttribute(attr));
     const nextReview = (id) => (document.getElementById("ag-nextreview-" + id) || {}).value || null;
     document.querySelectorAll("[data-agapprove]").forEach(function (btn) {
       const item = byId("data-agapprove", btn);
@@ -523,7 +570,7 @@ const MeetingDetail = {
         App.amend("Sign off " + subj + " → " + item.proposed_rag +
           ". Sets next review" + (nr ? " " + nr : "") + "; add any comments below.", "POST",
           "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/approve-signoff",
-          { next_review_date: nr }, () => self.show(self._id, "agenda"));
+          { next_review_date: nr }, () => self.show(self._id, "models_in_scope"));
       };
     });
     document.querySelectorAll("[data-agreject]").forEach(function (btn) {
@@ -534,7 +581,7 @@ const MeetingDetail = {
         App.amend("Reject sign-off for " + subj + " → " + item.proposed_rag +
           " (rating not promoted). Add any comments below.", "POST",
           "/api/meetings/" + self._id + "/agenda/" + item.item_id + "/reject-signoff",
-          { next_review_date: nr }, () => self.show(self._id, "agenda"));
+          { next_review_date: nr }, () => self.show(self._id, "models_in_scope"));
       };
     });
   },
@@ -624,7 +671,56 @@ const MeetingDetail = {
 
   // Phase MRC-3: name the MRC in the filter banner so the chair can see at a
   // glance which committee's remit is being surfaced.
+  // The Models tab is the home for every model decision point: Approvals (the
+  // risk-rating sign-offs) and Analysis (in-scope models with the MRC's
+  // confirmation to proceed and any follow-on actions).
   _modelsTab() {
+    return this._approvalsSection() +
+      '<div class="section-header" style="margin-top:18px">Analysis</div>' +
+      '<p class="muted" style="font-size:12px">Choose the models in scope, then record the ' +
+      "confirmation to proceed and any follow-on actions.</p>" +
+      this._scopeTable() + this._analysisReview();
+  },
+
+  // One review block per in-scope model: the MRC's confirmation to proceed
+  // (reviewed, discussed, agreed) with a note, plus follow-on action items
+  // (kept in the meeting's actions collection, linked by model_id).
+  _analysisReview() {
+    const inScope = this._models;
+    if (!inScope.length) {
+      return '<div class="muted" style="font-size:12px;margin-top:8px">' +
+        "Add models to scope above to record their analysis outcome and actions.</div>";
+    }
+    const allActions = (this._meeting.data || {}).actions || [];
+    const opts = (cur) => ["Pending", "Reviewed — agreed to proceed"].map((s) =>
+      "<option" + (s === (cur || "Pending") ? " selected" : "") + ">" + esc(s) + "</option>").join("");
+    const blocks = inScope.map((m) => {
+      const mid = m.model_id;
+      const acts = allActions.filter((a) => a.model_id === mid);
+      const actList = acts.length
+        ? acts.map((a) => '<div class="prow"><div style="font-size:12px">' + esc(a.description) +
+            ' <span class="muted" style="font-size:10px">' +
+            (a.owner ? esc(a.owner) + " · " : "") + (a.target_date ? esc(a.target_date) + " · " : "") +
+            esc(a.status || "Open") + "</span></div></div>").join("")
+        : '<div class="muted" style="font-size:11px">No actions yet.</div>';
+      return '<div class="card" style="margin-bottom:8px">' +
+        '<div class="row" style="justify-content:space-between;align-items:center">' +
+        '<b class="modelid">' + esc(mid) + "</b>" +
+        '<div><span class="muted" style="font-size:11px">Outcome</span> ' +
+        '<select data-analysis-status="' + esc(mid) + '">' + opts(m.analysis_status) + "</select></div></div>" +
+        '<div class="field" style="margin-top:6px"><label>Discussion note</label>' +
+        '<input data-analysis-note="' + esc(mid) + '" value="' + esc(m.analysis_note || "") + '"></div>' +
+        '<div class="section-header" style="margin-top:8px;font-size:11px">Follow-on actions</div>' + actList +
+        '<div class="row" style="margin-top:6px;flex-wrap:wrap;align-items:flex-end">' +
+        '<div class="field"><label>Action</label><input id="act-desc-' + esc(mid) + '"></div>' +
+        '<div class="field"><label>Owner</label><input id="act-owner-' + esc(mid) + '"></div>' +
+        '<div class="field"><label>Target</label><input type="date" id="act-date-' + esc(mid) + '"></div>' +
+        '<button class="btn small" data-act-add="' + esc(mid) + '">Add action</button></div></div>';
+    }).join("");
+    return blocks;
+  },
+
+  _scopeTable() {
     const inScope = new Set(this._models.map((m) => m.model_id));
     const filter = this._scopeFilter();
     const candidates = this._candidateModels();
@@ -690,12 +786,46 @@ const MeetingDetail = {
 
   _bindModels() {
     const self = this;
+    this._bindSignoffs();
     const toggle = document.getElementById("mt-show-all");
     if (toggle) toggle.onchange = function () {
       self._showAll = toggle.checked; self._render();
     };
     const itemByModel = {};
     self._models.forEach((r) => { itemByModel[r.model_id] = r.item_id; });
+    // Confirmation to proceed + discussion note per in-scope model.
+    document.querySelectorAll("[data-analysis-status]").forEach(function (sel) {
+      const modelId = sel.getAttribute("data-analysis-status");
+      sel.onchange = function () {
+        App.amend("Set analysis outcome for " + modelId + " → " + sel.value + ".", "POST",
+          "/api/meetings/" + self._id + "/collections/models_in_scope/" + itemByModel[modelId],
+          { fields: { analysis_status: sel.value } }, () => self.show(self._id, "models_in_scope"));
+      };
+    });
+    document.querySelectorAll("[data-analysis-note]").forEach(function (inp) {
+      const modelId = inp.getAttribute("data-analysis-note");
+      inp.onchange = function () {
+        App.amend("Set analysis note for " + modelId + ".", "POST",
+          "/api/meetings/" + self._id + "/collections/models_in_scope/" + itemByModel[modelId],
+          { fields: { analysis_note: inp.value } }, () => self.show(self._id, "models_in_scope"));
+      };
+    });
+    // Follow-on action items per in-scope model (meeting actions, linked by model).
+    document.querySelectorAll("[data-act-add]").forEach(function (btn) {
+      const mid = btn.getAttribute("data-act-add");
+      btn.onclick = function () {
+        const desc = (document.getElementById("act-desc-" + mid) || {}).value;
+        if (!desc) { App.toast("Action description is required", "error"); return; }
+        const owner = (document.getElementById("act-owner-" + mid) || {}).value;
+        const date = (document.getElementById("act-date-" + mid) || {}).value;
+        const fields = { description: desc, model_id: mid, status: "Open" };
+        if (owner) fields.owner = owner;
+        if (date) fields.target_date = date;
+        App.amend("Add action for " + mid + ".", "POST",
+          "/api/meetings/" + self._id + "/collections/actions",
+          { fields: fields }, () => self.show(self._id, "models_in_scope"));
+      };
+    });
     document.querySelectorAll("[data-presenter]").forEach(function (sel) {
       const modelId = sel.getAttribute("data-presenter");
       sel.onchange = function () {
