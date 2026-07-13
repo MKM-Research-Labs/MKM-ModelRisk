@@ -94,7 +94,8 @@ const MRC = {
       '<div class="field"><label>Meeting ID *</label><input id="sc-meeting_id" placeholder="MRC-2026-Q3"></div>';
     specs.fields.forEach(function (f) {
       // The MRC is fixed to the selected committee; status defaults on schedule.
-      if (f.key === "status" || f.key === "mrc") return;
+      // Hidden fields (lifecycle flags/artefacts) are set by workflow, not here.
+      if (f.key === "status" || f.key === "mrc" || f.hidden) return;
       const req = f.key === "title" || f.key === "date" ? " *" : "";
       inputs += '<div class="field"><label>' + esc(f.label) + req + "</label>" +
         inputControl("sc-" + f.key, f) + "</div>";
@@ -114,7 +115,7 @@ const MRC = {
     // and chair are derived from that MRC.
     const fields = { mrc: this._mrc };
     this._specs.fields.forEach(function (f) {
-      if (f.key === "title" || f.key === "date" || f.key === "status" || f.key === "mrc") return;
+      if (f.key === "title" || f.key === "date" || f.key === "status" || f.key === "mrc" || f.hidden) return;
       const v = val("sc-" + f.key);
       if (v !== "") fields[f.key] = v;
     });

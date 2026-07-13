@@ -63,6 +63,12 @@ MEETING_FIELD_SPECS = {
     "time": {"label": "Time", "type": "text"},
     "location": {"label": "Location", "type": "text"},
     "status": {"label": "Status", "type": "choice", "options": VALID_MEETING_STATUSES},
+    # Lifecycle flags/artefacts, set by workflow (not the schedule form). Hidden.
+    # agenda_locked: the chair/secretary has finalised the agenda for distribution.
+    # minutes_filename/name: the generated minutes PDF saved when the meeting closes.
+    "agenda_locked": {"label": "Agenda locked", "type": "text", "hidden": True},
+    "minutes_filename": {"label": "Minutes file", "type": "text", "hidden": True},
+    "minutes_original_name": {"label": "Minutes name", "type": "text", "hidden": True},
 }
 # ``company`` is not a meeting field — the institution is a singleton
 # (see MRC settings org_name). Division/department are derived from the MRC.
@@ -79,6 +85,10 @@ MRC_COLLECTION_SPECS = {
         # review_signoff / review_analysis / aob), so the UI renders it bespoke
         # rather than as a generic card. Blank for manually-added items. Hidden.
         {"key": "kind", "label": "Kind", "type": "text", "hidden": True},
+        # On the minutes_signoff item: the id of the previous meeting whose minutes
+        # are being reviewed/signed off (chosen from prior closed meetings). Hidden.
+        {"key": "prev_minutes_meeting", "label": "Previous minutes meeting",
+         "type": "text", "hidden": True},
         # A manually-added agenda item is just Title / Description / Presenter
         # (plus an optional document). Status + the sign-off routing fields are
         # set by the workflow, not the add form, so they are hidden from it.

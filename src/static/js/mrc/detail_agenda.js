@@ -39,22 +39,38 @@ Object.assign(MeetingDetail, {
     return this._agendaItems().slice().sort((a, b) => rank(a) - rank(b));
   },
 
+  _agendaLocked() { return (this._meeting.data || {}).agenda_locked === "true"; },
+
   _agendaContent() {
+    const locked = this._agendaLocked();
     const items = this._orderedAgenda();
     const cards = items.length
       ? items.map((it, i) => this._agendaKind(it) ? this._standingCard(it, i) : this._manualCard(it, i)).join("")
       : '<div class="empty">No agenda items yet.</div>';
-    const names = this._participantNames(this._meeting.data || {});
-    const presenterOpts = ['<option value=""></option>'].concat(
-      names.map((n) => "<option>" + esc(n) + "</option>")).join("");
-    return '<div id="agenda-list">' + cards + "</div>" +
-      '<div class="section-header" style="margin-top:14px">Add agenda item</div>' +
-      '<div class="row" style="flex-wrap:wrap;align-items:flex-end">' +
-      '<div class="field"><label>Title *</label><input id="ag-add-title"></div>' +
-      '<div class="field"><label>Description</label><input id="ag-add-description"></div>' +
-      '<div class="field"><label>Presenter</label><select id="ag-add-presenter">' + presenterOpts + "</select></div>" +
-      '<button class="btn small primary" id="ag-add">Add&hellip;</button></div>' +
-      '<p class="muted" style="font-size:11px;margin-top:4px">Attach a document from the item once added.</p>';
+    // Finalise/distribute bar: once the chair/secretary locks the agenda it is
+    // read-only and can be downloaded as a distribution pack (ZIP) for members.
+    const bar = locked
+      ? '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">' +
+        '<span class="badge" style="background:#388e3c">Agenda finalised</span><span>' +
+        '<a class="btn small primary" href="/api/meetings/' + esc(this._id) +
+        '/distribution.zip">&darr; Distribution pack (ZIP)</a> ' +
+        '<button class="btn small" data-agenda-unlock="1">Unlock</button></span></div>'
+      : '<div class="row" style="justify-content:flex-end;margin-bottom:10px">' +
+        '<button class="btn small" data-agenda-lock="1">Finalise agenda for distribution&hellip;</button></div>';
+    let html = bar + '<div id="agenda-list">' + cards + "</div>";
+    if (!locked) {
+      const names = this._participantNames(this._meeting.data || {});
+      const presenterOpts = ['<option value=""></option>'].concat(
+        names.map((n) => "<option>" + esc(n) + "</option>")).join("");
+      html += '<div class="section-header" style="margin-top:14px">Add agenda item</div>' +
+        '<div class="row" style="flex-wrap:wrap;align-items:flex-end">' +
+        '<div class="field"><label>Title *</label><input id="ag-add-title"></div>' +
+        '<div class="field"><label>Description</label><input id="ag-add-description"></div>' +
+        '<div class="field"><label>Presenter</label><select id="ag-add-presenter">' + presenterOpts + "</select></div>" +
+        '<button class="btn small primary" id="ag-add">Add&hellip;</button></div>' +
+        '<p class="muted" style="font-size:11px;margin-top:4px">Attach a document from the item once added.</p>';
+    }
+    return html;
   },
 
   // Compact card for a manually-added (kind-less) item.
@@ -62,7 +78,8 @@ Object.assign(MeetingDetail, {
     const meta = [];
     if (item.presenter) meta.push("Presenter: <b>" + esc(item.presenter) + "</b>");
     meta.push("Status: " + statusBadge(item.status));
-    const actions = '<button class="btn small" data-aged="' + esc(item.item_id) + '">Edit</button> ' +
+    const actions = this._agendaLocked() ? "" :
+      '<button class="btn small" data-aged="' + esc(item.item_id) + '">Edit</button> ' +
       '<button class="btn small danger" data-agrm="' + esc(item.item_id) + '">Remove</button>';
     return '<div class="card" style="margin-bottom:8px" id="agrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
@@ -88,6 +105,17 @@ Object.assign(MeetingDetail, {
     const self = this;
     const items = (this._meeting.data || {}).agenda || [];
     const byId = (attr, el) => items.find((i) => i.item_id === el.getAttribute(attr));
+    const lock = document.querySelector("[data-agenda-lock]");
+    if (lock) lock.onclick = () => App.amend("Finalise the agenda of " + self._id +
+      " for distribution.", "POST", "/api/meetings/" + self._id + "/lock-agenda", {},
+      () => self.show(self._id, "agenda"));
+    const unlock = document.querySelector("[data-agenda-unlock]");
+    if (unlock) unlock.onclick = () => App.amend("Re-open the agenda of " + self._id + ".",
+      "POST", "/api/meetings/" + self._id + "/unlock-agenda", {},
+      () => self.show(self._id, "agenda"));
+    this._bindStandingAgenda();
+    this._bindAgendaDocs();
+    if (this._agendaLocked()) return;   // no add/edit/remove while finalised
     document.getElementById("ag-add").onclick = function () {
       const title = val("ag-add-title");
       if (!title) { App.toast("Title is required", "error"); return; }
@@ -107,8 +135,6 @@ Object.assign(MeetingDetail, {
     document.querySelectorAll("[data-aged]").forEach(function (btn) {
       btn.onclick = () => self._agendaEdit(byId("data-aged", btn));
     });
-    this._bindAgendaDocs();
-    this._bindStandingAgenda();
   },
 
   // Wire the per-item document upload buttons (manual + minutes-sign-off items).
