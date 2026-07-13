@@ -100,7 +100,7 @@ const ProductDetail = {
       ["remediation_steps", "Remediation", n("remediation_steps")],
       ["validation_questions", "Validation", n("validation_questions")],
       ["operational_failure_events", "Events", n("operational_failure_events")],
-      ["risk", "Risk Rating", null], ["actions", "Actions", n("actions")], ["linkage", "MRC", null],
+      ["risk", "Risk Rating", null], ["linkage", "MRC", null],
       ["docs", "Docs", n("documents")],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
@@ -121,7 +121,6 @@ const ProductDetail = {
     }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); this._bindDanger(); return; }
     if (this._tab === "risk") { box.innerHTML = DetailTabs.risk(this._risk); return; }
-    if (this._tab === "actions") { box.innerHTML = this._actionsTab(d); this._bindActions(); return; }
     if (this._tab === "linkage") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
@@ -130,9 +129,16 @@ const ProductDetail = {
       return;
     }
     const spec = this.collSpec(this._tab);
-    box.innerHTML = Collections.render(d, { collections: [spec] }, this._product.retired);
+    let html = Collections.render(d, { collections: [spec] }, this._product.retired);
+    const docCat = COLLECTION_DOC_CATEGORY[this._tab];
+    const docOpts = { category: docCat, docs: d.documents || [], base: "/api/products/", id: this._id,
+      retired: this._product.retired, refresh: () => this.show(this._id, this._tab) };
+    if (docCat) html += '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
+      DocPanel.html(docOpts);
+    box.innerHTML = html;
     Collections.bind("/api/products/" + this._id + "/collections/", { collections: [spec] },
       this._product.retired, () => this.show(this._id, this._tab), d);
+    if (docCat) DocPanel.bind(docOpts);
   },
 
   _section(title, keys, d) {

@@ -53,6 +53,22 @@ const MeetingDetail = {
 
   collSpec(key) { return this._specs.collections.find((c) => c.key === key); },
 
+  // The friendly name for a model/product id (resolved from the loaded inventory
+  // / product lists), so the name shows against every bare id.
+  _subjectName(id) {
+    if (!id) return "";
+    const m = (this._inventory || []).find((x) => x.model_id === id);
+    if (m) return (m.data || {}).name || "";
+    const p = (this._products || []).find((x) => x.product_id === id);
+    return p ? (p.data || {}).product || "" : "";
+  },
+
+  // "<code>id</code> name" for display wherever a subject id appears.
+  _subjectLabelHtml(id) {
+    const n = this._subjectName(id);
+    return '<span class="code">' + esc(id) + "</span>" + (n ? " " + esc(n) : "");
+  },
+
   _render() {
     const m = this._meeting, d = m.data || {};
     // Participants live in a persistent left panel (with the live quorum badge)

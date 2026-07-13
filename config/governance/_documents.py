@@ -19,8 +19,15 @@
 # SOFTWARE.
 """Document categories and bibliography field specs (coding rule R1)."""
 
-# Per-model document categories (each a sub-tab on the model Docs tab).
-DOC_CATEGORIES = ("Core Documentation", "Test Results", "Analysis", "Monitoring")
+# Per-model document categories (each a sub-tab on the model Docs tab). The
+# Unit/Integration/Benchmark Test, Event Evidence and Remediation Evidence
+# categories back the in-context upload panels on the Testing block and the
+# Events / Remediation tabs (they still appear on the Docs tab too).
+DOC_CATEGORIES = (
+    "Core Documentation", "Test Results", "Analysis", "Monitoring",
+    "Unit Test", "Integration Test", "Benchmark Test",
+    "Event Evidence", "Remediation Evidence",
+)
 
 # Bibliography reference fields (top-level References tab + BibTeX export).
 BIBLIOGRAPHY_SPEC = {"label": "References", "id_prefix": "REF", "fields": [

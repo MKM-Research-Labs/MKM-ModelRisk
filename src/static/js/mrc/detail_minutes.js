@@ -99,7 +99,7 @@ Object.assign(MeetingDetail, {
     const related = item.model_id || item.product_id;
     const meta = [];
     if (item.presenter) meta.push("Presenter: <b>" + esc(item.presenter) + "</b>");
-    meta.push("Related: " + (related ? '<span class="code">' + esc(related) + "</span>" : '<span class="muted">—</span>'));
+    meta.push("Related: " + (related ? this._subjectLabelHtml(related) : '<span class="muted">—</span>'));
     // A sign-off approval minute is the record of a granted decision — it can be
     // edited but not removed; the sign-off is revoked on the model, not by
     // deleting its minute.

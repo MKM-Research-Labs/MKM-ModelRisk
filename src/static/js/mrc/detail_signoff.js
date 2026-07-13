@@ -48,7 +48,7 @@ Object.assign(MeetingDetail, {
       : "";
     return '<div class="card" style="margin-bottom:8px"><div class="row" ' +
       'style="justify-content:space-between;align-items:center">' +
-      '<div><span class="code">' + esc(subjectId) + "</span> &rarr; " + ragBadge(item.proposed_rag) +
+      "<div>" + this._subjectLabelHtml(subjectId) + " &rarr; " + ragBadge(item.proposed_rag) +
       doc + '</div><div class="rowact">' + decision + "</div></div></div>";
   },
 
