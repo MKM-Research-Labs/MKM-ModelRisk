@@ -168,8 +168,8 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
     page.request.post(base_url + "/api/reference/collections/mrc",
                       data={"fields": {"value": "MRC-X1-SO-CO", "name": "Company MRC",
                                        "level": "Company", "quorum_require_chair": "No",
-                                       "quorum_require_secretary": "No", "quorum_min_voting": "0",
-                                       "quorum_min_non_voting": "0"}, "confirmed": True}, headers=headers)
+                                       "quorum_require_secretary": "No", "quorum_min_voting": "0"},
+                                      "confirmed": True}, headers=headers)
     page.request.post(base_url + "/api/meetings",
                       data={"meeting_id": "MRC-X1-SO", "title": "Signoff Meeting",
                             "date": "2026-11-11", "fields": {"mrc": "MRC-X1-SO-CO"},

@@ -37,8 +37,8 @@ def _schedule(page: Page, base_url: str, meeting_id: str, title: str) -> None:
     page.request.post(base_url + "/api/reference/collections/mrc",
                       data={"fields": {"value": "MRC-DEFAULT", "name": "Default MRC",
                                        "level": "Company", "quorum_require_chair": "No",
-                                       "quorum_require_secretary": "No", "quorum_min_voting": "0",
-                                       "quorum_min_non_voting": "0"}, "confirmed": True},
+                                       "quorum_require_secretary": "No", "quorum_min_voting": "0"},
+                                      "confirmed": True},
                       headers=_HEADERS)
     # Seeded via the API — drop MrcNav's cached reference data so the MRC tab
     # sees the new committee and renders the schedule form.
