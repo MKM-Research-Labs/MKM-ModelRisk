@@ -62,7 +62,8 @@ const MrcNav = {
     const { committees, ref } = await this.load();
     this.normalize(committees, ref);
     const key = JSON.stringify(this.state) + "|" +
-      committees.map((c) => c.value).join(",");
+      committees.map((c) => c.value).join(",") + "|" +
+      ((ref && ref.division) || []).map((d) => d.value).join(",");
     if (key === this._key && el.firstChild) return;   // unchanged → leave as-is
     this._key = key;
     el.innerHTML = this.html(committees, ref);
@@ -96,9 +97,12 @@ const MrcNav = {
     return groups;
   },
 
-  // Divisions in reference order first, then any extra buckets (Company/Other).
+  // Every division from reference data (in reference order), so the top row
+  // showcases the whole org tree — including divisions with no committees or
+  // models yet, so you can select one and register into it. Any extra buckets
+  // committees roll up to (Company/Other) are appended after.
   orderedDivisions(groups, ref) {
-    const refOrder = ((ref && ref.division) || []).map((d) => d.value).filter((dv) => groups[dv]);
+    const refOrder = ((ref && ref.division) || []).map((d) => d.value);
     return refOrder.concat(Object.keys(groups).filter((dv) => !refOrder.includes(dv)));
   },
 
@@ -107,8 +111,12 @@ const MrcNav = {
     const s = this.state || { div: null, mrc: null };
     if (!s.div) { this.state = { div: null, mrc: null }; return; }
     const groups = this.groups(committees, ref);
-    if (!groups[s.div]) { this.state = { div: null, mrc: null }; return; }
-    if (s.mrc && !groups[s.div].some((c) => c.value === s.mrc)) {
+    // A division is valid if it exists in reference data (even with no
+    // committees) or is a synthetic Company/Other bucket.
+    if (!this.orderedDivisions(groups, ref).includes(s.div)) {
+      this.state = { div: null, mrc: null }; return;
+    }
+    if (s.mrc && !(groups[s.div] || []).some((c) => c.value === s.mrc)) {
       this.state = { div: s.div, mrc: null }; return;
     }
     this.state = { div: s.div, mrc: s.mrc };
@@ -117,14 +125,14 @@ const MrcNav = {
   // Two-tier tab strip: an "All" tab and the divisions on top; when a division is
   // active, its "All <div>" tab plus that division's committees appear below.
   html(committees, ref) {
-    if (!committees.length) return "";
     const state = this.state;
     const groups = this.groups(committees, ref);
+    const divisions = this.orderedDivisions(groups, ref);
+    if (!divisions.length) return "";
     const tab = (label, active, attr) =>
       '<button class="dtab' + (active ? " active" : "") + '" ' + attr + ">" + esc(label) + "</button>";
     const top = tab("All", !state.div, 'data-all="1"') +
-      this.orderedDivisions(groups, ref)
-        .map((dv) => tab(dv, state.div === dv, 'data-div="' + esc(dv) + '"')).join("");
+      divisions.map((dv) => tab(dv, state.div === dv, 'data-div="' + esc(dv) + '"')).join("");
     let second = "";
     if (state.div && groups[state.div]) {
       second =
@@ -166,6 +174,26 @@ const MrcNav = {
     }
     if (state.div === "Company" || state.div === "Other") return true;  // synthetic buckets
     return data.division === state.div;                 // whole division
+  },
+
+  // The org assignment implied by the current selection, for pre-filling the
+  // register modals: {division, department}. A Department-level committee pins
+  // both; a Division-level one (or the whole-division view) pins only the
+  // division. Synthetic buckets (Company/Other) pin nothing.
+  currentScope(committees, ref) {
+    const s = this.state || {};
+    let division = (s.div && s.div !== "Company" && s.div !== "Other") ? s.div : "";
+    let department = "";
+    if (s.mrc) {
+      const c = (committees || []).find((x) => x.value === s.mrc);
+      if (c && c.level === "Department") {
+        department = c.scope_value || "";
+        division = this.divisionOf(c, ref) || division;
+      } else if (c && c.level === "Division") {
+        division = c.scope_value || division;
+      }
+    }
+    return { division, department };
   },
 
   // The committee the MRC page should show for the current shared selection —

@@ -56,6 +56,8 @@ main { padding: 20px; max-width: 1180px; margin: 0 auto; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field label { color: var(--muted); font-size: 11px; }
 input, select, textarea { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; background: #fff; color: var(--text); }
+/* Read-only org-scope values in the register modal — look like a disabled field. */
+.reg-scope { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: #f4f5f7; color: var(--muted); min-height: 34px; box-sizing: border-box; display: flex; align-items: center; }
 textarea { width: 100%; resize: vertical; }
 .btn { border: 1px solid var(--line); background: #f9f9f9; color: var(--text); padding: 7px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
 .btn:hover { border-color: var(--accent); }

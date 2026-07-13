@@ -25,6 +25,10 @@ from typing import Any
 from flask import Blueprint, jsonify
 
 from src.database import Event, read_all
+from src.governance.model_inventory._state import (
+    EVENT_FIELD_UPDATED,
+    EVENT_REGISTERED,
+)
 from src.governance.collections import (
     EVENT_ITEM_ADDED,
     EVENT_ITEM_REMOVED,
@@ -41,13 +45,20 @@ def _flat_fields(payload: dict) -> dict[str, Any]:
 
 
 def _changes(event: Event) -> list[dict[str, Any]]:
-    """A per-field before/after list for collection events (empty otherwise).
+    """A per-field before/after list for model field/register and collection
+    events (empty otherwise).
 
     New events carry the old values under ``_changes`` / ``_removed``; older
     events predate that capture, so their ``from`` is ``None`` (rendered as a
     plain "set to" rather than an "old -> new").
     """
     payload = event.payload or {}
+    if event.event_type == EVENT_FIELD_UPDATED:
+        return [{"field": payload.get("field"),
+                 "from": payload.get("from"), "to": payload.get("value")}]
+    if event.event_type == EVENT_REGISTERED:
+        return [{"field": k, "from": None, "to": v}
+                for k, v in payload.items() if k != "model_id"]
     if event.event_type == EVENT_ITEM_UPDATED:
         meta = payload.get("_changes")
         if meta:

@@ -91,8 +91,13 @@ const Audit = {
     const el = document.getElementById("tab-audit");
     MrcNav.normalize(this._committees, this._ref);
     const self = this;
-    const events = this._events.filter((e) =>
-      MrcNav.inScope(this._committees, this._ref, self._scopeData(e)));
+    const events = this._events
+      // Drop the SR 26-2 validation questions seeded automatically at
+      // registration — the user made no change, so they'd be misleading noise
+      // here. They remain in the immutable event log; this only hides them
+      // from the audit view.
+      .filter((e) => e.reason !== "Seed SR 26-2 validation questions")
+      .filter((e) => MrcNav.inScope(this._committees, this._ref, self._scopeData(e)));
     let rows = "";
     events.forEach(function (e) {
       const when = e.recorded_at.replace("T", " ").slice(0, 19);

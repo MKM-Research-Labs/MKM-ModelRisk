@@ -21,6 +21,15 @@
 // Tabbed MRC meeting detail: Agenda / Minutes / Participants / Models /
 // Decisions / Actions / Documents. The collection tabs reuse the shared
 // Collections renderer (add/edit/remove); Models joins the inventory.
+
+// Sensible default for a sign-off's next review date: one year out. The
+// committee can still change it before signing off.
+function oneYearAhead() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 const MeetingDetail = {
   _id: null, _meeting: null, _specs: null, _models: [], _inventory: [], _products: [],
   _tab: "agenda", _showAll: false,
@@ -347,6 +356,7 @@ const MeetingDetail = {
       ? (pending
           ? '<span class="muted" style="font-size:11px">Next review</span> ' +
             '<input type="date" id="ag-nextreview-' + esc(item.item_id) +
+            '" value="' + oneYearAhead() +
             '" style="padding:3px 6px;font-size:11px"> ' +
             '<button class="btn small primary" data-agapprove="' + esc(item.item_id) +
             '">Sign off</button> ' +
