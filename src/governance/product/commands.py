@@ -74,6 +74,17 @@ def _is_duplicate(combination: tuple, *, exclude_product_id: str, config) -> boo
     return False
 
 
+def _default_org_from_analytics(fields: dict[str, Any], config) -> None:
+    """A product's org home (division/department) follows its analytics model
+    unless explicitly given, so it lands under the right division/department —
+    and thus the right MRC — rather than unscoped and hidden from the region view."""
+    model = get_model(fields.get("analytics_model"), config=config) if fields.get("analytics_model") else None
+    data = (model or {}).get("data") or {}
+    for key in ("division", "department"):
+        if not fields.get(key) and data.get(key):
+            fields[key] = data[key]
+
+
 def register_product(
     *, product_id: str, product: str, fields: dict[str, Any] | None = None, actor: str,
     reason: str | None = None, config=None,
@@ -81,6 +92,7 @@ def register_product(
     """Register a Product binding a product to its three components."""
     state, version = _load(product_id, config)
     fields = dict(fields or {})
+    _default_org_from_analytics(fields, config)
     analytics_live = _analytics_live(fields.get("analytics_model"), config)
     combination = (product,) + tuple(fields.get(k) for k in _COMBINATION_KEYS[1:])
     duplicate = _is_duplicate(combination, exclude_product_id=product_id, config=config)
