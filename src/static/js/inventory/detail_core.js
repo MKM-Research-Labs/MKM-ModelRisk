@@ -107,8 +107,10 @@ const Detail = {
       ["actions", "Actions", n("actions")],
       ["decisions", "MRC linkage",
         (d.rag_signoff_history || []).length + this._decisions.length],
-      ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
-      ["danger", "Danger", null],
+      ["docs", "Docs", n("documents")],
+      // Audit is the final tab — the complete, read-only record of every change,
+      // entry and upload, so it always sits last after Danger.
+      ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
     ];
     return '<div class="dtabs">' + tabs.map((t) => {
       const danger = t[0] === "danger" ? " dtab-danger" : "";
