@@ -64,13 +64,33 @@ Object.assign(MeetingDetail, {
       esc(item.text || "") + "</textarea></div>";
   },
 
+  // Minutes read as a walk-through of the agenda: one section per agenda item (in
+  // order), its filed minutes underneath, then a General section for anything
+  // unfiled. The add form picks which agenda item a new minute belongs to.
   _minutesContent() {
-    const items = (this._meeting.data || {}).minutes || [];
-    const cards = items.length
-      ? items.map((it, i) => this._minuteCard(it, i)).join("")
-      : '<div class="empty">No minutes yet.</div>';
-    return '<div id="minutes-list">' + cards + "</div>" +
-      '<div class="section-header" style="margin-top:14px">Add minute</div>' +
+    const minutes = (this._meeting.data || {}).minutes || [];
+    const agenda = this._orderedAgenda();
+    const byAgenda = {};
+    minutes.forEach((m) => {
+      const k = m.agenda_item_id || "";
+      (byAgenda[k] = byAgenda[k] || []).push(m);
+    });
+    let num = 0;
+    const self = this;
+    const section = (heading, list) =>
+      '<div class="section-header" style="margin-top:14px">' + heading + "</div>" +
+      (list.length ? list.map((it) => self._minuteCard(it, num++)).join("")
+        : '<div class="muted" style="font-size:12px;margin:4px 0 10px">— no minutes recorded —</div>');
+    let html = '<div id="minutes-list">';
+    agenda.forEach((a) => { html += section(esc(a.title || ""), byAgenda[a.item_id] || []); delete byAgenda[a.item_id]; });
+    const general = Object.keys(byAgenda).reduce((acc, k) => acc.concat(byAgenda[k]), []);
+    if (general.length) html += section("General notes", general);
+    html += "</div>";
+    const agendaOpts = ['<option value="">— General —</option>'].concat(agenda.map((a) =>
+      '<option value="' + esc(a.item_id) + '">' + esc(a.title || a.item_id) + "</option>")).join("");
+    return html +
+      '<div class="section-header" style="margin-top:16px">Add minute</div>' +
+      '<div class="field"><label>Agenda item</label><select id="madd-agenda">' + agendaOpts + "</select></div>" +
       this._minuteForm("madd", null) +
       '<div class="row" style="margin-top:8px"><button class="btn small primary" id="madd-btn">Add&hellip;</button></div>';
   },
@@ -125,6 +145,7 @@ Object.assign(MeetingDetail, {
       const rel = self._relatedFields(val("madd-related"));
       if (rel.model_id) fields.model_id = rel.model_id;
       if (rel.product_id) fields.product_id = rel.product_id;
+      const ag = val("madd-agenda"); if (ag) fields.agenda_item_id = ag;
       if (!fields.title) { App.toast("Title is required", "error"); return; }
       App.amend("Add a minute.", "POST",
         "/api/meetings/" + self._id + "/collections/minutes", { fields: fields },

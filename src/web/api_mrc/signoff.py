@@ -50,6 +50,16 @@ def _auto_minute(ctx, meeting_id: str, meeting: dict, subject, subject_id: str,
     chair = meeting["data"].get("chair")
     if chair:
         fields["presenter"] = chair
+    # File the minute under the "Review model sign-off" standing agenda item so
+    # the Minutes tab reads as a walk-through of the agenda.
+    review_item = next(
+        (a for a in (meeting["data"].get("agenda") or [])
+         if a.get("kind") == "review_signoff"
+         or (a.get("title") or "").lower() == "review model sign-off"),
+        None,
+    )
+    if review_item:
+        fields["agenda_item_id"] = review_item.get("item_id")
     dispatch(
         "add_collection_item", add_collection_item, context=ctx,
         meeting_id=meeting_id, collection="minutes", fields=fields,
