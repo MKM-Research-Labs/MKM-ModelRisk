@@ -98,7 +98,7 @@ Object.assign(MeetingDetail, {
     }
     return '<div style="margin-top:8px">' + items.map((it) => {
       const subj = it.subject_model_id || it.subject_product_id;
-      return '<div class="prow"><div style="font-size:12px"><span class="code">' + esc(subj) + "</span> &rarr; " +
+      return '<div class="prow"><div style="font-size:12px">' + this._subjectLabelHtml(subj) + " &rarr; " +
         ragBadge(it.proposed_rag) + "</div>" + statusBadge(it.status) + "</div>";
     }).join("") +
       '</div><p class="muted" style="font-size:11px;margin-top:6px">Decisions are taken in the Models tab (Approvals).</p>';
@@ -111,7 +111,8 @@ Object.assign(MeetingDetail, {
       return '<div class="muted" style="margin-top:8px;font-size:12px">No models in scope.</div>';
     }
     return '<div style="margin-top:8px">' + models.map((m) =>
-      '<div class="prow"><div style="font-size:12px"><span class="code">' + esc(m.model_id) + "</span></div>" +
+      '<div class="prow"><div style="font-size:12px"><span class="code">' + esc(m.model_id) + "</span>" +
+      (m.name ? " " + esc(m.name) : "") + "</div>" +
       statusBadge(m.analysis_status || "Pending") + "</div>").join("") +
       '</div><p class="muted" style="font-size:11px;margin-top:6px">Outcomes are recorded in the Models tab (Analysis).</p>';
   },

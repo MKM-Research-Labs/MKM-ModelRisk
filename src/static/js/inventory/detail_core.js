@@ -30,6 +30,14 @@ const OVERVIEW_LEFT = ["division", "department", "methodology", "source_module",
 // Review status (a derived badge) replaces the raw review-date clutter.
 const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "lifecycle_stage", "review_status", "peer_reviewer"];
 const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
+// The document category that backs each Testing field's in-context upload panel.
+const TESTING_DOC_CATEGORY = {
+  unit_tests: "Unit Test", integration_tests: "Integration Test", benchmark_tests: "Benchmark Test",
+};
+// Collection tabs that carry an in-context supporting-documents panel.
+const COLLECTION_DOC_CATEGORY = {
+  operational_failure_events: "Event Evidence", remediation_steps: "Remediation Evidence",
+};
 const HEADER_DATES = ["next_review_date"];
 
 const Detail = {
@@ -104,7 +112,6 @@ const Detail = {
       ["validation_questions", "Validation & Assumptions", cov],
       ["operational_failure_events", "Events", n("operational_failure_events")],
       ["risk", "Risk Rating", null],
-      ["actions", "Actions", n("actions")],
       ["decisions", "MRC linkage",
         (d.rag_signoff_history || []).length + this._decisions.length],
       ["docs", "Docs", n("documents")],
@@ -130,7 +137,6 @@ const Detail = {
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
-    if (this._tab === "actions") { box.innerHTML = this._actionsTab(d); this._bindActions(); return; }
     if (this._tab === "decisions") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "docs") {
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [], this._model.retired);
@@ -153,18 +159,29 @@ const Detail = {
     }
     // Limitations tab: Testing (scalar fields) + Model weaknesses + Limitations.
     if (this._tab === "limitations") {
+      const docOpts = (cat) => ({ category: cat, docs: d.documents || [], base: "/api/models/",
+        id: this._id, retired: this._model.retired, refresh: () => this.show(this._id, "limitations") });
       const testing = '<div class="section-header">Testing</div>' +
         TESTING_FIELDS.map((k) =>
           '<div class="inforow" id="row-' + k + '"><div class="k">' + esc(this.specByKey(k).label) +
-          '</div><div class="v">' + yesNo(d[k]) + "</div>" + this._editLink(k) + "</div>").join("");
+          '</div><div class="v">' + yesNo(d[k]) + "</div>" + this._editLink(k) + "</div>" +
+          DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
       box.innerHTML = testing + this._collSection("model_weaknesses", d) +
         this._collSection("limitations", d);
       this._bindEdits();
-      this._bindCollections(["model_weaknesses", "limitations"]); return;
+      this._bindCollections(["model_weaknesses", "limitations"]);
+      TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k]))); return;
     }
     const spec = this.collSpec(this._tab);
-    box.innerHTML = Collections.render(d, { collections: [spec] }, this._model.retired);
+    let html = Collections.render(d, { collections: [spec] }, this._model.retired);
+    const docCat = COLLECTION_DOC_CATEGORY[this._tab];
+    const docOpts = { category: docCat, docs: d.documents || [], base: "/api/models/", id: this._id,
+      retired: this._model.retired, refresh: () => this.show(this._id, this._tab) };
+    if (docCat) html += '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
+      DocPanel.html(docOpts);
+    box.innerHTML = html;
     this._bindCollection(this._tab);
+    if (docCat) DocPanel.bind(docOpts);
     if (this._tab === "operational_failure_events") this._defaultAccountable(d);
   },
 

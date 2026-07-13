@@ -50,7 +50,13 @@ Object.assign(MeetingDetail, {
     });
     Object.keys(byName).forEach((name) => {
       const p = byName[name];
-      out.push({ name: p.name, role: p.role || "Guest",
+      // Only genuine guests appear as extra invitees. A leftover record carrying a
+      // roster role (Chair/Secretary/Voting/Non-voting) is a stale attendance
+      // snapshot from a former committee line-up — that person has since been
+      // taken off the committee, so they must no longer show here.
+      const role = p.role || "Guest";
+      if (role !== "Guest") return;
+      out.push({ name: p.name, role: role,
                  status: p.status || "Invited", item_id: p.item_id });
     });
     return out;

@@ -166,6 +166,9 @@ Object.assign(ProductDetail, {
     if (current !== null && current !== undefined) input.value = current;
     document.getElementById("ped-cancel").onclick = () => this.show(this._id, "overview");
     document.getElementById("ped-save").onclick = () => {
+      // A RAG-rating change is proposed to the MRC for sign-off, not applied
+      // directly — it takes effect only once the committee approves it.
+      if (f.key === "rag_rating") { this._proposeRag(input.value.trim(), current); return; }
       const body = paramKey === "component"
         ? { component: f.key, value: input.value.trim() }
         : { field: f.key, value: input.value.trim() };
@@ -173,5 +176,20 @@ Object.assign(ProductDetail, {
         "/api/products/" + this._id + endpoint, body,
         () => { this.show(this._id, "overview"); Product.loadList(); });
     };
+  },
+
+  // Snag: a product RAG-rating change goes through the MRC. Raise a sign-off
+  // request proposing the new rating; it changes only when the MRC approves.
+  _proposeRag(value, current) {
+    if (!value || value === current) { this.show(this._id, "overview"); return; }
+    const mrc = (this._mrc || {}).mrc;
+    if (!mrc) {
+      App.toast("No MRC covers this product — bind a model / set up an MRC first.", "error");
+      return;
+    }
+    App.amend("Propose RAG " + value + " for " + this._id + " — routed to " +
+      (mrc.name || mrc.value) + " for MRC sign-off. The rating changes once approved.",
+      "POST", "/api/products/" + this._id + "/request-signoff", { proposed_rag: value },
+      () => { this.show(this._id, "overview"); Product.loadList(); });
   },
 });

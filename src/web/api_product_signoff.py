@@ -84,7 +84,9 @@ def product_request_signoff(product_id: str):
     if product is None:
         return jsonify({"error": "Product not found"}), 404
     data = product["data"] or {}
-    proposed_rag = data.get("rag_rating")
+    # A proposed rating may be supplied (a RAG change proposed for MRC sign-off);
+    # otherwise fall back to the product's current rating.
+    proposed_rag = json_body().get("proposed_rag") or data.get("rag_rating")
     if not proposed_rag:
         return jsonify({"error": "set the product's RAG rating before requesting sign-off"}), 400
     mrc, _level = _product_mrc(data)

@@ -193,9 +193,28 @@ Object.assign(Detail, {
     document.getElementById("ed-save").onclick = () => {
       let value = input.value.trim();
       if (f.type === "tier") value = parseInt(value, 10);
+      // Changing the RAG rating isn't applied directly — it is proposed to the
+      // MRC for sign-off, and only takes effect once approved.
+      if (f.key === "rag_rating") { this._proposeRag(value, current); return; }
       App.amend("Set " + f.label + ' = "' + input.value + '" on ' + this._id + ".", "POST",
         "/api/models/" + this._id + "/field", { field: f.key, value: value },
         () => { this.show(this._id, this._tab); Inventory.loadList(); });
     };
+  },
+
+  // Snag: a RAG-rating change must go through the MRC. Rather than setting the
+  // field, raise a sign-off request proposing the new rating; the rating only
+  // changes when the committee approves it.
+  _proposeRag(value, current) {
+    if (!value || value === current) { this.show(this._id, this._tab); return; }
+    const mrc = (this._mrc || {}).mrc;
+    if (!mrc) {
+      App.toast("No MRC covers this model — set one up under Admin → MRC first.", "error");
+      return;
+    }
+    App.amend("Propose RAG " + value + " for " + this._id + " — routed to " +
+      (mrc.name || mrc.value) + " for MRC sign-off. The rating changes once approved.",
+      "POST", "/api/models/" + this._id + "/request-signoff", { proposed_rag: value },
+      () => { this.show(this._id, "risk"); Inventory.loadList(); });
   },
 });

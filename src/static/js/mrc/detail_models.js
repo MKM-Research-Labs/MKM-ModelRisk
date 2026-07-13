@@ -52,44 +52,40 @@ Object.assign(MeetingDetail, {
   },
 
   // One review block per in-scope model: the MRC's confirmation to proceed
-  // (reviewed, discussed, agreed) with a note, plus follow-on action items. The
-  // actions are owned by the model; the committee adds them and files dated
-  // updates here (the full history lives on the model's Actions tab).
+  // (reviewed, discussed, agreed) with a note, plus follow-on remediation. The
+  // remediation steps are owned by the model; the committee adds them here and
+  // they appear on the model's Remediation tab.
   _analysisReview() {
     const inScope = this._models;
     if (!inScope.length) {
       return '<div class="muted" style="font-size:12px;margin-top:8px">' +
-        "Add models to scope above to record their analysis outcome and actions.</div>";
+        "Add models to scope above to record their analysis outcome and remediation.</div>";
     }
     const byId = {};
-    (this._inventory || []).forEach((m) => { byId[m.model_id] = (m.data || {}).actions || []; });
+    (this._inventory || []).forEach((m) => { byId[m.model_id] = (m.data || {}).remediation_steps || []; });
     const opts = (cur) => ["Pending", "Reviewed — agreed to proceed"].map((s) =>
       "<option" + (s === (cur || "Pending") ? " selected" : "") + ">" + esc(s) + "</option>").join("");
     const blocks = inScope.map((m) => {
       const mid = m.model_id;
-      const acts = byId[mid] || [];
-      const actList = acts.length
-        ? acts.map((a) => '<div class="prow"><div style="font-size:12px">' + esc(a.description) +
+      const steps = byId[mid] || [];
+      const stepList = steps.length
+        ? steps.map((a) => '<div class="prow"><div style="font-size:12px">' + esc(a.description) +
             ' <span class="muted" style="font-size:10px">' +
-            (a.target_date ? "target " + esc(a.target_date) + " · " : "") + esc(a.status || "Open") + "</span></div>" +
-            (a.status !== "Closed"
-              ? '<div class="pact"><input placeholder="update…" id="mact-note-' + esc(mid) + "-" + esc(a.item_id) +
-                '" style="font-size:11px;width:110px"> <button class="btn small" data-mact-update="' +
-                esc(mid) + "|" + esc(a.item_id) + '">Update</button></div>' : "") + "</div>").join("")
-        : '<div class="muted" style="font-size:11px">No actions yet.</div>';
+            (a.due_date ? "due " + esc(a.due_date) + " · " : "") + esc(a.status || "Open") + "</span></div></div>").join("")
+        : '<div class="muted" style="font-size:11px">No remediation yet.</div>';
       return '<div class="card" style="margin-bottom:8px">' +
         '<div class="row" style="justify-content:space-between;align-items:center">' +
-        '<b class="modelid">' + esc(mid) + "</b>" +
+        '<b class="modelid">' + esc(mid) + "</b>" + (m.name ? ' <span class="muted">' + esc(m.name) + "</span>" : "") +
         '<div><span class="muted" style="font-size:11px">Outcome</span> ' +
         '<select data-analysis-status="' + esc(mid) + '">' + opts(m.analysis_status) + "</select></div></div>" +
         '<div class="field" style="margin-top:6px"><label>Discussion note</label>' +
         '<input data-analysis-note="' + esc(mid) + '" value="' + esc(m.analysis_note || "") + '"></div>' +
-        '<div class="section-header" style="margin-top:8px;font-size:11px">Follow-on actions</div>' + actList +
+        '<div class="section-header" style="margin-top:8px;font-size:11px">Follow-on remediation</div>' + stepList +
         '<div class="row" style="margin-top:6px;flex-wrap:wrap;align-items:flex-end">' +
-        '<div class="field"><label>Action</label><input id="act-desc-' + esc(mid) + '"></div>' +
+        '<div class="field"><label>Remediation</label><input id="act-desc-' + esc(mid) + '"></div>' +
         '<div class="field"><label>Owner</label><input id="act-owner-' + esc(mid) + '"></div>' +
-        '<div class="field"><label>Target</label><input type="date" id="act-date-' + esc(mid) + '"></div>' +
-        '<button class="btn small" data-act-add="' + esc(mid) + '">Add action</button></div></div>';
+        '<div class="field"><label>Due date</label><input type="date" id="act-date-' + esc(mid) + '"></div>' +
+        '<button class="btn small" data-act-add="' + esc(mid) + '">Add remediation</button></div></div>';
     }).join("");
     return blocks;
   },
@@ -184,38 +180,21 @@ Object.assign(MeetingDetail, {
           { fields: { analysis_note: inp.value } }, () => self.show(self._id, "models_in_scope"));
       };
     });
-    // Follow-on actions are owned by the model. Adding one seeds its update
-    // history and records the meeting it was raised at.
-    const today = new Date().toISOString().slice(0, 10);
-    const byId = {};
-    (self._inventory || []).forEach((m) => { byId[m.model_id] = (m.data || {}).actions || []; });
+    // Follow-on remediation is owned by the model; adding one here files a
+    // remediation step that shows on the model's Remediation tab.
     document.querySelectorAll("[data-act-add]").forEach(function (btn) {
       const mid = btn.getAttribute("data-act-add");
       btn.onclick = function () {
         const desc = (document.getElementById("act-desc-" + mid) || {}).value;
-        if (!desc) { App.toast("Action description is required", "error"); return; }
+        if (!desc) { App.toast("Remediation description is required", "error"); return; }
         const owner = (document.getElementById("act-owner-" + mid) || {}).value;
         const date = (document.getElementById("act-date-" + mid) || {}).value;
-        const fields = { description: desc, status: "Open", raised_meeting: self._id,
-          updates: [{ date: today, note: "Raised at " + self._id, target_date: date || "", status: "Open" }] };
+        const fields = { description: desc, status: "Open" };
         if (owner) fields.owner = owner;
-        if (date) fields.target_date = date;
-        App.amend("Add action for " + mid + ".", "POST",
-          "/api/models/" + mid + "/collections/actions",
+        if (date) fields.due_date = date;
+        App.amend("Add remediation for " + mid + ".", "POST",
+          "/api/models/" + mid + "/collections/remediation_steps",
           { fields: fields }, () => self.show(self._id, "models_in_scope"));
-      };
-    });
-    document.querySelectorAll("[data-mact-update]").forEach(function (btn) {
-      const [mid, aid] = btn.getAttribute("data-mact-update").split("|");
-      btn.onclick = function () {
-        const note = (document.getElementById("mact-note-" + mid + "-" + aid) || {}).value;
-        if (!note) { App.toast("Enter an update note", "error"); return; }
-        const action = (byId[mid] || []).find((a) => a.item_id === aid) || {};
-        const updates = (action.updates || []).concat(
-          [{ date: today, note: note, target_date: action.target_date || "", status: action.status || "Open" }]);
-        App.amend("Update action " + aid + " on " + mid + ".", "POST",
-          "/api/models/" + mid + "/collections/actions/" + aid,
-          { fields: { updates: updates } }, () => self.show(self._id, "models_in_scope"));
       };
     });
     document.querySelectorAll("[data-presenter]").forEach(function (sel) {
