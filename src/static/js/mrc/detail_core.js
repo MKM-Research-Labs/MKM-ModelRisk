@@ -98,7 +98,13 @@ const MeetingDetail = {
   },
 
   _tabbar(d) {
-    const n = (k) => (d[k] || []).length;
+    // The agenda badge counts only what the tab shows — sign-off items render in
+    // the Models tab, so they don't inflate the agenda count.
+    const n = (k) => {
+      const arr = d[k] || [];
+      if (k === "agenda") return arr.filter((a) => !(a.subject_model_id || a.subject_product_id)).length;
+      return arr.length;
+    };
     // Participants moved out to the persistent left panel — no longer a tab.
     const tabs = [
       ["agenda", "Agenda"], ["minutes", "Minutes"],

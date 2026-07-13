@@ -88,7 +88,9 @@ def test_update_field_emits_event():
         _registered(), field="owner", value="bob"
     )
     assert event_type == EVENT_FIELD_UPDATED
-    assert payload == {"field": "owner", "value": "bob"}
+    # The prior value is captured for the audit trail (None here — freshly
+    # registered, owner unset).
+    assert payload == {"field": "owner", "value": "bob", "from": None}
 
 
 def test_update_field_requires_existing_model():
@@ -115,12 +117,12 @@ def test_tier_validation_rejects_bad_values(value):
 
 def test_tier_validation_accepts_valid_value():
     event_type, payload = decide_update_field(_registered(), field="tier", value=3)
-    assert payload == {"field": "tier", "value": 3}
+    assert payload == {"field": "tier", "value": 3, "from": None}
 
 
 def test_choice_field_accepts_valid_value():
     _, payload = decide_update_field(_registered(), field="rag_rating", value="Green")
-    assert payload == {"field": "rag_rating", "value": "Green"}
+    assert payload == {"field": "rag_rating", "value": "Green", "from": None}
 
 
 def test_free_text_field_skips_choice_validation():
