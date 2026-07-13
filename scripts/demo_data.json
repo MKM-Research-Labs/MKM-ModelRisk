@@ -49,11 +49,21 @@
     "scope_value": "Asset Management",
     "secretary": "David K Kelly",
     "voting_members": [
-     "Priya Anand"
+     "Priya Anand",
+     "Reza Moaleji",
+     "Darren Best"
     ],
     "non_voting_members": [
      "Sofia Castro"
-    ]
+    ],
+    "quorum_min_voting": "2"
+   },
+   {
+    "name": "Sustainability",
+    "level": "Department",
+    "value": "MRC-SUST",
+    "frequency": "Quarterly",
+    "scope_value": "Sustainability"
    }
   ],
   "calculating_agent": [
@@ -101,6 +111,18 @@
     "name": "Lena Okafor",
     "email": "lena.okafor@sterlingbank.com",
     "division": "RATINGS"
+   },
+   {
+    "name": "Reza Moaleji",
+    "email": "reza.moaleji@moodys.com",
+    "division": "ANALYTICS",
+    "department": "Asset Management"
+   },
+   {
+    "name": "Darren Best",
+    "email": "darren.best@moodys.com",
+    "division": "ANALYTICS",
+    "department": "Asset Management"
    }
   ]
  },
@@ -115,6 +137,31 @@
   }
  },
  "models": [
+  {
+   "model_id": "RAT-Sust",
+   "name": "Retail Sustainability Scoring",
+   "fields": {
+    "tier": 2,
+    "type": "Analytical Model",
+    "owner": "Marcus Reid",
+    "division": "RATINGS",
+    "complexity": "Medium",
+    "department": "Sustainability",
+    "materiality": "Low"
+   },
+   "collections": {},
+   "validation": {
+    "VQ-001": "Not Addressed",
+    "VQ-002": "Not Addressed",
+    "VQ-003": "Not Addressed",
+    "VQ-004": "Not Addressed",
+    "VQ-005": "Not Addressed",
+    "VQ-006": "Not Addressed",
+    "VQ-007": "Not Addressed",
+    "VQ-008": "Not Addressed",
+    "VQ-009": "Not Addressed"
+   }
+  },
   {
    "model_id": "STB-BND-001",
    "name": "Bond Pricer",
@@ -204,6 +251,13 @@
       "target_mrc": "MRC-AM",
       "proposed_rag": "Red",
       "agenda_item_id": "AG-001"
+     },
+     {
+      "status": "Attached",
+      "meeting_id": "MRC-2026-Oct",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Amber",
+      "agenda_item_id": "AG-005"
      }
     ]
    },
@@ -377,14 +431,16 @@
     "version": "2.1.0",
     "category": "Market Data",
     "division": "ANALYTICS",
-    "complexity": "Low",
+    "complexity": "Medium",
     "department": "Asset Management",
-    "rag_rating": "Green",
+    "rag_rating": "Amber",
     "description": "Nelson-Siegel-Svensson government-bond discount curve (vendor source: ICE).",
     "materiality": "High",
     "methodology": "NSS least-squares fit over a filtered subset of government bonds; daily refresh.",
     "lifecycle_stage": "Production",
-    "next_review_date": "2026-10-31"
+    "mrc_signoff_date": "2026-10-09",
+    "next_review_date": "2027-06-01",
+    "mrc_signoff_meeting": "MRC-2026-Oct"
    },
    "collections": {
     "assumptions": [
@@ -397,6 +453,26 @@
      {
       "impact": "Medium",
       "description": "NSS struggles to fit the very short end in stressed markets"
+     }
+    ],
+    "rag_signoff_history": [
+     {
+      "date": "2026-10-09",
+      "note": "approved at MRC",
+      "outcome": "Approved",
+      "to_rating": "Amber",
+      "meeting_id": "MRC-2026-Oct",
+      "from_rating": "Green",
+      "next_review_date": "2027-06-01"
+     }
+    ],
+    "rag_signoff_requests": [
+     {
+      "status": "Completed",
+      "meeting_id": "MRC-2026-Oct",
+      "target_mrc": "MRC-AM",
+      "proposed_rag": "Amber",
+      "agenda_item_id": "AG-004"
      }
     ]
    },
@@ -886,6 +962,61 @@
       "status": "Completed",
       "proposed_rag": "Red",
       "subject_model_id": "STB-MD-002"
+     },
+     {
+      "kind": "rollcall",
+      "title": "Rollcall and Confirmation of Quorum",
+      "description": "Confirm attendance in the participants panel; the meeting may proceed only once quorate."
+     },
+     {
+      "kind": "minutes_signoff",
+      "title": "Sign-off of the previous MRM minutes",
+      "description": "Proposed by the chair."
+     },
+     {
+      "kind": "review_signoff",
+      "title": "Review model sign-off",
+      "description": "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."
+     },
+     {
+      "kind": "review_analysis",
+      "title": "Review model analysis",
+      "description": "Model analyses are reviewed in the Models tab (Analysis) — confirmation to proceed and any actions."
+     },
+     {
+      "kind": "aob",
+      "title": "Any Other Business (AOB)",
+      "description": ""
+     }
+    ],
+    "minutes": [
+     {
+      "text": "MRC reviewed the model sign-off request and granted approval — STB-BND-001 → Red.",
+      "title": "Sign-off approved — STB-BND-001",
+      "model_id": "STB-BND-001",
+      "presenter": "Johnny Mattimore",
+      "agenda_item_id": "AG-007"
+     },
+     {
+      "text": "MRC reviewed the model sign-off request and granted approval — STB-BS-001 → Red.",
+      "title": "Sign-off approved — STB-BS-001",
+      "model_id": "STB-BS-001",
+      "presenter": "Johnny Mattimore",
+      "agenda_item_id": "AG-007"
+     },
+     {
+      "text": "MRC reviewed the model sign-off request and granted approval — STB-HW-001 → Amber.",
+      "title": "Sign-off approved — STB-HW-001",
+      "model_id": "STB-HW-001",
+      "presenter": "Johnny Mattimore",
+      "agenda_item_id": "AG-007"
+     },
+     {
+      "text": "MRC reviewed the model sign-off request and granted approval — STB-MD-002 → Red.",
+      "title": "Sign-off approved — STB-MD-002",
+      "model_id": "STB-MD-002",
+      "presenter": "Johnny Mattimore",
+      "agenda_item_id": "AG-007"
      }
     ],
     "models_in_scope": [
@@ -930,17 +1061,130 @@
       "status": "Completed",
       "proposed_rag": "Amber",
       "subject_product_id": "Product-0004"
+     },
+     {
+      "title": "Risk rating sign-off: STB-MD-001 → Amber",
+      "status": "Completed",
+      "proposed_rag": "Amber",
+      "subject_model_id": "STB-MD-001"
+     },
+     {
+      "title": "Risk rating sign-off: STB-BND-001 → Amber",
+      "status": "Pending",
+      "proposed_rag": "Amber",
+      "subject_model_id": "STB-BND-001"
+     },
+     {
+      "kind": "rollcall",
+      "title": "Rollcall and Confirmation of Quorum",
+      "description": "Confirm attendance in the participants panel; the meeting may proceed only once quorate."
+     },
+     {
+      "kind": "minutes_signoff",
+      "title": "Sign-off of the previous MRM minutes",
+      "description": "Proposed by the chair."
+     },
+     {
+      "kind": "review_signoff",
+      "title": "Review model sign-off",
+      "description": "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."
+     },
+     {
+      "kind": "review_analysis",
+      "title": "Review model analysis",
+      "description": "Model analyses are reviewed in the Models tab (Analysis) — confirmation to proceed and any actions."
+     },
+     {
+      "kind": "aob",
+      "title": "Any Other Business (AOB)",
+      "description": ""
+     }
+    ],
+    "minutes": [
+     {
+      "text": "MRC has reviewed the sign-off request from the model owner (Lena Okafor) and has granted approval and has set a date of next review on 2027-06-01.",
+      "title": "Sign-off approved — STB-MD-001",
+      "model_id": "STB-MD-001",
+      "presenter": "Johnny Mattimore",
+      "agenda_item_id": "AG-008"
+     },
+     {
+      "text": "MRC reviewed the product sign-off request and granted approval — Product-0002 → Amber.",
+      "title": "Sign-off approved — Product-0002",
+      "presenter": "Johnny Mattimore",
+      "product_id": "Product-0002",
+      "agenda_item_id": "AG-008"
+     },
+     {
+      "text": "MRC reviewed the product sign-off request and granted approval — Product-0003 → Green.",
+      "title": "Sign-off approved — Product-0003",
+      "presenter": "Johnny Mattimore",
+      "product_id": "Product-0003",
+      "agenda_item_id": "AG-008"
+     },
+     {
+      "text": "MRC reviewed the product sign-off request and granted approval — Product-0004 → Amber.",
+      "title": "Sign-off approved — Product-0004",
+      "presenter": "Johnny Mattimore",
+      "product_id": "Product-0004",
+      "agenda_item_id": "AG-008"
      }
     ],
     "participants": [
      {
       "name": "Marcus Reid",
       "role": "Guest"
+     },
+     {
+      "name": "Johnny Mattimore",
+      "role": "Chair",
+      "status": "Attended"
+     },
+     {
+      "name": "David K Kelly",
+      "role": "Secretary",
+      "status": "Attended"
+     },
+     {
+      "name": "Sofia Castro",
+      "role": "Non-voting",
+      "status": "Attended"
+     },
+     {
+      "name": "Priya Anand",
+      "role": "Voting",
+      "status": "Attended"
+     },
+     {
+      "name": "Reza Moaleji",
+      "role": "Voting",
+      "status": "Attended"
+     },
+     {
+      "name": "Darren Best",
+      "role": "Voting",
+      "status": "Apologies"
      }
     ],
     "models_in_scope": [
      {
-      "model_id": "STB-HW-001"
+      "model_id": "STB-HW-001",
+      "presenter": "Johnny Mattimore",
+      "analysis_note": "Discussed backtesting; agreed to proceed.",
+      "analysis_status": "Reviewed — agreed to proceed"
+     },
+     {
+      "model_id": "STB-MD-001",
+      "presenter": "Priya Anand"
+     }
+    ],
+    "actions": [
+     {
+      "owner": "Priya Anand",
+      "status": "Open",
+      "model_id": "STB-HW-001",
+      "description": "Refresh PD calibration",
+      "target_date": "2026-10-15"
      }
     ]
    }
@@ -971,6 +1215,31 @@
       "title": "PFE wrong-way risk remediation",
       "status": "Pending",
       "presenter": "Johnny Mattimore"
+     },
+     {
+      "kind": "rollcall",
+      "title": "Rollcall and Confirmation of Quorum",
+      "description": "Confirm attendance in the participants panel; the meeting may proceed only once quorate."
+     },
+     {
+      "kind": "minutes_signoff",
+      "title": "Sign-off of the previous MRM minutes",
+      "description": "Proposed by the chair."
+     },
+     {
+      "kind": "review_signoff",
+      "title": "Review model sign-off",
+      "description": "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."
+     },
+     {
+      "kind": "review_analysis",
+      "title": "Review model analysis",
+      "description": "Model analyses are reviewed in the Models tab (Analysis) — confirmation to proceed and any actions."
+     },
+     {
+      "kind": "aob",
+      "title": "Any Other Business (AOB)",
+      "description": ""
      }
     ],
     "minutes": [
@@ -1117,6 +1386,31 @@
       "status": "Pending",
       "presenter": "David K Kelly",
       "description": "Review of open actions carried over from Q1: local-vol framework, SABR recalibration, VQ refresh."
+     },
+     {
+      "kind": "rollcall",
+      "title": "Rollcall and Confirmation of Quorum",
+      "description": "Confirm attendance in the participants panel; the meeting may proceed only once quorate."
+     },
+     {
+      "kind": "minutes_signoff",
+      "title": "Sign-off of the previous MRM minutes",
+      "description": "Proposed by the chair."
+     },
+     {
+      "kind": "review_signoff",
+      "title": "Review model sign-off",
+      "description": "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."
+     },
+     {
+      "kind": "review_analysis",
+      "title": "Review model analysis",
+      "description": "Model analyses are reviewed in the Models tab (Analysis) — confirmation to proceed and any actions."
+     },
+     {
+      "kind": "aob",
+      "title": "Any Other Business (AOB)",
+      "description": ""
      }
     ],
     "participants": [
