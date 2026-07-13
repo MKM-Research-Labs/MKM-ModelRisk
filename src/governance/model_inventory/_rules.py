@@ -82,7 +82,11 @@ def decide_update_field(
     if field not in EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
     _validate_field(field, value)
-    return EVENT_FIELD_UPDATED, {"field": field, "value": value}
+    # Capture the prior value so the audit trail can show old -> new. Older
+    # events predate this and simply have no "from" (rendered as blank).
+    return EVENT_FIELD_UPDATED, {
+        "field": field, "value": value, "from": state.fields.get(field),
+    }
 
 
 def decide_retire(state: ModelState) -> tuple[str, dict[str, Any]]:

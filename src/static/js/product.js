@@ -113,7 +113,7 @@ const Product = {
     const box = document.getElementById("product-list");
     if (!products.length) {
       box.innerHTML = '<div class="empty">' +
-        (MrcNav.state.div ? "No products in this MRC scope." : "No Products yet. Register one above.") +
+        (MrcNav.state.div ? "No products in this scope yet. Register one above." : "No Products yet. Register one above.") +
         "</div>";
       return;
     }

@@ -73,7 +73,7 @@ const Inventory = {
     document.getElementById("reg-model_id").value = "";
     document.getElementById("reg-name").value = "";
     this._populateTypePicker();
-    await this._populateOrgPickers();
+    await this._populateOrgScope();
     document.getElementById("register-overlay").classList.remove("hidden");
     document.getElementById("reg-model_id").focus();
   },
@@ -86,22 +86,22 @@ const Inventory = {
     document.getElementById("reg-type").innerHTML = options;
   },
 
-  async _populateOrgPickers() {
-    const ref = (await App.get("/api/reference")).data || {};
-    const empty = '<option value=""></option>';
-    const divisions = ref.division || [], departments = ref.department || [];
-    const listOpts = (items) => empty + items.map((it) =>
-      "<option>" + esc(it.value) + "</option>").join("");
-    const division = document.getElementById("reg-division");
-    const department = document.getElementById("reg-department");
-    division.innerHTML = listOpts(divisions);
-    const filterDept = (parent) => {
-      department.innerHTML = empty + departments
-        .filter((it) => !parent || it.division === parent)
-        .map((it) => "<option>" + esc(it.value) + "</option>").join("");
-    };
-    filterDept(division.value);
-    division.onchange = () => filterDept(division.value);
+  // Division/Department are fixed by the region selected in the nav — shown
+  // read-only. The owner picker lists people eligible for that org scope
+  // (people anchored to the same division); if none match we fall back to the
+  // whole directory so registration is never blocked.
+  async _populateOrgScope() {
+    const { committees, ref } = await MrcNav.load();
+    const scope = MrcNav.currentScope(committees, ref);
+    this._regScope = scope;
+    document.getElementById("reg-division-val").textContent = scope.division || "—";
+    document.getElementById("reg-department-val").textContent = scope.department || "—";
+    const people = ref.people || [];
+    const eligible = people.filter((p) => !scope.division || p.division === scope.division);
+    const list = eligible.length ? eligible : people;
+    document.getElementById("reg-owner").innerHTML =
+      '<option value=""></option>' +
+      list.map((p) => "<option>" + esc(p.name) + "</option>").join("");
   },
 
   closeRegister() {
@@ -111,13 +111,16 @@ const Inventory = {
   submitRegister() {
     const id = val("reg-model_id"), name = val("reg-name");
     if (!id || !name) { App.toast("Model ID and name are required", "error"); return; }
-    const fields = {};
-    ["type", "division", "department"].forEach((k) => {
-      const v = val("reg-" + k);
-      if (v) fields[k] = v;
-    });
-    // Company option may still be empty if the admin lists are unset (fresh
-    // repo); the backend allows that, otherwise it rejects with a clear error.
+    const owner = val("reg-owner");
+    if (!owner) { App.toast("A model owner is required", "error"); return; }
+    const fields = { owner: owner };
+    const type = val("reg-type");
+    if (type) fields.type = type;
+    // Division/Department come from the region selected in the nav, not a form
+    // field, so a model always lands in the right place in the org tree.
+    const scope = this._regScope || {};
+    if (scope.division) fields.division = scope.division;
+    if (scope.department) fields.department = scope.department;
     this.closeRegister();
     App.amend('Register model "' + id + '" (' + name + ").", "POST", "/api/models",
       { model_id: id, name: name, fields: fields }, () => this.render());
@@ -147,7 +150,7 @@ const Inventory = {
     const box = document.getElementById("m-list");
     if (!models.length) {
       box.innerHTML = '<div class="empty">' +
-        (MrcNav.state.div ? "No models in this MRC scope." : "No models yet. Register one above.") +
+        (MrcNav.state.div ? "No models in this scope yet. Register one above." : "No models yet. Register one above.") +
         "</div>";
       return;
     }
