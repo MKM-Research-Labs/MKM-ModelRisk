@@ -54,11 +54,12 @@ def test_edit_field_records_amendment(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-003", "Depth Damage")
     open_model(page, "MKM-E2E-003")
-    page.click("[data-edit='owner']")
-    page.fill("#ed-input", "Jane Modeller")
+    # Edit a free-text field (owner is a people-reference dropdown now).
+    page.click("[data-edit='methodology']")
+    page.fill("#ed-input", "Regression")
     page.click("#ed-save")
     confirm(page)
-    expect(page.locator("#row-owner")).to_contain_text("Jane Modeller")
+    expect(page.locator("#row-methodology")).to_contain_text("Regression")
 
 
 def test_edit_lifecycle_stage_choice(page: Page, base_url: str):
@@ -166,7 +167,9 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
                             "confirmed": True}, headers=headers)
     page.request.post(base_url + "/api/reference/collections/mrc",
                       data={"fields": {"value": "MRC-X1-SO-CO", "name": "Company MRC",
-                                       "level": "Company"}, "confirmed": True}, headers=headers)
+                                       "level": "Company", "quorum_require_chair": "No",
+                                       "quorum_require_secretary": "No", "quorum_min_voting": "0",
+                                       "quorum_min_non_voting": "0"}, "confirmed": True}, headers=headers)
     page.request.post(base_url + "/api/meetings",
                       data={"meeting_id": "MRC-X1-SO", "title": "Signoff Meeting",
                             "date": "2026-11-11", "fields": {"mrc": "MRC-X1-SO-CO"},
@@ -181,11 +184,11 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
     # Auto-routes to the model's Company-level MRC and attaches to its meeting.
     page.click("#req-signoff")
     confirm(page)
-    # MRC approves via the agenda tab (bespoke renderer since the user's rewrite;
-    # sign-off items expose a data-agapprove hook).
+    # MRC approves from the Models tab — sign-offs live under Models → Approvals
+    # now (data-agapprove hook), and the committee is quorate (quorum off above).
     open_tab(page, "mrc")
     page.click("tr.clickable[data-id='MRC-X1-SO']")
-    page.click("[data-mtab='agenda']")
+    page.click("[data-mtab='models_in_scope']")
     page.locator("[data-agapprove]").first.click()
     confirm(page)
     # Back to the model — Risk tab now shows the history table.
@@ -237,8 +240,9 @@ def test_per_model_audit_tab_shows_recorded_events(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-X2-AUD", "Audit Model")
     open_model(page, "MKM-X2-AUD")
-    edit_model_field(page, "owner", "Priya Anand")
-    expect(page.locator("#row-owner")).to_contain_text("Priya Anand")
+    # Edit a free-text field (owner is a people-reference dropdown now).
+    edit_model_field(page, "methodology", "Regression")
+    expect(page.locator("#row-methodology")).to_contain_text("Regression")
     page.click("[data-dtab='audit']")
     body = page.locator("#dt-content")
     # Register + field-update events should both appear as event-type rows.

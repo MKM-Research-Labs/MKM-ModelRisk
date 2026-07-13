@@ -80,7 +80,9 @@ def open_admin_subtab(page: Page, atab: str) -> None:
     """Open the Admin tab and switch to one of its sub-tabs."""
     page.click(".tab[data-tab='reference']")
     page.click(f"[data-atab='{atab}']")
-    expect(page.locator(".dtab.active")).to_have_attribute("data-atab", atab)
+    # Scope to the admin sub-tabs — the persistent region-nav bar also renders
+    # `.dtab.active` buttons, so match only tabs carrying a data-atab.
+    expect(page.locator("[data-atab].active")).to_have_attribute("data-atab", atab)
 
 
 def add_collection_item(page: Page, list_key: str, fields: dict[str, str]) -> str:
