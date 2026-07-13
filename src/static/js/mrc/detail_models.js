@@ -52,25 +52,30 @@ Object.assign(MeetingDetail, {
   },
 
   // One review block per in-scope model: the MRC's confirmation to proceed
-  // (reviewed, discussed, agreed) with a note, plus follow-on action items
-  // (kept in the meeting's actions collection, linked by model_id).
+  // (reviewed, discussed, agreed) with a note, plus follow-on action items. The
+  // actions are owned by the model; the committee adds them and files dated
+  // updates here (the full history lives on the model's Actions tab).
   _analysisReview() {
     const inScope = this._models;
     if (!inScope.length) {
       return '<div class="muted" style="font-size:12px;margin-top:8px">' +
         "Add models to scope above to record their analysis outcome and actions.</div>";
     }
-    const allActions = (this._meeting.data || {}).actions || [];
+    const byId = {};
+    (this._inventory || []).forEach((m) => { byId[m.model_id] = (m.data || {}).actions || []; });
     const opts = (cur) => ["Pending", "Reviewed — agreed to proceed"].map((s) =>
       "<option" + (s === (cur || "Pending") ? " selected" : "") + ">" + esc(s) + "</option>").join("");
     const blocks = inScope.map((m) => {
       const mid = m.model_id;
-      const acts = allActions.filter((a) => a.model_id === mid);
+      const acts = byId[mid] || [];
       const actList = acts.length
         ? acts.map((a) => '<div class="prow"><div style="font-size:12px">' + esc(a.description) +
             ' <span class="muted" style="font-size:10px">' +
-            (a.owner ? esc(a.owner) + " · " : "") + (a.target_date ? esc(a.target_date) + " · " : "") +
-            esc(a.status || "Open") + "</span></div></div>").join("")
+            (a.target_date ? "target " + esc(a.target_date) + " · " : "") + esc(a.status || "Open") + "</span></div>" +
+            (a.status !== "Closed"
+              ? '<div class="pact"><input placeholder="update…" id="mact-note-' + esc(mid) + "-" + esc(a.item_id) +
+                '" style="font-size:11px;width:110px"> <button class="btn small" data-mact-update="' +
+                esc(mid) + "|" + esc(a.item_id) + '">Update</button></div>' : "") + "</div>").join("")
         : '<div class="muted" style="font-size:11px">No actions yet.</div>';
       return '<div class="card" style="margin-bottom:8px">' +
         '<div class="row" style="justify-content:space-between;align-items:center">' +
@@ -179,7 +184,11 @@ Object.assign(MeetingDetail, {
           { fields: { analysis_note: inp.value } }, () => self.show(self._id, "models_in_scope"));
       };
     });
-    // Follow-on action items per in-scope model (meeting actions, linked by model).
+    // Follow-on actions are owned by the model. Adding one seeds its update
+    // history and records the meeting it was raised at.
+    const today = new Date().toISOString().slice(0, 10);
+    const byId = {};
+    (self._inventory || []).forEach((m) => { byId[m.model_id] = (m.data || {}).actions || []; });
     document.querySelectorAll("[data-act-add]").forEach(function (btn) {
       const mid = btn.getAttribute("data-act-add");
       btn.onclick = function () {
@@ -187,12 +196,26 @@ Object.assign(MeetingDetail, {
         if (!desc) { App.toast("Action description is required", "error"); return; }
         const owner = (document.getElementById("act-owner-" + mid) || {}).value;
         const date = (document.getElementById("act-date-" + mid) || {}).value;
-        const fields = { description: desc, model_id: mid, status: "Open" };
+        const fields = { description: desc, status: "Open", raised_meeting: self._id,
+          updates: [{ date: today, note: "Raised at " + self._id, target_date: date || "", status: "Open" }] };
         if (owner) fields.owner = owner;
         if (date) fields.target_date = date;
         App.amend("Add action for " + mid + ".", "POST",
-          "/api/meetings/" + self._id + "/collections/actions",
+          "/api/models/" + mid + "/collections/actions",
           { fields: fields }, () => self.show(self._id, "models_in_scope"));
+      };
+    });
+    document.querySelectorAll("[data-mact-update]").forEach(function (btn) {
+      const [mid, aid] = btn.getAttribute("data-mact-update").split("|");
+      btn.onclick = function () {
+        const note = (document.getElementById("mact-note-" + mid + "-" + aid) || {}).value;
+        if (!note) { App.toast("Enter an update note", "error"); return; }
+        const action = (byId[mid] || []).find((a) => a.item_id === aid) || {};
+        const updates = (action.updates || []).concat(
+          [{ date: today, note: note, target_date: action.target_date || "", status: action.status || "Open" }]);
+        App.amend("Update action " + aid + " on " + mid + ".", "POST",
+          "/api/models/" + mid + "/collections/actions/" + aid,
+          { fields: { updates: updates } }, () => self.show(self._id, "models_in_scope"));
       };
     });
     document.querySelectorAll("[data-presenter]").forEach(function (sel) {

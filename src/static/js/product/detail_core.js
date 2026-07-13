@@ -100,7 +100,7 @@ const ProductDetail = {
       ["remediation_steps", "Remediation", n("remediation_steps")],
       ["validation_questions", "Validation", n("validation_questions")],
       ["operational_failure_events", "Events", n("operational_failure_events")],
-      ["risk", "Risk Rating", null], ["linkage", "MRC", null],
+      ["risk", "Risk Rating", null], ["actions", "Actions", n("actions")], ["linkage", "MRC", null],
       ["docs", "Docs", n("documents")], ["audit", "Audit", this._audit.length],
       ["danger", "Danger", null],
     ];
@@ -119,6 +119,7 @@ const ProductDetail = {
     }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); this._bindDanger(); return; }
     if (this._tab === "risk") { box.innerHTML = DetailTabs.risk(this._risk); return; }
+    if (this._tab === "actions") { box.innerHTML = this._actionsTab(d); this._bindActions(); return; }
     if (this._tab === "linkage") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
@@ -194,8 +195,8 @@ const ProductDetail = {
       '</div><span class="edit-btn" data-open-linkage="1">view</span></div>';
   },
 
-  // The MRC linkage tab: granted sign-offs plus decisions/actions linked from
-  // meetings (read-only, sourced from the meeting log). Mirrors the model view.
+  // The MRC linkage tab: granted sign-offs plus decisions linked from meetings
+  // (read-only). Actions are now first-class on the product (the Actions tab).
   _mrcLinkage(d) {
     const signoffs = d.rag_signoff_history || [];
     const soSection = signoffs.length
@@ -203,12 +204,10 @@ const ProductDetail = {
       : '<div class="section-header">Sign-off history</div>' +
         '<div class="empty">No MRC sign-offs granted yet.</div>';
     return '<p class="muted">The product&rsquo;s MRC record — granted rating sign-offs, plus ' +
-      "decisions and actions linked from meetings (read-only, sourced from the meeting log).</p>" +
+      "decisions linked from meetings (read-only, sourced from the meeting log).</p>" +
       soSection +
       '<div class="section-header">Decisions</div>' +
-      DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]) +
-      '<div class="section-header">Actions</div>' +
-      DetailTabs.linkedItems("Actions", this._actions, ["description", "owner", "target_date", "status"]);
+      DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]);
   },
 
   // Wire the MRC-status "view" link (rendered inside the overview) to the
