@@ -21,6 +21,8 @@
 / models-in-scope (the projection join). Attached to the shared ``mrc_bp``."""
 from __future__ import annotations
 
+import io
+import zipfile
 from datetime import date
 
 from flask import Response, jsonify, request, send_file
@@ -72,6 +74,69 @@ def pack_pdf(meeting_id: str):
     pdf = render_pack_pdf(meeting, get_settings())
     return Response(pdf, mimetype="application/pdf", headers={
         "Content-Disposition": f'inline; filename="mrc_{meeting_id}.pdf"',
+    })
+
+
+@mrc_bp.post("/<meeting_id>/lock-agenda")
+def lock_agenda(meeting_id: str):
+    """Chair/secretary finalises the agenda — it becomes read-only and ready to
+    distribute. Reversible via unlock-agenda."""
+    return _set_agenda_lock(meeting_id, "true")
+
+
+@mrc_bp.post("/<meeting_id>/unlock-agenda")
+def unlock_agenda(meeting_id: str):
+    return _set_agenda_lock(meeting_id, "false")
+
+
+def _set_agenda_lock(meeting_id: str, value: str):
+    body = json_body()
+    if get_meeting(meeting_id) is None:
+        return jsonify({"error": "meeting not found"}), 404
+    dispatch(
+        "update_meeting_field", update_meeting_field, context=context_from_request(body),
+        meeting_id=meeting_id, field="agenda_locked", value=value,
+    )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id))
+
+
+def _meeting_upload_files(meeting: dict) -> list[tuple[str, str, str]]:
+    """(category, stored_filename, display_name) for every file uploaded against
+    this meeting — agenda item documents and per-model analysis documents."""
+    data = meeting["data"] or {}
+    files = []
+    for a in data.get("agenda") or []:
+        if a.get("document_filename"):
+            files.append(("meeting_agenda", a["document_filename"],
+                          a.get("document_original_name") or a["document_filename"]))
+    for m in data.get("models_in_scope") or []:
+        if m.get("analysis_filename"):
+            files.append(("meeting_analysis", m["analysis_filename"],
+                          (m.get("model_id", "") + "_" + (m.get("analysis_original_name")
+                                                          or m["analysis_filename"])).lstrip("_")))
+    return files
+
+
+@mrc_bp.get("/<meeting_id>/distribution.zip")
+def distribution_zip(meeting_id: str):
+    """A distribution pack for members: the agenda PDF plus every uploaded file
+    (agenda documents + model analysis documents), bundled as a ZIP."""
+    meeting = get_meeting(meeting_id)
+    if meeting is None:
+        return jsonify({"error": "meeting not found"}), 404
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("agenda.pdf", render_pack_pdf(meeting, get_settings()))
+        seen = set()
+        for category, filename, display in _meeting_upload_files(get_meeting_raw(meeting_id) or meeting):
+            path = upload_path(category, filename)
+            if path.exists() and filename not in seen:
+                seen.add(filename)
+                zf.write(path, arcname="documents/" + display)
+    buf.seek(0)
+    return Response(buf.read(), mimetype="application/zip", headers={
+        "Content-Disposition": f'attachment; filename="mrc_{meeting_id}_distribution.zip"',
     })
 
 
