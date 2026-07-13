@@ -141,6 +141,7 @@ const Committees = {
       (archived ? ' <span class="badge" style="background:var(--muted);margin-left:8px">Archived</span>' : "") +
       '<span style="flex:1"></span>' + archiveBtn + "</div>" + rows +
       this._membershipSection(item) +
+      this._quorumSection(item) +
       '<div class="section-header" style="margin-top:16px">Terms of Reference</div>' + tor +
       '<div class="row" style="margin-top:6px"><input type="file" id="ctor-file">' +
       '<button class="btn small primary" id="ctor-upload">Upload ToR</button></div></div>';
@@ -240,6 +241,28 @@ const Committees = {
     document.getElementById("ctor-upload").onclick = () => self._uploadTor(item.item_id);
     const replace = document.getElementById("ctor-replace");
     if (replace) replace.onclick = () => document.getElementById("ctor-file").click();
+  },
+
+  // The quorum rule: minimum attendance for a meeting of this committee to be
+  // quorate. Each row reuses the generic field editor (data-ced) — the fields
+  // live on the mrc spec. Unset values fall back to the sensible defaults
+  // (Chair + Secretary + 3 non-voting), which is also what the meeting assumes.
+  _quorumSection(item) {
+    const row = (key, label, dflt) => {
+      const set = item[key] !== undefined && item[key] !== null && item[key] !== "";
+      const shown = set ? esc(String(item[key]))
+        : esc(String(dflt)) + ' <span class="muted">(default)</span>';
+      return '<div class="inforow" id="crow-' + key + '"><div class="k">' + label +
+        '</div><div class="v">' + shown +
+        '</div><span class="edit-btn" data-ced="' + key + '">edit</span></div>';
+    };
+    return '<div class="section-header" style="margin-top:16px">Quorum</div>' +
+      '<p class="muted" style="font-size:12px">Minimum attendance for a meeting to be quorate and ' +
+      'proceed. Default: Chair + Secretary + 3 non-voting members.</p>' +
+      row("quorum_require_chair", "Requires chair", "Yes") +
+      row("quorum_require_secretary", "Requires secretary", "Yes") +
+      row("quorum_min_voting", "Min voting members", "0") +
+      row("quorum_min_non_voting", "Min non-voting members", "3");
   },
 
   _editField(item, f) {

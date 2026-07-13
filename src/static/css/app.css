@@ -58,6 +58,18 @@ main { padding: 20px; max-width: 1180px; margin: 0 auto; }
 input, select, textarea { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; background: #fff; color: var(--text); }
 /* Read-only org-scope values in the register modal — look like a disabled field. */
 .reg-scope { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: #f4f5f7; color: var(--muted); min-height: 34px; box-sizing: border-box; display: flex; align-items: center; }
+
+/* MRC meeting detail: persistent participants panel (left) + content (right). */
+.mtd-cols { display: flex; gap: 16px; align-items: flex-start; margin-top: 12px; }
+.mtd-left { flex: 0 0 240px; border-right: 1px solid var(--line); padding-right: 14px; }
+.mtd-main { flex: 1; min-width: 0; }
+.mtd-left .prow { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.mtd-left .pwho { display: flex; flex-direction: column; font-size: 12px; }
+.mtd-left .prole { color: var(--muted); font-size: 10px; }
+.mtd-left .pact select { font-size: 11px; padding: 2px 4px; height: auto; }
+.mtd-left .pguest { display: flex; gap: 6px; margin-top: 6px; }
+.mtd-left .pguest select { flex: 1; font-size: 11px; }
+.quorum-banner { background: #fdecea; color: #b71c1c; border: 1px solid #f5c6c2; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
 textarea { width: 100%; resize: vertical; }
 .btn { border: 1px solid var(--line); background: #f9f9f9; color: var(--text); padding: 7px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
 .btn:hover { border-color: var(--accent); }
