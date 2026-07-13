@@ -30,6 +30,7 @@ from src.files import UploadError, save_upload, upload_path
 from src.governance.model_inventory import get_model
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.mrc import (
+    add_collection_item,
     get_meeting as get_meeting_raw,
     get_meeting_enriched as get_meeting,
     list_meetings_enriched as list_meetings,
@@ -188,6 +189,17 @@ def schedule():
         "schedule_meeting", schedule_meeting, context=ctx,
         meeting_id=meeting_id, title=body.get("title"), date=body.get("date"),
         fields=body.get("fields") or {},
+    )
+    rebuild_meeting_view()
+    # Every meeting opens with a roll call: confirm attendance and that the
+    # committee is quorate before any business. Seeded as agenda item 1, ahead
+    # of any queued sign-offs.
+    dispatch(
+        "add_collection_item", add_collection_item, context=ctx,
+        meeting_id=meeting_id, collection="agenda",
+        fields={"title": "Rollcall and Confirmation of Quorum",
+                "description": "Confirm attendance in the participants panel; the "
+                               "meeting may proceed only once quorate."},
     )
     rebuild_meeting_view()
     # Pull any queued sign-off requests for this committee onto the new agenda.
