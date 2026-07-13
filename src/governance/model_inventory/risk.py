@@ -163,10 +163,15 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
     # even when the owner and heatmap already agree: agreement is not approval, so
     # a never-signed-off model (or one whose heatmap has since moved) still needs
     # MRC sign-off.
+    # A rejected or revoked latest entry un-does the sign-off even if it names the
+    # current rating: the standing state is the outcome of the *most recent*
+    # decision, so a Revoke returns the subject to "needs MRC sign-off".
     signoff_history = data.get("rag_signoff_history") or []
     latest_signoff = signoff_history[-1] if signoff_history else None
     signed_off = bool(
-        heatmap["rag"] and latest_signoff and latest_signoff.get("to_rating") == heatmap["rag"]
+        heatmap["rag"] and latest_signoff
+        and latest_signoff.get("outcome") not in ("Rejected", "Revoked")
+        and latest_signoff.get("to_rating") == heatmap["rag"]
     )
     return {
         "rating": rating,

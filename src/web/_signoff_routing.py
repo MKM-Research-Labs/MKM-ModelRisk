@@ -32,6 +32,7 @@ governance functions (no blueprints) to stay cycle-free.
 """
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Callable
 
 from src.command import CommandContext, dispatch
@@ -155,6 +156,28 @@ def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
     meeting = earliest_scheduled_for_mrc(target_mrc)
     if meeting is not None and request is not None:
         attach_request(ctx, subject, subject_id, request, meeting)
+    return subject.get(subject_id)
+
+
+def revoke_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
+                   note: str | None = None, on_date: str | None = None) -> dict | None:
+    """Revoke a granted MRC sign-off. Appends a ``Revoked`` sign-off-history entry
+    and clears the MRC sign-off stamp (date + meeting). The rag_rating is kept —
+    this un-approves the rating rather than re-rating it, so the subject returns
+    to needing sign-off. Guarding that it *is* currently signed off is the
+    caller's job."""
+    record = subject.get(subject_id) or {"data": {}}
+    current = (record["data"] or {}).get("rag_rating")
+    # to_rating is a required history field; a revoke is recorded *at* the current
+    # rating (from == to), the outcome is what flips ``signed_off`` off.
+    fields = {"outcome": "Revoked", "date": on_date or date.today().isoformat(),
+              "to_rating": current, "from_rating": current}
+    if note:
+        fields["note"] = note
+    subject.add_item(ctx, subject_id, "rag_signoff_history", fields)
+    subject.set_field(ctx, subject_id, "mrc_signoff_date", "")
+    subject.set_field(ctx, subject_id, "mrc_signoff_meeting", "")
+    subject.rebuild()
     return subject.get(subject_id)
 
 

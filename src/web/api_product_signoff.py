@@ -22,13 +22,16 @@ Division/Department and raise a sign-off request. Mirrors ``api_models_signoff``
 registered on the shared ``product_bp`` blueprint."""
 from __future__ import annotations
 
+from datetime import date
+
 from flask import jsonify
 
+from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import get_meeting, matching_mrc
 from src.governance.product import get_product
 from src.governance.reference import get_reference_lists
 from src.web._helpers import context_from_request, json_body
-from src.web._signoff_routing import PRODUCT_SUBJECT, _newest, raise_signoff
+from src.web._signoff_routing import PRODUCT_SUBJECT, _newest, raise_signoff, revoke_signoff
 from src.web.api_product import product_bp
 
 
@@ -96,3 +99,19 @@ def product_request_signoff(product_id: str):
     raise_signoff(ctx, PRODUCT_SUBJECT, product_id,
                   proposed_rag=proposed_rag, target_mrc=mrc["value"], note=json_body().get("note"))
     return jsonify(get_product(product_id)), 201
+
+
+@product_bp.post("/<product_id>/revoke-signoff")
+def product_revoke_signoff(product_id: str):
+    """Revoke a granted MRC sign-off on a product — keeps the RAG rating but
+    returns the product to needing sign-off. Records a Revoked history entry."""
+    product = get_product(product_id)
+    if product is None:
+        return jsonify({"error": "Product not found"}), 404
+    risk = compute_risk_rating(product["data"] or {}, as_of=date.today().isoformat())
+    if not risk.get("signed_off"):
+        return jsonify({"error": "product is not currently signed off"}), 400
+    body = json_body()
+    ctx = context_from_request(body)
+    revoke_signoff(ctx, PRODUCT_SUBJECT, product_id, note=body.get("note") or body.get("reason"))
+    return jsonify(get_product(product_id))
