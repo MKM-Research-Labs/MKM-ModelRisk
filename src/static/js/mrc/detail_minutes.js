@@ -100,11 +100,17 @@ Object.assign(MeetingDetail, {
     const meta = [];
     if (item.presenter) meta.push("Presenter: <b>" + esc(item.presenter) + "</b>");
     meta.push("Related: " + (related ? '<span class="code">' + esc(related) + "</span>" : '<span class="muted">—</span>'));
+    // A sign-off approval minute is the record of a granted decision — it can be
+    // edited but not removed; the sign-off is revoked on the model, not by
+    // deleting its minute.
+    const signoff = (item.title || "").indexOf("Sign-off approved") === 0;
+    const remove = signoff ? "" :
+      ' <button class="btn small danger" data-minrm="' + esc(item.item_id) + '">Remove</button>';
     return '<div class="card" style="margin-bottom:8px" id="minrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b></div>" +
-      '<div class="rowact"><button class="btn small" data-mined="' + esc(item.item_id) + '">Edit</button> ' +
-      '<button class="btn small danger" data-minrm="' + esc(item.item_id) + '">Remove</button></div></div>' +
+      '<div class="rowact"><button class="btn small" data-mined="' + esc(item.item_id) + '">Edit</button>' +
+      remove + "</div></div>" +
       '<div class="muted" style="margin-top:6px">' + meta.join(" &nbsp;·&nbsp; ") + "</div>" +
       (item.text ? '<div style="margin-top:6px;white-space:pre-wrap">' + esc(item.text) + "</div>" : "") +
       "</div>";
