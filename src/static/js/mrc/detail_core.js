@@ -107,9 +107,8 @@ const MeetingDetail = {
     };
     // Participants moved out to the persistent left panel — no longer a tab.
     const tabs = [
-      ["agenda", "Agenda"], ["minutes", "Minutes"],
-      ["models_in_scope", "Models"], ["decisions", "Decisions"], ["actions", "Actions"],
-      ["documents", "Documents"],
+      ["agenda", "Agenda"], ["models_in_scope", "Models"], ["actions", "Actions"],
+      ["minutes", "Minutes"],
     ];
     return '<div class="dtabs">' + tabs.map((t) =>
       '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-mtab="' + t[0] + '">' +
