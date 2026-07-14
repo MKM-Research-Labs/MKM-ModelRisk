@@ -23,27 +23,42 @@
 const AuditReports = {
   async render() {
     const reports = await App.get("/api/audit-reports");
-    const cards = reports.length ? reports.map((r) =>
-      '<div class="rcard"><div class="rlabel">' + esc(r.label) + "</div>" +
-      '<div class="rmeta">' + esc(r.filename) + " &middot; " + fmtSize(r.size) +
-      " &middot; " + esc((r.modified || "").slice(0, 10)) + "</div>" +
-      '<div class="row" style="margin-top:10px">' +
-      '<a class="btn small primary" href="/api/audit-reports/' + esc(r.filename) +
-      '" target="_blank">View</a>' +
-      '<a class="btn small" href="/api/audit-reports/' + esc(r.filename) +
-      '" download>Download</a></div></div>').join("") :
+    const cards = reports.length ? reports.map((r) => this._card(r)).join("") :
       '<div class="empty">No reports generated yet. Click “Generate reports”.</div>';
     document.getElementById("tab-reports").innerHTML =
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Audit reports</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="ar-generate">Generate reports</button></div>' +
-      '<p class="muted">Generate produces one PDF per audit rule (R1&ndash;R8), plus a ' +
-      "consolidated coding-rule audit and the Model Risk Report. Files are written to " +
-      "uploads/audit/ (gitignored).</p>" +
+      '<p class="muted">Generate produces one PDF per audit rule (R1&ndash;R8), the ' +
+      "JSON-file audit and a consolidated coding-rule audit, plus the Model Risk Report. " +
+      "The test suite then runs in the background, adding coverage (XML + browsable HTML), " +
+      "JUnit results and the Test Report. Files are written to uploads/audit/ (gitignored)." +
+      "</p>" +
       '<p class="muted" id="ar-cov-note"></p>' +
       '<div class="rgrid" style="margin-top:12px">' + cards + "</div></div>";
     document.getElementById("ar-generate").onclick = () => this._generate();
     this._resumeCoverage();          // reflect an in-flight coverage refresh, if any
+  },
+
+  // One artefact card. The coverage HTML report opens its own page (r.href);
+  // PDFs render inline, other artefacts (XML/JSON/TXT) download.
+  _card(r) {
+    const badge = r.type ? '<span class="pill">' + esc(r.type) + "</span> " : "";
+    const meta = '<div class="rmeta">' + badge + esc(r.filename) + " &middot; " +
+      fmtSize(r.size) + " &middot; " + esc((r.modified || "").slice(0, 10)) + "</div>";
+    let actions;
+    if (r.href) {
+      actions = '<a class="btn small primary" href="/api/audit-reports/' + esc(r.href) +
+        '" target="_blank">Open</a>';
+    } else {
+      const url = "/api/audit-reports/" + esc(r.filename);
+      const view = r.type === "PDF"
+        ? '<a class="btn small primary" href="' + url + '" target="_blank">View</a>'
+        : "";
+      actions = view + '<a class="btn small" href="' + url + '" download>Download</a>';
+    }
+    return '<div class="rcard"><div class="rlabel">' + esc(r.label) + "</div>" + meta +
+      '<div class="row" style="margin-top:10px">' + actions + "</div></div>";
   },
 
   // Poll the background coverage refresh: show progress, and re-render (so the

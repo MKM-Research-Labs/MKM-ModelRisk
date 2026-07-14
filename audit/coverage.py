@@ -31,13 +31,21 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from config.audit import COVERAGE_MINIMUM
+from config.audit import AUDIT_OUTPUT_DIR, COVERAGE_MINIMUM, COVERAGE_XML_NAME
 
 from audit._walk import REPO_ROOT
 
-# Default location of the Cobertura report, written by ``coverage xml`` or
-# ``pytest --cov --cov-report=xml`` at the repo root.
-COVERAGE_XML = REPO_ROOT / "coverage.xml"
+# Candidate locations for the Cobertura report, most-specific first: the audit
+# run writes it into the audit output directory (alongside the report PDFs);
+# a plain ``pytest --cov --cov-report=xml`` still drops it at the repo root, so
+# that legacy location is honoured as a fallback.
+COVERAGE_XML = REPO_ROOT / COVERAGE_XML_NAME
+_AUDIT_COVERAGE_XML = AUDIT_OUTPUT_DIR / COVERAGE_XML_NAME
+
+
+def default_coverage_path() -> Path:
+    """The coverage.xml the audit should read: audit-dir copy if present, else root."""
+    return _AUDIT_COVERAGE_XML if _AUDIT_COVERAGE_XML.exists() else COVERAGE_XML
 
 
 def _package_rows(root: ET.Element) -> list[dict]:
@@ -73,7 +81,7 @@ def coverage_summary(cov_path: Path | None = None) -> dict:
     Returns ``{"available": False, ...}`` with zeroed totals when the report is
     absent, so callers can render a placeholder without special-casing.
     """
-    path = COVERAGE_XML if cov_path is None else cov_path
+    path = default_coverage_path() if cov_path is None else cov_path
     summary = {
         "available": False,
         "line_rate": 0.0,

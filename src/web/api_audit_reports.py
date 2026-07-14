@@ -17,22 +17,32 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""HTTP API for generated audit report files (list, view/download, generate)."""
+"""HTTP API for generated audit report files (list, view/download, generate).
+
+The Generate action produces the full audit-evidence package into a single
+directory — the per-rule and consolidated PDFs plus the ``__init__`` JSON export
+immediately, and then (in the background, since the suite takes ~1 min) the
+coverage/JUnit artefacts and the Test Report, mirroring PhysicalRisk where the
+audit run itself drops coverage, JUnit and the browsable coverage HTML alongside
+the reports. The tab lists every artefact, not only the PDFs.
+"""
 from __future__ import annotations
 
 import os
 import shutil
 import subprocess
-import sys
 import threading
 from datetime import date, datetime
 
 from flask import Blueprint, abort, jsonify, send_from_directory
 
-from audit._walk import REPO_ROOT
-from audit.__main__ import build_report, write_audit_reports
-from audit.pdf import REPORT_LABELS
-from config.audit import AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS, USER_GUIDE_MD
+from audit.__main__ import build_report, write_audit_reports, write_init_audit_json
+from audit.coverage import coverage_summary
+from audit.pdf import REPORT_LABELS, render_test_report_pdf
+from audit.testsuite import SUITE_ACTIVE_ENV, run_test_suite
+from config.audit import (AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS,
+                          COVERAGE_HTML_DIRNAME, COVERAGE_HTML_LABEL,
+                          COVERAGE_XML_NAME, TEST_REPORT_PDF_NAME, USER_GUIDE_MD)
 from src.governance.model_inventory import list_models
 from src.governance.model_inventory.report import render_report_pdf
 from src.governance.mrc.pack import TectonicNotFound
@@ -47,31 +57,32 @@ audit_reports_bp = Blueprint("audit_reports", __name__, url_prefix="/api/audit-r
 # Filename -> human label: the fixed reports plus every generated per-rule PDF.
 _LABELS = {**AUDIT_REPORT_LABELS, **REPORT_LABELS}
 
-# Background coverage refresh. The full suite takes ~1 min, so generation returns
-# immediately and refreshes the coverage-dependent reports (R3 + the consolidated
-# overview) once ``coverage.xml`` has been regenerated.
+# File extension -> short type badge shown in the tab.
+_TYPE_LABELS = {".pdf": "PDF", ".xml": "XML", ".json": "JSON",
+                ".txt": "TXT", ".html": "HTML"}
+
+# Background full-suite refresh. The suite takes ~1 min, so generation returns
+# immediately and refreshes the coverage/JUnit artefacts, the Test Report and the
+# coverage-dependent reports (R3 + the consolidated overview) once it lands.
 _cov_lock = threading.Lock()
 _cov_state = {"running": False, "error": None}
 
 
-def _run_pytest_coverage() -> None:
-    """Run the suite with coverage, writing ``coverage.xml`` at the repo root.
-
-    Pinned to the dedicated ``mkm_modelrisk_test`` database so a live or demo
-    event store is never touched, regardless of how the server was configured.
-    """
-    env = {**os.environ, "MKM_DB_NAME": "mkm_modelrisk_test", "PYTHONUNBUFFERED": "1"}
-    subprocess.run(
-        [sys.executable, "-m", "pytest", "--cov", "--cov-report=xml", "-q"],
-        cwd=str(REPO_ROOT), env=env, capture_output=True, timeout=900, check=False)
-
-
 def _run_coverage_and_rebuild(output_dir) -> None:
-    """Regenerate coverage, then rebuild the reports so R3 shows live numbers."""
+    """Run the suites into ``output_dir``, then rebuild the coverage-aware output.
+
+    Emits ``coverage.xml``/``coverage/`` HTML/``junit.xml`` (+ best-effort
+    ``e2e_junit.xml``), writes the Test Report from the parsed results, and
+    re-renders the reports so R3 and the consolidated overview show live numbers.
+    """
     global _cov_state
     try:
-        _run_pytest_coverage()
-        write_audit_reports(build_report(), date.today().isoformat(), output_dir)
+        results = run_test_suite(output_dir)
+        as_of = date.today().isoformat()
+        cov = coverage_summary(output_dir / COVERAGE_XML_NAME)
+        (output_dir / TEST_REPORT_PDF_NAME).write_bytes(
+            render_test_report_pdf(results, cov, as_of))
+        write_audit_reports(build_report(), as_of, output_dir)
         error = None
     except Exception as exc:                    # missing pytest, timeout, tectonic…
         error = str(exc)
@@ -81,7 +92,14 @@ def _run_coverage_and_rebuild(output_dir) -> None:
 
 
 def _start_coverage_refresh(output_dir) -> bool:
-    """Kick off a background coverage refresh unless one is already running."""
+    """Kick off a background suite/coverage refresh unless one is already running.
+
+    Refuses to start when already inside a suite run (``SUITE_ACTIVE_ENV`` set) —
+    e.g. an e2e test that POSTs to /generate while the e2e suite itself runs under
+    an audit run — so a suite never recursively spawns another suite.
+    """
+    if os.environ.get(SUITE_ACTIVE_ENV):
+        return False
     with _cov_lock:
         if _cov_state["running"]:
             return False
@@ -92,17 +110,36 @@ def _start_coverage_refresh(output_dir) -> bool:
     return True
 
 
+def _entry(path) -> dict:
+    """Catalogue row for one artefact file ``path``."""
+    stat = path.stat()
+    ext = path.suffix.lower()
+    return {
+        "filename": path.name,
+        "label": _LABELS.get(path.name, path.stem.replace("_", " ").title()),
+        "type": _TYPE_LABELS.get(ext, ext.lstrip(".").upper() or "FILE"),
+        "size": stat.st_size,
+        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+    }
+
+
 def _catalogue() -> list[dict]:
+    """Every artefact in the output dir, plus the browsable coverage HTML report."""
     if not OUTPUT_DIR.is_dir():
         return []
-    reports = []
-    for path in sorted(OUTPUT_DIR.glob("*.pdf")):
-        stat = path.stat()
+    reports = [_entry(path)
+               for path in sorted(OUTPUT_DIR.iterdir())
+               if path.is_file() and not path.name.startswith(".")]
+    cov_index = OUTPUT_DIR / COVERAGE_HTML_DIRNAME / "index.html"
+    if cov_index.is_file():
+        stat = cov_index.stat()
         reports.append({
-            "filename": path.name,
-            "label": _LABELS.get(path.name, path.stem.replace("_", " ").title()),
+            "filename": f"{COVERAGE_HTML_DIRNAME}/index.html",
+            "label": COVERAGE_HTML_LABEL,
+            "type": "HTML",
             "size": stat.st_size,
             "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+            "href": "coverage",         # served by the coverage route, not the file route
         })
     return reports
 
@@ -112,12 +149,32 @@ def list_reports():
     return jsonify(_catalogue())
 
 
+@audit_reports_bp.get("/coverage")
+def serve_coverage_index():
+    """Serve the browsable HTML coverage report's index page."""
+    cov_dir = OUTPUT_DIR / COVERAGE_HTML_DIRNAME
+    if not (cov_dir / "index.html").is_file():
+        abort(404)
+    return send_from_directory(cov_dir, "index.html")
+
+
+@audit_reports_bp.get("/coverage/<path:filename>")
+def serve_coverage_asset(filename: str):
+    """Serve a static asset (css/js/per-file page) of the coverage HTML report."""
+    cov_dir = OUTPUT_DIR / COVERAGE_HTML_DIRNAME
+    if not cov_dir.is_dir():
+        abort(404)
+    return send_from_directory(cov_dir, filename)
+
+
 @audit_reports_bp.get("/<path:filename>")
 def serve_report(filename: str):
     # send_from_directory rejects path traversal and missing files with 404.
+    # PDFs render inline; XML/JSON/TXT download as attachments.
     if not OUTPUT_DIR.is_dir():
         abort(404)
-    return send_from_directory(OUTPUT_DIR, filename, mimetype="application/pdf")
+    as_attachment = os.path.splitext(filename)[1].lower() != ".pdf"
+    return send_from_directory(OUTPUT_DIR, filename, as_attachment=as_attachment)
 
 
 def _render_user_guide(dest):
@@ -134,18 +191,22 @@ def generate():
     """(Re)generate the audit report PDFs into the output directory."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     as_of = date.today().isoformat()
+    report = build_report()
     try:
-        # One standalone PDF per audit function (R1–R8) plus the consolidated
-        # overview — the same set the ``python -m audit --pdf`` CLI emits.
-        write_audit_reports(build_report(), as_of, OUTPUT_DIR)
+        # One standalone PDF per audit function (R1–R8) plus the JSON-file audit
+        # and the consolidated overview — the same set the ``python -m audit
+        # --pdf`` CLI emits — followed by the Model Risk report.
+        write_audit_reports(report, as_of, OUTPUT_DIR)
         (OUTPUT_DIR / "model_risk_report.pdf").write_bytes(
             render_report_pdf(list_models(), get_settings(), as_of))
     except TectonicNotFound as exc:
         # Optional system dependency missing: surface an actionable 503 rather
         # than a raw 500 stack trace.
         return jsonify({"error": str(exc)}), 503
+    # Machine-readable __init__ audit export sits next to the PDFs.
+    write_init_audit_json(report, OUTPUT_DIR)
     _render_user_guide(OUTPUT_DIR / "user_guide.pdf")
-    # Refresh coverage in the background; the R3 report updates when it lands.
+    # Run the suites in the background; coverage/JUnit/Test Report land when done.
     _start_coverage_refresh(OUTPUT_DIR)
     return jsonify(_catalogue())
 

@@ -132,6 +132,17 @@ def _duplication_body(report: dict) -> str:
     ])
 
 
+def _json_files_body(report: dict) -> str:
+    findings = report.get("json_files", [])
+    intro = ("First-party source should persist through the Postgres event store, "
+             "not ``.json`` files on disk. Every touch below is migration backlog "
+             "(reported, not gated).\\par\\medskip\n")
+    return intro + _findings_section(
+        "JSON-file I/O under the source tree", findings,
+        ["File", "Line", "Kind", "Snippet"],
+        lambda f: [f["path"], f["line"], f["kind"], f["snippet"]])
+
+
 # One standalone report per audit function. ``body`` renders the rule's findings;
 # ``title``/``subtitle`` head the page; ``label`` names it in the Audit Reports tab.
 REPORTS = [
@@ -166,8 +177,18 @@ REPORTS = [
      "subtitle": "No duplicated code; shared logic extracted", "body": _duplication_body},
 ]
 
-# Filename -> Audit-Reports-tab label, for the generated per-rule PDFs.
-REPORT_LABELS = {spec["filename"]: spec["label"] for spec in REPORTS}
+# Standalone evidence reports rendered next to the R1–R8 set but kept out of the
+# consolidated audit's summary table (they are not one of the numbered rules).
+STANDALONE_REPORTS = [
+    {"filename": "json_files_report.pdf", "label": "JSON-File Audit",
+     "title": "JSON-File Audit",
+     "subtitle": "Source persists through Postgres, not .json files",
+     "body": _json_files_body},
+]
+
+# Filename -> Audit-Reports-tab label, for every generated per-rule/standalone PDF.
+REPORT_LABELS = {spec["filename"]: spec["label"]
+                 for spec in (*REPORTS, *STANDALONE_REPORTS)}
 
 
 def _document(title: str, subtitle: str, as_of: str, body: str) -> str:
@@ -232,3 +253,36 @@ def render_report_pdf(report: dict, spec: dict, as_of: str) -> bytes:
 def render_audit_pdf(report: dict, as_of: str) -> bytes:
     """Build and compile the consolidated coding-rule audit report to PDF bytes."""
     return pack.compile_tex(build_audit_tex(report, as_of))
+
+
+def _suite_row(name: str, result: dict | None) -> list:
+    """One summary-table row for a test suite; a dash line when it did not run."""
+    if not result:
+        return [name, "—", "—", "—", "—", "not run"]
+    status = "PASS" if result["failures"] == 0 and result["errors"] == 0 else "FAIL"
+    return [name, result["tests"], result["failures"], result["errors"],
+            result["skipped"], status]
+
+
+def build_test_report_tex(results: dict, cov: dict, as_of: str) -> str:
+    """Pure: render the model/unit test-summary report (counts + coverage)."""
+    body = _section("Test suites", _table(
+        ["Suite", "Tests", "Failures", "Errors", "Skipped", "Status"],
+        [_suite_row("Unit / model", results.get("unit")),
+         _suite_row("End-to-end", results.get("e2e"))]))
+    if cov.get("available"):
+        pct = cov["line_rate"] * 100
+        body += _section("Coverage", _table(
+            ["Metric", "Value"],
+            [["Line coverage", f"{pct:.2f}%"],
+             ["Lines covered", f"{cov['lines_covered']:,}"],
+             ["Lines valid", f"{cov['lines_valid']:,}"],
+             ["Gate", str(COVERAGE_MINIMUM) + "%"]]))
+    else:
+        body += ("Coverage was not measured for this run.\\par\\medskip\n")
+    return _document("Test Report", "Unit, e2e and coverage evidence", as_of, body)
+
+
+def render_test_report_pdf(results: dict, cov: dict, as_of: str) -> bytes:
+    """Build and compile the test-summary report to PDF bytes."""
+    return pack.compile_tex(build_test_report_tex(results, cov, as_of))
