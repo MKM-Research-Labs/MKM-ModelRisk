@@ -24,8 +24,12 @@ from tests.web.conftest import HEADERS
 
 
 def _seed_mrc(client, value="MRC-CO", level="Company", scope_value=None):
-    """A Company-level MRC covers every model regardless of its org unit."""
-    fields = {"value": value, "name": value, "level": level}
+    """A Company-level MRC covering every model. Quorum is switched off so its
+    meetings are quorate without an attended roster — these tests exercise
+    sign-off mechanics; the quorum gate is covered in test_mrc_quorum.py."""
+    fields = {"value": value, "name": value, "level": level,
+              "quorum_require_chair": "No", "quorum_require_secretary": "No",
+              "quorum_min_voting": "0"}
     if scope_value:
         fields["scope_value"] = scope_value
     return client.post(

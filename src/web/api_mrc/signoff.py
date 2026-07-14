@@ -32,6 +32,7 @@ from src.governance.mrc import (
 from src.web._helpers import context_from_request, json_body
 from src.web._signoff_routing import complete_request_for_agenda, subject_for_agenda_item
 from src.web.api_mrc._bp import mrc_bp
+from src.web.api_mrc._quorum import is_quorate
 
 
 def _auto_minute(ctx, meeting_id: str, meeting: dict, subject, subject_id: str,
@@ -88,6 +89,11 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     subject, subject_id = subject_for_agenda_item(item)
     if subject is None or not proposed_rag:
         return jsonify({"error": "agenda item is not a sign-off request"}), 400
+    # A committee may only take sign-off decisions once the meeting is quorate —
+    # the same gate that governs closing it. Enforced here, not just in the UI,
+    # so the "wait until the meeting is quorate" rule can't be bypassed.
+    if not is_quorate(meeting["data"]):
+        return jsonify({"error": "meeting is not quorate"}), 400
     record = subject.get(subject_id)
     if record is None:
         return jsonify({"error": f"subject {subject_id} not found"}), 404

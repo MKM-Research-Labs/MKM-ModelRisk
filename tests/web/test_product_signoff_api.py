@@ -24,7 +24,11 @@ from tests.web.conftest import HEADERS
 
 
 def _seed_mrc(client, value="MRC-CO", level="Company", scope_value=None):
-    fields = {"value": value, "name": value, "level": level}
+    # Quorum requirements off so meetings are quorate without an attended roster
+    # — these tests exercise sign-off mechanics, not the quorum gate.
+    fields = {"value": value, "name": value, "level": level,
+              "quorum_require_chair": "No", "quorum_require_secretary": "No",
+              "quorum_min_voting": "0"}
     if scope_value:
         fields["scope_value"] = scope_value
     return client.post("/api/reference/collections/mrc",
