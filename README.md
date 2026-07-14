@@ -111,47 +111,106 @@ Then open **http://127.0.0.1:5015** — the **Acting as** field is pre-filled wi
 the host id you entered. (Prerequisites: **PostgreSQL 16** and **Python 3.13**; see
 [Prerequisites](#prerequisites) above.)
 
-### Full setup, step by step
+### First-time setup, step by step (macOS)
 
-Run these steps in order from a terminal. Steps 1–6 are a one-off; after that you
-only need `scripts/pg.sh start` and `python app.py` to run the app again.
+Follow these in order from a fresh clone. **Steps 0–4 are one-off**; after that,
+running the app again is just the three commands in
+[Running it again](#running-it-again). Each step says what you should see, so you
+can confirm it worked before moving on.
+
+**Step 0 — Install the tools (one-off).** Skip to Step 1 if `brew --version`,
+`psql --version` and `python3.13 --version` already work.
 
 ```bash
-# 1. Clone the repository and enter it
-git clone https://github.com/MKM-Research-Labs/MKM-ModelRisk.git
-cd MKM-ModelRisk
+# Homebrew — skip if `brew --version` already prints a version
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# 2. Create the local PostgreSQL cluster + the mkm_modelrisk database.
-#    One-off. Creates a cluster on port 5433 under ./.pgdata (gitignored).
-scripts/pg.sh init
-#    Started automatically by `init`. To start/stop/check it later:
-#    scripts/pg.sh start | stop | status
+# The two required tools (PostgreSQL 16 + Python 3.13)
+brew install postgresql@16 python@3.13
 
-# 3. Create and activate a Python 3.13 virtual environment
-python3.13 -m venv .venv
-source .venv/bin/activate        # do this in every new terminal (macOS/Linux)
-
-# 4. Install the Python dependencies (editable install, includes test tooling)
-pip install -e ".[dev]"          # or: pip install -r requirements.txt
-python -m playwright install chromium   # browser used by the e2e tests
-
-# 5. Start the app — migrations run automatically on first startup
-python app.py                    # serves http://127.0.0.1:5015
-
-# 6. (Optional) Load a few example models so the inventory isn't empty.
-#    Run in a second terminal (with .venv activated) while the app is stopped,
-#    or before step 5.
-PYTHONPATH=. python scripts/seed_demo.py
+# Optional — only needed for PDF exports (Meeting Pack, reports, User Guide)
+brew install tectonic pandoc
 ```
 
-Open **http://127.0.0.1:5015** and you'll land on the **Model Inventory** tab.
-Set the **Acting as** field (top right) to your name/email — that identity is
-recorded on every change you make. From there, follow the
-[**User Guide**](docs/user_guide.md).
+Verify before continuing:
 
-**Defaults work out of the box** (see [Configuration](#configuration)) — you only
-need a `.env` file to change ports, database names, or credentials:
-`cp .env.example .env` and edit it.
+```bash
+psql --version         # → psql (PostgreSQL) 16.x
+python3.13 --version   # → Python 3.13.x
+```
+
+If either is `command not found`, Homebrew isn't on your `PATH` — see
+[Troubleshooting](#troubleshooting).
+
+**Step 1 — Get the code.**
+
+```bash
+git clone https://github.com/MKM-Research-Labs/MKM-ModelRisk.git
+cd MKM-ModelRisk
+```
+
+**Step 2 — Create the Python environment.**
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate          # ← run this in EVERY new terminal
+pip install -e ".[dev]"
+```
+
+✓ Your prompt now shows `(.venv)` and `python --version` prints `3.13.x`.
+
+**Step 3 — Create the database cluster (one-off).**
+
+```bash
+bash scripts/pg.sh init            # creates ./.pgdata on port 5433, then starts it
+```
+
+✓ You should see `Cluster ready on port 5433; database 'mkm_modelrisk' created.`
+Confirm it is up with `bash scripts/pg.sh status` → `... accepting connections`.
+
+**Step 4 — Launch the demo.**
+
+```bash
+python app.py demo                 # creates + seeds mkm_modelrisk_demo on first run
+```
+
+✓ You should see `Running on http://127.0.0.1:5015`.
+
+**Step 5 — Open it.** Visit **http://127.0.0.1:5015**, set the **Acting as** field
+(top-right) to your name/email — that identity is stamped on every change — and
+follow the [**User Guide**](docs/user_guide.md).
+
+#### Running it again
+
+In a fresh terminal (the database persists between runs):
+
+```bash
+cd MKM-ModelRisk
+source .venv/bin/activate
+bash scripts/pg.sh start
+python app.py demo
+```
+
+Stop the app with **Ctrl-C**; stop the database with `bash scripts/pg.sh stop`.
+
+> **Demo vs dev.** `python app.py demo` uses a throwaway, pre-seeded
+> `mkm_modelrisk_demo` database — the right choice for handovers and client
+> walkthroughs. `python app.py` (no `demo`) uses your own `mkm_modelrisk` dev
+> database instead. Defaults work out of the box; only create a `.env`
+> (`cp .env.example .env`) to change ports/credentials — see
+> [Configuration](#configuration).
+
+#### Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| `command not found: python3.13` or `psql` | Homebrew's tools aren't on your `PATH`. Ensure `/opt/homebrew/bin` (Apple Silicon) or `/usr/local/bin` (Intel) is on `PATH`, then open a **new** terminal. Re-run `brew install postgresql@16 python@3.13` if needed. |
+| `scripts/pg.sh: Permission denied` | Invoke it via `bash scripts/pg.sh …` (as shown above). |
+| `pg_ctl: could not start server` on `init`/`start` | A cluster is **already running** on port 5433 — check `bash scripts/pg.sh status`. If a different PostgreSQL owns 5433, stop it (or set `MKM_DB_PORT`). |
+| `psql: could not connect` / `connection refused` | The cluster isn't running: `bash scripts/pg.sh start`. |
+| `Address already in use` on port 5015 | An app instance is still up: `lsof -tiTCP:5015 \| xargs kill`, then retry. |
+| PDF exports return **503** | Install the optional engines: `brew install tectonic pandoc`. |
+| Demo data looks stale / want a clean slate | `bash scripts/pg.sh start && dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk_demo && python app.py demo`. |
 
 ### Verify the checkout (optional but recommended)
 
