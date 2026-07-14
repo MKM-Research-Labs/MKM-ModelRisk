@@ -146,6 +146,17 @@ MRC_COLLECTION_SPECS = {
         {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
         {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
     ]},
+    # Products in scope for analysis — the exact mirror of models_in_scope, so the
+    # Signoff tab's Analysis section can cover products alongside models.
+    "products_in_scope": {"label": "Products", "id_prefix": "PS", "fields": [
+        {"key": "product_id", "label": "Product", "type": "text", "required": True},
+        {"key": "presenter", "label": "Presenter", "type": "text", "reference": "people"},
+        {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
+         "options": VALID_ANALYSIS_STATUS},
+        {"key": "analysis_note", "label": "Analysis note", "type": "text"},
+        {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
+        {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
+    ]},
     "decisions": {"label": "Decisions", "id_prefix": "D", "fields": [
         {"key": "description", "label": "Decision", "type": "text", "required": True},
         {"key": "date", "label": "Date", "type": "date"},
