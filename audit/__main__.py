@@ -20,11 +20,12 @@
 """Console coding-rule audit report: ``python -m audit``."""
 from __future__ import annotations
 
+import json
 import sys
 from datetime import date
 from pathlib import Path
 
-from config.audit import AUDIT_OUTPUT_DIR, COVERAGE_MINIMUM
+from config.audit import AUDIT_OUTPUT_DIR, COVERAGE_MINIMUM, INIT_AUDIT_JSON_NAME
 from src.governance.mrc.pack import TectonicNotFound
 
 from audit.coverage import coverage_summary, low_coverage_packages
@@ -34,9 +35,11 @@ from audit.embedded_js import embedded_js_findings
 from audit.hardcoding import hardcoding_findings
 from audit.headers import header_findings
 from audit.init_files import init_file_findings
+from audit.json_files import json_file_findings
 from audit.large_files import large_source_files, large_test_files, large_web_files
 from audit.path_definitions import path_definition_findings
-from audit.pdf import REPORTS, render_audit_pdf, render_report_pdf
+from audit.pdf import (REPORTS, STANDALONE_REPORTS, render_audit_pdf,
+                       render_report_pdf)
 
 _USAGE = ("usage: python -m audit [--pdf]\n\n"
           "  --pdf   also render the audit reports (one PDF per rule R1–R8 plus a\n"
@@ -65,6 +68,7 @@ def build_report() -> dict:
         "path_definitions": path_definition_findings(),
         "coverage": coverage_summary(),
         "duplication": duplication_report(),
+        "json_files": json_file_findings(),
     }
 
 
@@ -79,7 +83,7 @@ def write_audit_reports(report: dict, as_of: str, output_dir: Path) -> list[Path
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     written = []
-    for spec in REPORTS:
+    for spec in (*REPORTS, *STANDALONE_REPORTS):
         dest = output_dir / spec["filename"]
         dest.write_bytes(render_report_pdf(report, spec, as_of))
         written.append(dest)
@@ -87,6 +91,16 @@ def write_audit_reports(report: dict, as_of: str, output_dir: Path) -> list[Path
     dest.write_bytes(render_audit_pdf(report, as_of))
     written.append(dest)
     return written
+
+
+def write_init_audit_json(report: dict, output_dir: Path) -> Path:
+    """Emit the machine-readable ``__init__`` audit results next to the PDFs."""
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    dest = output_dir / INIT_AUDIT_JSON_NAME
+    payload = {"findings": report["init_files"], "count": len(report["init_files"])}
+    dest.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return dest
 
 
 def _write_pdfs(report: dict) -> int:
@@ -129,6 +143,8 @@ def main(argv=None) -> int:
     _print_section("R6 data access outside src/database (reported)", report["data_access"],
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     _print_section("R6 path definitions outside config (reported)", report["path_definitions"],
+                   lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
+    _print_section("R6 .json file I/O under source (reported)", report["json_files"],
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     cov = report["coverage"]
     if cov["available"]:

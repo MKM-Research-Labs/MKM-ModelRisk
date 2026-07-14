@@ -20,14 +20,16 @@
 """Audit CLI: the consolidated ``python -m audit`` report."""
 from __future__ import annotations
 
+import json
+
 import audit.__main__ as cli
-from audit.__main__ import build_report, main
+from audit.__main__ import build_report, main, write_init_audit_json
 from src.governance.mrc import pack
 
 _SECTIONS = {
     "large_source_files", "large_web_files", "large_test_files", "hardcoding",
     "embedded_js", "init_files", "headers", "data_access", "path_definitions",
-    "coverage", "duplication",
+    "coverage", "duplication", "json_files",
 }
 
 
@@ -60,8 +62,19 @@ def test_pdf_flag_writes_the_full_report_set(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     names = sorted(p.name for p in tmp_path.glob("*.pdf"))
     assert "coding_rule_audit.pdf" in names
+    assert "json_files_report.pdf" in names          # standalone JSON-file audit
     assert sum(n.startswith("audit_r") for n in names) == 9
     assert "Generated" in out and str(tmp_path) in out
+
+
+def test_write_init_audit_json_exports_findings(tmp_path, monkeypatch):
+    monkeypatch.setattr(cli, "duplication_report", lambda: {"available": False})
+    report = build_report()
+    dest = write_init_audit_json(report, tmp_path)
+    assert dest.name == "init_audit_results.json"
+    payload = json.loads(dest.read_text())
+    assert payload["count"] == len(report["init_files"])
+    assert payload["findings"] == report["init_files"]
 
 
 def test_pdf_flag_reports_missing_engine(tmp_path, monkeypatch, capsys):

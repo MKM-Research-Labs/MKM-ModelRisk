@@ -35,12 +35,32 @@ AUDIT_OUTPUT_DIR = (
 # The user guide (Markdown) — published as a PDF into the Audit Reports tab.
 USER_GUIDE_MD = Path(__file__).resolve().parents[1] / "docs" / "user_guide.md"
 
+# Test-evidence artefacts produced by the audit run itself and written into
+# AUDIT_OUTPUT_DIR alongside the report PDFs — mirroring PhysicalRisk, where the
+# audit run drops coverage, JUnit and the test-summary artefacts into one place.
+JUNIT_XML_NAME = "junit.xml"
+COVERAGE_XML_NAME = "coverage.xml"
+COVERAGE_HTML_DIRNAME = "coverage"          # holds index.html + static assets
+E2E_JUNIT_XML_NAME = "e2e_junit.xml"
+INIT_AUDIT_JSON_NAME = "init_audit_results.json"
+TEST_REPORT_PDF_NAME = "test_report.pdf"
+JSON_FILES_REPORT_PDF_NAME = "json_files_report.pdf"
+
 # Human-readable titles for the generated report files (filename -> label).
 AUDIT_REPORT_LABELS = {
     "coding_rule_audit.pdf": "Coding-Rule Audit",
     "model_risk_report.pdf": "Model Risk Report",
     "user_guide.pdf": "User Guide",
+    TEST_REPORT_PDF_NAME: "Test Report",
+    JSON_FILES_REPORT_PDF_NAME: "JSON-File Audit",
+    JUNIT_XML_NAME: "JUnit Results",
+    E2E_JUNIT_XML_NAME: "E2E JUnit Results",
+    COVERAGE_XML_NAME: "Coverage (Cobertura XML)",
+    INIT_AUDIT_JSON_NAME: "__init__ Audit (JSON)",
 }
+
+# Label for the browsable HTML coverage report (a directory, surfaced as one card).
+COVERAGE_HTML_LABEL = "Coverage HTML"
 
 # Coding rule R2: source files should stay under this many lines.
 MAX_SOURCE_FILE_LINES = 300
@@ -81,6 +101,16 @@ DATA_TREE_NAMES = ("uploads",)
 EXCLUDE_DIRS = frozenset({
     "__pycache__", ".git", ".venv", "node_modules", "uploads",
     ".pytest_cache", "htmlcov", "build", "dist", ".claude",
+})
+
+# Coding rule R6 (JSON-file audit) — MKM-ModelRisk persists through the Postgres
+# event store, so first-party source should not read or write ``.json`` files on
+# disk. The json-file audit flags ``json.load``/``json.dump`` calls and ``.json``
+# path literals under the source dirs; it is reported (non-gating), tracking the
+# json→Postgres migration backlog. Files whose basename is allowlisted here are
+# config/manifest artefacts (not runtime data stores) and are not flagged.
+JSON_IO_ALLOWLIST = frozenset({
+    "package.json", "package-lock.json", "pyproject.toml", "tsconfig.json",
 })
 
 # Duplicate-code detection (jscpd).

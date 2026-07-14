@@ -20,7 +20,8 @@
 """Coverage audit: parse the Cobertura ``coverage.xml`` into a summary (R3)."""
 from __future__ import annotations
 
-from audit.coverage import coverage_summary, low_coverage_packages
+import audit.coverage as cov_mod
+from audit.coverage import coverage_summary, default_coverage_path, low_coverage_packages
 
 _COBERTURA = """<?xml version="1.0" ?>
 <coverage line-rate="0.8" lines-valid="10" lines-covered="8">
@@ -53,6 +54,19 @@ def _write_xml(tmp_path, text):
     path = tmp_path / "coverage.xml"
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def test_default_coverage_path_prefers_audit_dir(tmp_path, monkeypatch):
+    audit_copy = tmp_path / "coverage.xml"
+    audit_copy.write_text("<coverage/>")
+    monkeypatch.setattr(cov_mod, "_AUDIT_COVERAGE_XML", audit_copy)
+    assert default_coverage_path() == audit_copy
+
+
+def test_default_coverage_path_falls_back_to_repo_root(tmp_path, monkeypatch):
+    # No audit-dir copy → the repo-root location is used (legacy pytest --cov).
+    monkeypatch.setattr(cov_mod, "_AUDIT_COVERAGE_XML", tmp_path / "absent.xml")
+    assert default_coverage_path() == cov_mod.COVERAGE_XML
 
 
 def test_missing_report_is_unavailable(tmp_path):
