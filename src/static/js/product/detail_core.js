@@ -86,8 +86,7 @@ const ProductDetail = {
       '<div class="name">' + fieldDisplay(d.product) + "</div>" +
       '<div class="sub"><span class="code">' + fieldDisplay(d.identifier) + "</span> · " + esc(this._id) +
       (d.product_id ? " · " + esc(d.product_id) : "") + "</div>" +
-      '<div style="margin-top:8px">' + productStatusBadge(d.status, this._product.retired) +
-      (this._risk && this._risk.rating ? " &nbsp; " + riskBadge(this._risk.rating) : "") + "</div></div>" +
+      '<div style="margin-top:8px">' + productStatusBadge(d.status, this._product.retired) + "</div></div>" +
       '<div class="right"><div class="olabel">OWNER</div>' +
       '<div class="oname">' + fieldDisplay(d.owner) + "</div></div></div>";
   },
@@ -124,7 +123,10 @@ const ProductDetail = {
     if (this._tab === "linkage") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
-      ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [],
+      // Remediation Evidence is captured in-context on the Remediation tab, so it
+      // is not offered as a standalone category here.
+      const cats = (this._specs.doc_categories || []).filter((c) => c !== "Remediation Evidence");
+      ModelDocs.render(this._id, d.documents || [], cats,
         this._product.retired, "/api/products/", () => this.show(this._id, "docs"), "pt-content");
       return;
     }
