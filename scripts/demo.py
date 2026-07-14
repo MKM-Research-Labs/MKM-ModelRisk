@@ -32,6 +32,7 @@ from pathlib import Path
 import psycopg
 
 from config import DatabaseConfig
+from config.governance import STANDING_AGENDA_KINDS
 from src.database import run_migrations
 from src.files import save_upload
 from src.governance.bibliography import add_reference
@@ -45,7 +46,7 @@ from src.governance.model_inventory import (
 )
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.mrc import add_collection_item as _meeting_add
-from src.governance.mrc import rebuild_meeting_view, schedule_meeting
+from src.governance.mrc import rebuild_meeting_view, schedule_meeting, seed_standing_agenda
 from src.governance.mrc.pack import compile_tex
 from src.governance.mrc_settings import set_field, set_logo
 from src.governance.product import add_collection_item as _product_add
@@ -160,8 +161,13 @@ def seed() -> None:
     for meeting in data["meetings"]:
         schedule_meeting(meeting_id=meeting["meeting_id"], title=meeting["title"],
                          date=meeting["fields"]["date"], fields=meeting.get("fields", {}), actor=_ACTOR)
+        seed_standing_agenda(meeting_id=meeting["meeting_id"], actor=_ACTOR)
         for collection, items in meeting.get("collections", {}).items():
             for item in items:
+                # Standing agenda items are seeded above; skip them here so a
+                # demo_data.json that still carries them can't duplicate them.
+                if collection == "agenda" and item.get("kind") in STANDING_AGENDA_KINDS:
+                    continue
                 _meeting_add(meeting_id=meeting["meeting_id"], collection=collection, fields=item, actor=_ACTOR)
     for reference in data["bibliography"]:
         add_reference(fields=reference, actor=_ACTOR)

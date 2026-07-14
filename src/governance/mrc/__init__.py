@@ -24,6 +24,7 @@ from src.governance.mrc.commands import (
     add_collection_item,
     remove_collection_item,
     schedule_meeting,
+    seed_standing_agenda,
     update_collection_item,
     update_meeting_field,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "AGGREGATE_TYPE",
     "DomainError",
     "schedule_meeting",
+    "seed_standing_agenda",
     "update_meeting_field",
     "add_collection_item",
     "update_collection_item",
