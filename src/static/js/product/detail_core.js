@@ -123,9 +123,10 @@ const ProductDetail = {
     if (this._tab === "linkage") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
-      // Remediation Evidence is captured in-context on the Remediation tab, so it
-      // is not offered as a standalone category here.
-      const cats = (this._specs.doc_categories || []).filter((c) => c !== "Remediation Evidence");
+      // Remediation / Event Evidence are captured in-context on the Remediation
+      // and Events tabs, so they are not offered as standalone Docs categories.
+      const cats = (this._specs.doc_categories || []).filter(
+        (c) => c !== "Remediation Evidence" && c !== "Event Evidence");
       ModelDocs.render(this._id, d.documents || [], cats,
         this._product.retired, "/api/products/", () => this.show(this._id, "docs"), "pt-content");
       return;
