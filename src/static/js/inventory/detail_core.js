@@ -141,7 +141,11 @@ const Detail = {
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
     if (this._tab === "decisions") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "docs") {
-      ModelDocs.render(this._id, d.documents || [], this._specs.doc_categories || [], this._model.retired);
+      // Remediation / Event Evidence are captured in-context on the Remediation
+      // and Events tabs, so they are not offered as standalone Docs categories.
+      const cats = (this._specs.doc_categories || []).filter(
+        (c) => c !== "Remediation Evidence" && c !== "Event Evidence");
+      ModelDocs.render(this._id, d.documents || [], cats, this._model.retired);
       return;
     }
     // Validation & Assumptions overlap — one tab: the SR 26-2 questions plus
