@@ -57,40 +57,11 @@ Object.assign(ProductDetail, {
       '</div><div class="v">' + value + "</div>" + editLink + "</div>";
   },
 
-  // MRC sign-off state: a pending/queued request, or a button to request one.
-  _signoffPanel(d) {
-    const pending = (this._mrc || {}).pending_signoff;
-    if (pending) {
-      const detail = pending.status === "Attached"
-        ? 'on the agenda of <span class="code">' + esc(pending.meeting_id) + "</span>" +
-          (pending.meeting_date ? " (" + esc(pending.meeting_date) + ")" : "")
-        : "queued for <b>" + esc(pending.target_mrc || "its MRC") +
-          "</b> — added to that committee's next scheduled meeting";
-      return '<div class="dz-row" style="border:1px solid #f57c00;background:#fff8e1;' +
-        'padding:10px 14px;border-radius:6px;margin:8px 0"><div class="dz-text">' +
-        '<b>Pending MRC sign-off</b><p class="muted">Proposed <b>' + esc(pending.proposed_rag) +
-        "</b> " + detail + ".</p></div></div>";
-    }
-    if (this._product.retired) return "";
-    // Once signed off, offer to revoke (keeps the rating, returns to needing sign-off).
-    if ((this._risk || {}).signed_off) {
-      return '<div class="dz-row" style="border:1px solid #388e3c;background:#e8f5e9;' +
-        'padding:10px 14px;border-radius:6px;margin:8px 0"><div class="dz-text">' +
-        '<b>MRC signed off — ' + esc(d.rag_rating) + "</b>" +
-        '<p class="muted">This rating has current MRC sign-off. Revoking keeps the rating ' +
-        'but returns it to needing sign-off.</p></div>' +
-        '<div class="dz-action"><button class="btn small danger" id="prevoke-signoff">Revoke sign-off&hellip;</button></div></div>';
-    }
-    if (!d.rag_rating) {
-      return '<p class="muted" style="font-size:12px;margin:6px 0">Set a RAG rating to request MRC sign-off.</p>';
-    }
-    if (!(this._mrc || {}).mrc) return "";   // _mrcRow already explains the missing committee
-    return '<div class="dz-row" style="border:1px solid var(--line);padding:10px 14px;' +
-      'border-radius:6px;margin:8px 0"><div class="dz-text"><b>' + esc(d.rag_rating) +
-      " rating not yet signed off</b><p class=\"muted\">Request MRC sign-off — routed to the " +
-      "product's committee, picked up at its next meeting.</p></div>" +
-      '<div class="dz-action"><button class="btn small primary" id="preq-signoff" data-proposed="' +
-      esc(d.rag_rating) + '">Request MRC sign-off&hellip;</button></div></div>';
+  // Product-level MRC sign-off removed: the RAG rating is set directly and the
+  // committee meeting holds the authoritative MRC status. The read-only "MRC
+  // status" row (_mrcStatusRow) still surfaces the latest meeting decision.
+  _signoffPanel() {
+    return "";
   },
 
   _bindSignoffRequest() {
@@ -166,9 +137,8 @@ Object.assign(ProductDetail, {
     if (current !== null && current !== undefined) input.value = current;
     document.getElementById("ped-cancel").onclick = () => this.show(this._id, "overview");
     document.getElementById("ped-save").onclick = () => {
-      // A RAG-rating change is proposed to the MRC for sign-off, not applied
-      // directly — it takes effect only once the committee approves it.
-      if (f.key === "rag_rating") { this._proposeRag(input.value.trim(), current); return; }
+      // The RAG rating is set directly, like any other field. The MRC meeting
+      // sign-off is the authoritative status; the product does not gate edits.
       const body = paramKey === "component"
         ? { component: f.key, value: input.value.trim() }
         : { field: f.key, value: input.value.trim() };
