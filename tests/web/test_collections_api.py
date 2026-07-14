@@ -87,10 +87,12 @@ def test_add_item_unknown_collection_is_400(client):
     assert response.status_code == 400
 
 
-def test_add_item_without_confirmation_is_409(client):
+def test_add_item_applies_without_confirmation(client):
+    # Adding a non-critical collection item is not gated by confirm-to-amend.
     _register(client)
     response = client.post(
         "/api/models/M1/collections/assumptions",
         json={"fields": {"description": "x"}}, headers=HEADERS,
     )
-    assert response.status_code == 409
+    assert response.status_code == 201
+    assert response.get_json()["data"]["assumptions"][0]["description"] == "x"
