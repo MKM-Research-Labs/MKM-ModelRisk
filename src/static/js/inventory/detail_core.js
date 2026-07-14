@@ -106,10 +106,12 @@ const Detail = {
     const n = (k) => (d[k] || []).length;
     const vq = d.validation_questions || [];
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
+    const tst = TESTING_FIELDS.filter((k) => d[k] === "Yes").length + "/" + TESTING_FIELDS.length;
     const tabs = [
       ["overview", "Overview", null], ["remediation_steps", "Remediation", n("remediation_steps")],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
       ["validation_questions", "Validation & Assumptions", cov],
+      ["testing", "Testing", tst],
       ["operational_failure_events", "Events", n("operational_failure_events")],
       ["risk", "Risk Rating", null],
       ["decisions", "MRC linkage",
@@ -157,20 +159,24 @@ const Detail = {
         this._collSection("change_history", d);
       this._bindCollections(["version_history", "change_history"]); return;
     }
-    // Limitations tab: Testing (scalar fields) + Model weaknesses + Limitations.
-    if (this._tab === "limitations") {
+    // Testing tab: the unit / integration / benchmark test fields, each with its
+    // own in-context supporting-documents panel.
+    if (this._tab === "testing") {
       const docOpts = (cat) => ({ category: cat, docs: d.documents || [], base: "/api/models/",
-        id: this._id, retired: this._model.retired, refresh: () => this.show(this._id, "limitations") });
-      const testing = '<div class="section-header">Testing</div>' +
+        id: this._id, retired: this._model.retired, refresh: () => this.show(this._id, "testing") });
+      box.innerHTML = '<div class="section-header">Testing</div>' +
         TESTING_FIELDS.map((k) =>
           '<div class="inforow" id="row-' + k + '"><div class="k">' + esc(this.specByKey(k).label) +
           '</div><div class="v">' + yesNo(d[k]) + "</div>" + this._editLink(k) + "</div>" +
           DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
-      box.innerHTML = testing + this._collSection("model_weaknesses", d) +
-        this._collSection("limitations", d);
       this._bindEdits();
-      this._bindCollections(["model_weaknesses", "limitations"]);
       TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k]))); return;
+    }
+    // Limitations tab: Model weaknesses + Limitations.
+    if (this._tab === "limitations") {
+      box.innerHTML = this._collSection("model_weaknesses", d) +
+        this._collSection("limitations", d);
+      this._bindCollections(["model_weaknesses", "limitations"]); return;
     }
     const spec = this.collSpec(this._tab);
     let html = Collections.render(d, { collections: [spec] }, this._model.retired);
