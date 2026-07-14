@@ -52,14 +52,14 @@ def test_add_person_record():
     add_option(
         list_name="people",
         fields={"name": "Jane Doe", "email": "jane@firm",
-                "level": "Division", "scope_value": "Markets"},
+                "division": "Markets", "department": "Rates"},
         actor="admin",
     )
     person = get_reference_lists()["people"][0]
     assert person["item_id"] == "PE-001"
     assert person["name"] == "Jane Doe"
-    assert person["level"] == "Division"
-    assert person["scope_value"] == "Markets"
+    assert person["division"] == "Markets"
+    assert person["department"] == "Rates"
 
 
 def test_add_multiple_options_increment_ids():
