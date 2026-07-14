@@ -39,7 +39,7 @@ const Bibliography = {
       '<a class="btn small" href="/api/bibliography/export.bib">Export BibTeX</a></div>' +
       '<div id="bib-add"></div>' +
       "<table><thead><tr><th>Author(s)</th><th>Year</th><th>Title</th><th>Journal / Publisher</th>" +
-      "<th>Category</th><th></th></tr></thead><tbody id=\"bib-rows\"></tbody></table></div>";
+      "<th>Category</th><th>Notes</th><th></th></tr></thead><tbody id=\"bib-rows\"></tbody></table></div>";
     document.getElementById("bib-cat").onchange = (e) => { this._cat = e.target.value; this._renderRows(); };
     this._renderForm();
     this._renderRows();
@@ -83,9 +83,10 @@ const Bibliography = {
       (r.url ? '<a href="' + esc(r.url) + '" target="_blank">' + fieldDisplay(r.title) + "</a>"
         : fieldDisplay(r.title)) + "</td><td>" + fieldDisplay(r.journal) + "</td><td>" +
       (r.category ? '<span class="badge" style="background:#1976d2">' + esc(r.category) + "</span>" : "—") +
-      '</td><td class="rowact"><button class="btn small" data-bibed="' + esc(r.item_id) + '">Edit</button>' +
+      '</td><td class="muted" style="font-size:12px">' + fieldDisplay(r.notes) + "</td>" +
+      '<td class="rowact"><button class="btn small" data-bibed="' + esc(r.item_id) + '">Edit</button>' +
       ' <button class="btn small danger" data-bibrm="' + esc(r.item_id) + '">Remove</button></td></tr>').join("") :
-      '<tr><td colspan="6" class="empty">No references.</td></tr>';
+      '<tr><td colspan="7" class="empty">No references.</td></tr>';
     document.getElementById("bib-rows").innerHTML = rows;
     const self = this;
     document.querySelectorAll("[data-bibrm]").forEach(function (el) {

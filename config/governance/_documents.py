@@ -37,5 +37,6 @@ BIBLIOGRAPHY_SPEC = {"label": "References", "id_prefix": "REF", "fields": [
     {"key": "journal", "label": "Journal / Publisher", "type": "text"},
     {"key": "category", "label": "Category", "type": "text"},
     {"key": "url", "label": "URL", "type": "text"},
+    {"key": "notes", "label": "Notes", "type": "textarea"},
 ]}
 BIBLIOGRAPHY_SPECS = {"references": BIBLIOGRAPHY_SPEC}
