@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from flask import jsonify, send_file
 
-from src.command import dispatch
+from src.command import dispatch, require_confirmation
 from src.files import save_upload, upload_path
 from src.governance.mrc import (
     get_meeting_enriched as get_meeting,
@@ -64,9 +64,12 @@ def close_meeting(meeting_id: str):
     still_open = _open_agenda(d)
     if still_open:
         return jsonify({"error": "agenda items still open: " + ", ".join(still_open)}), 400
+    ctx = context_from_request(body)
+    # Closing is a confirm-to-amend action; gate it before generating the PDF so
+    # an unconfirmed call does no work.
+    require_confirmation("close_meeting", ctx)
     pdf = render_pack_pdf(meeting, get_settings())
     meta = save_upload("meeting_minutes", f"minutes_{meeting_id}.pdf", pdf)
-    ctx = context_from_request(body)
     for field, value in (("minutes_filename", meta["filename"]),
                          ("minutes_original_name", meta["original_name"]),
                          ("status", "Completed")):

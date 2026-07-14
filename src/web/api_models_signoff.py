@@ -36,6 +36,7 @@ from src.governance.model_inventory import get_model
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import get_meeting, matching_mrc
 from src.governance.reference import get_reference_lists
+from src.command import require_confirmation
 from src.web._helpers import context_from_request, json_body
 from src.web._signoff_routing import MODEL_SUBJECT, _newest, raise_signoff, revoke_signoff
 from src.web.api_models import models_bp
@@ -105,5 +106,6 @@ def revoke_model_signoff(model_id: str):
         return jsonify({"error": "model is not currently signed off"}), 400
     body = json_body()
     ctx = context_from_request(body)
+    require_confirmation("revoke_signoff", ctx)
     revoke_signoff(ctx, MODEL_SUBJECT, model_id, note=body.get("note") or body.get("reason"))
     return jsonify(get_model(model_id))

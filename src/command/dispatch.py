@@ -33,6 +33,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from config.commands import CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS
 from src.command._context import CommandContext
 from src.identity import Principal, resolve_principal
 
@@ -58,6 +59,25 @@ def context_from_headers(
     return CommandContext(principal=principal, confirmed=confirmed, reason=reason)
 
 
+def _requires_confirmation(command_name: str, kwargs: dict[str, Any]) -> bool:
+    """Whether this command needs the explicit confirmation step (rule R1 policy
+    in ``config.commands``). Non-critical changes apply without a confirmation."""
+    if command_name in CONFIRM_REQUIRED_COMMANDS:
+        return True
+    critical_fields = CONFIRM_REQUIRED_FIELDS.get(command_name)
+    return bool(critical_fields) and kwargs.get("field") in critical_fields
+
+
+def require_confirmation(command_name: str, context: CommandContext) -> None:
+    """Explicit confirm gate for composed operations (MRC sign-off / reject /
+    revoke, close meeting) that run several sub-commands rather than one
+    dispatched command. Raises before any of them mutate."""
+    if not context.confirmed:
+        raise ConfirmationRequired(
+            f"command '{command_name}' requires explicit confirmation"
+        )
+
+
 def dispatch(
     command_name: str,
     handler: Callable[..., Any],
@@ -67,9 +87,11 @@ def dispatch(
 ) -> Any:
     """Run a mutating command handler within ``context``.
 
-    The handler must accept ``actor`` and ``reason`` keyword arguments.
+    The handler must accept ``actor`` and ``reason`` keyword arguments. Commands
+    the confirm-to-amend policy deems important refuse to run unconfirmed;
+    everything else applies immediately.
     """
-    if not context.confirmed:
+    if _requires_confirmation(command_name, kwargs) and not context.confirmed:
         raise ConfirmationRequired(
             f"command '{command_name}' requires explicit confirmation"
         )

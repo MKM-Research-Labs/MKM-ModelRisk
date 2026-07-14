@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from flask import jsonify
 
-from src.command import dispatch
+from src.command import dispatch, require_confirmation
 from src.governance.mrc import (
     add_collection_item,
     get_meeting_enriched as get_meeting,
@@ -98,6 +98,9 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     if record is None:
         return jsonify({"error": f"subject {subject_id} not found"}), 404
     ctx = context_from_request(body)
+    # A committee decision is a confirm-to-amend action (composed of several
+    # sub-commands), so gate it explicitly before any of them mutate.
+    require_confirmation("signoff", ctx)
     approved = outcome == "Approved"
     from_rating = (record["data"] or {}).get("rag_rating")
     meeting_date = meeting["data"].get("date")
