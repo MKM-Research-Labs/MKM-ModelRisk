@@ -27,9 +27,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from config.paths import MIGRATIONS_DIR as _MIGRATIONS_DIR
 from src.database._connection import owner_connection
-
-_MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 
 def migration_files() -> list[Path]:

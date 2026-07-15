@@ -22,11 +22,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from psycopg.types.json import Jsonb
-
-from src.database import app_connection, read_all
+from src.database import read_all, read_view, replace_view
 from src.governance.mrc._state import apply, initial_state
 from src.governance.mrc.commands import AGGREGATE_TYPE
+
+_VIEW = "mrc_meeting_view"
+_COLUMNS = ("meeting_id", "data", "status", "version")
 
 
 def _to_document(state) -> dict[str, Any]:
@@ -45,55 +46,20 @@ def rebuild_meeting_view(config=None) -> int:
         state, _ = states.get(event.aggregate_id, (initial_state(), 0))
         state = apply(state, event.event_type, event.payload)
         states[event.aggregate_id] = (state, event.stream_seq)
-    with app_connection(config) as conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM mrc_meeting_view")
-            for meeting_id, (state, version) in states.items():
-                cur.execute(
-                    "INSERT INTO mrc_meeting_view "
-                    "(meeting_id, data, status, version) VALUES (%s, %s, %s, %s)",
-                    (
-                        meeting_id,
-                        Jsonb(_to_document(state)),
-                        state.fields.get("status"),
-                        version,
-                    ),
-                )
-    return len(states)
-
-
-def _row_to_dict(row: tuple) -> dict[str, Any]:
-    return {
-        "meeting_id": row[0],
-        "data": row[1],
-        "status": row[2],
-        "version": row[3],
-    }
+    rows = ((meeting_id, _to_document(state), state.fields.get("status"), version)
+            for meeting_id, (state, version) in states.items())
+    return replace_view(_VIEW, _COLUMNS, rows, config=config)
 
 
 def get_meeting(meeting_id: str, config=None) -> dict[str, Any] | None:
     """Return one meeting's current state, or ``None`` if not present."""
-    with app_connection(config) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT meeting_id, data, status, version "
-                "FROM mrc_meeting_view WHERE meeting_id = %s",
-                (meeting_id,),
-            )
-            row = cur.fetchone()
-    return _row_to_dict(row) if row is not None else None
+    rows = read_view(_VIEW, _COLUMNS, where="meeting_id", value=meeting_id, config=config)
+    return rows[0] if rows else None
 
 
 def list_meetings(config=None) -> list[dict[str, Any]]:
     """Return all meetings, ordered by ``meeting_id``."""
-    with app_connection(config) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT meeting_id, data, status, version "
-                "FROM mrc_meeting_view ORDER BY meeting_id"
-            )
-            rows = cur.fetchall()
-    return [_row_to_dict(row) for row in rows]
+    return read_view(_VIEW, _COLUMNS, order_by="meeting_id", config=config)
 
 
 def _enrich(meeting: dict | None, refs: dict[str, list]) -> dict | None:
