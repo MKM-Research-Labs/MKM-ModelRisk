@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from flask import jsonify, send_file
 
-from src.command import dispatch
+from src.command import dispatch, require_confirmation
 from src.files import save_upload, upload_path
 from src.governance.mrc import (
     get_meeting_enriched as get_meeting,
@@ -37,39 +37,7 @@ from src.governance.mrc.pack import render_pack_pdf
 from src.governance.mrc_settings import get_settings
 from src.web._helpers import context_from_request, json_body
 from src.web.api_mrc._bp import mrc_bp
-
-
-def _quorate(d: dict) -> bool:
-    """Server-side mirror of the participants-panel quorum rule: Chair +
-    Secretary + N voting members marked Attended (non-voting don't count)."""
-    parts = {p.get("name"): p for p in (d.get("participants") or [])}
-    roster = []
-    if d.get("chair"):
-        roster.append((d["chair"], "Chair"))
-    if d.get("secretary"):
-        roster.append((d["secretary"], "Secretary"))
-    for n in d.get("voting_members") or []:
-        roster.append((n, "Voting"))
-    attended: list[str] = []
-    seen = set()
-    for name, role in roster:
-        seen.add(name)
-        if ((parts.get(name) or {}).get("status") or "Invited") == "Attended":
-            attended.append(role)
-    for name, p in parts.items():
-        if name not in seen and (p.get("status") or "Invited") == "Attended":
-            attended.append(p.get("role") or "Guest")
-    req_chair = (d.get("quorum_require_chair") or "Yes") != "No"
-    req_sec = (d.get("quorum_require_secretary") or "Yes") != "No"
-    try:
-        min_voting = int(d.get("quorum_min_voting") or 2)
-    except (TypeError, ValueError):
-        min_voting = 2
-    if req_chair and "Chair" not in attended:
-        return False
-    if req_sec and "Secretary" not in attended:
-        return False
-    return attended.count("Voting") >= min_voting
+from src.web.api_mrc._quorum import is_quorate
 
 
 def _open_agenda(d: dict) -> list[str]:
@@ -91,14 +59,17 @@ def close_meeting(meeting_id: str):
     d = meeting["data"] or {}
     if d.get("status") == "Completed":
         return jsonify({"error": "meeting is already closed"}), 400
-    if not _quorate(d):
+    if not is_quorate(d):
         return jsonify({"error": "meeting is not quorate"}), 400
     still_open = _open_agenda(d)
     if still_open:
         return jsonify({"error": "agenda items still open: " + ", ".join(still_open)}), 400
+    ctx = context_from_request(body)
+    # Closing is a confirm-to-amend action; gate it before generating the PDF so
+    # an unconfirmed call does no work.
+    require_confirmation("close_meeting", ctx)
     pdf = render_pack_pdf(meeting, get_settings())
     meta = save_upload("meeting_minutes", f"minutes_{meeting_id}.pdf", pdf)
-    ctx = context_from_request(body)
     for field, value in (("minutes_filename", meta["filename"]),
                          ("minutes_original_name", meta["original_name"]),
                          ("status", "Completed")):

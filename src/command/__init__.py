@@ -25,6 +25,7 @@ from src.command.dispatch import (
     authorize,
     context_from_headers,
     dispatch,
+    require_confirmation,
 )
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     "authorize",
     "context_from_headers",
     "dispatch",
+    "require_confirmation",
 ]

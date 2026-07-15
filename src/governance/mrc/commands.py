@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance import STANDING_AGENDA
 from src.database import Event, append_event, read_stream
 from src.governance.mrc import _rules
 from src.governance.mrc._state import MeetingState, apply, initial_state
@@ -61,6 +62,25 @@ def schedule_meeting(
         state, meeting_id=meeting_id, title=title, date=date, fields=fields or {}
     )
     return _record(meeting_id, decision, version, actor, reason, config)
+
+
+def seed_standing_agenda(
+    *, meeting_id: str, actor: str, reason: str | None = None, config=None,
+) -> list[Event]:
+    """Seed the standing agenda (rollcall … AOB) onto a freshly-scheduled meeting.
+
+    Shared by every creation path — the web ``schedule`` endpoint and the demo
+    seeder — so the standing items are never missed. ``schedule_meeting`` stays a
+    single-event command; the standing items are ordinary ``CollectionItemAdded``
+    events layered on afterwards.
+    """
+    return [
+        add_collection_item(
+            meeting_id=meeting_id, collection="agenda", fields=dict(item),
+            actor=actor, reason=reason, config=config,
+        )
+        for item in STANDING_AGENDA
+    ]
 
 
 def update_meeting_field(

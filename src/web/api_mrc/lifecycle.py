@@ -32,12 +32,12 @@ from src.files import UploadError, save_upload, upload_path
 from src.governance.model_inventory import get_model
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.mrc import (
-    add_collection_item,
     get_meeting as get_meeting_raw,
     get_meeting_enriched as get_meeting,
     list_meetings_enriched as list_meetings,
     rebuild_meeting_view,
     schedule_meeting,
+    seed_standing_agenda,
     update_collection_item,
     update_meeting_field,
 )
@@ -256,34 +256,16 @@ def schedule():
         fields=body.get("fields") or {},
     )
     rebuild_meeting_view()
-    # Seed the standard high-level agenda. The detail of model sign-offs and
-    # analysis lives in the Models tab, so the agenda stays a running order.
-    for kind, title, desc in _DEFAULT_AGENDA:
-        dispatch(
-            "add_collection_item", add_collection_item, context=ctx,
-            meeting_id=meeting_id, collection="agenda",
-            fields={"title": title, "description": desc, "kind": kind},
-        )
+    # Seed the standard high-level agenda from the single shared helper, so every
+    # creation path (this endpoint and the demo seeder) stays consistent. The
+    # detail of model sign-offs and analysis lives in the Models tab, so the
+    # agenda stays a running order. Confirmation was already enforced above.
+    seed_standing_agenda(meeting_id=meeting_id, actor=ctx.principal.actor, reason=ctx.reason)
     rebuild_meeting_view()
     # Pull any queued sign-off requests for this committee onto the new agenda.
     # (They carry the subject id + proposed RAG but render in the Models tab.)
     drain_pending_for_meeting(ctx, get_meeting_raw(meeting_id) or {"meeting_id": meeting_id, "data": {}})
     return jsonify(get_meeting(meeting_id)), 201
-
-
-# The standing MRC agenda seeded on every new meeting: (kind, title, description).
-# The UI renders each kind bespoke; AOB always sorts last.
-_DEFAULT_AGENDA = (
-    ("rollcall", "Rollcall and Confirmation of Quorum",
-     "Confirm attendance in the participants panel; the meeting may proceed only once quorate."),
-    ("minutes_signoff", "Sign-off of the previous MRM minutes",
-     "Proposed by the chair."),
-    ("review_signoff", "Review model sign-off",
-     "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."),
-    ("review_analysis", "Review model analysis",
-     "Model analyses are reviewed in the Models tab (Analysis) — confirmation to proceed and any actions."),
-    ("aob", "Any Other Business (AOB)", ""),
-)
 
 
 @mrc_bp.post("/<meeting_id>/field")

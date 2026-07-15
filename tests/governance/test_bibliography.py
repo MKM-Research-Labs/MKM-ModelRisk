@@ -75,3 +75,14 @@ def test_bibtex_export():
 
 def test_bibtex_empty():
     assert to_bibtex([]) == ""
+
+
+def test_notes_are_stored_and_exported_as_bibtex_note():
+    add_reference(
+        fields={"authors": "Chow, V. T.", "title": "Open-Channel Hydraulics",
+                "notes": "Foundation text for Manning's equation."},
+        actor="admin",
+    )
+    refs = get_references()
+    assert refs[0]["notes"] == "Foundation text for Manning's equation."
+    assert "note = {Foundation text for Manning's equation.}" in to_bibtex(refs)

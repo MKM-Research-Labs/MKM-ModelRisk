@@ -81,12 +81,21 @@ const App = {
     }, 3200);
   },
 
-  // Confirm-to-amend: open the modal, then send the mutation with confirmed=true.
-  amend(summary, method, path, body, onDone) {
-    this._pending = { method: method, path: path, body: body, onDone: onDone };
-    document.getElementById("confirm-summary").textContent = summary;
-    document.getElementById("confirm-reason").value = "";
-    document.getElementById("confirm-overlay").classList.remove("hidden");
+  // Confirm-to-amend: apply the change immediately; the server decides whether
+  // it is important enough (rule R1 policy) to need explicit confirmation first.
+  // A 409 means confirmation is required — open the modal and re-send with the
+  // reason. Non-critical changes just apply, with no dialog.
+  async amend(summary, method, path, body, onDone) {
+    try {
+      await this.send(method, path, Object.assign({}, body || {}, { confirmed: false }));
+      this._afterAmend(onDone);
+    } catch (e) {
+      if (e.status !== 409) { this.toast(e.message, "error"); return; }
+      this._pending = { method: method, path: path, body: body, onDone: onDone };
+      document.getElementById("confirm-summary").textContent = summary;
+      document.getElementById("confirm-reason").value = "";
+      document.getElementById("confirm-overlay").classList.remove("hidden");
+    }
   },
 
   closeConfirm() {
@@ -98,19 +107,23 @@ const App = {
     const p = this._pending;
     if (!p) return;
     const reason = document.getElementById("confirm-reason").value.trim() || null;
-    const payload = Object.assign({}, p.body, { confirmed: true, reason: reason });
+    const payload = Object.assign({}, p.body || {}, { confirmed: true, reason: reason });
     try {
       await this.send(p.method, p.path, payload);
-      // A mutation may change committees/divisions/departments — drop the cached
-      // region nav, and mark tabs stale so they re-render with fresh data on the
-      // next visit (the current tab is refreshed immediately by onDone below).
-      if (typeof MrcNav !== "undefined") MrcNav.invalidate();
-      if (typeof Nav !== "undefined") Nav.markAllDirty();
       this.closeConfirm();
-      this.toast("Change recorded in the audit trail", "ok");
-      if (p.onDone) p.onDone();
+      this._afterAmend(p.onDone);
     } catch (e) {
       this.toast(e.message, "error");
     }
+  },
+
+  // Shared post-mutation refresh. A change may move committees/divisions/
+  // departments, so drop the cached region nav and mark tabs stale; the current
+  // tab is refreshed immediately by onDone.
+  _afterAmend(onDone) {
+    if (typeof MrcNav !== "undefined") MrcNav.invalidate();
+    if (typeof Nav !== "undefined") Nav.markAllDirty();
+    this.toast("Change recorded in the audit trail", "ok");
+    if (onDone) onDone();
   },
 };

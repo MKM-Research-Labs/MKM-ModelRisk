@@ -154,13 +154,15 @@ def test_invalid_meeting_status_is_400(client):
     assert response.status_code == 400
 
 
-def test_add_without_confirmation_is_409(client):
+def test_add_applies_without_confirmation(client):
+    # Adding a non-critical agenda item is not gated by confirm-to-amend.
     _schedule(client)
     response = client.post(
         "/api/meetings/MTG1/collections/agenda",
         json={"fields": {"title": "x"}}, headers=HEADERS,
     )
-    assert response.status_code == 409
+    assert response.status_code == 201
+    assert "x" in [a["title"] for a in response.get_json()["data"]["agenda"]]
 
 
 def test_bulk_add_collection_items(client):
@@ -185,14 +187,16 @@ def test_bulk_add_collection_items(client):
     assert [m["title"] for m in minutes] == ["Welcome", "Approvals", "AOB"]
 
 
-def test_bulk_add_without_confirmation_is_409(client):
+def test_bulk_add_applies_without_confirmation(client):
+    # Bulk-adding non-critical items is not gated by confirm-to-amend.
     _schedule(client)
     response = client.post(
         "/api/meetings/MTG1/collections/minutes/bulk",
         json={"items": [{"fields": {"title": "x"}}]},
         headers=HEADERS,
     )
-    assert response.status_code == 409
+    assert response.status_code == 201
+    assert response.get_json()["data"]["minutes"][0]["title"] == "x"
 
 
 def _set_scope(client, model_ids):
@@ -232,11 +236,14 @@ def test_set_models_in_scope_unknown_meeting_is_404(client):
     assert response.status_code == 404
 
 
-def test_set_models_in_scope_without_confirmation_is_409(client):
+def test_set_models_in_scope_applies_without_confirmation(client):
+    # Setting the in-scope models is not gated by confirm-to-amend.
     _schedule(client)
     response = client.post(
         "/api/meetings/MTG1/collections/models_in_scope/set",
         json={"model_ids": ["M-A"]}, headers=HEADERS,
     )
-    assert response.status_code == 409
+    assert response.status_code == 200
+    scope = response.get_json()["data"].get("models_in_scope") or []
+    assert [m["model_id"] for m in scope] == ["M-A"]
 
