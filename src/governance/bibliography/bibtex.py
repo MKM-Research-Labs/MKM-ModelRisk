@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 _FIELD_MAP = (("authors", "author"), ("title", "title"), ("year", "year"),
-              ("journal", "journal"), ("url", "url"))
+              ("journal", "journal"), ("url", "url"), ("notes", "note"))
 
 
 def to_bibtex(references: list[dict]) -> str:

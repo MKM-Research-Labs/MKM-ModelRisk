@@ -146,6 +146,17 @@ MRC_COLLECTION_SPECS = {
         {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
         {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
     ]},
+    # Products in scope for analysis — the exact mirror of models_in_scope, so the
+    # Signoff tab's Analysis section can cover products alongside models.
+    "products_in_scope": {"label": "Products", "id_prefix": "PS", "fields": [
+        {"key": "product_id", "label": "Product", "type": "text", "required": True},
+        {"key": "presenter", "label": "Presenter", "type": "text", "reference": "people"},
+        {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
+         "options": VALID_ANALYSIS_STATUS},
+        {"key": "analysis_note", "label": "Analysis note", "type": "text"},
+        {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
+        {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
+    ]},
     "decisions": {"label": "Decisions", "id_prefix": "D", "fields": [
         {"key": "description", "label": "Decision", "type": "text", "required": True},
         {"key": "date", "label": "Date", "type": "date"},
@@ -159,3 +170,22 @@ MRC_COLLECTION_SPECS = {
         {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
     ]},
 }
+
+# The standing agenda seeded onto every new MRC meeting, in running order (AOB
+# always last). Each item's ``kind`` drives the bespoke per-item UI renderer and
+# marks it as a template item, so generic agenda replay (the demo seeder) skips
+# these to avoid duplicating what the seeding helper already adds.
+STANDING_AGENDA = (
+    {"kind": "rollcall", "title": "Rollcall and Confirmation of Quorum",
+     "description": "Confirm attendance in the participants panel; the meeting "
+                    "may proceed only once quorate."},
+    {"kind": "minutes_signoff", "title": "Sign-off of the previous MRM minutes",
+     "description": "Proposed by the chair."},
+    {"kind": "review_signoff", "title": "Review model sign-off",
+     "description": "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."},
+    {"kind": "review_analysis", "title": "Review model analysis",
+     "description": "Model analyses are reviewed in the Models tab (Analysis) — "
+                    "confirmation to proceed and any actions."},
+    {"kind": "aob", "title": "Any Other Business (AOB)", "description": ""},
+)
+STANDING_AGENDA_KINDS = frozenset(item["kind"] for item in STANDING_AGENDA)

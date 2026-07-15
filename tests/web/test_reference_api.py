@@ -177,12 +177,14 @@ def test_add_unknown_list_is_400(client):
     assert response.status_code == 400
 
 
-def test_add_without_confirmation_is_409(client):
+def test_add_applies_without_confirmation(client):
+    # Adding a non-critical reference value is not gated by confirm-to-amend.
     response = client.post(
         "/api/reference/collections/division",
         json={"fields": {"value": "x"}}, headers=HEADERS,
     )
-    assert response.status_code == 409
+    assert response.status_code == 201
+    assert "x" in [d["value"] for d in response.get_json()["division"]]
 
 
 def test_model_division_field_becomes_dropdown_after_adding(client):

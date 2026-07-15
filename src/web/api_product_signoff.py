@@ -30,6 +30,7 @@ from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import get_meeting, matching_mrc
 from src.governance.product import get_product
 from src.governance.reference import get_reference_lists
+from src.command import require_confirmation
 from src.web._helpers import context_from_request, json_body
 from src.web._signoff_routing import PRODUCT_SUBJECT, _newest, raise_signoff, revoke_signoff
 from src.web.api_product import product_bp
@@ -115,5 +116,6 @@ def product_revoke_signoff(product_id: str):
         return jsonify({"error": "product is not currently signed off"}), 400
     body = json_body()
     ctx = context_from_request(body)
+    require_confirmation("revoke_signoff", ctx)
     revoke_signoff(ctx, PRODUCT_SUBJECT, product_id, note=body.get("note") or body.get("reason"))
     return jsonify(get_product(product_id))

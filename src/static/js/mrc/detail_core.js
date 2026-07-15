@@ -40,6 +40,7 @@ const MeetingDetail = {
     this._specs = await MRC.specs();
     this._meeting = await App.get("/api/meetings/" + meetingId);
     this._models = await App.get("/api/meetings/" + meetingId + "/models");
+    this._meetingProducts = await App.get("/api/meetings/" + meetingId + "/products");
     this._inventory = await App.get("/api/models");
     this._products = await App.get("/api/products");
     this._people = (await App.get("/api/reference")).data.people || [];
@@ -141,15 +142,21 @@ const MeetingDetail = {
 
   _tabbar(d) {
     // The agenda badge counts only what the tab shows — sign-off items render in
-    // the Models tab, so they don't inflate the agenda count.
+    // the Signoff tab, so they don't inflate the agenda count.
     const n = (k) => {
       const arr = d[k] || [];
       if (k === "agenda") return arr.filter((a) => !(a.subject_model_id || a.subject_product_id)).length;
+      if (k === "models_in_scope") {
+        // Signoff tab: risk-rating sign-offs (Approvals) + in-scope analysis
+        // items (models + products).
+        const signoffs = (d.agenda || []).filter((a) => a.subject_model_id || a.subject_product_id).length;
+        return signoffs + arr.length + (d.products_in_scope || []).length;
+      }
       return arr.length;
     };
     // Participants moved out to the persistent left panel — no longer a tab.
     const tabs = [
-      ["agenda", "Agenda"], ["models_in_scope", "Models"], ["actions", "Actions"],
+      ["agenda", "Agenda"], ["models_in_scope", "Signoff"], ["actions", "Actions"],
       ["minutes", "Minutes"],
     ];
     return '<div class="dtabs">' + tabs.map((t) =>
