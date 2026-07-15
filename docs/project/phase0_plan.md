@@ -117,7 +117,7 @@ its own `pyproject.toml`.
 
 | Module | Role |
 |---|---|
-| `modelrisk_scan/manifest/` | Generalised engine lifted from PhysicalRisk `src/lineage/manifest/_core.py` — hashing, `record_step`, `save/repair` — with **topology injected** (constructor takes `DEPENDENCY_GRAPH`/`STEP_IO`) |
+| `modelrisk_scan/manifest/` | **Deferred to Phase 3.** The generalised engine (hashing, `record_step`, `save/repair`, topology injected) is lifted from PhysicalRisk `src/lineage/manifest/_core.py` only when PhysicalRisk adopts this library in place of its local copy — porting 292 lines to sit unused until then is premature. Phase 0 ships the push client + provenance, which is what the exit-criterion smoke test needs. |
 | `modelrisk_scan/client.py` | `IngestClient(base_url, token).push(artifact, payload, provenance)` — builds envelope, computes content-hash, POSTs, handles `200`/`201`/`422` |
 | `modelrisk_scan/provenance.py` | Build provenance (repo, `git rev-parse HEAD`, producer, version, timestamp) |
 
