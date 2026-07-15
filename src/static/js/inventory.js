@@ -126,55 +126,20 @@ const Inventory = {
       { model_id: id, name: name, fields: fields }, () => this.render());
   },
 
-  _summary(models) {
-    const ragCount = (k) => models.filter((m) => (m.data || {}).rag_rating === k).length;
-    const card = (lbl, v, color) =>
-      '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
-      lbl + '</div><div class="val">' + v + "</div></div>";
-    return '<div class="summary">' +
-      card("Total", models.length, "#1976d2") +
-      card("Green", ragCount("Green"), "#388e3c") +
-      card("Amber", ragCount("Amber"), "#f57c00") +
-      card("Red", ragCount("Red"), "#d32f2f") +
-      card("Retired", models.filter((m) => m.retired).length, "#9e9e9e") +
-      "</div>";
-  },
-
   async loadList() {
     const nav = await MrcNav.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     const all = await App.get("/api/models");
     const models = all.filter((m) => MrcNav.inScope(this._committees, this._ref, m.data));
-    document.getElementById("m-summary").innerHTML = this._summary(models);
-    const box = document.getElementById("m-list");
     if (!models.length) {
-      box.innerHTML = '<div class="empty">' +
+      document.getElementById("m-summary").innerHTML = "";
+      document.getElementById("m-list").innerHTML = '<div class="empty">' +
         (MrcNav.state.div ? "No models in this scope yet. Register one above." : "No models yet. Register one above.") +
         "</div>";
       return;
     }
-    let rows = "";
-    models.forEach(function (m) {
-      const d = m.data || {};
-      const lifecycle = m.retired
-        ? '<span class="pill">retired</span>'
-        : fieldDisplay(d.lifecycle_stage || d.status);
-      rows +=
-        '<tr class="clickable" data-id="' + esc(m.model_id) + '">' +
-        '<td class="modelid">' + esc(m.model_id) + "</td>" +
-        "<td>" + fieldDisplay(d.name) + "</td>" +
-        "<td>" + tierBadge(d.tier) + "</td>" +
-        "<td>" + ragBadge(d.rag_rating) + "</td>" +
-        "<td>" + fieldDisplay(d.owner) + "</td>" +
-        "<td>" + mrcStatusBadge(d) + "</td>" +
-        "<td>" + lifecycle + "</td></tr>";
-    });
-    box.innerHTML =
-      "<table><thead><tr><th>ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
-      "<th>Owner</th><th>MRC Status</th><th>Lifecycle</th></tr></thead><tbody>" + rows + "</tbody></table>";
-    box.querySelectorAll("tr.clickable").forEach(function (tr) {
-      tr.onclick = function () { Detail.show(tr.getAttribute("data-id")); };
-    });
+    // Delegate tiles, filters and the sortable table to the list view.
+    InventoryList.mount(models, function (id) { Detail.show(id); });
   },
 };

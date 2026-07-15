@@ -94,6 +94,34 @@ function reviewBadge(status) {
   return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
 }
 
+// A model is "Due Soon" when its next review falls within this many days.
+const DUE_SOON_DAYS = 30;
+
+// Derive a model's review status from its next-review date (vs today):
+// Overdue (past), Due Soon (within DUE_SOON_DAYS), On Track (later), or Not
+// Scheduled (no/invalid date).
+function reviewStatus(nextDate) {
+  if (!nextDate) return "Not Scheduled";
+  const due = new Date(nextDate + "T00:00:00");
+  if (isNaN(due.getTime())) return "Not Scheduled";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((due - today) / 86400000);
+  if (days < 0) return "Overdue";
+  if (days <= DUE_SOON_DAYS) return "Due Soon";
+  return "On Track";
+}
+
+// Sort orders for badge columns (lower sorts first): highest-risk first.
+const RAG_ORDER = { Red: 0, Amber: 1, Green: 2 };
+const REVIEW_ORDER = { "Overdue": 0, "Due Soon": 1, "On Track": 2, "Upcoming": 2, "Not Scheduled": 3 };
+
+// The latest MRC sign-off outcome as a sortable string ("" when none).
+function mrcOutcome(data) {
+  const hist = (data && data.rag_signoff_history) || [];
+  return hist.length ? (hist[hist.length - 1].outcome || "Approved") : "";
+}
+
 const LIFECYCLE_COLORS = {
   "New": "#1976d2", "Being Enhanced": "#f57c00",
   "No New Development": "#9e9e9e", "Marked for Removal": "#d32f2f",

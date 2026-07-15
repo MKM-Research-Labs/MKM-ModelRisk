@@ -276,3 +276,69 @@ def test_model_actions_with_update_history(page: Page, base_url: str):
     card = page.locator("#actions-list .card").first
     expect(card.locator(".prow")).to_have_count(2)
     expect(card).to_contain_text("2026-11-30")
+
+
+# --- Inventory UX: summary tiles, per-column filters, sortable table ---------
+
+
+def test_inventory_summary_tiles_render(page: Page, base_url: str):
+    """The stat tiles (total, per-tier, review buckets, assessed) all render."""
+    open_app(page, base_url)
+    register_model(page, "MKM-TILE-01", "Tile Model")
+    summary = page.locator("#m-summary")
+    for label in ["Total Models", "Tier 1", "Tier 2", "Tier 3",
+                  "Overdue", "Due Soon", "Assessed"]:
+        expect(summary).to_contain_text(label)
+
+
+def test_inventory_sort_by_id_toggles(page: Page, base_url: str):
+    """Clicking the ID header sorts, and clicking again reverses."""
+    open_app(page, base_url)
+    register_model(page, "MKM-SORT-A", "Alpha")
+    register_model(page, "MKM-SORT-B", "Bravo")
+    # Default: ascending by ID, so A is first.
+    expect(page.locator("#m-table tbody tr").first).to_have_attribute("data-id", "MKM-SORT-A")
+    page.click("#m-table th[data-sort='model_id']")   # reverse
+    expect(page.locator("#m-table tbody tr").first).to_have_attribute("data-id", "MKM-SORT-B")
+
+
+def test_inventory_search_filters_rows(page: Page, base_url: str):
+    """The search box narrows the table; a non-match shows the empty state."""
+    open_app(page, base_url)
+    register_model(page, "MKM-FIND-01", "Findable")
+    register_model(page, "MKM-HIDE-02", "Other")
+    page.fill("#mf-q", "Findable")
+    expect(page.locator("tr.clickable[data-id='MKM-FIND-01']")).to_have_count(1)
+    expect(page.locator("tr.clickable[data-id='MKM-HIDE-02']")).to_have_count(0)
+    page.fill("#mf-q", "zzzzz")
+    expect(page.locator("#m-table")).to_contain_text("No models match")
+
+
+def test_inventory_filter_by_rag(page: Page, base_url: str):
+    """The RAG dropdown narrows the table to matching models."""
+    open_app(page, base_url)
+    register_model(page, "MKM-RAG-AM", "Amber One")
+    open_model(page, "MKM-RAG-AM")
+    edit_model_field(page, "rag_rating", "Amber", choice=True)
+    register_model(page, "MKM-RAG-GR", "Green One")
+    open_model(page, "MKM-RAG-GR")
+    edit_model_field(page, "rag_rating", "Green", choice=True)
+    # Re-enter the inventory list so it reflects the edited ratings.
+    open_tab(page, "mrc")
+    open_tab(page, "inventory")
+    page.select_option("#mf-rag", "Amber")
+    expect(page.locator("tr.clickable[data-id='MKM-RAG-AM']")).to_have_count(1)
+    expect(page.locator("tr.clickable[data-id='MKM-RAG-GR']")).to_have_count(0)
+
+
+def test_inventory_tier_tile_toggles_filter(page: Page, base_url: str):
+    """Clicking a Tier tile filters the table to that tier and back."""
+    open_app(page, base_url)
+    register_model(page, "MKM-TIER-01", "Tiered Model")
+    open_model(page, "MKM-TIER-01")
+    edit_model_field(page, "tier", "2", choice=True)
+    open_tab(page, "mrc")
+    open_tab(page, "inventory")
+    page.click("#m-summary [data-tile='tier=2']")
+    expect(page.locator("#mf-tier")).to_have_value("2")
+    expect(page.locator("tr.clickable[data-id='MKM-TIER-01']")).to_have_count(1)
