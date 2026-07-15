@@ -13,6 +13,10 @@ and reduce **PhysicalRisk** to a *producer* that feeds it. After migration:
   UI, CRUD, or `.json` persistence.
 - The same contract lets *any* repo feed ModelRisk — including, later, a
   Moody's repo where the scans are produced by running Claude over their code.
+- **No historical backfill — PhysicalRisk onboards as a new adopter.** Current
+  state is established at go-live; the audit trail accrues natively from then on.
+  Legacy history (audit log, past MRC meetings, past lineage runs) is **not**
+  migrated — the same clean-start path a future Moody's adopter would follow.
 
 This supersedes the earlier "generalise the four components and re-import them
 as a pinned library" framing. Investigation of both codebases showed that model
@@ -70,8 +74,8 @@ The PhysicalRisk "Regulatory Compliance" console has eleven tabs. Their targets:
 | **Model Chain** | `model_inventory.json` → `model_chain.links` ("string of pearls") | **none** | Net-new: schema + dependency-graph view |
 | **BCBS 239** | `bcbs239_assessment.json` | **none** | Net-new domain + view |
 | **RACI** | `raci_matrix.json` | fields only, no domain | Net-new domain + view |
-| **MRC** | `mrc_meetings.json` etc. | **canonical** (event-sourced) | Reconcile data into existing MRC; **ModelRisk wins** |
-| **Audit Trail** | `model_audit_log.json` (~3.5 MB) | event store is the audit spine | Fold legacy log in as imported events |
+| **MRC** | `mrc_meetings.json` etc. | **canonical** (event-sourced) | Use ModelRisk MRC from go-live; **no meeting-history import** |
+| **Audit Trail** | `model_audit_log.json` (~3.5 MB) | event store is the audit spine | **Starts fresh at go-live — no historic import** |
 | **Documents** | `governance_documents.json` + `governance_docs/`, `mrc_uploads/` blobs | exists (+ `src/files/store.py`) | Migrate records + blobs |
 | **Bibliography** | `bibliography.json` | exists | Migrate data |
 | **Audit Reports** | PDF audit generators (`docs/models/full_audit/`) | `src/governance/mrc/pack.py` renders PDF | Generalise/port report builders |
@@ -257,41 +261,36 @@ are built.
 
 ---
 
-## Persistence: `.json` → event-sourced DB
+## Persistence: event-sourced DB, no historical backfill
 
 ModelRisk is **event-sourced CQRS on Postgres** (psycopg 3, append-only `events`
 table with a per-stream tamper-evident hash chain; read models are Postgres
-views built by projections). It is **not** an ORM with mutable rows. Migration
-implications:
+views built by projections). PhysicalRisk onboards as a **new adopter**, so there
+is **no bulk history migration**:
 
-- Importing legacy `.json` means **synthesising events** — a genesis
-  `…Imported` event per aggregate that folds into the existing projection — not
-  inserting rows.
-- The one-off loader is written as a **documented, re-runnable script** under
-  `scripts/`; it is audit evidence of the data move. It reads the legacy JSON,
-  wraps each record in the ingest envelope (with provenance pointing at the
-  legacy file + its checksum), and calls the same ingest path producers use —
-  so the import exercises the real contract.
-- Validate with row counts, checksums, and field-by-field reconciliation between
-  source JSON and destination projection.
-- **Canonical source — resolved.** The regulatory JSON appears in two places,
-  and the split follows how the app resolves paths:
-  - `docs/models/governance_data/` (repo-versioned, `get_governance_data_dir()`)
-    is authoritative for the **governance files** — `model_inventory.json`,
-    `model_audit_log.json`, `bcbs239_assessment.json`, `raci_matrix.json`,
-    `mrc_meetings.json`, `bibliography.json`, `governance_documents.json` — plus
-    the `governance_docs/` and `mrc_uploads/` blob dirs. This is the copy the
-    live app reads.
-  - The SSD `data/` dir (`/Volumes/David SSD/Docs/PhysicalRisk/data`, via the
-    `data →` symlink, `get_data_dir()`) is authoritative **only** for
-    `data_lineage.json` and `field_lineage_registry.json` (pipeline output).
-  - The SSD dir also contains **stale** copies of `model_inventory.json`
-    (227 KB vs the canonical 264 KB) and `model_audit_log.json` (397 KB vs
-    3.5 MB), sitting beside `*.bak` files. The loader **must ignore** these and
-    read governance files from `governance_data/` only.
-  The remaining shared files (bcbs239, raci, mrc_meetings, bibliography,
-  governance_documents) are byte-identical across both locations, so the choice
-  is moot for them — but standardise on `governance_data/` for consistency.
+- **History is not imported.** Audit trail, MRC meeting history, and past
+  lineage runs stay behind. ModelRisk's audit spine begins at go-live and accrues
+  natively from then on. The ~3.5 MB `model_audit_log.json` in particular is
+  dropped, not replayed.
+- **Current state arrives through the normal producer path — not a bespoke
+  loader.** On first run each producer pushes its *current* snapshot — model
+  inventory + chain, current BCBS 239 assessment, RACI matrix, bibliography, and
+  the current model-doc PDFs — through the same `/ingest/*` endpoints used
+  thereafter. Onboarding exercises the real contract; there is no throwaway
+  migration script to write, validate, or maintain.
+- Because state arrives as ingest events, each seeded aggregate gets a clean
+  genesis event (provenance pointing at the producing repo + commit), so the
+  audit chain is well-formed from record one — it simply starts at go-live.
+- The legacy `.json` files are retained read-only as an archive until go-live is
+  signed off, then decommissioned. They are a reference, not a source to replay.
+
+**Current-state seed reads the canonical copy.** Where onboarding reads a current
+snapshot from disk, use the authoritative location — governance files from
+`docs/models/governance_data/` (`get_governance_data_dir()`), and the two lineage
+files from the SSD `data/` dir (`/Volumes/David SSD/Docs/PhysicalRisk/data`,
+`get_data_dir()`). Ignore the stale SSD copies of `model_inventory.json` /
+`model_audit_log.json` that sit beside the `*.bak` files. Under start-at-zero the
+large history copies (the audit log) are irrelevant anyway.
 
 ---
 
@@ -323,10 +322,12 @@ Data-lineage and field-lineage sinks + ingestion endpoints and console views.
 Point PhysicalRisk's manifest engine (now on `modelrisk-scan`) at
 `POST /ingest/data-lineage`. Wire field-lineage/inventory push.
 
-**Phase 4 — Data-move for existing domains.**
-Reconcile Documents (+ blobs), Bibliography, Audit Trail (`model_audit_log`),
-and MRC data into ModelRisk (ModelRisk MRC is canonical; PhysicalRisk data folds
-in as history). Retain original JSON read-only as provenance until sign-off.
+**Phase 4 — Onboard current state (start at zero).**
+No historical backfill. Each producer pushes its *current* snapshot once —
+inventory + chain, BCBS 239, RACI, bibliography, and current model-doc PDFs —
+through the `/ingest/*` endpoints. Audit trail, MRC meeting history, and past
+lineage runs are **not** migrated; ModelRisk's audit spine starts at go-live.
+Legacy JSON is kept read-only as an archive until sign-off, then dropped.
 
 **Phase 5 — PhysicalRisk cutover.**
 Switch model-doc generation to upload PDFs to ModelRisk. Delete PhysicalRisk's
@@ -343,8 +344,9 @@ PhysicalRisk now only produces and pushes.
   `lineage.manifest` topology (data, not calls), handled by injecting topology
   into `modelrisk-scan`. No dependency inversion needed.
 - **Two MRC implementations.** ModelRisk already has an event-sourced MRC and
-  PhysicalRisk has a parallel JSON one. ModelRisk is canonical; the import folds
-  PhysicalRisk meetings in as history. Do not overwrite ModelRisk's event stream.
+  PhysicalRisk has a parallel JSON one. ModelRisk's is used from go-live;
+  PhysicalRisk's meeting history is **not** imported (start-at-zero), so there is
+  no reconciliation and nothing overwrites ModelRisk's event stream.
 - **Utility drift.** Never *copy* scanner code into both repos. ModelRisk owns
   `modelrisk-scan`; PhysicalRisk installs it. A copied-and-edited scanner
   re-creates the duplication this migration exists to remove.
