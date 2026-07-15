@@ -22,7 +22,7 @@
 No other package may import a driver, open a connection, or write SQL. Everything
 goes through the functions re-exported here.
 """
-from src.database._connection import app_connection, owner_connection
+from src.database._connection import app_connection, create_database, owner_connection
 from src.database._migrate import migration_files, run_migrations
 from src.database.eventstore import (
     ConcurrencyError,
@@ -32,11 +32,12 @@ from src.database.eventstore import (
     read_stream,
     verify_chain,
 )
-from src.database.projections import replay
+from src.database.projections import read_view, replace_view, replay
 
 __all__ = [
     "app_connection",
     "owner_connection",
+    "create_database",
     "migration_files",
     "run_migrations",
     "ConcurrencyError",
@@ -46,4 +47,6 @@ __all__ = [
     "read_stream",
     "verify_chain",
     "replay",
+    "replace_view",
+    "read_view",
 ]

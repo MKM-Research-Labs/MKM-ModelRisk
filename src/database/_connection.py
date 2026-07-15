@@ -28,8 +28,35 @@ from contextlib import contextmanager
 from typing import Iterator
 
 import psycopg
+from psycopg import sql
 
 from config import DatabaseConfig
+
+# A pre-existing database to connect to while creating another (you cannot
+# connect to the database you are about to CREATE).
+_MAINTENANCE_DB = "mkm_modelrisk"
+
+
+def create_database(name: str, *, config: DatabaseConfig | None = None) -> bool:
+    """Create database ``name`` if it does not already exist, as the owner role
+    over an autocommit connection to the maintenance database. Returns ``True``
+    if it was created, ``False`` if it already existed.
+
+    The single sanctioned home for the ``CREATE DATABASE`` admin operation (R6),
+    so callers (e.g. the demo bootstrap) never open their own driver connection.
+    """
+    cfg = config or DatabaseConfig.from_env()
+    with psycopg.connect(
+        host=cfg.host, port=cfg.port, dbname=_MAINTENANCE_DB,
+        user=cfg.owner_user, password=cfg.owner_password, autocommit=True,
+    ) as admin:
+        with admin.cursor() as cur:
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (name,))
+            if cur.fetchone() is not None:
+                return False
+            cur.execute(sql.SQL("CREATE DATABASE {name} OWNER {owner}").format(
+                name=sql.Identifier(name), owner=sql.Identifier(cfg.owner_user)))
+    return True
 
 
 @contextmanager

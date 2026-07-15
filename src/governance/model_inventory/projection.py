@@ -27,11 +27,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from psycopg.types.json import Jsonb
-
-from src.database import app_connection, read_all
+from src.database import read_all, read_view, replace_view
 from src.governance.model_inventory._state import apply, initial_state
 from src.governance.model_inventory.commands import AGGREGATE_TYPE
+
+_VIEW = "model_inventory_view"
+_COLUMNS = ("model_id", "data", "retired", "version")
 
 
 def _document(state) -> dict[str, Any]:
@@ -51,47 +52,17 @@ def rebuild_inventory_view(config=None) -> int:
         state, _ = states.get(event.aggregate_id, (initial_state(), 0))
         state = apply(state, event.event_type, event.payload)
         states[event.aggregate_id] = (state, event.stream_seq)
-    with app_connection(config) as conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM model_inventory_view")
-            for model_id, (state, version) in states.items():
-                cur.execute(
-                    "INSERT INTO model_inventory_view "
-                    "(model_id, data, retired, version) VALUES (%s, %s, %s, %s)",
-                    (model_id, Jsonb(_document(state)), state.retired, version),
-                )
-    return len(states)
-
-
-def _row_to_dict(row: tuple) -> dict[str, Any]:
-    return {
-        "model_id": row[0],
-        "data": row[1],
-        "retired": row[2],
-        "version": row[3],
-    }
+    rows = ((model_id, _document(state), state.retired, version)
+            for model_id, (state, version) in states.items())
+    return replace_view(_VIEW, _COLUMNS, rows, config=config)
 
 
 def get_model(model_id: str, config=None) -> dict[str, Any] | None:
     """Return one model's current state, or ``None`` if not present."""
-    with app_connection(config) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT model_id, data, retired, version "
-                "FROM model_inventory_view WHERE model_id = %s",
-                (model_id,),
-            )
-            row = cur.fetchone()
-    return _row_to_dict(row) if row is not None else None
+    rows = read_view(_VIEW, _COLUMNS, where="model_id", value=model_id, config=config)
+    return rows[0] if rows else None
 
 
 def list_models(config=None) -> list[dict[str, Any]]:
     """Return all models in the inventory, ordered by ``model_id``."""
-    with app_connection(config) as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT model_id, data, retired, version "
-                "FROM model_inventory_view ORDER BY model_id"
-            )
-            rows = cur.fetchall()
-    return [_row_to_dict(row) for row in rows]
+    return read_view(_VIEW, _COLUMNS, order_by="model_id", config=config)

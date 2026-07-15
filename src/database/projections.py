@@ -25,9 +25,60 @@ projection can be built from zero or caught up from a checkpoint.
 """
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable, Iterable, Sequence
 
+from psycopg import sql
+from psycopg.types.json import Jsonb
+
+from src.database._connection import app_connection
 from src.database.eventstore import Event, read_all
+
+
+def replace_view(
+    table: str, columns: Sequence[str], rows: Iterable[Sequence[Any]], *, config=None,
+) -> int:
+    """Atomically replace a read-model view: ``DELETE`` every row, then ``INSERT``
+    each row in ``rows`` (a value sequence aligned to ``columns``). ``dict`` values
+    are JSON-encoded automatically. The single sanctioned way for a projection to
+    rebuild its view table (R6) — callers pass data, never SQL.
+    """
+    delete = sql.SQL("DELETE FROM {table}").format(table=sql.Identifier(table))
+    insert = sql.SQL("INSERT INTO {table} ({cols}) VALUES ({vals})").format(
+        table=sql.Identifier(table),
+        cols=sql.SQL(", ").join(sql.Identifier(c) for c in columns),
+        vals=sql.SQL(", ").join(sql.Placeholder() for _ in columns),
+    )
+    count = 0
+    with app_connection(config) as conn, conn.cursor() as cur:
+        cur.execute(delete)
+        for row in rows:
+            cur.execute(insert, tuple(Jsonb(v) if isinstance(v, dict) else v for v in row))
+            count += 1
+    return count
+
+
+def read_view(
+    table: str, columns: Sequence[str], *,
+    where: str | None = None, value: Any = None, order_by: str | None = None, config=None,
+) -> list[dict[str, Any]]:
+    """Read rows from a read-model view as dicts keyed by ``columns``, optionally
+    filtered by ``where = value`` and/or ordered by ``order_by``. The sanctioned
+    read path for projection queries (R6)."""
+    query = sql.SQL("SELECT {cols} FROM {table}").format(
+        cols=sql.SQL(", ").join(sql.Identifier(c) for c in columns),
+        table=sql.Identifier(table),
+    )
+    params: tuple = ()
+    if where is not None:
+        query = query + sql.SQL(" WHERE {col} = {ph}").format(
+            col=sql.Identifier(where), ph=sql.Placeholder())
+        params = (value,)
+    if order_by is not None:
+        query = query + sql.SQL(" ORDER BY {col}").format(col=sql.Identifier(order_by))
+    with app_connection(config) as conn, conn.cursor() as cur:
+        cur.execute(query, params)
+        rows = cur.fetchall()
+    return [dict(zip(columns, row)) for row in rows]
 
 
 def replay(
