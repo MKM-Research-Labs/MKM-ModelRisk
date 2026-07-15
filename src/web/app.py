@@ -25,6 +25,7 @@ from flask import Flask, jsonify, request
 from src.command import ConfirmationRequired
 from src.database import run_migrations
 from src.governance.errors import DomainError
+from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
 from src.web.api_audit_reports import audit_reports_bp
 from src.web.api_bibliography import bib_bp
@@ -36,6 +37,7 @@ from src.web.api_mrc_settings import settings_bp
 from src.web.api_product import product_bp
 from src.web import api_product_signoff  # noqa: F401 — attaches endpoints to product_bp
 from src.web import api_product_risk  # noqa: F401 — attaches endpoints to product_bp
+from src.web.api_ingest import ingest_bp
 from src.web.api_reference import reference_bp
 from src.web.views import views_bp
 
@@ -48,6 +50,10 @@ def _register_error_handlers(app: Flask) -> None:
     @app.errorhandler(ConfirmationRequired)
     def _confirmation_required(exc: ConfirmationRequired):
         return jsonify({"error": str(exc), "needs_confirmation": True}), 409
+
+    @app.errorhandler(SchemaValidationError)
+    def _schema_validation_error(exc: SchemaValidationError):
+        return jsonify({"error": str(exc), "details": exc.errors}), 422
 
 
 def create_app(run_db_migrations: bool = True) -> Flask:
@@ -66,6 +72,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(bib_bp)
     app.register_blueprint(audit_bp)
     app.register_blueprint(audit_reports_bp)
+    app.register_blueprint(ingest_bp)
     _register_error_handlers(app)
 
     # Never cache the front-end assets: the console is a single-page app whose

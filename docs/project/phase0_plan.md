@@ -101,9 +101,12 @@ Multi-file blueprint, exactly like `api_mrc/`.
   validate → `dispatch("ingest_data_lineage", …)` → `rebuild_data_lineage_view()`
   + receipt → `201` (or `200` idempotent).
 - `status.py` → `GET /status/<artifact>` reads `ingest_receipts_view`.
-- `documents.py` → `POST /documents` (multipart) using `request_actor()` +
-  `src/files/store.py` — **minimal** accept+store+receipt to de-risk the
-  multipart path (full model-doc semantics deferred to Phase 5).
+- `documents.py` (multipart PDF upload) is **deferred to Phase 5** with the
+  model-doc workflow. The receipt aggregate keys on `(artifact, source_repo)`,
+  which fits per-repo lineage cleanly but not per-document uploads (each doc is
+  distinct); documents get their own aggregate when that workflow is built, so a
+  throwaway minimal endpoint now would be rework. The data-lineage round-trip is
+  the Phase 0 exit criterion and does not need it.
 - `src/web/app.py` → register `ingest_bp`; add
   `@app.errorhandler(SchemaValidationError) → ({"error":…, "details":[…]}, 422)`.
 
