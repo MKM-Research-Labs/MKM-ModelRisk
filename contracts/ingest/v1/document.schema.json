@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modelrisk.mkm/contracts/ingest/v1/document.schema.json",
+  "title": "Document upload metadata (v1)",
+  "description": "Metadata accompanying a model-documentation PDF upload (multipart). The binary is the file part; this schema validates the JSON metadata part. Producer-added fields are allowed.",
+  "type": "object",
+  "required": ["model_id", "doc_type", "title"],
+  "additionalProperties": true,
+  "properties": {
+    "model_id": {
+      "description": "Model this document belongs to, matching a model_inventory model_id.",
+      "type": "string",
+      "minLength": 1
+    },
+    "doc_type": {
+      "description": "Document category, e.g. 'model_documentation', 'validation_report'.",
+      "type": "string",
+      "minLength": 1
+    },
+    "title": { "type": "string", "minLength": 1 },
+    "filename": { "type": "string" },
+    "content_type": { "type": "string" },
+    "version": { "type": "string" },
+    "author": { "type": "string" },
+    "created_at": { "type": "string" },
+    "notes": { "type": "string" }
+  }
+}

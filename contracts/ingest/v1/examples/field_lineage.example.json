@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "description": "Field-level data lineage registry — maps every field on every report/screen to its data source. BCBS 239 Principle 3 (Accuracy & Integrity).",
+  "last_updated": "2026-03-19T00:00:00",
+  "reports": {
+    "eod_report": {
+      "label": "End-of-Day Trading Report",
+      "generator": "src/reports/trading/eod_generator.py",
+      "sections": {
+        "executive_summary": {
+          "label": "Executive Summary (Page 1)",
+          "fields": {
+            "eod_date": {
+              "label": "EOD Date",
+              "source_file": "data/output/trading/eod/<date>.json",
+              "source_field": "eod_date",
+              "pipeline_step": "blotter",
+              "cdm_path": null,
+              "computation": "snapshot timestamp"
+            },
+            "open_positions": {
+              "label": "Number of Open Positions",
+              "source_file": "data/output/prs/*.json",
+              "source_field": "count(TradeStatus='Committed')",
+              "pipeline_step": "blotter",
+              "cdm_path": "PhysicalSwap.Header.TradeStatus",
+              "computation": "count of open trades"
+            }
+          }
+        }
+      }
+    }
+  }
+}

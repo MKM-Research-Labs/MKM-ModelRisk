@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modelrisk.mkm/contracts/ingest/v1/data_lineage.schema.json",
+  "title": "Data lineage manifest (v1)",
+  "description": "Pipeline run manifest emitted by the data-lineage scanner. 'runs' maps a run id to its ordered step names; 'steps' records each step's hashed inputs/outputs. Structural keys are required; producer-added fields are allowed. Cross-reference integrity (every step named in 'runs' exists in 'steps') is enforced server-side, not by this schema.",
+  "type": "object",
+  "required": ["runs", "steps"],
+  "additionalProperties": true,
+  "properties": {
+    "runs": {
+      "description": "run_id -> ordered list of step names executed in that run.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 1 }
+      }
+    },
+    "steps": {
+      "description": "step_name -> the step's recorded manifest entry.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/step" }
+    }
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "required": ["run_id", "generator", "status", "inputs", "outputs"],
+      "additionalProperties": true,
+      "properties": {
+        "run_id": { "type": "string", "minLength": 1 },
+        "timestamp": { "type": "string" },
+        "user": { "type": "string" },
+        "hostname": { "type": "string" },
+        "generator": { "type": "string" },
+        "status": { "type": "string" },
+        "elapsed_seconds": { "type": "number" },
+        "parameters": { "type": "object" },
+        "inputs": { "$ref": "#/$defs/artifactMap" },
+        "outputs": { "$ref": "#/$defs/artifactMap" }
+      }
+    },
+    "artifactMap": {
+      "description": "artifact name (file or dir) -> its hash record.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/artifactEntry" }
+    },
+    "artifactEntry": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": true,
+      "properties": {
+        "hash": { "type": ["string", "null"] },
+        "type": { "type": "string" },
+        "file_count": { "type": "integer" }
+      }
+    }
+  }
+}

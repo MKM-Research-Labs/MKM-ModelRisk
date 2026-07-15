@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modelrisk.mkm/contracts/ingest/v1/envelope.schema.json",
+  "title": "ModelRisk ingest envelope (v1)",
+  "description": "Common wrapper every producer POSTs to /api/ingest/*. Provenance is stamped on every stored event and is the BCBS 239 audit trail. The payload is validated separately against the artifact schema selected by the endpoint (or the optional 'artifact' field).",
+  "type": "object",
+  "required": ["provenance", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "description": "Contract major version. Absent means v1.",
+      "const": "v1"
+    },
+    "artifact": {
+      "description": "Which artifact 'payload' carries. Optional: the endpoint path is authoritative, but including it makes the envelope self-describing.",
+      "type": "string",
+      "enum": ["model-inventory", "model-chain", "data-lineage", "field-lineage", "document"]
+    },
+    "provenance": { "$ref": "#/$defs/provenance" },
+    "payload": {
+      "description": "Artifact-specific body. Validated against the matching artifact schema.",
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["source_repo", "commit", "producer", "producer_version", "generated_at"],
+      "additionalProperties": false,
+      "properties": {
+        "source_repo": {
+          "description": "Repo the scan was produced in, e.g. 'PhysicalRisk'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "description": "Git commit SHA of the producing repo at scan time.",
+          "type": "string",
+          "minLength": 1
+        },
+        "producer": {
+          "description": "Producer identity, e.g. 'modelrisk-scan/data-lineage'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "producer_version": {
+          "description": "Version of the producer that generated the payload.",
+          "type": "string",
+          "minLength": 1
+        },
+        "generated_at": {
+          "description": "RFC 3339 timestamp the payload was generated.",
+          "type": "string",
+          "format": "date-time",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

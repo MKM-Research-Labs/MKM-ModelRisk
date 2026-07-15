@@ -1,0 +1,966 @@
+{
+  "metadata": {
+    "framework": "MKM Research Labs Model Risk Governance",
+    "version": "1.0.0",
+    "last_updated": "2026-06-17",
+    "handbook_reference": "Handbook of Model Risk Management for Vendors (Kelly, Mattimore 2025)",
+    "tiering_methodology": "Materiality x Complexity matrix (Chapter 8: Proportionality)"
+  },
+  "models": [
+    {
+      "model_id": "MKM-SI-001",
+      "name": "Storm Intensity Distribution",
+      "short_name": "Storm Intensity",
+      "description": "Hybrid Normal-Pareto distribution for storm rainfall intensity modelling. Uses Gaussian core with Generalised Pareto Distribution (GPD) tail above a fitted threshold.",
+      "category": "Hazard",
+      "tier": 2,
+      "materiality": "Medium",
+      "complexity": "Medium",
+      "tier_rationale": "Medium materiality: feeds into downstream hazard models but not directly into pricing. Medium complexity: hybrid distribution with threshold selection requiring expert judgement.",
+      "status": "Active",
+      "lifecycle_stage": "Development",
+      "version": "1.0.0",
+      "owner": "David K Kelly",
+      "model_owner_role": "Chief Science Officer",
+      "peer_reviewer": "TBD",
+      "source_module": "src/models/intensity/distribution.py",
+      "methodology": "Hybrid Normal-GPD with maximum likelihood threshold estimation",
+      "alternatives_considered": [
+        "Pure Pareto",
+        "Lognormal",
+        "GPD only",
+        "Pure GEV"
+      ],
+      "methodology_rationale": "Hybrid approach captures both typical and extreme rainfall. Pure Pareto overestimates body; lognormal underestimates tail. GPD-only misses the distribution body needed for moderate events.",
+      "assumptions": [
+        {
+          "id": "SI-A1",
+          "description": "Storm events are independent",
+          "impact": "Medium",
+          "monitoring": "Check autocorrelation in residuals",
+          "mitigation": "Seasonal decomposition if violated"
+        },
+        {
+          "id": "SI-A2",
+          "description": "Stationarity of rainfall distribution",
+          "impact": "High",
+          "monitoring": "Rolling parameter stability test",
+          "mitigation": "Climate trend adjustment"
+        },
+        {
+          "id": "SI-A3",
+          "description": "No spatial correlation between storm intensities",
+          "impact": "Medium",
+          "monitoring": "Cross-site correlation analysis",
+          "mitigation": "Copula extension if needed"
+        },
+        {
+          "id": "SI-A4",
+          "description": "GPD threshold selection is appropriate",
+          "impact": "High",
+          "monitoring": "Mean residual life plot stability",
+          "mitigation": "Sensitivity analysis on threshold"
+        }
+      ],
+      "limitations": [
+        {
+          "id": "SI-L1",
+          "description": "Independence assumption may not hold for clustered storm events",
+          "impact": "Medium",
+          "monitoring_trigger": "Autocorrelation > 0.3 at lag 1",
+          "compensating_control": "Manual review of clustered events"
+        },
+        {
+          "id": "SI-L2",
+          "description": "Stationarity assumption ignores climate change trends",
+          "impact": "High",
+          "monitoring_trigger": "Significant trend in 10-year rolling parameters",
+          "compensating_control": "Annual recalibration with trend test"
+        },
+        {
+          "id": "SI-L3",
+          "description": "No spatial correlation modelled",
+          "impact": "Medium",
+          "monitoring_trigger": "Portfolio concentration in single catchment",
+          "compensating_control": "Diversification requirement"
+        },
+        {
+          "id": "SI-L4",
+          "description": "Threshold selection involves subjective judgement",
+          "impact": "Medium",
+          "monitoring_trigger": "Threshold sensitivity > 10% on tail quantiles",
+          "compensating_control": "Document threshold selection rationale"
+        }
+      ],
+      "known_failure_modes": [
+        "Very small sample sizes (<20 events) cause unstable GPD fit",
+        "Bimodal rainfall distributions (convective + frontal) poorly captured by single hybrid",
+        "Extreme extrapolation beyond observed data unreliable"
+      ],
+      "key_parameters": [
+        "threshold",
+        "gpd_shape (xi)",
+        "gpd_scale (sigma)",
+        "normal_mean",
+        "normal_std"
+      ],
+      "input_data": "Historical rainfall observations (Environment Agency gauge network)",
+      "output_data": "Storm intensity probability distribution, exceedance probabilities",
+      "downstream_models": [
+        "MKM-SG-001"
+      ],
+      "upstream_models": [],
+      "validation_status": "Initial",
+      "validation_date": null,
+      "next_review_date": "2026-06-15",
+      "recertification_date": "2027-02-15",
+      "review_frequency": "Semi-annual",
+      "documents": [
+        {
+          "type": "Model Documentation",
+          "name": "Storm Intensity Distribution Documentation",
+          "path": "docs/models/storm_intensity/storm_intensity.pdf"
+        }
+      ],
+      "change_history": [
+        {
+          "version": "1.0.0",
+          "date": "2025-12-01",
+          "author": "David K Kelly",
+          "type": "Initial",
+          "description": "Initial implementation of hybrid Normal-Pareto storm intensity model"
+        }
+      ],
+      "test_coverage": {
+        "unit_tests": true,
+        "integration_tests": true,
+        "benchmark_tests": false,
+        "test_file": "tests/models/test_intensity_distribution.py"
+      },
+      "last_review_date": "2026-02-13",
+      "rag_rating": "Green",
+      "mrc_signoff_date": "2026-02-06",
+      "remediation_steps": [
+        {
+          "id": "SI-R1",
+          "description": "Complete benchmark tests against EA published intensity distributions",
+          "owner": "David K Kelly",
+          "priority": "Medium",
+          "due_date": "2026-04-15",
+          "status": "Open"
+        },
+        {
+          "id": "SI-R2",
+          "description": "Assign independent peer reviewer for threshold selection methodology",
+          "owner": "David K Kelly",
+          "priority": "High",
+          "due_date": "2026-03-31",
+          "status": "Open"
+        }
+      ],
+      "version_history": [
+        {
+          "version": "0.1.0",
+          "date": "2025-09-15",
+          "author": "David K Kelly",
+          "description": "Initial prototype of storm intensity distribution using pure Pareto",
+          "document": "PhysicalRisk_Platform_Guide_v1.pdf"
+        },
+        {
+          "version": "0.2.0",
+          "date": "2025-10-20",
+          "author": "David K Kelly",
+          "description": "Switched to hybrid Normal-GPD approach for better body fit",
+          "document": "PhysicalRisk_Platform_Guide_v1.pdf"
+        },
+        {
+          "version": "1.0.0",
+          "date": "2025-12-01",
+          "author": "David K Kelly",
+          "description": "Production-candidate release with MLE threshold estimation",
+          "document": "PhysicalRisk_Validation_v1.pdf"
+        }
+      ],
+      "validation_questions": [
+        {
+          "question_id": 1,
+          "short_label": "Ronseal Test",
+          "question": "Does the model do what it says on the tin?",
+          "handbook_ref": "Chapter 5, Question 1",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 2,
+          "short_label": "Accuracy & Stability",
+          "question": "Does the model provide timely, accurate and stable results?",
+          "handbook_ref": "Chapter 5, Question 2",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 3,
+          "short_label": "Resource Usage",
+          "question": "Does the model consume excessive computational resources?",
+          "handbook_ref": "Chapter 5, Question 3",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 4,
+          "short_label": "Override Controls",
+          "question": "Are there controls over manual overrides?",
+          "handbook_ref": "Chapter 5, Question 4",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 5,
+          "short_label": "Output Consumption",
+          "question": "How is the output consumed for risk decision-making?",
+          "handbook_ref": "Chapter 5, Question 5",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 6,
+          "short_label": "Model Chaining",
+          "question": "Is the model's output used as input to another model?",
+          "handbook_ref": "Chapter 5, Question 6",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 7,
+          "short_label": "Weaknesses",
+          "question": "Does the model have weaknesses and limitations of use?",
+          "handbook_ref": "Chapter 5, Question 7",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 8,
+          "short_label": "Monitoring",
+          "question": "What type of monitoring is required?",
+          "handbook_ref": "Chapter 5, Question 8",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 9,
+          "short_label": "Overall Risk",
+          "question": "Is the overall model risk acceptable?",
+          "handbook_ref": "Chapter 5, Question 9",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        }
+      ],
+      "overall_risk_rating": {
+        "calculated_rating": "Unacceptable",
+        "calculated_score": 0.22,
+        "component_scores": {
+          "validation_coverage": 0.0,
+          "remediation_health": 0.2,
+          "review_currency": 0.0,
+          "assumption_risk": 0.6,
+          "limitation_risk": 0.8
+        },
+        "effective_rating": "Unacceptable",
+        "mrc_override": null,
+        "mrc_override_reason": null,
+        "mrc_override_date": null,
+        "mrc_override_by": null,
+        "last_calculated": "2026-06-22T16:37:25.121587"
+      }
+    },
+    {
+      "model_id": "MKM-SG-001",
+      "name": "Storm-Gauge Response Model",
+      "short_name": "Storm-Gauge",
+      "description": "Spatial decay model mapping storm intensity to gauge-level water levels. Uses distance-based attenuation with catchment-specific calibration.",
+      "category": "Hazard",
+      "tier": 2,
+      "materiality": "Medium",
+      "complexity": "Medium",
+      "tier_rationale": "Medium materiality: translates storm events to local water levels for downstream GEV fitting. Medium complexity: spatial interpolation with calibrated decay parameters.",
+      "status": "Active",
+      "lifecycle_stage": "Development",
+      "version": "1.0.0",
+      "owner": "David K Kelly",
+      "model_owner_role": "Chief Science Officer",
+      "peer_reviewer": "TBD",
+      "source_module": "src/models/stormgauge/forward_model.py",
+      "methodology": "Spatial decay with distance-based intensity-to-level conversion",
+      "alternatives_considered": [
+        "Pure IDW interpolation",
+        "Kriging",
+        "Neural network spatial model"
+      ],
+      "methodology_rationale": "Physical decay model is interpretable and auditable. Kriging requires more data points than typically available. Neural networks lack transparency for regulatory purposes.",
+      "assumptions": [
+        {
+          "id": "SG-A1",
+          "description": "No antecedent moisture conditions modelled",
+          "impact": "High",
+          "monitoring": "Compare predicted vs observed for wet/dry antecedent periods",
+          "mitigation": "Seasonal adjustment factor"
+        },
+        {
+          "id": "SG-A2",
+          "description": "Linear storm track interpolation",
+          "impact": "Medium",
+          "monitoring": "Track reconstruction error analysis",
+          "mitigation": "Higher-order interpolation if needed"
+        },
+        {
+          "id": "SG-A3",
+          "description": "Static decay parameters",
+          "impact": "Medium",
+          "monitoring": "Parameter stability across seasons",
+          "mitigation": "Seasonal recalibration"
+        },
+        {
+          "id": "SG-A4",
+          "description": "No tidal interaction",
+          "impact": "High",
+          "monitoring": "Residual analysis for coastal gauges",
+          "mitigation": "Tidal correction for estuarine gauges"
+        }
+      ],
+      "limitations": [
+        {
+          "id": "SG-L1",
+          "description": "No antecedent conditions modelling",
+          "impact": "High",
+          "monitoring_trigger": "Systematic under-prediction after prolonged wet periods",
+          "compensating_control": "Seasonal moisture index adjustment"
+        },
+        {
+          "id": "SG-L2",
+          "description": "Linear track interpolation may miss curved storm paths",
+          "impact": "Medium",
+          "monitoring_trigger": "Track error > 10km at gauge locations",
+          "compensating_control": "Manual track review for significant events"
+        },
+        {
+          "id": "SG-L3",
+          "description": "Static sensitivity parameters",
+          "impact": "Medium",
+          "monitoring_trigger": "Parameter drift > 15% over 12 months",
+          "compensating_control": "Annual recalibration"
+        },
+        {
+          "id": "SG-L4",
+          "description": "No tidal interaction for coastal/estuarine gauges",
+          "impact": "High",
+          "monitoring_trigger": "Prediction bias at tidal gauges",
+          "compensating_control": "Exclude estuarine gauges or add tidal overlay"
+        }
+      ],
+      "known_failure_modes": [
+        "Gauges in urban areas with complex drainage may not follow spatial decay assumptions",
+        "Flash flood events with very localised intensity poorly modelled by regional decay",
+        "Snow-melt driven floods not captured by rainfall-only model"
+      ],
+      "key_parameters": [
+        "decay_rate",
+        "intensity_scale",
+        "distance_exponent"
+      ],
+      "input_data": "Storm intensity distribution (MKM-SI-001), gauge locations, catchment geometry",
+      "output_data": "Per-gauge water level responses for each storm scenario",
+      "downstream_models": [
+        "MKM-GH-001"
+      ],
+      "upstream_models": [
+        "MKM-SI-001"
+      ],
+      "validation_status": "Initial",
+      "validation_date": null,
+      "next_review_date": "2026-06-15",
+      "recertification_date": "2027-02-15",
+      "review_frequency": "Semi-annual",
+      "documents": [
+        {
+          "type": "Model Documentation",
+          "name": "Storm-Gauge Response Model Documentation",
+          "path": "docs/models/storm_gauge/storm_gauge.pdf"
+        }
+      ],
+      "change_history": [
+        {
+          "version": "1.0.0",
+          "date": "2025-12-01",
+          "author": "David K Kelly",
+          "type": "Initial",
+          "description": "Initial implementation of storm-gauge spatial response model"
+        }
+      ],
+      "test_coverage": {
+        "unit_tests": true,
+        "integration_tests": true,
+        "benchmark_tests": false,
+        "test_file": "tests/models/test_forward_model.py"
+      },
+      "last_review_date": "2026-02-13",
+      "rag_rating": "Green",
+      "mrc_signoff_date": "2026-02-13",
+      "remediation_steps": [
+        {
+          "id": "SG-R1",
+          "description": "Add antecedent moisture sensitivity analysis to validation pack",
+          "owner": "David K Kelly",
+          "priority": "High",
+          "due_date": "2026-04-15",
+          "status": "Open"
+        },
+        {
+          "id": "SG-R2",
+          "description": "Document tidal interaction limitations for estuarine gauges",
+          "owner": "David K Kelly",
+          "priority": "Medium",
+          "due_date": "2026-05-01",
+          "status": "Open"
+        }
+      ],
+      "version_history": [
+        {
+          "version": "0.1.0",
+          "date": "2025-09-20",
+          "author": "David K Kelly",
+          "description": "Initial storm-gauge spatial decay model",
+          "document": "PhysicalRisk_Platform_Guide_v1.pdf"
+        },
+        {
+          "version": "0.2.0",
+          "date": "2025-11-01",
+          "author": "David K Kelly",
+          "description": "Added catchment-specific calibration parameters",
+          "document": "PhysicalRisk_Platform_Guide_v1.pdf"
+        },
+        {
+          "version": "1.0.0",
+          "date": "2025-12-01",
+          "author": "David K Kelly",
+          "description": "Release with distance-based attenuation and intensity-to-level conversion",
+          "document": "PhysicalRisk_Validation_v1.pdf"
+        }
+      ],
+      "validation_questions": [
+        {
+          "question_id": 1,
+          "short_label": "Ronseal Test",
+          "question": "Does the model do what it says on the tin?",
+          "handbook_ref": "Chapter 5, Question 1",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 2,
+          "short_label": "Accuracy & Stability",
+          "question": "Does the model provide timely, accurate and stable results?",
+          "handbook_ref": "Chapter 5, Question 2",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 3,
+          "short_label": "Resource Usage",
+          "question": "Does the model consume excessive computational resources?",
+          "handbook_ref": "Chapter 5, Question 3",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 4,
+          "short_label": "Override Controls",
+          "question": "Are there controls over manual overrides?",
+          "handbook_ref": "Chapter 5, Question 4",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 5,
+          "short_label": "Output Consumption",
+          "question": "How is the output consumed for risk decision-making?",
+          "handbook_ref": "Chapter 5, Question 5",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 6,
+          "short_label": "Model Chaining",
+          "question": "Is the model's output used as input to another model?",
+          "handbook_ref": "Chapter 5, Question 6",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 7,
+          "short_label": "Weaknesses",
+          "question": "Does the model have weaknesses and limitations of use?",
+          "handbook_ref": "Chapter 5, Question 7",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 8,
+          "short_label": "Monitoring",
+          "question": "What type of monitoring is required?",
+          "handbook_ref": "Chapter 5, Question 8",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 9,
+          "short_label": "Overall Risk",
+          "question": "Is the overall model risk acceptable?",
+          "handbook_ref": "Chapter 5, Question 9",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        }
+      ],
+      "overall_risk_rating": {
+        "calculated_rating": "Not Rated",
+        "calculated_score": null,
+        "component_scores": {
+          "validation_coverage": null,
+          "remediation_health": null,
+          "review_currency": null,
+          "assumption_risk": null,
+          "limitation_risk": null
+        },
+        "effective_rating": "Not Rated",
+        "mrc_override": null,
+        "mrc_override_reason": null,
+        "mrc_override_date": null,
+        "mrc_override_by": null,
+        "last_calculated": null
+      }
+    },
+    {
+      "model_id": "MKM-GH-001",
+      "name": "GEV Hazard Curve Model",
+      "short_name": "GEV Hazard",
+      "description": "Generalised Extreme Value distribution fitting for flood exceedance rates. Constructs hazard curves showing probability of exceeding given flood depths at each gauge location.",
+      "category": "Hazard",
+      "tier": 1,
+      "materiality": "High",
+      "complexity": "High",
+      "tier_rationale": "High materiality: directly determines flood exceedance probabilities used in pricing and capital. High complexity: GEV fitting with shape parameter estimation, return level extrapolation, and term structure construction.",
+      "status": "Active",
+      "lifecycle_stage": "Development",
+      "version": "1.0.0",
+      "owner": "David K Kelly",
+      "model_owner_role": "Chief Science Officer",
+      "peer_reviewer": "TBD",
+      "source_module": "src/models/hazard/gev.py",
+      "methodology": "Maximum likelihood GEV fitting with exceedance rate scaling and return level term structure",
+      "alternatives_considered": [
+        "Peaks-over-threshold with GPD",
+        "Empirical frequency analysis",
+        "Log-Pearson Type III"
+      ],
+      "methodology_rationale": "GEV is the theoretically justified distribution for block maxima (annual maximum flood levels). GPD requires threshold selection; empirical methods cannot extrapolate; Log-Pearson less flexible shape.",
+      "assumptions": [
+        {
+          "id": "GH-A1",
+          "description": "Annual maxima are independent and identically distributed",
+          "impact": "High",
+          "monitoring": "Ljung-Box test on annual maxima series",
+          "mitigation": "Time-varying GEV parameters"
+        },
+        {
+          "id": "GH-A2",
+          "description": "Stationarity over the observation period",
+          "impact": "High",
+          "monitoring": "Mann-Kendall trend test on annual maxima",
+          "mitigation": "Non-stationary GEV extension"
+        },
+        {
+          "id": "GH-A3",
+          "description": "Univariate analysis per gauge (no spatial dependence)",
+          "impact": "Medium",
+          "monitoring": "Cross-gauge correlation analysis",
+          "mitigation": "Max-stable process extension"
+        },
+        {
+          "id": "GH-A4",
+          "description": "Exceedance probability scaled by base flood rate",
+          "impact": "High",
+          "monitoring": "Base rate stability over time",
+          "mitigation": "Recalibrate base rate annually"
+        }
+      ],
+      "limitations": [
+        {
+          "id": "GH-L1",
+          "description": "Sample size sensitivity: <30 annual maxima gives unstable shape parameter",
+          "impact": "High",
+          "monitoring_trigger": "Shape parameter confidence interval width > 0.3",
+          "compensating_control": "Regional frequency analysis or Bayesian prior"
+        },
+        {
+          "id": "GH-L2",
+          "description": "Stationarity assumption may not hold under climate change",
+          "impact": "High",
+          "monitoring_trigger": "Significant trend (p<0.05) in annual maxima",
+          "compensating_control": "Climate-adjusted return levels"
+        },
+        {
+          "id": "GH-L3",
+          "description": "Univariate analysis ignores spatial flood dependence",
+          "impact": "Medium",
+          "monitoring_trigger": "Correlated gauge failures in same event",
+          "compensating_control": "Portfolio-level spatial diversification check"
+        }
+      ],
+      "known_failure_modes": [
+        "Very short records (<15 years) produce unreliable extreme quantiles",
+        "Mixed flood generation mechanisms (pluvial + fluvial + tidal) violate iid assumption",
+        "Shape parameter > 0.5 indicates heavy tail that may be physically unrealistic"
+      ],
+      "key_parameters": [
+        "location (mu)",
+        "scale (sigma)",
+        "shape (xi)",
+        "base_rate",
+        "return_periods"
+      ],
+      "input_data": "Per-gauge water level time series (from MKM-SG-001 or historical observations)",
+      "output_data": "Hazard curves (exceedance probability vs flood depth), return levels, term structure",
+      "downstream_models": [
+        "MKM-PR-001"
+      ],
+      "upstream_models": [
+        "MKM-SG-001"
+      ],
+      "validation_status": "Initial",
+      "validation_date": null,
+      "next_review_date": "2026-04-15",
+      "recertification_date": "2027-02-15",
+      "review_frequency": "Quarterly",
+      "documents": [
+        {
+          "type": "Model Documentation",
+          "name": "GEV Hazard Curve Model Documentation",
+          "path": "docs/models/gev_hazard/gev_hazard.pdf"
+        }
+      ],
+      "change_history": [
+        {
+          "version": "1.0.0",
+          "date": "2025-12-01",
+          "author": "David K Kelly",
+          "type": "Initial",
+          "description": "Initial GEV hazard curve implementation with term structure"
+        }
+      ],
+      "test_coverage": {
+        "unit_tests": true,
+        "integration_tests": true,
+        "benchmark_tests": false,
+        "test_file": "tests/models/test_gev.py"
+      },
+      "last_review_date": "2026-02-13",
+      "rag_rating": "Green",
+      "mrc_signoff_date": "2026-02-13",
+      "remediation_steps": [
+        {
+          "id": "GH-R1",
+          "description": "Complete back-testing against 2024 flood season observed return levels",
+          "owner": "David K Kelly",
+          "priority": "High",
+          "due_date": "2026-03-31",
+          "status": "Open"
+        },
+        {
+          "id": "GH-R2",
+          "description": "Produce reproducibility pack with fixed random seeds and expected outputs",
+          "owner": "David K Kelly",
+          "priority": "High",
+          "due_date": "2026-04-15",
+          "status": "Open"
+        },
+        {
+          "id": "GH-R3",
+          "description": "Add confidence interval reporting to term structure outputs",
+          "owner": "David K Kelly",
+          "priority": "Medium",
+          "due_date": "2026-05-15",
+          "status": "Open"
+        }
+      ],
+      "version_history": [
+        {
+          "version": "0.1.0",
+          "date": "2025-08-15",
+          "author": "David K Kelly",
+          "description": "Initial GEV fitting from annual maxima series",
+          "document": "PhysicalRisk_Platform_Guide_v1.pdf"
+        },
+        {
+          "version": "0.2.0",
+          "date": "2025-09-30",
+          "author": "David K Kelly",
+          "description": "Added exceedance probability and return level calculation",
+          "document": "PhysicalRisk_Platform_Guide_v1.pdf"
+        },
+        {
+          "version": "0.3.0",
+          "date": "2025-11-01",
+          "author": "David K Kelly",
+          "description": "Added term structure for multi-year hazard curves",
+          "document": "PhysicalRisk_Platform_Guide_v1.pdf"
+        },
+        {
+          "version": "1.0.0",
+          "date": "2025-12-01",
+          "author": "David K Kelly",
+          "description": "Full hazard curve builder with base rate scaling",
+          "document": "PhysicalRisk_Validation_v1.pdf"
+        }
+      ],
+      "validation_questions": [
+        {
+          "question_id": 1,
+          "short_label": "Ronseal Test",
+          "question": "Does the model do what it says on the tin?",
+          "handbook_ref": "Chapter 5, Question 1",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 2,
+          "short_label": "Accuracy & Stability",
+          "question": "Does the model provide timely, accurate and stable results?",
+          "handbook_ref": "Chapter 5, Question 2",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 3,
+          "short_label": "Resource Usage",
+          "question": "Does the model consume excessive computational resources?",
+          "handbook_ref": "Chapter 5, Question 3",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 4,
+          "short_label": "Override Controls",
+          "question": "Are there controls over manual overrides?",
+          "handbook_ref": "Chapter 5, Question 4",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 5,
+          "short_label": "Output Consumption",
+          "question": "How is the output consumed for risk decision-making?",
+          "handbook_ref": "Chapter 5, Question 5",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 6,
+          "short_label": "Model Chaining",
+          "question": "Is the model's output used as input to another model?",
+          "handbook_ref": "Chapter 5, Question 6",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 7,
+          "short_label": "Weaknesses",
+          "question": "Does the model have weaknesses and limitations of use?",
+          "handbook_ref": "Chapter 5, Question 7",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 8,
+          "short_label": "Monitoring",
+          "question": "What type of monitoring is required?",
+          "handbook_ref": "Chapter 5, Question 8",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        },
+        {
+          "question_id": 9,
+          "short_label": "Overall Risk",
+          "question": "Is the overall model risk acceptable?",
+          "handbook_ref": "Chapter 5, Question 9",
+          "status": "Not Addressed",
+          "evidence": "",
+          "last_reviewed": null,
+          "reviewed_by": null
+        }
+      ],
+      "overall_risk_rating": {
+        "calculated_rating": "Conditional",
+        "calculated_score": 0.458,
+        "component_scores": {
+          "validation_coverage": 0.0,
+          "remediation_health": 0.55,
+          "review_currency": 1.0,
+          "assumption_risk": 0.4,
+          "limitation_risk": 0.6
+        },
+        "effective_rating": "Conditional",
+        "mrc_override": null,
+        "mrc_override_reason": null,
+        "mrc_override_date": null,
+        "mrc_override_by": null,
+        "last_calculated": "2026-02-20T10:34:15.588628"
+      }
+    }
+  ],
+  "model_chain": {
+    "description": "String of pearls: Storm Intensity -> Storm-Gauge -> GEV Hazard -> PRS Pricing -> Delta Engine. Stress branch: Storm-Gauge -> Flood Classifier -> Delta Engine",
+    "links": [
+      {
+        "from": "MKM-SI-001",
+        "to": "MKM-SG-001",
+        "data_handoff": "Storm intensity distribution",
+        "granularity": "Per-storm event",
+        "compatibility": "Continuous distribution to discrete gauge responses",
+        "fields": [
+          {
+            "name": "effective_precipitation_mm",
+            "type": "float",
+            "description": "Derived precipitation; normalised by /35.0 in response model"
+          },
+          {
+            "name": "duration_hours",
+            "type": "float",
+            "description": "Storm duration; scaled via min(2.0, duration/24) for duration_factor"
+          },
+          {
+            "name": "intensity_factor",
+            "type": "float",
+            "description": "Multiplier on base precipitation (0.1–5.0)"
+          },
+          {
+            "name": "storm_id",
+            "type": "string",
+            "description": "Unique storm scenario identifier"
+          },
+          {
+            "name": "peak_position",
+            "type": "float",
+            "description": "Position of peak within storm (0–1)"
+          }
+        ]
+      },
+      {
+        "from": "MKM-SG-001",
+        "to": "MKM-GH-001",
+        "data_handoff": "Per-gauge water level time series",
+        "granularity": "Per-gauge, per-storm",
+        "compatibility": "Gauge-level annual maxima for GEV fitting",
+        "fields": [
+          {
+            "name": "peak_level_m",
+            "type": "float",
+            "description": "Maximum water level reached during storm (m); array passed to GEV fitter"
+          },
+          {
+            "name": "level_change_m",
+            "type": "float",
+            "description": "Rise from baseline water level (m)"
+          },
+          {
+            "name": "exceeded_alert",
+            "type": "boolean",
+            "description": "Whether level exceeded flood_alert threshold"
+          },
+          {
+            "name": "exceeded_warning",
+            "type": "boolean",
+            "description": "Whether level exceeded flood_warning threshold"
+          },
+          {
+            "name": "exceeded_severe",
+            "type": "boolean",
+            "description": "Whether level exceeded severe_flood_warning threshold"
+          },
+          {
+            "name": "gauge_id",
+            "type": "string",
+            "description": "Gauge identifier linking to gauge metadata"
+          }
+        ]
+      }
+    ]
+  },
+  "tiering_matrix": {
+    "description": "Materiality x Complexity risk tier matrix (from Handbook Chapter 8)",
+    "matrix": {
+      "High_High": 1,
+      "High_Medium": 1,
+      "High_Low": 2,
+      "Medium_High": 2,
+      "Medium_Medium": 2,
+      "Medium_Low": 3,
+      "Low_High": 3,
+      "Low_Medium": 3,
+      "Low_Low": 3,
+      "DeMinimis_High": 4,
+      "DeMinimis_Medium": 4,
+      "DeMinimis_Low": 4
+    }
+  }
+}

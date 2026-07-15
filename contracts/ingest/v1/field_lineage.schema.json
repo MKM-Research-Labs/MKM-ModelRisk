@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modelrisk.mkm/contracts/ingest/v1/field_lineage.schema.json",
+  "title": "Field lineage registry (v1)",
+  "description": "Report -> section -> field lineage catalogue (BCBS 239 Principle 3). Each field records where its value comes from. Structural keys are required; producer-added fields are allowed. That every field's 'pipeline_step' resolves to a known data-lineage step is enforced server-side, not by this schema.",
+  "type": "object",
+  "required": ["version", "reports"],
+  "additionalProperties": true,
+  "properties": {
+    "version": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "last_updated": { "type": "string" },
+    "reports": {
+      "description": "report_key -> report lineage.",
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/report" }
+    },
+    "field_count_summary": { "type": "object" }
+  },
+  "$defs": {
+    "report": {
+      "type": "object",
+      "required": ["sections"],
+      "additionalProperties": true,
+      "properties": {
+        "label": { "type": "string" },
+        "generator": { "type": "string" },
+        "sections": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/section" }
+        }
+      }
+    },
+    "section": {
+      "type": "object",
+      "required": ["fields"],
+      "additionalProperties": true,
+      "properties": {
+        "label": { "type": "string" },
+        "fields": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/field" }
+        }
+      }
+    },
+    "field": {
+      "type": "object",
+      "required": ["source_file", "source_field"],
+      "additionalProperties": true,
+      "properties": {
+        "label": { "type": "string" },
+        "source_file": { "type": ["string", "null"] },
+        "source_field": { "type": ["string", "null"] },
+        "pipeline_step": { "type": ["string", "null"] },
+        "cdm_path": { "type": ["string", "null"] },
+        "computation": { "type": "string" }
+      }
+    }
+  }
+}

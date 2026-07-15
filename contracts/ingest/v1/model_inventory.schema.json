@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modelrisk.mkm/contracts/ingest/v1/model_inventory.schema.json",
+  "title": "Model inventory + chain (v1)",
+  "description": "Model inventory snapshot plus the 'string of pearls' model-chain dependency graph. Only structural and identifying keys are required; the many descriptive model fields are optional and producer-added fields are allowed. Chain referential integrity (links resolve to known model_ids, acyclic) is enforced server-side, not by this schema.",
+  "type": "object",
+  "required": ["models"],
+  "additionalProperties": true,
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "framework": { "type": "string" },
+        "version": { "type": "string" },
+        "last_updated": { "type": "string" },
+        "handbook_reference": { "type": "string" },
+        "tiering_methodology": { "type": "string" }
+      }
+    },
+    "models": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/model" }
+    },
+    "model_chain": { "$ref": "#/$defs/chain" },
+    "tiering_matrix": { "type": "object" },
+    "audit_trail": { "type": "array" }
+  },
+  "$defs": {
+    "model": {
+      "type": "object",
+      "required": ["model_id", "name"],
+      "additionalProperties": true,
+      "properties": {
+        "model_id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "short_name": { "type": "string" },
+        "tier": { "type": ["string", "integer"] },
+        "materiality": { "type": "string" },
+        "status": { "type": "string" },
+        "version": { "type": ["string", "number"] },
+        "owner": { "type": "string" },
+        "rag_rating": { "type": ["string", "null"] },
+        "validation_status": { "type": "string" },
+        "source_module": { "type": "string" },
+        "upstream_models": { "type": "array", "items": { "type": "string" } },
+        "downstream_models": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "chain": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "description": { "type": "string" },
+        "links": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/link" }
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": true,
+      "properties": {
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "data_handoff": { "type": "string" },
+        "granularity": { "type": "string" },
+        "compatibility": { "type": "string" },
+        "fields": { "type": "array", "items": { "type": "object" } }
+      }
+    }
+  }
+}

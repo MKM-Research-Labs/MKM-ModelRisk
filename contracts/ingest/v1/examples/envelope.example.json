@@ -1,0 +1,44 @@
+{
+  "schema_version": "v1",
+  "artifact": "data-lineage",
+  "provenance": {
+    "source_repo": "PhysicalRisk",
+    "commit": "d097faea1234567890abcdef1234567890abcdef",
+    "producer": "modelrisk-scan/data-lineage",
+    "producer_version": "0.1.0",
+    "generated_at": "2026-07-15T15:48:22Z"
+  },
+  "payload": {
+    "runs": {
+      "run-test-001": [
+        "gaugehd"
+      ]
+    },
+    "steps": {
+      "gaugehd": {
+        "run_id": "run-20260714-154822",
+        "timestamp": "2026-07-14T15:48:22.370654",
+        "user": "newdavid",
+        "hostname": "Davids-MacBook-Pro-4.local",
+        "generator": "port.src.gauge.gaugehd",
+        "status": "success",
+        "elapsed_seconds": 0.0,
+        "parameters": {
+          "history_years": 1
+        },
+        "inputs": {
+          "gauge.json": {
+            "hash": null,
+            "type": "missing"
+          }
+        },
+        "outputs": {
+          "gaugehd/": {
+            "hash": null,
+            "type": "missing"
+          }
+        }
+      }
+    }
+  }
+}
