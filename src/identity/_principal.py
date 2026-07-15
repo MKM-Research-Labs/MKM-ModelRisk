@@ -24,6 +24,7 @@ from dataclasses import dataclass
 
 SOURCE_SSO_HEADER = "sso-header"
 SOURCE_FALLBACK = "fallback"
+SOURCE_INGEST = "ingest"
 
 
 @dataclass(frozen=True)

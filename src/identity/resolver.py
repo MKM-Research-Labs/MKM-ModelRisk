@@ -25,14 +25,19 @@ swapped in here without touching command handlers.
 """
 from __future__ import annotations
 
-from typing import Mapping
+from typing import Any, Mapping
 
 from config.identity import (
     IDENTITY_DEV_FALLBACK,
     IDENTITY_HEADER,
     IDENTITY_NAME_HEADER,
 )
-from src.identity._principal import SOURCE_FALLBACK, SOURCE_SSO_HEADER, Principal
+from src.identity._principal import (
+    SOURCE_FALLBACK,
+    SOURCE_INGEST,
+    SOURCE_SSO_HEADER,
+    Principal,
+)
 
 
 class IdentityError(RuntimeError):
@@ -67,3 +72,14 @@ def resolve_principal(
         display_name=IDENTITY_DEV_FALLBACK,
         source=SOURCE_FALLBACK,
     )
+
+
+def ingest_principal(provenance: Mapping[str, Any]) -> Principal:
+    """A synthetic principal attributing an ingested payload to its source system.
+
+    ``actor`` is ``ingest:<source_repo>`` so a producer's events are unmistakably
+    machine-originated in the audit trail; ``display_name`` names the producer.
+    """
+    repo = provenance["source_repo"]
+    producer = provenance.get("producer") or repo
+    return Principal(actor=f"ingest:{repo}", display_name=producer, source=SOURCE_INGEST)

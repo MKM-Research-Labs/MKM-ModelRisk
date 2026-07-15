@@ -1,0 +1,112 @@
+# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+#
+# This software is licensed by MKM Research Labs for non-commercial
+# research and educational use only. Any commercial use, including
+# but not limited to use in or for products or services offered for sale,
+# internal business operations intended for commercial advantage, or
+# research and development conducted for a commercial entity, is expressly
+# prohibited unless separately authorized in writing by MKM Research Labs.
+#
+# Use, reproduction, distribution, or modification of this code is subject to the
+# terms and conditions of the license agreement provided with this software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Ingest validation: JSON Schema plus cross-reference integrity.
+
+Two layers: (1) structural validation of the envelope and the artifact payload
+against the frozen ``contracts/ingest/v1`` schemas; (2) cross-reference checks
+that span records and cannot be expressed in a schema (e.g. every step named in a
+data-lineage ``runs`` list has a matching ``steps`` entry). Both raise
+``SchemaValidationError`` carrying a list of human-readable errors.
+"""
+from __future__ import annotations
+
+import json
+from functools import lru_cache
+from typing import Any, Callable
+
+from jsonschema import Draft202012Validator
+
+from config.ingest import INGEST_ARTIFACTS
+from config.paths import CONTRACTS_V1_DIR
+
+_ENVELOPE_SCHEMA = "envelope.schema.json"
+
+
+class SchemaValidationError(ValueError):
+    """Raised when a payload fails structural or cross-reference validation."""
+
+    def __init__(self, message: str, errors: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.errors = errors or []
+
+
+@lru_cache(maxsize=None)
+def _validator(schema_file: str) -> Draft202012Validator:
+    schema = json.loads((CONTRACTS_V1_DIR / schema_file).read_text())
+    return Draft202012Validator(schema)
+
+
+def _errors(schema_file: str, instance: Any) -> list[str]:
+    validator = _validator(schema_file)
+    out = []
+    for err in sorted(validator.iter_errors(instance), key=lambda e: list(e.path)):
+        location = "/".join(str(p) for p in err.path) or "<root>"
+        out.append(f"{location}: {err.message}")
+    return out
+
+
+def validate_envelope(body: Any) -> None:
+    """Validate the request envelope (provenance + payload)."""
+    errors = _errors(_ENVELOPE_SCHEMA, body)
+    if errors:
+        raise SchemaValidationError("invalid ingest envelope", errors)
+
+
+def validate_payload(artifact: str, payload: Any) -> None:
+    """Validate an artifact payload structurally, then cross-reference it."""
+    schema_file = INGEST_ARTIFACTS.get(artifact)
+    if schema_file is None:
+        raise SchemaValidationError(
+            f"unknown artifact: {artifact}",
+            [f"'{artifact}' is not an accepted ingest artifact"],
+        )
+    errors = _errors(schema_file, payload)
+    if errors:
+        raise SchemaValidationError(f"invalid {artifact} payload", errors)
+    _check_cross_refs(artifact, payload)
+
+
+def _check_data_lineage(payload: dict[str, Any]) -> list[str]:
+    """Every step named in a run must have a matching entry in ``steps``."""
+    steps = payload.get("steps", {})
+    errors = []
+    for run_id, step_names in payload.get("runs", {}).items():
+        for name in step_names:
+            if name not in steps:
+                errors.append(f"runs/{run_id}: step '{name}' has no entry in steps")
+    return errors
+
+
+# artifact -> cross-reference checker. model-inventory (chain integrity) and
+# field-lineage (pipeline_step resolves to a known step) are added in Phase 2/3.
+_CROSS_REFS: dict[str, Callable[[dict[str, Any]], list[str]]] = {
+    "data-lineage": _check_data_lineage,
+}
+
+
+def _check_cross_refs(artifact: str, payload: Any) -> None:
+    checker = _CROSS_REFS.get(artifact)
+    if checker is None:
+        return
+    errors = checker(payload)
+    if errors:
+        raise SchemaValidationError(
+            f"{artifact} cross-reference check failed", errors
+        )

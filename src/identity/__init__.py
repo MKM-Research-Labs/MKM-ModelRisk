@@ -19,6 +19,6 @@
 # SOFTWARE.
 """Identity: resolve the acting principal from the client's SSO."""
 from src.identity._principal import Principal
-from src.identity.resolver import IdentityError, resolve_principal
+from src.identity.resolver import IdentityError, ingest_principal, resolve_principal
 
-__all__ = ["Principal", "IdentityError", "resolve_principal"]
+__all__ = ["Principal", "IdentityError", "resolve_principal", "ingest_principal"]
