@@ -30,10 +30,13 @@ confirmation explicitly at their endpoints via ``require_confirmation``.
 """
 from __future__ import annotations
 
-# Whole commands that always require confirmation.
+# Whole commands that always require confirmation. Retiring is significant and
+# effectively one-way — the subject becomes read-only — so both the model and the
+# product retire commands are gated, and the reason is recorded on the event.
 CONFIRM_REQUIRED_COMMANDS = frozenset({
     "register_model",
     "register_product",
+    "retire_model",
     "retire_product",
 })
 
