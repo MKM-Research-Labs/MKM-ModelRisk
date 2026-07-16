@@ -314,16 +314,28 @@ def test_inventory_search_filters_rows(page: Page, base_url: str):
     expect(page.locator("#m-table")).to_contain_text("No models match")
 
 
+def _set_field(page: Page, base_url: str, model_id: str, field: str, value) -> None:
+    """Set one scalar field via the API.
+
+    The list view is what's under test here, so drive the data straight in rather
+    than through per-field detail editors (which differ by field: RAG has a
+    bespoke owner/table control, tier its own picker).
+    """
+    page.request.post(
+        f"{base_url}/api/models/{model_id}/field",
+        data={"field": field, "value": value, "confirmed": True},
+        headers={"X-Auth-Request-User": "e2e", "Content-Type": "application/json"},
+    )
+
+
 def test_inventory_filter_by_rag(page: Page, base_url: str):
     """The RAG dropdown narrows the table to matching models."""
     open_app(page, base_url)
     register_model(page, "MKM-RAG-AM", "Amber One")
-    open_model(page, "MKM-RAG-AM")
-    edit_model_field(page, "rag_rating", "Amber", choice=True)
     register_model(page, "MKM-RAG-GR", "Green One")
-    open_model(page, "MKM-RAG-GR")
-    edit_model_field(page, "rag_rating", "Green", choice=True)
-    # Re-enter the inventory list so it reflects the edited ratings.
+    _set_field(page, base_url, "MKM-RAG-AM", "rag_rating", "Amber")
+    _set_field(page, base_url, "MKM-RAG-GR", "rag_rating", "Green")
+    # Re-enter the inventory list so it reflects the ratings just set.
     open_tab(page, "mrc")
     open_tab(page, "inventory")
     page.select_option("#mf-rag", "Amber")
@@ -335,8 +347,7 @@ def test_inventory_tier_tile_toggles_filter(page: Page, base_url: str):
     """Clicking a Tier tile filters the table to that tier and back."""
     open_app(page, base_url)
     register_model(page, "MKM-TIER-01", "Tiered Model")
-    open_model(page, "MKM-TIER-01")
-    edit_model_field(page, "tier", "2", choice=True)
+    _set_field(page, base_url, "MKM-TIER-01", "tier", 2)  # tier is an int server-side
     open_tab(page, "mrc")
     open_tab(page, "inventory")
     page.click("#m-summary [data-tile='tier=2']")
