@@ -328,6 +328,18 @@ def _set_field(page: Page, base_url: str, model_id: str, field: str, value) -> N
     )
 
 
+def _reload_list(page: Page, base_url: str, expected_rows: int) -> None:
+    """Reload the console and wait for the list to settle before interacting.
+
+    Mounting the list resets the filter state and rebuilds the filter controls,
+    so acting before the mount completes can land on a control that is then
+    replaced — and the change is lost with the detached node. Waiting on the row
+    count pins the interaction to the final render.
+    """
+    open_app(page, base_url)
+    expect(page.locator("#m-table tbody tr")).to_have_count(expected_rows)
+
+
 def test_inventory_filter_by_rag(page: Page, base_url: str):
     """The RAG dropdown narrows the table to matching models."""
     open_app(page, base_url)
@@ -335,9 +347,7 @@ def test_inventory_filter_by_rag(page: Page, base_url: str):
     register_model(page, "MKM-RAG-GR", "Green One")
     _set_field(page, base_url, "MKM-RAG-AM", "rag_rating", "Amber")
     _set_field(page, base_url, "MKM-RAG-GR", "rag_rating", "Green")
-    # Re-enter the inventory list so it reflects the ratings just set.
-    open_tab(page, "mrc")
-    open_tab(page, "inventory")
+    _reload_list(page, base_url, 2)
     page.select_option("#mf-rag", "Amber")
     expect(page.locator("tr.clickable[data-id='MKM-RAG-AM']")).to_have_count(1)
     expect(page.locator("tr.clickable[data-id='MKM-RAG-GR']")).to_have_count(0)
@@ -348,8 +358,9 @@ def test_inventory_tier_tile_toggles_filter(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-TIER-01", "Tiered Model")
     _set_field(page, base_url, "MKM-TIER-01", "tier", 2)  # tier is an int server-side
-    open_tab(page, "mrc")
-    open_tab(page, "inventory")
+    _reload_list(page, base_url, 1)
     page.click("#m-summary [data-tile='tier=2']")
     expect(page.locator("#mf-tier")).to_have_value("2")
     expect(page.locator("tr.clickable[data-id='MKM-TIER-01']")).to_have_count(1)
+    page.click("#m-summary [data-tile='tier=2']")   # clicking again clears it
+    expect(page.locator("#mf-tier")).to_have_value("")
