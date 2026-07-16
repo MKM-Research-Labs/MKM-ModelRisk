@@ -23,7 +23,7 @@ from audit.data_access import data_access_findings
 from audit.duplication import duplication_report, jscpd_available
 from audit.embedded_js import embedded_js_findings
 from audit.hardcoding import hardcoding_findings
-from audit.init_files import init_file_findings
+from audit.init_files import init_file_findings, init_file_inventory
 from audit.large_files import large_source_files, large_test_files, large_web_files
 from audit.path_definitions import path_definition_findings
 
@@ -34,6 +34,7 @@ __all__ = [
     "hardcoding_findings",
     "embedded_js_findings",
     "init_file_findings",
+    "init_file_inventory",
     "data_access_findings",
     "path_definition_findings",
     "coverage_summary",

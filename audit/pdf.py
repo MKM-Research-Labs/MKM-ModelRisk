@@ -89,10 +89,17 @@ def _coverage_body(report: dict) -> str:
 
 
 def _init_files_body(report: dict) -> str:
-    return _findings_section(
-        "R4 — Substantive __init__.py", report["init_files"],
-        ["File", "Functions", "Classes"],
-        lambda f: [f["path"], ", ".join(f["functions"]), ", ".join(f["classes"])])
+    inventory = report.get("init_inventory", [])
+    embedded = [item for item in inventory if not item["reexport"]]
+    intro = ("Every package \\texttt{__init__.py} should be aggregate-only — a "
+             "docstring, imports and \\texttt{__all__}, with no functions, classes "
+             "or module-level logic. All " + str(len(inventory)) + " first-party "
+             "\\texttt{__init__.py} files are listed below; " + str(len(embedded))
+             + " contain code.\\par\\medskip\n")
+    return intro + _findings_section(
+        "R4 — __init__.py inventory", inventory,
+        ["File", "Lines", "Re-export only"],
+        lambda f: [f["path"], f["lines"], "Yes" if f["reexport"] else "No"])
 
 
 def _headers_body(report: dict) -> str:

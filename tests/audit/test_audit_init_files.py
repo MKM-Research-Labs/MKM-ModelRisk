@@ -22,7 +22,8 @@ from __future__ import annotations
 
 import ast
 
-from audit.init_files import _substantive, init_file_findings
+from audit.init_files import (_reexport_only, _substantive, init_file_findings,
+                              init_file_inventory)
 
 
 def test_substantive_detects_functions_and_classes():
@@ -38,3 +39,35 @@ def test_substantive_allows_imports_and_reexports():
 
 def test_repo_init_files_only_reexport():
     assert init_file_findings() == []
+
+
+def test_reexport_only_accepts_docstring_imports_and_dunder_all():
+    src = '"""Package."""\nfrom x import y\nimport os\n__all__ = ["y"]\n'
+    assert _reexport_only(ast.parse(src)) is True
+
+
+def test_reexport_only_rejects_functions_classes_and_logic():
+    assert _reexport_only(ast.parse("def f():\n    pass\n")) is False
+    assert _reexport_only(ast.parse("class C:\n    pass\n")) is False
+    # Module-level logic that _substantive (functions/classes only) would miss.
+    assert _reexport_only(ast.parse("from x import y\nZ = [i for i in y]\n")) is False
+    assert _reexport_only(ast.parse("import os\nos.mkdir('x')\n")) is False
+
+
+def test_inventory_lists_every_init_with_length_and_verdict():
+    inventory = init_file_inventory()
+    assert inventory, "expected first-party __init__.py files"
+    # Every entry carries a path, a positive line count and a boolean verdict.
+    for item in inventory:
+        assert item["path"].endswith("__init__.py")
+        assert item["lines"] > 0
+        assert isinstance(item["reexport"], bool)
+    # Coverage spans packages beyond the app source (audit/ and packages/).
+    paths = {item["path"] for item in inventory}
+    assert "config/__init__.py" in paths
+    assert "audit/__init__.py" in paths
+    assert any(p.startswith("packages/") for p in paths)
+
+
+def test_inventory_reports_every_repo_init_as_reexport():
+    assert all(item["reexport"] for item in init_file_inventory())

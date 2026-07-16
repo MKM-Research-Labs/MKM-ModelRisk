@@ -101,6 +101,11 @@ NOTICE_EXEMPT_NAMES = frozenset({"LICENSE"})
 # so the notice scan never reports — or reads — them. ``.env`` holds secrets.
 NOTICE_EXCLUDE_NAMES = frozenset({".DS_Store", ".coverage", "coverage.xml", ".env"})
 
+# Package trees scanned for the R4 ``__init__.py`` inventory. Broader than
+# SOURCE_DIRS so the inventory lists every first-party package initialiser —
+# including the audit suite and the bundled packages/ — not just the app source.
+INIT_INVENTORY_DIRS = ("config", "src", "scripts", "app", "audit", "packages")
+
 # Coding rule R2 — the "split rule". The modularisation scan is repo-wide: it
 # covers all non-test first-party code (root-level files like app.py plus these
 # sub-trees), not just SOURCE_DIRS, so the docs/ generators and web assets are

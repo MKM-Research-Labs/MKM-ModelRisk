@@ -34,7 +34,7 @@ from audit.duplication import duplication_report
 from audit.embedded_js import embedded_js_findings
 from audit.hardcoding import hardcoding_findings
 from audit.headers import apply_headers, header_findings
-from audit.init_files import init_file_findings
+from audit.init_files import init_file_findings, init_file_inventory
 from audit.json_files import json_file_findings
 from audit.large_files import large_source_files, large_test_files, large_web_files
 from audit.notices import notice_findings
@@ -57,6 +57,22 @@ def _print_section(title: str, findings: list[dict], formatter) -> int:
     return len(findings)
 
 
+def _print_init_inventory(inventory: list[dict], substantive: list[dict]) -> int:
+    """List every __init__.py with its length and re-export verdict (R4).
+
+    The full inventory is shown for visibility; the gated count is the number of
+    substantive files (those defining functions or classes).
+    """
+    not_reexport = [item for item in inventory if not item["reexport"]]
+    mark = "OK " if not not_reexport else "!! "
+    print(f"\n{mark}R4 __init__.py — {len(inventory)} file(s), "
+          f"{len(not_reexport)} with embedded code")
+    for item in inventory:
+        flag = "re-export" if item["reexport"] else "HAS CODE "
+        print(f"     {item['lines']:>4} lines  {flag}  {item['path']}")
+    return len(substantive)
+
+
 def build_report() -> dict:
     """Collect every audit's findings into one dict (used by tests and the CLI)."""
     return {
@@ -66,6 +82,7 @@ def build_report() -> dict:
         "hardcoding": hardcoding_findings(),
         "embedded_js": embedded_js_findings(),
         "init_files": init_file_findings(),
+        "init_inventory": init_file_inventory(),
         "headers": header_findings(),
         "licence_notices": notice_findings(),
         "data_access": data_access_findings(),
@@ -149,8 +166,7 @@ def main(argv=None) -> int:
                             lambda f: f"{f['lines']:>4}  {f['path']}")
     total += _print_section("R2 large test files (>400)", report["large_test_files"],
                             lambda f: f"{f['lines']:>4}  {f['path']}")
-    total += _print_section("R4 substantive __init__.py", report["init_files"],
-                            lambda f: f"{f['path']}  fns={f['functions']} classes={f['classes']}")
+    total += _print_init_inventory(report["init_inventory"], report["init_files"])
     total += _print_section("R5 missing copyright header", report["headers"],
                             lambda f: f["path"])
     total += _print_section("R7 embedded JavaScript / CSS", report["embedded_js"],

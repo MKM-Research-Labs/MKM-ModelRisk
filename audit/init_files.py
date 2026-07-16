@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import ast
 
-from config.audit import SOURCE_DIRS
+from config.audit import INIT_INVENTORY_DIRS, SOURCE_DIRS
 
-from audit._walk import py_files, rel
+from audit._walk import count_lines, py_files, rel
 
 
 def _substantive(tree: ast.Module) -> dict:
@@ -38,6 +38,40 @@ def _substantive(tree: ast.Module) -> dict:
     return {"functions": functions, "classes": classes, "decorated": decorated}
 
 
+def _is_docstring(node: ast.stmt) -> bool:
+    """The module docstring: a bare string-constant expression."""
+    return (isinstance(node, ast.Expr) and isinstance(node.value, ast.Constant)
+            and isinstance(node.value.value, str))
+
+
+def _is_dunder_reexport(node: ast.stmt) -> bool:
+    """A dunder assignment (``__all__``/``__version__``) with a literal value."""
+    if not isinstance(node, ast.Assign):
+        return False
+    names = [t.id for t in node.targets if isinstance(t, ast.Name)]
+    if not names or not all(n.startswith("__") and n.endswith("__") for n in names):
+        return False
+    return isinstance(node.value, (ast.List, ast.Tuple, ast.Set, ast.Constant))
+
+
+def _reexport_only(tree: ast.Module) -> bool:
+    """True when a module is 100% aggregate: docstring, imports and ``__all__``.
+
+    Stricter than :func:`_substantive` — it also rejects module-level logic
+    (loops, conditionals, computed values, side-effecting calls), so only pure
+    aggregator packages pass.
+    """
+    for index, node in enumerate(tree.body):
+        if index == 0 and _is_docstring(node):
+            continue
+        if isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        if _is_dunder_reexport(node):
+            continue
+        return False
+    return True
+
+
 def init_file_findings() -> list[dict]:
     """Report ``__init__.py`` files that define functions, classes or routes."""
     findings = []
@@ -49,3 +83,21 @@ def init_file_findings() -> list[dict]:
         if detail["functions"] or detail["classes"]:
             findings.append({"path": rel(path), **detail})
     return findings
+
+
+def init_file_inventory() -> list[dict]:
+    """Every first-party ``__init__.py`` with its length and re-export verdict.
+
+    Where :func:`init_file_findings` reports only offenders (the R4 gate), this
+    lists *all* package initialisers so the audit can show each is aggregate-only.
+    ``lines`` is the file's length; ``reexport`` is ``True`` when the file is
+    nothing but a docstring, imports and a literal ``__all__``.
+    """
+    inventory = []
+    for path in py_files(*INIT_INVENTORY_DIRS):
+        if path.name != "__init__.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8", errors="replace"))
+        inventory.append({"path": rel(path), "lines": count_lines(path),
+                          "reexport": _reexport_only(tree)})
+    return sorted(inventory, key=lambda item: item["path"])

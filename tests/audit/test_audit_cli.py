@@ -28,7 +28,7 @@ from src.governance.mrc import pack
 
 _SECTIONS = {
     "large_source_files", "large_web_files", "large_test_files", "hardcoding",
-    "embedded_js", "init_files", "headers", "licence_notices",
+    "embedded_js", "init_files", "init_inventory", "headers", "licence_notices",
     "data_access", "path_definitions",
     "coverage", "duplication", "json_files",
 }
