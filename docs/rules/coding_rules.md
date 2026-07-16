@@ -78,13 +78,30 @@ implementation into named, testable modules.
 licence header from `docs/shared/copyright.py` (after an optional shebang). `.js` files use
 the same lines with `//` in place of `#`.
 
+**Every other first-party file carries a one-line licence notice** in its own comment syntax
+(`--` for `.sql`, `/* */` for `.css`, `<!-- -->` for `.html`/`.md`, `#` for `.sh`/`.toml`/
+dotfiles) rather than the full block. A file that *cannot* hold a comment — JSON forbids
+them, binaries have no comment syntax — is marked by a sibling `<name>.license` file
+(REUSE-style), so the exemption is recorded as a decision rather than an oversight.
+
 **Why.** Legal/licensing clarity on every file; a single canonical source for the text.
+Every file states its terms or points at `LICENSE`; none is silently unmarked.
 
-**How to comply.** Copy the header verbatim from `docs/shared/copyright.py`; place it at the
-very top, before the module docstring; never hand-retype it.
+**How to comply.** Don't hand-retype it — run `python -m audit --fix-headers`, which rewrites
+any non-compliant header in place from `docs/shared/copyright.py` (preserving a shebang, and
+leaving a leading comment that isn't a licence header alone).
 
-**Verified by.** The self-healing header audit (to be ported in Phase 0). Until then,
-reviewed by hand against `docs/shared/copyright.py`.
+**Verified by.** The self-healing header audit (`audit/headers.py`): `header_findings()` gates
+`python -m audit` and `tests/audit/test_audit_headers.py`; `apply_headers()` backs
+`--fix-headers`. Scope is repo-wide — root-level files plus `HEADER_SCAN_DIRS` in
+`config/audit.py` (`tests/` and `docs/` included), so the entry point and the test suite
+cannot carry a stale licence while R5 passes.
+
+The one-line notices are checked by `audit/notices.py` (`notice_findings()`), **reported
+rather than gating** — the wording is prose and the comment syntax varies, so it is surfaced
+for review instead of failing the build. `tests/audit/test_audit_headers.py` also asserts the
+canonical block matches `LICENSE` verbatim, so the per-file header and the licence file
+cannot drift apart.
 
 ---
 
@@ -162,9 +179,17 @@ duplication percentage; cross-model duplication is treated as a hard fault in re
 
 ## Change log
 
+- 2026-07-16 — Relicensed to MIT (`LICENSE` at the repo root). R5 extended: the header is
+  now propagated by `python -m audit --fix-headers`, its scope is repo-wide (root files,
+  `tests/`, `docs/`), and every non-`.py`/`.js` file carries a one-line notice — checked,
+  reported, by `audit/notices.py`.
 - 2026-06-25 — Added R8 (avoid duplication / extract utilities; zero-tolerance across
   models). Extended R7 to forbid embedding JS/CSS in `.py` files.
 - 2026-06-25 — Added R7 (front-end assets under `src/static` / `src/templates`).
 - 2026-06-22 — Created for MKM-ModelRisk, adapting R1–R6 from the parent engagement.
   R6 reframed around the `src/database/` event store. Mechanical audits (R1/R2/R4/R5/R6
   gates) to be ported in Phase 0.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

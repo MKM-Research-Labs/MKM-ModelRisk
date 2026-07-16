@@ -1,4 +1,4 @@
--- Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+-- Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
 -- Product read-model projection (rebuilt from the event log; not a source of truth).
 CREATE TABLE IF NOT EXISTS product_view (
     product_id TEXT PRIMARY KEY,

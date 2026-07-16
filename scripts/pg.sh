@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+# Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
 #
 # Manage a local native PostgreSQL cluster for MKM-ModelRisk (no Docker).
 # Reads connection settings from .env when present; otherwise uses the defaults

@@ -212,4 +212,4 @@ committee integration and polish. The plan can stop cleanly after any phase.
 
 ---
 
-© 2022–2026 MKM Research Labs. All rights reserved.
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

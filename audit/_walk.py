@@ -1,14 +1,14 @@
-# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+# Copyright (c) 2022-2026 MKM Research Labs.
 #
-# This software is licensed by MKM Research Labs for non-commercial
-# research and educational use only. Any commercial use, including
-# but not limited to use in or for products or services offered for sale,
-# internal business operations intended for commercial advantage, or
-# research and development conducted for a commercial entity, is expressly
-# prohibited unless separately authorized in writing by MKM Research Labs.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# Use, reproduction, distribution, or modification of this code is subject to the
-# terms and conditions of the license agreement provided with this software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -52,13 +52,15 @@ def code_files(dirs, extensions):
     Covers root-level files (e.g. ``app.py``) plus every file under each named
     top-level directory in ``dirs``, restricted to ``extensions`` and outside
     the excluded dirs. This is the repo-wide counterpart to ``py_files`` — the
-    scope the modularisation ("split") rule measures.
+    scope the modularisation ("split") rule measures. Pass ``extensions=None``
+    for every file regardless of suffix (the licence-notice scan's scope).
     """
-    suffixes = frozenset(extensions)
+    suffixes = None if extensions is None else frozenset(extensions)
     seen = set()
 
     def _emit(path: Path):
-        if (path.is_file() and path.suffix in suffixes
+        if (path.is_file()
+                and (suffixes is None or path.suffix in suffixes)
                 and path not in seen
                 and not _excluded(path.relative_to(REPO_ROOT))):
             seen.add(path)

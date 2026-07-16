@@ -1,4 +1,4 @@
--- Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+-- Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
 -- Migration 0002: the runtime application role and its grants.
 --
 -- Immutability is enforced here, at the database-grant level: the application

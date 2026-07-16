@@ -1,14 +1,14 @@
-# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+# Copyright (c) 2022-2026 MKM Research Labs.
 #
-# This software is licensed by MKM Research Labs for non-commercial
-# research and educational use only. Any commercial use, including
-# but not limited to use in or for products or services offered for sale,
-# internal business operations intended for commercial advantage, or
-# research and development conducted for a commercial entity, is expressly
-# prohibited unless separately authorized in writing by MKM Research Labs.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# Use, reproduction, distribution, or modification of this code is subject to the
-# terms and conditions of the license agreement provided with this software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -69,6 +69,37 @@ MAX_TEST_FILE_LINES = 400
 # Directories scanned for source-code audits, and the source-of-truth for params.
 SOURCE_DIRS = ("config", "src", "scripts", "app")
 CONFIG_DIR = "config"
+
+# Every first-party sub-tree. Coding rule R5 ("every first-party .py and .js
+# file") is licence-bearing scope, so it is repo-wide like R2's: root-level files
+# (app.py) plus these trees — tests, docs, the published packages/ clients and the
+# contracts/ schemas included. Scoping it to SOURCE_DIRS would let the entry point,
+# the test suite and a shipped package carry a stale licence while R5 passed.
+FIRST_PARTY_DIRS = ("config", "src", "scripts", "audit", "tests", "docs",
+                    "packages", "contracts")
+
+# The header gate (audit/headers.py) and the notice scan (audit/notices.py) share
+# that scope: between them they must account for every first-party file.
+HEADER_SCAN_DIRS = FIRST_PARTY_DIRS
+HEADER_EXTENSIONS = (".py", ".js")
+
+# Licence notices on everything R5's full-block gate does not cover (.sql, .css,
+# .html, .sh, .md, .toml, .txt, dotfiles, images, binaries). Those files carry a
+# one-line notice in their own comment syntax rather than the 19-line block; the
+# notice audit is reported, not gating, because the wording is prose and the
+# comment syntax varies. A file that cannot hold a comment at all (JSON forbids
+# them; binaries have no syntax) is marked by a sibling ``<name>.license`` file,
+# REUSE-style — so it is recorded as decided, never as overlooked.
+NOTICE_MARKER = "MIT License"
+NOTICE_SIBLING_SUFFIX = ".license"
+
+# Files that state the licence rather than reference it, so they need no notice.
+NOTICE_EXEMPT_NAMES = frozenset({"LICENSE"})
+
+# Generated or local-only files (mirrors the .gitignore entries that name files
+# rather than directories, which EXCLUDE_DIRS already covers). Not first-party,
+# so the notice scan never reports — or reads — them. ``.env`` holds secrets.
+NOTICE_EXCLUDE_NAMES = frozenset({".DS_Store", ".coverage", "coverage.xml", ".env"})
 
 # Coding rule R2 — the "split rule". The modularisation scan is repo-wide: it
 # covers all non-test first-party code (root-level files like app.py plus these

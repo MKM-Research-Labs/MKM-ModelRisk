@@ -1,14 +1,14 @@
-# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+# Copyright (c) 2022-2026 MKM Research Labs.
 #
-# This software is licensed by MKM Research Labs for non-commercial
-# research and educational use only. Any commercial use, including
-# but not limited to use in or for products or services offered for sale,
-# internal business operations intended for commercial advantage, or
-# research and development conducted for a commercial entity, is expressly
-# prohibited unless separately authorized in writing by MKM Research Labs.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# Use, reproduction, distribution, or modification of this code is subject to the
-# terms and conditions of the license agreement provided with this software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -29,6 +29,7 @@ from src.governance.mrc.pack import _esc
 _CLEAN = {
     "large_source_files": [], "large_web_files": [], "large_test_files": [],
     "hardcoding": [], "embedded_js": [], "init_files": [], "headers": [],
+    "licence_notices": [],
     "data_access": [], "path_definitions": [], "json_files": [],
     "coverage": {"available": True, "line_rate": 0.995, "lines_valid": 1000,
                  "lines_covered": 995, "by_package": []},
@@ -42,6 +43,7 @@ _FINDINGS = {
     "embedded_js": [{"path": "z.py", "line": 9, "kind": "script", "js_lines": 5}],
     "init_files": [{"path": "p.py", "functions": ["f"], "classes": ["C"]}],
     "headers": [{"path": "h.py"}],
+    "licence_notices": [{"path": "n.sql", "kind": ".sql"}],
     "data_access": [{"path": "d.py", "line": 7, "kind": "sql", "snippet": "SELECT 1 FROM t"}],
     "path_definitions": [{"path": "q.py", "line": 3, "kind": "root_walk",
                           "snippet": "Path(__file__).parents[1]"}],

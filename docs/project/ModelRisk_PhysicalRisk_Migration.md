@@ -375,3 +375,7 @@ PhysicalRisk re-import them as a version-pinned wheel — was dropped because:
 
 The narrow, healthy remainder of the library idea survives as `modelrisk-scan` —
 stateless scan utilities only, never the regulatory core.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

@@ -1,14 +1,14 @@
-# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+# Copyright (c) 2022-2026 MKM Research Labs.
 #
-# This software is licensed by MKM Research Labs for non-commercial
-# research and educational use only. Any commercial use, including
-# but not limited to use in or for products or services offered for sale,
-# internal business operations intended for commercial advantage, or
-# research and development conducted for a commercial entity, is expressly
-# prohibited unless separately authorized in writing by MKM Research Labs.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# Use, reproduction, distribution, or modification of this code is subject to the
-# terms and conditions of the license agreement provided with this software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -96,8 +96,11 @@ def _init_files_body(report: dict) -> str:
 
 
 def _headers_body(report: dict) -> str:
-    return _findings_section("R5 — Missing copyright header", report["headers"],
-                             ["File"], lambda f: [f["path"]])
+    return (_findings_section("R5 — Missing copyright header", report["headers"],
+                              ["File"], lambda f: [f["path"]])
+            + _findings_section("R5 — Missing licence notice (reported)",
+                                report["licence_notices"],
+                                ["File", "Type"], lambda f: [f["path"], f["kind"]]))
 
 
 def _data_access_body(report: dict) -> str:
@@ -223,7 +226,10 @@ def _summary_table(report: dict) -> str:
             ["R3", "At least " + str(COVERAGE_MINIMUM) + "% test coverage, verified each stage",
              cov_result],
             ["R4", "No functions or logic in __init__.py", _result(report["init_files"])],
-            ["R5", "Canonical copyright header on every file", _result(report["headers"])],
+            ["R5", "Canonical copyright header on every .py/.js file",
+             _result(report["headers"])],
+            ["R5", "Licence notice on every other first-party file",
+             _reported(report["licence_notices"])],
             ["R6", "Data store reached only through src/database", _reported(report["data_access"])],
             ["R6", "Filesystem paths defined only in config", _reported(report["path_definitions"])],
             ["R7", "No JavaScript or CSS embedded in .py files", _result(report["embedded_js"])],

@@ -1,4 +1,4 @@
--- Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+-- Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
 -- Migration 0001: the event store and projection checkpoints.
 
 -- Append-only event log. One row per recorded event. Streams are keyed by

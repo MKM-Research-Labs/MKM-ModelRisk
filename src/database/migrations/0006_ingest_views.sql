@@ -1,4 +1,4 @@
--- Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+-- Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
 -- Migration 0006: ingest read models (Phase 0 collector foundation).
 --
 -- Two derived, fully rebuildable projections for the ingest spine. Both are

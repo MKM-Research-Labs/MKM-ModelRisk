@@ -1,4 +1,4 @@
--- Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+-- Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
 -- Migration 0003: model-inventory read model (projection).
 --
 -- A derived, fully rebuildable current-state view of the model-inventory

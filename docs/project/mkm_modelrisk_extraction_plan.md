@@ -254,3 +254,7 @@ Port each aggregate as commands → events → projection → API → tests. Sug
 2. Scaffold the repo (Phase 0) — I can generate the skeleton, port the coding-rule audits + copyright self-heal, and stand up CI.
 3. Phase 1 spike: event table + append/replay + one projection, to de-risk the CQRS core early.
 ```
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

@@ -332,6 +332,13 @@ See [`docs/mkm_modelrisk_extraction_plan.md`](docs/mkm_modelrisk_extraction_plan
 for the architecture and build plan, and [`docs/rules/`](docs/rules/) for the
 coding rules.
 
+## Licence
+
+Released under the MIT License — see [`LICENSE`](LICENSE) for the full text.
+The per-file header that every first-party source file carries (coding rule R5)
+is generated from [`docs/shared/copyright.py`](docs/shared/copyright.py), which
+is the single source of truth for that text.
+
 ---
 
-© 2022–2026 MKM Research Labs. All rights reserved.
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

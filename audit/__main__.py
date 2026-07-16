@@ -1,14 +1,14 @@
-# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+# Copyright (c) 2022-2026 MKM Research Labs.
 #
-# This software is licensed by MKM Research Labs for non-commercial
-# research and educational use only. Any commercial use, including
-# but not limited to use in or for products or services offered for sale,
-# internal business operations intended for commercial advantage, or
-# research and development conducted for a commercial entity, is expressly
-# prohibited unless separately authorized in writing by MKM Research Labs.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# Use, reproduction, distribution, or modification of this code is subject to the
-# terms and conditions of the license agreement provided with this software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -33,17 +33,20 @@ from audit.data_access import data_access_findings
 from audit.duplication import duplication_report
 from audit.embedded_js import embedded_js_findings
 from audit.hardcoding import hardcoding_findings
-from audit.headers import header_findings
+from audit.headers import apply_headers, header_findings
 from audit.init_files import init_file_findings
 from audit.json_files import json_file_findings
 from audit.large_files import large_source_files, large_test_files, large_web_files
+from audit.notices import notice_findings
 from audit.path_definitions import path_definition_findings
 from audit.pdf import (REPORTS, STANDALONE_REPORTS, render_audit_pdf,
                        render_report_pdf)
 
-_USAGE = ("usage: python -m audit [--pdf]\n\n"
-          "  --pdf   also render the audit reports (one PDF per rule R1–R8 plus a\n"
-          "          consolidated overview) into the audit output directory")
+_USAGE = ("usage: python -m audit [--pdf] [--fix-headers]\n\n"
+          "  --pdf           also render the audit reports (one PDF per rule R1–R8 plus a\n"
+          "                  consolidated overview) into the audit output directory\n"
+          "  --fix-headers   rewrite any non-compliant R5 copyright header in place from\n"
+          "                  docs/shared/copyright.py, then exit")
 
 
 def _print_section(title: str, findings: list[dict], formatter) -> int:
@@ -64,6 +67,7 @@ def build_report() -> dict:
         "embedded_js": embedded_js_findings(),
         "init_files": init_file_findings(),
         "headers": header_findings(),
+        "licence_notices": notice_findings(),
         "data_access": data_access_findings(),
         "path_definitions": path_definition_findings(),
         "coverage": coverage_summary(),
@@ -116,11 +120,25 @@ def _write_pdfs(report: dict) -> int:
     return 0
 
 
+def _fix_headers() -> int:
+    """Self-heal R5 headers for ``--fix-headers``; return a process exit code."""
+    changed = apply_headers()
+    if not changed:
+        print("R5 copyright headers — already compliant, nothing to do")
+        return 0
+    print(f"R5 copyright headers — rewrote {len(changed)} file(s):")
+    for path in changed:
+        print("     " + path)
+    return 0
+
+
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
     if "-h" in argv or "--help" in argv:
         print(_USAGE)
         return 0
+    if "--fix-headers" in argv:
+        return _fix_headers()
     report = build_report()
     print("MKM-ModelRisk — coding-rule audit")
     print("=" * 50)
@@ -140,6 +158,8 @@ def main(argv=None) -> int:
     # Reported (non-gating) sections — visibility only, not counted in ``total``.
     _print_section("R2 large web files (>300, reported)", report["large_web_files"],
                    lambda f: f"{f['lines']:>4}  {f['path']}")
+    _print_section("R5 licence notice outside .py/.js (reported)", report["licence_notices"],
+                   lambda f: f"{f['path']}  ({f['kind']})")
     _print_section("R6 data access outside src/database (reported)", report["data_access"],
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     _print_section("R6 path definitions outside config (reported)", report["path_definitions"],

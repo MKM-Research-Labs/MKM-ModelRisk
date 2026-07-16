@@ -1,14 +1,14 @@
-# Copyright (c) 2022-2026 MKM Research Labs. All rights reserved.
+# Copyright (c) 2022-2026 MKM Research Labs.
 #
-# This software is licensed by MKM Research Labs for non-commercial
-# research and educational use only. Any commercial use, including
-# but not limited to use in or for products or services offered for sale,
-# internal business operations intended for commercial advantage, or
-# research and development conducted for a commercial entity, is expressly
-# prohibited unless separately authorized in writing by MKM Research Labs.
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
 #
-# Use, reproduction, distribution, or modification of this code is subject to the
-# terms and conditions of the license agreement provided with this software.
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -21,6 +21,10 @@
 
 The comment block above is the single source of truth for the licence header
 that must begin every first-party ``.py`` and ``.js`` file. For ``.js`` files
-the same lines are used with ``//`` in place of ``#``. When the self-healing
-header audit is ported it reads this block verbatim; do not hand-retype it.
+the same lines are used with ``//`` in place of ``#``. The header audit reads
+this block verbatim; do not hand-retype it — run ``python -m audit
+--fix-headers`` to propagate a change here to every file.
+
+The full licence text lives in ``LICENSE`` at the repo root; keep the two in
+step — the body of this block is that file's text, comment-prefixed.
 """

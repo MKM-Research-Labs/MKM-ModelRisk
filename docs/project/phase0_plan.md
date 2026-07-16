@@ -177,3 +177,7 @@ the domains.
   as `api_mrc/` and the governance domains already do).
 - **R3:** tests for every new module to hold the 99% coverage gate; the E2E
   smoke test carries the `e2e` marker.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

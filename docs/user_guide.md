@@ -504,4 +504,4 @@ cleared from the application.
 
 ---
 
-© 2022-2026 MKM Research Labs. All rights reserved.
+© 2022-2026 MKM Research Labs. Licensed under the MIT License; see [`LICENSE`](../LICENSE).

@@ -41,3 +41,7 @@ Phase 0 ships the **push client** and **provenance** builder. The generalised
 data-lineage manifest *engine* (lifted and de-domained from PhysicalRisk's
 `src/lineage/manifest`) lands in **Phase 3**, when PhysicalRisk actually adopts
 this library in place of its local copy.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

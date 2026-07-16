@@ -65,3 +65,7 @@ new `v2/` directory and a new endpoint version — never an in-place edit that
 could silently invalidate an existing producer. The `examples/` are validated
 against their schemas by `tests/ingest/test_contracts_v1.py`, which fails if a
 schema and its example drift apart.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.
