@@ -289,7 +289,7 @@ src/
 audit/         Self-checking coding-rule audit suite (python -m audit)
 scripts/       Operational scripts (seed_demo.py, pg.sh)
 tests/         Unit/integration tests + tests/e2e (Playwright browser suite)
-docs/          User guide, coding rules
+docs/          User guide, dependency manifest, coding rules
 ```
 
 See [`docs/user_guide.md`](docs/user_guide.md) for a walkthrough of every screen,
@@ -298,6 +298,8 @@ and [`docs/rules/`](docs/rules/) for the coding rules.
 ## Licence
 
 Released under the MIT License — see [`LICENSE`](LICENSE) for the full text.
+Third-party dependencies and their licences are listed in
+[`docs/dependencies.md`](docs/dependencies.md).
 The per-file header that every first-party source file carries (coding rule R5)
 is generated from [`docs/shared/copyright.py`](docs/shared/copyright.py), which
 is the single source of truth for that text.
