@@ -22,30 +22,13 @@
 Run the governance console with ``python app.py`` (applies DB migrations on
 startup). ``app`` is exposed at module level so a WSGI server can serve it too,
 e.g. ``gunicorn app:app``.
-
-``python app.py demo`` serves a separate, pre-seeded ``mkm_modelrisk_demo``
-database (created and seeded on first run) — for client demos, never touching
-the dev data.
 """
 from __future__ import annotations
 
-import os
-import sys
+from config.web import WEB_HOST, WEB_PORT
+from src.web import create_app
 
-_DEMO = len(sys.argv) > 1 and sys.argv[1] == "demo"
-if _DEMO:
-    os.environ["MKM_DB_NAME"] = "mkm_modelrisk_demo"
-
-from config.web import WEB_HOST, WEB_PORT  # noqa: E402
-from src.web import create_app  # noqa: E402
-
-if _DEMO:
-    from scripts.demo import bootstrap_demo  # noqa: E402
-
-    bootstrap_demo()
-    app = create_app(run_db_migrations=False)
-else:
-    app = create_app()
+app = create_app()
 
 if __name__ == "__main__":  # pragma: no cover
-    app.run(host=WEB_HOST, port=WEB_PORT, debug=not _DEMO)
+    app.run(host=WEB_HOST, port=WEB_PORT, debug=True)

@@ -75,8 +75,7 @@ you are `dev@localhost` by default.
 **What to do:**
 
 1. Open the console (locally: `python app.py`, then the host/port from
-   `config/web.py`, default `http://127.0.0.1:5015`). For a pre-seeded demo
-   instance instead, use `python app.py demo`.
+   `config/web.py`, default `http://127.0.0.1:5015`).
 2. Set the **Acting as** field in the header to your name or email — this is the
    actor stamped on every change you make.
 3. The main tabs are: **Model Inventory, Products, MRC, Documents, Bibliography,

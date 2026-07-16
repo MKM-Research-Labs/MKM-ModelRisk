@@ -20,14 +20,12 @@
 """Filesystem path parameters (coding rule R1 — paths defined only in config).
 
 The single home for repository-relative paths used by the migration runner and
-the demo seed/export scripts, so no source or script module walks the tree with
+the ingest validator, so no source or script module walks the tree with
 ``Path(__file__)`` itself.
 """
 from __future__ import annotations
 
 from pathlib import Path
-
-from config.files import UPLOAD_DIR
 
 # Repository root (config/ lives directly under it).
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -37,11 +35,3 @@ MIGRATIONS_DIR = _REPO_ROOT / "src" / "database" / "migrations"
 
 # Frozen v1 ingest contract schemas, loaded by the ingest validator.
 CONTRACTS_V1_DIR = _REPO_ROOT / "contracts" / "ingest" / "v1"
-
-# Demo seed data + branded assets: read when seeding, written by the exporter.
-DEMO_DATA_PATH = _REPO_ROOT / "scripts" / "demo_data.json"
-DEMO_ASSETS_DIR = _REPO_ROOT / "scripts" / "demo_assets"
-DEMO_LOGO_PATH = _REPO_ROOT / "docs" / "shared" / "moodys.jpeg"
-
-# Live committee Terms-of-Reference uploads, copied back out by the exporter.
-UPLOADS_MRC_DIR = UPLOAD_DIR / "mrc"

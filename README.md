@@ -83,11 +83,11 @@ export and one extra audit check.
 
 ## Getting started
 
-### Quick start — the demo in one command
+### Quick start — one command
 
 From the repo root after cloning, this prompts for your **host id** (the identity
 your changes are attributed to — the "Acting as" author), then sets up the virtual
-environment, the local database cluster, and launches the pre-seeded demo. It is
+environment, the local database cluster, and launches the app. It is
 safe to re-run.
 
 ```bash
@@ -103,8 +103,11 @@ pip install -e ".[dev]"
 # Local PostgreSQL cluster: initialise on first run, otherwise just start it.
 if [ -d .pgdata ]; then scripts/pg.sh start 2>/dev/null || true; else scripts/pg.sh init; fi
 
-# Create, migrate, seed and serve the demo database.
-python app.py demo
+# Create, migrate and serve the database.
+python app.py
+
+# Optional: populate the inventory with a few example models.
+python scripts/seed_demo.py
 ```
 
 Then open **http://127.0.0.1:5015** — the **Acting as** field is pre-filled with
@@ -168,10 +171,10 @@ bash scripts/pg.sh init            # creates ./.pgdata on port 5433, then starts
 ✓ You should see `Cluster ready on port 5433; database 'mkm_modelrisk' created.`
 Confirm it is up with `bash scripts/pg.sh status` → `... accepting connections`.
 
-**Step 4 — Launch the demo.**
+**Step 4 — Launch the app.**
 
 ```bash
-python app.py demo                 # creates + seeds mkm_modelrisk_demo on first run
+python app.py                      # creates + migrates mkm_modelrisk on first run
 ```
 
 ✓ You should see `Running on http://127.0.0.1:5015`.
@@ -188,16 +191,14 @@ In a fresh terminal (the database persists between runs):
 cd MKM-ModelRisk
 source .venv/bin/activate
 bash scripts/pg.sh start
-python app.py demo
+python app.py
 ```
 
 Stop the app with **Ctrl-C**; stop the database with `bash scripts/pg.sh stop`.
 
-> **Demo vs dev.** `python app.py demo` uses a throwaway, pre-seeded
-> `mkm_modelrisk_demo` database — the right choice for handovers and client
-> walkthroughs. `python app.py` (no `demo`) uses your own `mkm_modelrisk` dev
-> database instead. Defaults work out of the box; only create a `.env`
-> (`cp .env.example .env`) to change ports/credentials — see
+> **Note.** The database starts empty; `python scripts/seed_demo.py` populates the
+> inventory with a few example models. Defaults work out of the box; only create a
+> `.env` (`cp .env.example .env`) to change ports/credentials — see
 > [Configuration](#configuration).
 
 #### Troubleshooting
@@ -210,7 +211,7 @@ Stop the app with **Ctrl-C**; stop the database with `bash scripts/pg.sh stop`.
 | `psql: could not connect` / `connection refused` | The cluster isn't running: `bash scripts/pg.sh start`. |
 | `Address already in use` on port 5015 | An app instance is still up: `lsof -tiTCP:5015 \| xargs kill`, then retry. |
 | PDF exports return **503** | Install the optional engines: `brew install tectonic pandoc`. |
-| Demo data looks stale / want a clean slate | `bash scripts/pg.sh start && dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk_demo && python app.py demo`. |
+| Want a clean slate | `bash scripts/pg.sh start && dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk && python app.py`. |
 
 ### Verify the checkout (optional but recommended)
 
@@ -219,46 +220,9 @@ python -m audit                  # coding-rule audit — exits non-zero on any f
 pytest --cov                     # unit + integration suite, 100% coverage
 ```
 
-### Client demo
-
-```bash
-python app.py demo
-```
-
-Serves a separate, pre-seeded **`mkm_modelrisk_demo`** database (created, migrated
-and seeded on first run; never touches your dev data). It loads a worked **Moody's**
-scenario from `scripts/demo_data.json` — the branded company logo, divisions and
-departments, people (each anchored to an org unit), MRC committees with their
-membership rosters, models, Products, scheduled MRC meetings with agendas and
-sign-offs, and a bibliography. The company logo is read from
-`docs/shared/moodys.jpeg`.
-
 > **Tip:** the database is the only stateful piece. It lives in the cluster's data
 > directory (`./.pgdata` by default, gitignored). Manage it with
 > `scripts/pg.sh start|stop|status`; the data persists across stop/start.
-
-**Re-seed from scratch.** The demo seeds **only when the database is empty**, so
-your in-app edits persist across restarts. To rebuild it fresh from
-`demo_data.json` (e.g. after pulling new demo content), drop it first:
-
-```bash
-scripts/pg.sh start
-dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk_demo
-python app.py demo        # recreates + re-seeds, then serves
-```
-
-**Update the seed from your running demo.** After tailoring the demo through the
-UI, capture it back into `demo_data.json` so a fresh clone reproduces it:
-
-```bash
-MKM_DB_NAME=mkm_modelrisk_demo python scripts/export_demo.py
-```
-
-(The seed logo (`docs/shared/moodys.jpeg`) and committee Terms-of-Reference
-(`scripts/demo_assets/`, wired up via `committee_tors` in `demo_data.json`) are
-committed and re-uploaded on seed. Other in-app uploads — analysis / agenda
-documents — live under `uploads/`, which is gitignored, so they don't travel with
-a clone.)
 
 ---
 
