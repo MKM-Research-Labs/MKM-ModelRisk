@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "demo",
+      "name": "modelrisk",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["app.py", "demo"],
+      "runtimeArgs": ["app.py"],
       "port": 5015
     }
   ]

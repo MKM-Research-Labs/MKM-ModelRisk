@@ -2,7 +2,7 @@
 
 The JSON Schemas under `ingest/v1/` are the **contract** every producer codes to.
 ModelRisk is the collector/system-of-record; producers (PhysicalRisk today, other
-repos later — e.g. a Moody's repo running Claude over its own code) generate
+adopting repos later — each running Claude over its own code) generate
 artifacts and POST them to `/api/ingest/*`. These schemas are the frozen,
 language-agnostic definition of what a valid payload looks like, so a producer in
 any stack can conform.

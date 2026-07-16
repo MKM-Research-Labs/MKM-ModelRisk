@@ -5,7 +5,7 @@ version = "0.1.0"
 description = "Producer-side client for pushing scans (data lineage, model inventory, field lineage) into a ModelRisk collector."
 requires-python = ">=3.13"
 # Deliberately dependency-free: producers install this into any repo (PhysicalRisk
-# today, a Moody's repo tomorrow) and it must not drag in a dependency tree. The
+# today, any adopting repo tomorrow) and it must not drag in a dependency tree. The
 # HTTP client uses the standard library only.
 dependencies = []
 

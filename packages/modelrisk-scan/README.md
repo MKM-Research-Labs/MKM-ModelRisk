@@ -1,8 +1,9 @@
 # modelrisk-scan
 
 Producer-side client for feeding a **ModelRisk** collector. Install it into any
-repo that produces governance scans — PhysicalRisk today, a Moody's repo running
-Claude over its own code tomorrow — and push artifacts over the ingest contract.
+repo that produces governance scans — PhysicalRisk today, any adopting repo
+running Claude over its own code tomorrow — and push artifacts over the ingest
+contract.
 
 Deliberately **dependency-free** (standard library only), so it never drags a
 dependency tree into a producer repo.

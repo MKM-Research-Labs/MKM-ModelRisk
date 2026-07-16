@@ -289,12 +289,11 @@ src/
 audit/         Self-checking coding-rule audit suite (python -m audit)
 scripts/       Operational scripts (seed_demo.py, pg.sh)
 tests/         Unit/integration tests + tests/e2e (Playwright browser suite)
-docs/          User guide, architecture/build plan, coding rules
+docs/          User guide, coding rules
 ```
 
-See [`docs/mkm_modelrisk_extraction_plan.md`](docs/mkm_modelrisk_extraction_plan.md)
-for the architecture and build plan, and [`docs/rules/`](docs/rules/) for the
-coding rules.
+See [`docs/user_guide.md`](docs/user_guide.md) for a walkthrough of every screen,
+and [`docs/rules/`](docs/rules/) for the coding rules.
 
 ## Licence
 
