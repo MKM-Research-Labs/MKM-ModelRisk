@@ -96,7 +96,9 @@ Object.assign(MeetingDetail, {
         '<div><span class="muted" style="font-size:11px">Outcome</span> ' +
         '<select data-analysis-status="' + esc(id) + '">' + opts(m.analysis_status) + "</select></div></div>" +
         '<div class="field" style="margin-top:6px"><label>Discussion note</label>' +
-        '<input data-analysis-note="' + esc(id) + '" value="' + esc(m.analysis_note || "") + '"></div>' +
+        '<div class="row" style="align-items:flex-end;gap:6px">' +
+        '<input data-analysis-note="' + esc(id) + '" value="' + esc(m.analysis_note || "") + '" style="flex:1">' +
+        '<button class="btn small" data-analysis-note-save="' + esc(id) + '">Save note</button></div></div>' +
         '<div class="section-header" style="margin-top:8px;font-size:11px">Follow-on remediation</div>' + stepList +
         '<div class="row" style="margin-top:6px;flex-wrap:wrap;align-items:flex-end">' +
         '<div class="field"><label>Remediation</label><input id="act-desc-' + esc(id) + '"></div>' +
@@ -183,10 +185,17 @@ Object.assign(MeetingDetail, {
       sel.onchange = () => App.amend("Set analysis outcome for " + id + " → " + sel.value + ".", "POST",
         scopePath(id), { fields: { analysis_status: sel.value } }, reload);
     });
-    document.querySelectorAll("[data-analysis-note]").forEach(function (inp) {
-      const id = inp.getAttribute("data-analysis-note");
-      inp.onchange = () => App.amend("Set analysis note for " + id + ".", "POST",
-        scopePath(id), { fields: { analysis_note: inp.value } }, reload);
+    // The discussion note saves via an explicit button, not on blur: a
+    // blur-triggered amend would collide with a subsequent click (e.g. Add
+    // remediation), and the single pending-amend slot would silently drop one of
+    // the two changes.
+    document.querySelectorAll("[data-analysis-note-save]").forEach(function (btn) {
+      const id = btn.getAttribute("data-analysis-note-save");
+      btn.onclick = function () {
+        const inp = document.querySelector('[data-analysis-note="' + id + '"]');
+        App.amend("Set analysis note for " + id + ".", "POST",
+          scopePath(id), { fields: { analysis_note: inp.value } }, reload);
+      };
     });
     document.querySelectorAll("[data-presenter]").forEach(function (sel) {
       const id = sel.getAttribute("data-presenter");

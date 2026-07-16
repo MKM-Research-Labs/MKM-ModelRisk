@@ -159,6 +159,11 @@ def models_in_scope(meeting_id: str):
             "rag_rating": data.get("rag_rating"),
             "review_status": compute_review_status(data.get("next_review_date"), today),
             "presenter": item.get("presenter"),
+            # The committee's recorded outcome + discussion note for this model.
+            # Without these the Analysis panel always re-renders the Outcome as
+            # "Pending" and a blank note, so saved values never appear to stick.
+            "analysis_status": item.get("analysis_status"),
+            "analysis_note": item.get("analysis_note"),
             "analysis_original_name": item.get("analysis_original_name"),
         })
     return jsonify(rows)

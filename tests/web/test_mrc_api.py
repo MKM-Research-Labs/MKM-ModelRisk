@@ -75,6 +75,25 @@ def test_models_in_scope_joins_inventory(client):
     assert rows[0]["review_status"] == "Overdue"
 
 
+def test_models_in_scope_surfaces_analysis_outcome_and_note(client):
+    # Regression: the /models view feeds the Analysis panel's Outcome dropdown and
+    # Discussion note. If the endpoint drops these item fields, a saved outcome
+    # re-renders as "Pending" and the note re-renders blank ("does not stick").
+    client.post(
+        "/api/models",
+        json={"model_id": "MKM-Y", "name": "Example Y", "confirmed": True,
+              "fields": {"tier": 1, "rag_rating": "Amber"}},
+        headers=HEADERS,
+    )
+    _schedule(client)
+    _add(client, "models_in_scope",
+         {"model_id": "MKM-Y", "analysis_status": "Reviewed — agreed to proceed",
+          "analysis_note": "Agreed to proceed with caveats"})
+    rows = client.get("/api/meetings/MTG1/models").get_json()
+    assert rows[0]["analysis_status"] == "Reviewed — agreed to proceed"
+    assert rows[0]["analysis_note"] == "Agreed to proceed with caveats"
+
+
 def test_models_in_scope_handles_unknown_model(client):
     _schedule(client)
     _add(client, "models_in_scope", {"model_id": "GHOST"})
