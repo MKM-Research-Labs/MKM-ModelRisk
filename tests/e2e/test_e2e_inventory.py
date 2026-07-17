@@ -272,28 +272,11 @@ def test_per_model_audit_tab_shows_recorded_events(page: Page, base_url: str):
     expect(body).to_contain_text("dev@localhost")
 
 
-def test_model_actions_with_update_history(page: Page, base_url: str):
-    """Actions are owned by the model: add one, then file a dated update — the
-    update history grows and the action's target tracks the latest update."""
-    open_app(page, base_url)
-    register_model(page, "MKM-ACT-01", "Action Model")
-    open_model(page, "MKM-ACT-01")
-    page.click("[data-dtab='actions']")
-    page.fill("#act-desc", "Revalidate the PD curve")
-    page.fill("#act-target", "2026-09-30")
-    page.click("#act-add")   # adding an action is not gated — applies immediately
-    card = page.locator("#actions-list .card").first
-    expect(card).to_contain_text("Revalidate the PD curve")
-    # Seeded with one "Raised" update.
-    expect(card.locator(".prow")).to_have_count(1)
-    # File an update with a revised target.
-    item_id = page.locator("[data-act-update]").first.get_attribute("data-act-update")
-    page.fill(f"#upd-note-{item_id}", "Data delayed; revised")
-    page.fill(f"#upd-target-{item_id}", "2026-11-30")
-    page.click(f"[data-act-update='{item_id}']")   # likewise ungated
-    card = page.locator("#actions-list .card").first
-    expect(card.locator(".prow")).to_have_count(2)
-    expect(card).to_contain_text("2026-11-30")
+# test_model_actions_with_update_history — retired.
+# Actions are no longer managed from the model detail: the tab was dropped from
+# Detail._tabbar and they are worked from the MRC meeting (Models in scope), which
+# is where the committee revisits them. The orphaned panel it drove
+# (inventory/detail_actions.js) has been removed with it.
 
 
 # --- Inventory UX: summary tiles, per-column filters, sortable table ---------

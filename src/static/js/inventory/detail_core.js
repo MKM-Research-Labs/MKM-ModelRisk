@@ -42,26 +42,24 @@ const HEADER_DATES = ["next_review_date"];
 
 const Detail = {
   _id: null, _model: null, _specs: null, _risk: null, _audit: [], _mrc: null,
-  _decisions: [], _actions: [], _tab: "overview",
+  _decisions: [], _tab: "overview",
 
   async show(modelId, tab) {
     this._id = modelId;
     this._specs = await Inventory.specs();
     // Fetch the independent reads in parallel so a re-render settles quickly.
-    const [model, risk, mrc, audit, decisions, actions] = await Promise.all([
+    const [model, risk, mrc, audit, decisions] = await Promise.all([
       App.get("/api/models/" + modelId),
       App.get("/api/models/" + modelId + "/risk-rating"),
       App.get("/api/models/" + modelId + "/mrc"),
       App.get("/api/audit"),
       App.get("/api/models/" + modelId + "/decisions"),
-      App.get("/api/models/" + modelId + "/actions"),
     ]);
     this._model = model;
     this._risk = risk;
     this._mrc = mrc;
     this._audit = audit.filter((e) => e.aggregate_id === modelId);
     this._decisions = decisions;
-    this._actions = actions;
     if (tab) this._tab = tab;
     this._render();
     document.getElementById("m-detail").scrollIntoView({ block: "start" });
