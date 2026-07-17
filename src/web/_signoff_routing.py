@@ -64,6 +64,9 @@ from src.governance.product import (
 # (see VALID_SIGNOFF_KINDS) is raised onto this one collection, so a committee
 # has one list to work rather than one per decision type.
 REQUESTS = "signoff_requests"
+# The audit of what the committee decided, one entry per decision. Mirrors the
+# request's kind, so the rating fields only carry meaning for a "rag" decision.
+HISTORY = "signoff_history"
 
 
 class Subject:
@@ -183,11 +186,12 @@ def revoke_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
     current = (record["data"] or {}).get("rag_rating")
     # to_rating is a required history field; a revoke is recorded *at* the current
     # rating (from == to), the outcome is what flips ``signed_off`` off.
-    fields = {"outcome": "Revoked", "date": on_date or date.today().isoformat(),
+    fields = {"kind": "rag", "outcome": "Revoked",
+              "date": on_date or date.today().isoformat(),
               "to_rating": current, "from_rating": current}
     if note:
         fields["note"] = note
-    subject.add_item(ctx, subject_id, "rag_signoff_history", fields)
+    subject.add_item(ctx, subject_id, HISTORY, fields)
     subject.set_field(ctx, subject_id, "mrc_signoff_date", "")
     subject.set_field(ctx, subject_id, "mrc_signoff_meeting", "")
     subject.rebuild()

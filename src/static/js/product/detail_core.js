@@ -185,7 +185,7 @@ const ProductDetail = {
   // MRC status: a one-line summary of the product's MRC linkage — its latest
   // sign-off decision (or a pending request), linking through to the full record.
   _mrcStatusRow(d) {
-    const hist = d.rag_signoff_history || [];
+    const hist = d.signoff_history || [];
     const latest = hist.length ? hist[hist.length - 1] : null;
     const pending = (this._risk || {}).pending_signoff;
     let value;
@@ -209,7 +209,7 @@ const ProductDetail = {
   // The MRC linkage tab: granted sign-offs plus decisions linked from meetings
   // (read-only). Actions are now first-class on the product (the Actions tab).
   _mrcLinkage(d) {
-    const signoffs = d.rag_signoff_history || [];
+    const signoffs = d.signoff_history || [];
     const soSection = signoffs.length
       ? DetailTabs.signoffHistory(signoffs)
       : '<div class="section-header">Sign-off history</div>' +

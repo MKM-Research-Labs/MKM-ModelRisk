@@ -113,7 +113,7 @@ const Detail = {
       ["operational_failure_events", "Events", n("operational_failure_events")],
       ["risk", "Risk Rating", null],
       ["decisions", "MRC linkage",
-        (d.rag_signoff_history || []).length + this._decisions.length],
+        (d.signoff_history || []).length + this._decisions.length],
       ["docs", "Docs", n("documents")],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
@@ -201,7 +201,7 @@ const Detail = {
   // committee approves) plus decisions linked from the meeting log. Actions are
   // now first-class on the model (the Actions tab), not a read-only projection.
   _mrcLinkage(d) {
-    const signoffs = d.rag_signoff_history || [];
+    const signoffs = d.signoff_history || [];
     const soSection = signoffs.length
       ? DetailTabs.signoffHistory(signoffs)
       : '<div class="section-header">Sign-off history</div>' +

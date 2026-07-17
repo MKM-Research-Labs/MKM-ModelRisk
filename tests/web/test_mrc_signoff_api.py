@@ -181,7 +181,7 @@ def test_approve_signoff_snaps_model_rating_and_records_history(client):
     assert response.status_code == 200
     payload = response.get_json()
     assert payload["model"]["data"]["rag_rating"] == "Green"
-    history = payload["model"]["data"]["rag_signoff_history"]
+    history = payload["model"]["data"]["signoff_history"]
     assert len(history) == 1 and history[0]["from_rating"] == "Amber" and history[0]["to_rating"] == "Green"
     # The agenda item is now marked Completed.
     assert _signoff_agenda_items(payload["meeting"]["data"]["agenda"])[0]["status"] == "Completed"
@@ -200,7 +200,7 @@ def test_approve_signoff_records_confirm_reason_as_comment(client):
         json={"confirmed": True, "reason": "Chair satisfied with validation"}, headers=HEADERS,
     )
     assert response.status_code == 200
-    history = response.get_json()["model"]["data"]["rag_signoff_history"]
+    history = response.get_json()["model"]["data"]["signoff_history"]
     assert history[0]["note"] == "Chair satisfied with validation"
 
 
@@ -217,8 +217,8 @@ def test_approve_signoff_sets_next_review_from_mrc(client):
     assert resp.status_code == 200
     model = resp.get_json()["model"]["data"]
     assert model["next_review_date"] == "2027-01-31"
-    assert model["rag_signoff_history"][0]["outcome"] == "Approved"
-    assert model["rag_signoff_history"][0]["next_review_date"] == "2027-01-31"
+    assert model["signoff_history"][0]["outcome"] == "Approved"
+    assert model["signoff_history"][0]["next_review_date"] == "2027-01-31"
 
 
 def test_reject_signoff_leaves_rating_and_marks_rejected(client):
@@ -237,7 +237,7 @@ def test_reject_signoff_leaves_rating_and_marks_rejected(client):
     assert model["rag_rating"] == "Amber"     # NOT promoted to the proposed Green
     assert model["next_review_date"] == "2027-03-31"
     assert model["signoff_requests"][0]["status"] == "Rejected"
-    assert model["rag_signoff_history"][0]["outcome"] == "Rejected"
+    assert model["signoff_history"][0]["outcome"] == "Rejected"
     assert _signoff_agenda_items(resp.get_json()["meeting"]["data"]["agenda"])[0]["status"] == "Rejected"
 
 

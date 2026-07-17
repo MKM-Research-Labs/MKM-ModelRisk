@@ -100,7 +100,7 @@ PRODUCT_COLLECTION_SPECS = {
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     # The MRC sign-off queue + history, shared shape with the model inventory.
     "signoff_requests": COLLECTION_SPECS["signoff_requests"],
-    "rag_signoff_history": COLLECTION_SPECS["rag_signoff_history"],
+    "signoff_history": COLLECTION_SPECS["signoff_history"],
     # Product-owned action items with an update history (same shape as a model's).
     "actions": COLLECTION_SPECS["actions"],
 }

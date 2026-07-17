@@ -30,7 +30,11 @@ from src.governance.mrc import (
     update_collection_item,
 )
 from src.web._helpers import context_from_request, json_body
-from src.web._signoff_routing import complete_request_for_agenda, subject_for_agenda_item
+from src.web._signoff_routing import (
+    HISTORY,
+    complete_request_for_agenda,
+    subject_for_agenda_item,
+)
 from src.web.api_mrc._bp import mrc_bp
 from src.web.api_mrc._quorum import is_quorate
 
@@ -108,7 +112,8 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     # An approval promotes the proposed rating; a rejection leaves it untouched.
     if approved:
         subject.set_field(ctx, subject_id, "rag_rating", proposed_rag)
-    history_fields = {"to_rating": proposed_rag, "meeting_id": meeting_id, "outcome": outcome}
+    history_fields = {"kind": "rag", "to_rating": proposed_rag,
+                      "meeting_id": meeting_id, "outcome": outcome}
     if from_rating:
         history_fields["from_rating"] = from_rating
     if meeting_date:
@@ -119,7 +124,7 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     note = body.get("note") or body.get("reason")
     if note:
         history_fields["note"] = note
-    subject.add_item(ctx, subject_id, "rag_signoff_history", history_fields)
+    subject.add_item(ctx, subject_id, HISTORY, history_fields)
     # The committee sets the next review date on either outcome.
     if next_review:
         subject.set_field(ctx, subject_id, "next_review_date", next_review)

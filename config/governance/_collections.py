@@ -109,15 +109,17 @@ COLLECTION_SPECS = {
         {"key": "model_id", "label": "Related model", "type": "text", "required": True},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
-    # W4c — audit of RAG sign-offs approved by MRC. One entry per approved
-    # transition; each records where the change came from, what it was, and
-    # which meeting rubber-stamped it.
-    "rag_signoff_history": {"label": "Sign-off history", "id_prefix": "SO", "fields": [
+    # W4c — audit of the decisions the MRC took. One entry per decision; each
+    # records what was decided, which meeting rubber-stamped it, and — for a
+    # rating decision — where the rating came from and went to. ``kind`` mirrors
+    # the request it settles, so the rating fields are only meaningful for "rag".
+    "signoff_history": {"label": "Sign-off history", "id_prefix": "SO", "fields": [
         {"key": "date", "label": "Date", "type": "date", "required": True},
+        {"key": "kind", "label": "Kind", "type": "choice",
+         "options": VALID_SIGNOFF_KINDS, "required": True},
         {"key": "outcome", "label": "Outcome", "type": "choice", "options": VALID_SIGNOFF_OUTCOME},
         {"key": "from_rating", "label": "From", "type": "choice", "options": VALID_RAG_RATINGS},
-        {"key": "to_rating", "label": "To", "type": "choice",
-         "options": VALID_RAG_RATINGS, "required": True},
+        {"key": "to_rating", "label": "To", "type": "choice", "options": VALID_RAG_RATINGS},
         {"key": "meeting_id", "label": "Meeting", "type": "text"},
         {"key": "next_review_date", "label": "Next review", "type": "date"},
         {"key": "note", "label": "Note", "type": "text"},

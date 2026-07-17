@@ -118,7 +118,7 @@ const REVIEW_ORDER = { "Overdue": 0, "Due Soon": 1, "On Track": 2, "Upcoming": 2
 
 // The latest MRC sign-off outcome as a sortable string ("" when none).
 function mrcOutcome(data) {
-  const hist = (data && data.rag_signoff_history) || [];
+  const hist = (data && data.signoff_history) || [];
   return hist.length ? (hist[hist.length - 1].outcome || "Approved") : "";
 }
 
@@ -138,7 +138,7 @@ function lifecycleBadge(lifecycle) {
 // rejected), or a dash when the MRC has not yet ruled. The detail view also
 // surfaces pending requests; the list keeps to the decided outcome.
 function mrcStatusBadge(data) {
-  const hist = (data && data.rag_signoff_history) || [];
+  const hist = (data && data.signoff_history) || [];
   const latest = hist.length ? hist[hist.length - 1] : null;
   if (!latest) return '<span class="muted">—</span>';
   const outcome = latest.outcome || "Approved";

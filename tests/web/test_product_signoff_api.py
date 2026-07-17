@@ -153,7 +153,7 @@ def test_approve_stamps_signoff_date_meeting_and_history(client):
     assert product["rag_rating"] == "Green"
     assert product["mrc_signoff_date"] == "2026-09-15"
     assert product["mrc_signoff_meeting"] == "MTG1"
-    assert product["rag_signoff_history"][0]["to_rating"] == "Green"
+    assert product["signoff_history"][0]["to_rating"] == "Green"
     assert product["signoff_requests"][0]["status"] == "Completed"
     signoff = next(a for a in resp.get_json()["meeting"]["data"]["agenda"]
                    if a.get("subject_product_id"))

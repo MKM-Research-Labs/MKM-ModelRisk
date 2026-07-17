@@ -199,14 +199,14 @@ def test_green_owner_and_table_still_needs_signoff_when_never_signed_off():
 def test_signed_off_when_latest_signoff_matches_heatmap():
     assert _signed({"tier": 1, "materiality": "Low", "complexity": "Low",
                     "rag_rating": "Green",
-                    "rag_signoff_history": [{"to_rating": "Green"}]}) is True
+                    "signoff_history": [{"to_rating": "Green"}]}) is True
 
 
 def test_not_signed_off_when_heatmap_moved_since_last_signoff():
     # Signed off Green previously, but the heatmap is now Red (High × High, tier 1).
     assert _signed({"tier": 1, "materiality": "High", "complexity": "High",
                     "rag_rating": "Green",
-                    "rag_signoff_history": [{"to_rating": "Green"}]}) is False
+                    "signoff_history": [{"to_rating": "Green"}]}) is False
 
 
 def test_not_signed_off_without_a_heatmap_placement():

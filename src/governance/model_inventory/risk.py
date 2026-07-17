@@ -166,7 +166,7 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
     # A rejected or revoked latest entry un-does the sign-off even if it names the
     # current rating: the standing state is the outcome of the *most recent*
     # decision, so a Revoke returns the subject to "needs MRC sign-off".
-    signoff_history = data.get("rag_signoff_history") or []
+    signoff_history = data.get("signoff_history") or []
     latest_signoff = signoff_history[-1] if signoff_history else None
     signed_off = bool(
         heatmap["rag"] and latest_signoff

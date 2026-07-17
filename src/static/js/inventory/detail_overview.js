@@ -44,7 +44,7 @@ Object.assign(Detail, {
   // MRC status: a one-line summary of the model's MRC linkage — its latest
   // sign-off decision (or a pending request), linking through to the full record.
   _mrcStatusRow(d) {
-    const hist = d.rag_signoff_history || [];
+    const hist = d.signoff_history || [];
     const latest = hist.length ? hist[hist.length - 1] : null;
     const pending = (this._risk || {}).pending_signoff;
     let value;
