@@ -55,10 +55,8 @@ def test_edit_field_records_amendment(page: Page, base_url: str):
     register_model(page, "MKM-E2E-003", "Depth Damage")
     open_model(page, "MKM-E2E-003")
     # Edit a free-text field (owner is a people-reference dropdown now).
-    page.click("[data-edit='methodology']")
-    page.fill("#ed-input", "Regression")
-    page.click("#ed-save")
-    confirm(page)
+    # Methodology is not a gated field, so this applies without a confirm step.
+    edit_model_field(page, "methodology", "Regression")
     expect(page.locator("#row-methodology")).to_contain_text("Regression")
 
 
@@ -261,8 +259,7 @@ def test_model_actions_with_update_history(page: Page, base_url: str):
     page.click("[data-dtab='actions']")
     page.fill("#act-desc", "Revalidate the PD curve")
     page.fill("#act-target", "2026-09-30")
-    page.click("#act-add")
-    confirm(page)
+    page.click("#act-add")   # adding an action is not gated — applies immediately
     card = page.locator("#actions-list .card").first
     expect(card).to_contain_text("Revalidate the PD curve")
     # Seeded with one "Raised" update.
@@ -271,8 +268,7 @@ def test_model_actions_with_update_history(page: Page, base_url: str):
     item_id = page.locator("[data-act-update]").first.get_attribute("data-act-update")
     page.fill(f"#upd-note-{item_id}", "Data delayed; revised")
     page.fill(f"#upd-target-{item_id}", "2026-11-30")
-    page.click(f"[data-act-update='{item_id}']")
-    confirm(page)
+    page.click(f"[data-act-update='{item_id}']")   # likewise ungated
     card = page.locator("#actions-list .card").first
     expect(card.locator(".prow")).to_have_count(2)
     expect(card).to_contain_text("2026-11-30")
