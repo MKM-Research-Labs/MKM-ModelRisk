@@ -22,3 +22,8 @@ htmlcov/
 .pgdata/
 uploads/
 pgctl.sh
+
+# Internal planning notes. docs/project/ was deliberately scrubbed from the repo
+# for the handover (see "remove internal planning docs and third-party
+# references"), so planning stays local and is never committed.
+*.local.md
