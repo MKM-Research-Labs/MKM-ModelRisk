@@ -38,6 +38,7 @@ from src.governance import collections as coll
 from src.governance.errors import DomainError
 from src.governance.model_inventory._state import (
     EVENT_FIELD_UPDATED,
+    EVENT_REACTIVATED,
     EVENT_REGISTERED,
     EVENT_RETIRED,
     ModelState,
@@ -95,6 +96,15 @@ def decide_retire(state: ModelState) -> tuple[str, dict[str, Any]]:
     if state.retired:
         raise DomainError("model is already retired")
     return EVENT_RETIRED, {}
+
+
+def decide_reactivate(state: ModelState) -> tuple[str, dict[str, Any]]:
+    """Bring a hibernated model back into the active inventory."""
+    if not state.exists:
+        raise DomainError("model does not exist")
+    if not state.retired:
+        raise DomainError("model is not retired")
+    return EVENT_REACTIVATED, {}
 
 
 # --- Structured collections (assumptions, limitations, validation questions, …) ---

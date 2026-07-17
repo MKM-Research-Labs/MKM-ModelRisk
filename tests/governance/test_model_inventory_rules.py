@@ -24,12 +24,14 @@ import pytest
 
 from src.governance.model_inventory._rules import (
     DomainError,
+    decide_reactivate,
     decide_register,
     decide_retire,
     decide_update_field,
 )
 from src.governance.model_inventory._state import (
     EVENT_FIELD_UPDATED,
+    EVENT_REACTIVATED,
     EVENT_REGISTERED,
     EVENT_RETIRED,
     apply,
@@ -148,6 +150,31 @@ def test_retire_rejects_already_retired():
     state = apply(_registered(), EVENT_RETIRED, {})
     with pytest.raises(DomainError):
         decide_retire(state)
+
+
+# Retirement is hibernation, so it reverses: the committee can bring a model back.
+
+
+def test_reactivate_emits_event():
+    state = apply(_registered(), EVENT_RETIRED, {})
+    event_type, payload = decide_reactivate(state)
+    assert event_type == EVENT_REACTIVATED
+    assert payload == {}
+
+
+def test_reactivate_returns_model_to_the_active_inventory():
+    state = apply(_registered(), EVENT_RETIRED, {})
+    assert apply(state, EVENT_REACTIVATED, {}).retired is False
+
+
+def test_reactivate_requires_existing_model():
+    with pytest.raises(DomainError):
+        decide_reactivate(initial_state())
+
+
+def test_reactivate_rejects_a_model_that_is_not_retired():
+    with pytest.raises(DomainError):
+        decide_reactivate(_registered())
 
 
 def test_apply_ignores_unknown_event_type():

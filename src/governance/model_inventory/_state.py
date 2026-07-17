@@ -33,6 +33,10 @@ from src.governance import collections as coll
 EVENT_REGISTERED = "ModelRegistered"
 EVENT_FIELD_UPDATED = "ModelFieldUpdated"
 EVENT_RETIRED = "ModelRetired"
+# Retirement is hibernation, not deletion: a retired model drops out of the
+# active inventory but the committee can bring it back, so the flag flips both
+# ways and the history of both decisions stays in the log.
+EVENT_REACTIVATED = "ModelReactivated"
 
 
 @dataclass(frozen=True)
@@ -61,6 +65,8 @@ def apply(state: ModelState, event_type: str, payload: dict[str, Any]) -> ModelS
         return replace(state, fields=updated)
     if event_type == EVENT_RETIRED:
         return replace(state, retired=True)
+    if event_type == EVENT_REACTIVATED:
+        return replace(state, retired=False)
     folded = coll.fold(state.collections, event_type, payload)
     if folded is not None:
         return replace(state, collections=folded)

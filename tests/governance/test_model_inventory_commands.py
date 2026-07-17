@@ -26,6 +26,7 @@ from src.database import read_stream
 from src.governance.model_inventory import (
     AGGREGATE_TYPE,
     DomainError,
+    reactivate_model,
     register_model,
     retire_model,
     update_model_field,
@@ -60,6 +61,26 @@ def test_full_stream_records_lifecycle():
     # Registration also seeds nine validation questions; ignore those here.
     non_seed = [e.event_type for e in stream if e.event_type != "CollectionItemAdded"]
     assert non_seed == ["ModelRegistered", "ModelFieldUpdated", "ModelRetired"]
+
+
+def test_reactivate_appends_event_and_returns_model_to_active():
+    register_model(model_id="M-RA", name="Hibernated", actor="alice")
+    retire_model(model_id="M-RA", actor="alice")
+    event = reactivate_model(model_id="M-RA", actor="alice", reason="Back in use")
+    assert event.event_type == "ModelReactivated"
+    assert event.reason == "Back in use"
+    # The whole lifecycle stays in the log — hibernation is reversible, not a delete.
+    types = [e.event_type for e in read_stream(
+        aggregate_type=AGGREGATE_TYPE, aggregate_id="M-RA")]
+    assert types[-2:] == ["ModelRetired", "ModelReactivated"]
+    # Editing works again once it is back.
+    update_model_field(model_id="M-RA", field="methodology", value="OLS", actor="alice")
+
+
+def test_reactivate_a_model_that_is_not_retired_raises():
+    register_model(model_id="M-RA2", name="Active", actor="alice")
+    with pytest.raises(DomainError):
+        reactivate_model(model_id="M-RA2", actor="alice")
 
 
 def test_register_duplicate_raises():

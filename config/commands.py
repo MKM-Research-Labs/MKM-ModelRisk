@@ -36,6 +36,7 @@ from __future__ import annotations
 CONFIRM_REQUIRED_COMMANDS = frozenset({
     "register_model",
     "register_product",
+    "reactivate_model",
     "retire_model",
     "retire_product",
 })

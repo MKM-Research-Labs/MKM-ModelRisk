@@ -33,6 +33,7 @@ from src.database import Event, append_event, read_stream
 from src.governance import collections as coll
 from src.governance.model_inventory._rules import (
     decide_add_item,
+    decide_reactivate,
     decide_register,
     decide_remove_item,
     decide_retire,
@@ -119,9 +120,21 @@ def update_model_field(
 def retire_model(
     *, model_id: str, actor: str, reason: str | None = None, config=None,
 ) -> Event:
-    """Retire a model (it can no longer be edited)."""
+    """Retire (hibernate) a model — it drops out of the active inventory and can
+    no longer be edited. Ratified by the MRC, so this runs off an approved
+    request rather than straight from the owner."""
     state, version = _load(model_id, config)
     decision = decide_retire(state)
+    return _record(model_id, decision, version, actor, reason, config)
+
+
+def reactivate_model(
+    *, model_id: str, actor: str, reason: str | None = None, config=None,
+) -> Event:
+    """Bring a hibernated model back into the active inventory. Ratified by the
+    MRC on the same footing as the retire that put it there."""
+    state, version = _load(model_id, config)
+    decision = decide_reactivate(state)
     return _record(model_id, decision, version, actor, reason, config)
 
 
