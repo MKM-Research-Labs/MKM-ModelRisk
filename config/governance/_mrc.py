@@ -18,6 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """MRC settings, branding and meeting field specs (coding rule R1)."""
+from config.governance._collections import VALID_SIGNOFF_KINDS
 from config.governance._inventory import VALID_RAG_RATINGS
 
 # --- MRC settings & branding (header for the console and Meeting Pack PDF) ---
@@ -96,12 +97,18 @@ MRC_COLLECTION_SPECS = {
          "options": VALID_AGENDA_STATUS, "hidden": True},
         {"key": "document_filename", "label": "Document file", "type": "text", "hidden": True},
         {"key": "document_original_name", "label": "Document", "type": "text", "hidden": True},
-        # W4c — sign-off agenda items link back to a model/product and carry the
-        # proposed RAG. When Approved at the meeting, the subject's official
-        # rag_rating snaps to proposed_rag. Set by request-signoff, not by hand.
+        # W4c — sign-off agenda items link back to a model/product and say what
+        # the committee is being asked to ratify. ``signoff_kind`` mirrors the
+        # queued request's kind (rag / retire / reactivate); it is deliberately
+        # not the ``kind`` field above, which marks a standing-template role.
+        # Approving a "rag" item snaps the subject's rag_rating to proposed_rag;
+        # a "retire" hibernates it; a "reactivate" brings it back. Set by the
+        # request routing, not by hand.
         {"key": "subject_model_id", "label": "Subject model",
          "type": "text", "reference": "model_inventory", "hidden": True},
         {"key": "subject_product_id", "label": "Subject product", "type": "text", "hidden": True},
+        {"key": "signoff_kind", "label": "Sign-off kind", "type": "choice",
+         "options": VALID_SIGNOFF_KINDS, "hidden": True},
         {"key": "proposed_rag", "label": "Proposed RAG",
          "type": "choice", "options": VALID_RAG_RATINGS, "hidden": True},
         # Phase MRC-4: back-pointers on an escalation-child item — the child

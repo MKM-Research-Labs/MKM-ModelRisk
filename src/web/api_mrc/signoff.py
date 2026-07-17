@@ -39,19 +39,39 @@ from src.web.api_mrc._bp import mrc_bp
 from src.web.api_mrc._quorum import is_quorate
 
 
-def _auto_minute(ctx, meeting_id: str, meeting: dict, subject, subject_id: str,
-                 record: dict, next_review):
-    """Record an approved sign-off as a meeting minute, so the decision lands in
-    the log without re-typing. References the subject and the review date set."""
-    owner = (record["data"] or {}).get("owner")
-    review = next_review or "not set"
-    text = (
+def _minute_text(signoff_kind: str, subject, subject_id: str, owner_bit: str,
+                 next_review) -> tuple[str, str]:
+    """The title + wording recording what the committee ratified."""
+    if signoff_kind == "retire":
+        return (
+            f"Retire ratified — {subject_id}",
+            f"MRC has reviewed the retire request from the {subject.kind} owner"
+            f"{owner_bit} and has ratified it. The {subject.kind} is hibernated "
+            f"and drops out of the active inventory.",
+        )
+    if signoff_kind == "reactivate":
+        return (
+            f"Reactivate ratified — {subject_id}",
+            f"MRC has reviewed the reactivate request from the {subject.kind} owner"
+            f"{owner_bit} and has ratified it. The {subject.kind} returns to the "
+            f"active inventory.",
+        )
+    return (
+        f"Sign-off approved — {subject_id}",
         f"MRC has reviewed the sign-off request from the {subject.kind} owner"
-        + (f" ({owner})" if owner else "")
-        + f" and has granted approval and has set a date of next review on {review}."
+        f"{owner_bit} and has granted approval and has set a date of next review "
+        f"on {next_review or 'not set'}.",
     )
-    fields = {"title": f"Sign-off approved — {subject_id}", "text": text,
-              subject.id_key: subject_id}
+
+
+def _auto_minute(ctx, meeting_id: str, meeting: dict, subject, subject_id: str,
+                 record: dict, next_review, signoff_kind: str = "rag"):
+    """Record an approved decision as a meeting minute, so it lands in the log
+    without re-typing. The wording reflects what was actually ratified."""
+    owner = (record["data"] or {}).get("owner")
+    owner_bit = f" ({owner})" if owner else ""
+    title, text = _minute_text(signoff_kind, subject, subject_id, owner_bit, next_review)
+    fields = {"title": title, "text": text, subject.id_key: subject_id}
     chair = meeting["data"].get("chair")
     if chair:
         fields["presenter"] = chair
@@ -75,11 +95,12 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     """Record the committee's decision on a sign-off item (Approved / Rejected)
     for a model or product subject, and reflect it back onto that subject.
 
-    Every decision records a sign-off history entry (with the outcome + any
-    next-review date the committee set) and moves the queued request + agenda
-    item to their terminal state. An approval additionally snaps the subject's
-    rag_rating and stamps its MRC sign-off date + meeting. All auditable events
-    under one confirm.
+    One queue carries every kind of decision, so what an approval *does* follows
+    the item's ``signoff_kind``: "rag" snaps the subject's rag_rating and stamps
+    its MRC sign-off date + meeting; "retire" hibernates it; "reactivate" brings
+    it back. Whatever the kind, the decision records a history entry (with the
+    outcome + any next-review date), is minuted, and moves the queued request +
+    agenda item to their terminal state — all auditable events under one confirm.
     """
     body = json_body()
     meeting = get_meeting(meeting_id)
@@ -90,9 +111,17 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     if item is None:
         return jsonify({"error": "agenda item not found"}), 404
     proposed_rag = item.get("proposed_rag")
+    # What the committee is being asked to ratify. Items raised before the queue
+    # carried a kind are rating decisions, which is what a proposed_rag implies.
+    signoff_kind = item.get("signoff_kind") or ("rag" if proposed_rag else None)
     subject, subject_id = subject_for_agenda_item(item)
-    if subject is None or not proposed_rag:
+    if subject is None or not signoff_kind:
         return jsonify({"error": "agenda item is not a sign-off request"}), 400
+    if not subject.supports(signoff_kind):
+        return jsonify(
+            {"error": f"a {subject.kind} cannot be the subject of a "
+                      f"{signoff_kind} decision"}
+        ), 400
     # A committee may only take sign-off decisions once the meeting is quorate —
     # the same gate that governs closing it. Enforced here, not just in the UI,
     # so the "wait until the meeting is quorate" rule can't be bypassed.
@@ -109,13 +138,21 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     from_rating = (record["data"] or {}).get("rag_rating")
     meeting_date = meeting["data"].get("date")
     next_review = body.get("next_review_date")
-    # An approval promotes the proposed rating; a rejection leaves it untouched.
+    # An approval carries out what was asked; a rejection changes nothing about
+    # the subject beyond recording the decision.
     if approved:
-        subject.set_field(ctx, subject_id, "rag_rating", proposed_rag)
-    history_fields = {"kind": "rag", "to_rating": proposed_rag,
-                      "meeting_id": meeting_id, "outcome": outcome}
-    if from_rating:
-        history_fields["from_rating"] = from_rating
+        if signoff_kind == "retire":
+            subject.retire(ctx, subject_id)
+        elif signoff_kind == "reactivate":
+            subject.reactivate(ctx, subject_id)
+        else:
+            subject.set_field(ctx, subject_id, "rag_rating", proposed_rag)
+    history_fields = {"kind": signoff_kind, "meeting_id": meeting_id, "outcome": outcome}
+    # The rating fields only mean anything for a rating decision.
+    if signoff_kind == "rag":
+        history_fields["to_rating"] = proposed_rag
+        if from_rating:
+            history_fields["from_rating"] = from_rating
     if meeting_date:
         history_fields["date"] = meeting_date
     if next_review:
@@ -128,12 +165,16 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     # The committee sets the next review date on either outcome.
     if next_review:
         subject.set_field(ctx, subject_id, "next_review_date", next_review)
-    # An approval stamps the MRC sign-off (date + the meeting it came from).
+    # An approved *rating* stamps the MRC sign-off (date + the meeting it came
+    # from); a retire/reactivate is not a rating sign-off, so it leaves the stamp
+    # alone — but every ratified decision is minuted.
     if approved:
-        if meeting_date:
-            subject.set_field(ctx, subject_id, "mrc_signoff_date", meeting_date)
-        subject.set_field(ctx, subject_id, "mrc_signoff_meeting", meeting_id)
-        _auto_minute(ctx, meeting_id, meeting, subject, subject_id, record, next_review)
+        if signoff_kind == "rag":
+            if meeting_date:
+                subject.set_field(ctx, subject_id, "mrc_signoff_date", meeting_date)
+            subject.set_field(ctx, subject_id, "mrc_signoff_meeting", meeting_id)
+        _auto_minute(ctx, meeting_id, meeting, subject, subject_id, record,
+                     next_review, signoff_kind)
     complete_request_for_agenda(ctx, subject, subject_id, item_id,
                                 status=("Completed" if approved else "Rejected"))
     dispatch(

@@ -31,6 +31,7 @@ from config.governance import (
     COLLECTION_SPECS,
     EDITABLE_FIELDS,
     FIELD_CHOICES,
+    SIGNOFF_COLLECTIONS,
     TIER_MAX,
     TIER_MIN,
 )
@@ -120,14 +121,28 @@ def _require_editable(state: ModelState) -> None:
 def decide_add_item(
     state: ModelState, *, collection: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
-    _require_editable(state)
+    # A hibernated model is read-only, except to the committee's own machinery
+    # (see SIGNOFF_COLLECTIONS): reactivating it has to be requested *on it*, and
+    # the decision that hibernated it still has to be recordable against it.
+    if collection in SIGNOFF_COLLECTIONS:
+        if not state.exists:
+            raise DomainError("model does not exist")
+    else:
+        _require_editable(state)
     return coll.decide_add(state.collections, COLLECTION_SPECS, collection=collection, fields=fields)
 
 
 def decide_update_item(
     state: ModelState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
-    _require_editable(state)
+    # Same exemption as adding: a hibernated model's reactivate request still has
+    # to be walked through the queue (Pending -> Attached -> Completed), which is
+    # an update on the retired model itself.
+    if collection in SIGNOFF_COLLECTIONS:
+        if not state.exists:
+            raise DomainError("model does not exist")
+    else:
+        _require_editable(state)
     return coll.decide_update(
         state.collections, COLLECTION_SPECS, collection=collection, item_id=item_id, fields=fields
     )

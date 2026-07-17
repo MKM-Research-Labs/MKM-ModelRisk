@@ -33,16 +33,19 @@ governance functions (no blueprints) to stay cycle-free.
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Callable
 
+
+from config.governance import SIGNOFF_HISTORY_COLLECTION, SIGNOFF_REQUESTS_COLLECTION
 from src.command import CommandContext, dispatch
-from src.governance.model_inventory import (
-    add_collection_item as _model_add,
-    get_model,
-    list_models,
-    rebuild_inventory_view,
-    update_collection_item as _model_update,
-    update_model_field,
+# The adapter moved to its own module, but this stays the front door for the
+# whole sign-off flow — re-exported so call sites import the routing and its
+# subjects from one place.
+from src.web._signoff_subject import (  # noqa: F401
+    MODEL_SUBJECT,
+    PRODUCT_SUBJECT,
+    SUBJECTS,
+    Subject,
+    subject_for_agenda_item,
 )
 from src.governance.mrc import (
     add_collection_item as _mrc_add,
@@ -50,86 +53,13 @@ from src.governance.mrc import (
     list_meetings,
     rebuild_meeting_view,
 )
-from src.governance.product import (
-    add_collection_item as _product_add,
-    get_product,
-    list_products,
-    rebuild_product_view,
-    update_collection_item as _product_update,
-    update_product_field,
-)
 
 
-# The single approvals queue. Every kind of decision the committee ratifies
-# (see VALID_SIGNOFF_KINDS) is raised onto this one collection, so a committee
-# has one list to work rather than one per decision type.
-REQUESTS = "signoff_requests"
-# The audit of what the committee decided, one entry per decision. Mirrors the
-# request's kind, so the rating fields only carry meaning for a "rag" decision.
-HISTORY = "signoff_history"
-
-
-class Subject:
-    """Per-aggregate adapter so the routing is written once for both kinds."""
-
-    def __init__(self, *, kind: str, agenda_id_field: str, id_key: str,
-                 get: Callable, list_all: Callable, add_cmd, update_cmd, field_cmd,
-                 rebuild: Callable, id_kwarg: str):
-        self.kind = kind
-        self.agenda_id_field = agenda_id_field   # e.g. "subject_model_id"
-        self.id_key = id_key                       # e.g. "model_id" (row key)
-        self._get = get
-        self._list = list_all
-        self._add_cmd = add_cmd
-        self._update_cmd = update_cmd
-        self._field_cmd = field_cmd
-        self._rebuild = rebuild
-        self._id_kwarg = id_kwarg                  # e.g. "model_id" (command kwarg)
-
-    def get(self, subject_id: str) -> dict | None:
-        return self._get(subject_id)
-
-    def list_all(self) -> list[dict]:
-        return self._list()
-
-    def rebuild(self) -> None:
-        self._rebuild()
-
-    def add_item(self, ctx: CommandContext, subject_id: str, collection: str, fields: dict) -> None:
-        dispatch("add_collection_item", self._add_cmd, context=ctx,
-                 collection=collection, fields=fields, **{self._id_kwarg: subject_id})
-
-    def update_item(self, ctx: CommandContext, subject_id: str, collection: str,
-                    item_id: str, fields: dict) -> None:
-        dispatch("update_collection_item", self._update_cmd, context=ctx,
-                 collection=collection, item_id=item_id, fields=fields,
-                 **{self._id_kwarg: subject_id})
-
-    def set_field(self, ctx: CommandContext, subject_id: str, field: str, value: Any) -> None:
-        dispatch("update_field", self._field_cmd, context=ctx,
-                 field=field, value=value, **{self._id_kwarg: subject_id})
-
-
-MODEL_SUBJECT = Subject(
-    kind="model", agenda_id_field="subject_model_id", id_key="model_id",
-    get=get_model, list_all=list_models, add_cmd=_model_add, update_cmd=_model_update,
-    field_cmd=update_model_field, rebuild=rebuild_inventory_view, id_kwarg="model_id",
-)
-PRODUCT_SUBJECT = Subject(
-    kind="product", agenda_id_field="subject_product_id", id_key="product_id",
-    get=get_product, list_all=list_products, add_cmd=_product_add, update_cmd=_product_update,
-    field_cmd=update_product_field, rebuild=rebuild_product_view, id_kwarg="product_id",
-)
-SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT)
-
-
-def subject_for_agenda_item(item: dict) -> tuple[Subject | None, str | None]:
-    """Pick the adapter + subject id an agenda sign-off item points at."""
-    for subject in SUBJECTS:
-        subject_id = item.get(subject.agenda_id_field)
-        if subject_id:
-            return subject, subject_id
-    return None, None
+# The single approvals queue (every kind of decision the committee ratifies) and
+# the audit of what it decided. Named in config so the domain rules and this
+# routing cannot disagree about them.
+REQUESTS = SIGNOFF_REQUESTS_COLLECTION
+HISTORY = SIGNOFF_HISTORY_COLLECTION
 
 
 def _newest(items: list[dict]) -> dict | None:
@@ -198,26 +128,43 @@ def revoke_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
     return subject.get(subject_id)
 
 
+def agenda_title(signoff_kind: str, subject_id: str, proposed_rag: str | None) -> str:
+    """How the decision reads on the committee's agenda."""
+    if signoff_kind == "retire":
+        return f"Retire (hibernate): {subject_id}"
+    if signoff_kind == "reactivate":
+        return f"Reactivate: {subject_id}"
+    return f"Risk rating sign-off: {subject_id} → {proposed_rag}"
+
+
 def attach_request(ctx: CommandContext, subject: Subject, subject_id: str,
                    request_item: dict, meeting: dict, config=None) -> None:
     """Put a queued request onto a meeting's agenda and mark it Attached."""
     meeting_id = meeting["meeting_id"]
     proposed = request_item.get("proposed_rag")
+    signoff_kind = request_item.get("kind") or "rag"
+    fields = {
+        "title": agenda_title(signoff_kind, subject_id, proposed),
+        subject.agenda_id_field: subject_id,
+        "signoff_kind": signoff_kind,
+        "status": "Pending",
+    }
+    # Only a rating decision carries a proposed rating.
+    if proposed:
+        fields["proposed_rag"] = proposed
     dispatch(
         "add_collection_item", _mrc_add, context=ctx,
-        meeting_id=meeting_id, collection="agenda",
-        fields={
-            "title": f"Risk rating sign-off: {subject_id} → {proposed}",
-            subject.agenda_id_field: subject_id,
-            "proposed_rag": proposed,
-            "status": "Pending",
-        },
+        meeting_id=meeting_id, collection="agenda", fields=fields,
     )
     rebuild_meeting_view(config)
     refreshed = get_meeting(meeting_id, config=config) or {"data": {}}
+    # Match on the subject + what is being decided. A retire has no rating, so
+    # matching on proposed_rag alone would never find its item.
     agenda = [
         a for a in (refreshed["data"].get("agenda") or [])
-        if a.get(subject.agenda_id_field) == subject_id and a.get("proposed_rag") == proposed
+        if a.get(subject.agenda_id_field) == subject_id
+        and (a.get("signoff_kind") or "rag") == signoff_kind
+        and a.get("proposed_rag") == proposed
     ]
     agenda_item = _newest(agenda)
     subject.update_item(

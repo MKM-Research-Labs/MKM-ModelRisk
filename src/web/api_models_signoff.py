@@ -71,6 +71,16 @@ def pending_signoff(model_id: str) -> dict | None:
     return result
 
 
+def _target_mrc(model: dict):
+    """The committee responsible for this model, or an error response."""
+    data = model["data"] or {}
+    mrc, _level = matching_mrc(data.get("division"), data.get("department"), get_reference_lists())
+    if mrc is None:
+        return None, (jsonify({"error": "no MRC committee covers this model's division/department — "
+                                        "configure one under Admin → MRC first"}), 400)
+    return mrc, None
+
+
 @models_bp.post("/<model_id>/request-signoff")
 def request_signoff(model_id: str):
     """Owner raises an MRC sign-off request. It is routed to the model's
@@ -83,15 +93,53 @@ def request_signoff(model_id: str):
     proposed_rag = body.get("proposed_rag")
     if not proposed_rag:
         return jsonify({"error": "proposed_rag is required"}), 400
-    data = model["data"] or {}
-    mrc, _level = matching_mrc(data.get("division"), data.get("department"), get_reference_lists())
-    if mrc is None:
-        return jsonify({"error": "no MRC committee covers this model's division/department — "
-                                 "configure one under Admin → MRC first"}), 400
+    mrc, error = _target_mrc(model)
+    if error:
+        return error
     ctx = context_from_request(body)
-    raise_signoff(ctx, MODEL_SUBJECT, model_id,
+    raise_signoff(ctx, MODEL_SUBJECT, model_id, kind="rag",
                   proposed_rag=proposed_rag, target_mrc=mrc["value"], note=body.get("note"))
     return jsonify(get_model(model_id)), 201
+
+
+def _request_lifecycle_change(model_id: str, *, kind: str, expect_retired: bool):
+    """Raise a retire/reactivate request for the committee to ratify.
+
+    The two are the same journey in opposite directions — the only difference is
+    which state the model has to be in to ask — so they share one path.
+    """
+    model = get_model(model_id)
+    if model is None:
+        return jsonify({"error": "model not found"}), 404
+    if bool(model.get("retired")) is not expect_retired:
+        return jsonify(
+            {"error": "model is already retired" if expect_retired is False
+                      else "model is not retired"}
+        ), 400
+    mrc, error = _target_mrc(model)
+    if error:
+        return error
+    body = json_body()
+    ctx = context_from_request(body)
+    raise_signoff(ctx, MODEL_SUBJECT, model_id, kind=kind,
+                  target_mrc=mrc["value"], note=body.get("note"))
+    return jsonify(get_model(model_id)), 201
+
+
+@models_bp.post("/<model_id>/request-retire")
+def request_retire(model_id: str):
+    """Owner asks the MRC to ratify retiring (hibernating) the model.
+
+    The model stays active and editable while the request is queued — it only
+    drops out of the inventory once the committee approves.
+    """
+    return _request_lifecycle_change(model_id, kind="retire", expect_retired=False)
+
+
+@models_bp.post("/<model_id>/request-reactivate")
+def request_reactivate(model_id: str):
+    """Owner asks the MRC to ratify bringing a hibernated model back."""
+    return _request_lifecycle_change(model_id, kind="reactivate", expect_retired=True)
 
 
 @models_bp.post("/<model_id>/revoke-signoff")

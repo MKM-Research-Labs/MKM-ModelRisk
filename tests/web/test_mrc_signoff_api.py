@@ -20,75 +20,17 @@
 """Tests for the MRC sign-off actions (request / approve / escalate)."""
 from __future__ import annotations
 
+from tests.web._signoff_flows import (
+    _add,
+    _register_subject_model,
+    _request_signoff,
+    _schedule,
+    _schedule_meeting,
+    _seed_mrc,
+    _signoff_agenda_items,
+    _signoff_item,
+)
 from tests.web.conftest import HEADERS
-
-
-def _seed_mrc(client, value="MRC-CO", level="Company", scope_value=None):
-    """A Company-level MRC covering every model. Quorum is switched off so its
-    meetings are quorate without an attended roster — these tests exercise
-    sign-off mechanics; the quorum gate is covered in test_mrc_quorum.py."""
-    fields = {"value": value, "name": value, "level": level,
-              "quorum_require_chair": "No", "quorum_require_secretary": "No",
-              "quorum_min_voting": "0"}
-    if scope_value:
-        fields["scope_value"] = scope_value
-    return client.post(
-        "/api/reference/collections/mrc",
-        json={"fields": fields, "confirmed": True}, headers=HEADERS,
-    )
-
-
-def _schedule(client, meeting_id="MTG1", mrc="MRC-CO", date="2026-06-30"):
-    return client.post(
-        "/api/meetings",
-        json={"meeting_id": meeting_id, "title": "Q2 MRC", "date": date,
-              "fields": {"mrc": mrc}, "confirmed": True},
-        headers=HEADERS,
-    )
-
-
-def _add(client, collection, fields):
-    return client.post(
-        "/api/meetings/MTG1/collections/" + collection,
-        json={"fields": fields, "confirmed": True}, headers=HEADERS,
-    )
-
-
-def _schedule_meeting(client, meeting_id="MTG1", mrc="MRC-CO", date="2026-09-15"):
-    return client.post(
-        "/api/meetings",
-        json={"meeting_id": meeting_id, "title": "Q3", "date": date,
-              "fields": {"mrc": mrc}, "confirmed": True},
-        headers=HEADERS,
-    )
-
-
-def _register_subject_model(client, model_id="M1", **fields):
-    return client.post(
-        "/api/models",
-        json={"model_id": model_id, "name": "Subject",
-              "fields": {"rag_rating": "Amber", **fields}, "confirmed": True},
-        headers=HEADERS,
-    )
-
-
-def _request_signoff(client, model_id="M1", proposed_rag="Green"):
-    return client.post(
-        f"/api/models/{model_id}/request-signoff",
-        json={"proposed_rag": proposed_rag, "confirmed": True},
-        headers=HEADERS,
-    )
-
-
-def _signoff_agenda_items(agenda):
-    """The sign-off items on a meeting's agenda — every meeting also seeds the
-    five standing agenda items, so a sign-off is never alone or necessarily first."""
-    return [a for a in agenda if a.get("subject_model_id") or a.get("subject_product_id")]
-
-
-def _signoff_item(client, meeting_id="MTG1"):
-    agenda = client.get(f"/api/meetings/{meeting_id}").get_json()["data"]["agenda"]
-    return _signoff_agenda_items(agenda)[0]
 
 
 def test_request_signoff_attaches_to_scheduled_meeting_of_matching_mrc(client):

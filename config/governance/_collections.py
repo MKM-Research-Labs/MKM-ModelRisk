@@ -48,6 +48,18 @@ VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Rejected", 
 # "rag" proposes a new risk rating; "retire" hibernates the subject (it drops out
 # of the active inventory); "reactivate" brings a hibernated subject back.
 VALID_SIGNOFF_KINDS = ("rag", "retire", "reactivate")
+# Named once so the domain rules and the routing agree on it. A hibernated
+# subject is read-only *except* for this queue: a reactivate request has to be
+# raised on the very subject it would bring back, so exempting it is what keeps
+# hibernation reversible rather than a one-way trip.
+SIGNOFF_REQUESTS_COLLECTION = "signoff_requests"
+SIGNOFF_HISTORY_COLLECTION = "signoff_history"
+# The committee's own machinery: the queue it works and the record of what it
+# decided. Both are exempt from a subject's read-only-when-hibernated rule —
+# a decision must be recordable even when it is the decision that hibernated the
+# subject, and a reactivate is raised and minuted on a subject that is still
+# hibernated at the time.
+SIGNOFF_COLLECTIONS = (SIGNOFF_REQUESTS_COLLECTION, SIGNOFF_HISTORY_COLLECTION)
 # The committee's decision on a sign-off request.
 VALID_SIGNOFF_OUTCOME = ("Approved", "Rejected", "Revoked")
 
@@ -113,7 +125,7 @@ COLLECTION_SPECS = {
     # records what was decided, which meeting rubber-stamped it, and — for a
     # rating decision — where the rating came from and went to. ``kind`` mirrors
     # the request it settles, so the rating fields are only meaningful for "rag".
-    "signoff_history": {"label": "Sign-off history", "id_prefix": "SO", "fields": [
+    SIGNOFF_HISTORY_COLLECTION: {"label": "Sign-off history", "id_prefix": "SO", "fields": [
         {"key": "date", "label": "Date", "type": "date", "required": True},
         {"key": "kind", "label": "Kind", "type": "choice",
          "options": VALID_SIGNOFF_KINDS, "required": True},
@@ -131,7 +143,7 @@ COLLECTION_SPECS = {
     # One queue carries every kind of decision the committee ratifies, so
     # ``kind`` says what is being asked and the kind-specific fields (e.g.
     # ``proposed_rag`` for a rating) are only meaningful for that kind.
-    "signoff_requests": {"label": "Sign-off requests", "id_prefix": "SR", "fields": [
+    SIGNOFF_REQUESTS_COLLECTION: {"label": "Sign-off requests", "id_prefix": "SR", "fields": [
         {"key": "kind", "label": "Kind", "type": "choice",
          "options": VALID_SIGNOFF_KINDS, "required": True},
         {"key": "proposed_rag", "label": "Proposed RAG", "type": "choice",

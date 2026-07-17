@@ -22,8 +22,11 @@ from __future__ import annotations
 
 import pytest
 
+from config.governance import SIGNOFF_REQUESTS_COLLECTION
 from src.governance.model_inventory._rules import (
     DomainError,
+    decide_add_item,
+    decide_update_item,
     decide_reactivate,
     decide_register,
     decide_retire,
@@ -186,3 +189,26 @@ def test_apply_field_update_merges_fields():
     state = apply(_registered(), EVENT_FIELD_UPDATED, {"field": "owner", "value": "x"})
     assert state.fields["owner"] == "x"
     assert state.fields["name"] == "Alpha"
+
+
+# The sign-off queue is exempt from the hibernated read-only rule, but it must
+# still refuse a model that was never registered.
+
+
+def test_signoff_queue_exemption_still_requires_the_model_to_exist():
+    with pytest.raises(DomainError):
+        decide_add_item(initial_state(), collection=SIGNOFF_REQUESTS_COLLECTION,
+                        fields={"kind": "reactivate", "target_mrc": "MRC-CO"})
+    with pytest.raises(DomainError):
+        decide_update_item(initial_state(), collection=SIGNOFF_REQUESTS_COLLECTION,
+                           item_id="SR-001", fields={"status": "Attached"})
+
+
+def test_a_hibernated_model_accepts_signoff_items_but_nothing_else():
+    retired = apply(_registered(), EVENT_RETIRED, {})
+    # The committee's queue still works on it — the only way back.
+    decide_add_item(retired, collection=SIGNOFF_REQUESTS_COLLECTION,
+                    fields={"kind": "reactivate", "target_mrc": "MRC-CO"})
+    # Everything else stays read-only.
+    with pytest.raises(DomainError):
+        decide_add_item(retired, collection="limitations", fields={"description": "x"})
