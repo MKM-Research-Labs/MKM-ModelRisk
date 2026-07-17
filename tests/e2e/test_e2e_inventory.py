@@ -115,14 +115,30 @@ def test_rag_change_routes_to_mrc_signoff(page: Page, base_url: str):
     assert proposed == ["Amber"], f"expected one queued proposal, got {proposed}"
 
 
-def test_retire_model(page: Page, base_url: str):
+def _seed_mrc(page: Page, base_url: str, value: str = "MRC-E2E-RET"):
+    """A Company-level MRC, so a model has a committee to route requests to."""
+    page.request.post(
+        base_url + "/api/reference/collections/mrc",
+        data={"fields": {"value": value, "name": "Company MRC", "level": "Company",
+                         "quorum_require_chair": "No", "quorum_require_secretary": "No",
+                         "quorum_min_voting": "0"}, "confirmed": True},
+        headers={"X-Auth-Request-User": "e2e", "Content-Type": "application/json"},
+    )
+
+
+def test_requesting_retire_queues_it_and_leaves_the_model_active(page: Page, base_url: str):
+    """The Danger tab asks the MRC; it does not hibernate the model itself."""
+    _seed_mrc(page, base_url)
     open_app(page, base_url)
     register_model(page, "MKM-E2E-008", "Legacy Model")
     open_model(page, "MKM-E2E-008")
     page.click("[data-dtab='danger']")
     page.click("#d-retire")
-    confirm(page)
-    expect(page.locator("tr.clickable[data-id='MKM-E2E-008']")).to_contain_text("retired")
+    confirm(page)   # requesting is gated: the owner confirms, the MRC then ratifies
+    # The tab now reports the request, and the model is still active in the list.
+    expect(page.locator("#dt-content")).to_contain_text("awaiting MRC ratification")
+    expect(page.locator("tr.clickable[data-id='MKM-E2E-008']")).not_to_contain_text("retired")
+    assert page.request.get(base_url + "/api/models/MKM-E2E-008").json()["retired"] is False
 
 
 def test_risk_heatmap_reflects_materiality_and_complexity(page: Page, base_url: str):
@@ -179,46 +195,41 @@ def test_events_counter_reflects_recent_event(page: Page, base_url: str):
 
 
 def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
-    """Approved sign-offs surface as a chronological table on the Risk tab (W4c)."""
-    # Seed model + Company MRC + meeting via API (UI paths are covered elsewhere).
+    """Approved sign-offs surface as a chronological table on the Risk tab (W4c).
+
+    This covers the *rendering*, so the journey that produces the history is
+    driven through the API: raising and approving via the UI is covered by
+    test_rag_change_routes_to_mrc_signoff and the MRC tests, and doing it here
+    only made the test race its own re-renders.
+    """
     headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
-    page.request.post(base_url + "/api/models",
-                      data={"model_id": "MKM-X1-SO-01", "name": "Signoff History Model",
-                            "confirmed": True}, headers=headers)
-    page.request.post(base_url + "/api/reference/collections/mrc",
-                      data={"fields": {"value": "MRC-X1-SO-CO", "name": "Company MRC",
-                                       "level": "Company", "quorum_require_chair": "No",
-                                       "quorum_require_secretary": "No", "quorum_min_voting": "0"},
-                                      "confirmed": True}, headers=headers)
-    page.request.post(base_url + "/api/meetings",
-                      data={"meeting_id": "MRC-X1-SO", "title": "Signoff Meeting",
-                            "date": "2026-11-11", "fields": {"mrc": "MRC-X1-SO-CO"},
-                            "confirmed": True}, headers=headers)
+    post = lambda path, body: page.request.post(base_url + path, data=body, headers=headers)
+    post("/api/models", {"model_id": "MKM-X1-SO-01", "name": "Signoff History Model",
+                         "fields": {"materiality": "High", "complexity": "Low"},
+                         "confirmed": True})
+    post("/api/reference/collections/mrc",
+         {"fields": {"value": "MRC-X1-SO-CO", "name": "Company MRC", "level": "Company",
+                     "quorum_require_chair": "No", "quorum_require_secretary": "No",
+                     "quorum_min_voting": "0"}, "confirmed": True})
+    post("/api/meetings", {"meeting_id": "MRC-X1-SO", "title": "Signoff Meeting",
+                           "date": "2026-11-11", "fields": {"mrc": "MRC-X1-SO-CO"},
+                           "confirmed": True})
+    post("/api/models/MKM-X1-SO-01/request-signoff",
+         {"proposed_rag": "Amber", "confirmed": True})
+    agenda = page.request.get(base_url + "/api/meetings/MRC-X1-SO").json()["data"]["agenda"]
+    item = next(a for a in agenda if a.get("subject_model_id") == "MKM-X1-SO-01")
+    approved = post(f"/api/meetings/MRC-X1-SO/agenda/{item['item_id']}/approve-signoff",
+                    {"confirmed": True, "next_review_date": "2027-01-31"})
+    assert approved.status == 200, approved.text()
+
     open_app(page, base_url)
-    open_model(page, "MKM-X1-SO-01")
-    edit_model_field(page, "materiality", "High", choice=True)
-    expect(page.locator("#row-materiality")).to_contain_text("High")
-    edit_model_field(page, "complexity", "Low", choice=True)  # -> Amber cell
-    expect(page.locator("#row-complexity")).to_contain_text("Low")
-    page.click("[data-dtab='risk']")
-    # Auto-routes to the model's Company-level MRC and attaches to its meeting.
-    # Raising a request is not gated — only the committee's decision is.
-    page.click("#req-signoff")
-    # MRC approves from the Models tab — sign-offs live under Models → Approvals
-    # now (data-agapprove hook), and the committee is quorate (quorum off above).
-    open_tab(page, "mrc")
-    page.click("tr.clickable[data-id='MRC-X1-SO']")
-    page.click("[data-mtab='models_in_scope']")
-    page.locator("[data-agapprove]").first.click()
-    confirm(page)   # require_confirmation("signoff") — the decision is gated
-    # Back to the model — Risk tab now shows the history table.
-    open_tab(page, "inventory")
     open_model(page, "MKM-X1-SO-01")
     page.click("[data-dtab='risk']")
     body = page.locator("#dt-content")
     expect(body).to_contain_text("Sign-off history")
     expect(body).to_contain_text("MRC-X1-SO")
-    expect(body).to_contain_text("Amber")  # the "To" column of the history row
+    expect(body).to_contain_text("Amber")     # the "To" column of the history row
+    expect(body).to_contain_text("2027-01-31")
 
 
 # test_register_with_company_assignment — retired.
@@ -229,24 +240,39 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
 
 # --- X2 coverage: retired read-only, org-scope filter, per-model audit ------
 
-def test_retired_model_hides_edit_and_danger_zone(page: Page, base_url: str):
-    """Once retired, edit pencils vanish and the Danger tab shows a read-only note."""
+def _hibernate_via_mrc(page: Page, base_url: str, model_id: str):
+    """Hibernate a model the only way there is: request it, then have the
+    committee ratify it."""
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    _seed_mrc(page, base_url)
+    page.request.post(base_url + "/api/meetings",
+                      data={"meeting_id": "MTG-X2", "title": "Retire", "date": "2026-11-11",
+                            "fields": {"mrc": "MRC-E2E-RET"}, "confirmed": True}, headers=headers)
+    page.request.post(base_url + f"/api/models/{model_id}/request-retire",
+                      data={"confirmed": True}, headers=headers)
+    agenda = page.request.get(base_url + "/api/meetings/MTG-X2").json()["data"]["agenda"]
+    item = next(a for a in agenda if a.get("signoff_kind") == "retire")
+    page.request.post(
+        base_url + f"/api/meetings/MTG-X2/agenda/{item['item_id']}/approve-signoff",
+        data={"confirmed": True}, headers=headers)
+
+
+def test_hibernated_model_is_read_only_but_can_be_asked_back(page: Page, base_url: str):
+    """Once the MRC ratifies a retire the model is read-only — but hibernation is
+    reversible, so the Danger tab offers to ask the committee to bring it back."""
     open_app(page, base_url)
     register_model(page, "MKM-X2-RET", "Legacy Model")
+    _hibernate_via_mrc(page, base_url, "MKM-X2-RET")
+    open_app(page, base_url)               # reload so the list reflects it
     open_model(page, "MKM-X2-RET")
-    page.click("[data-dtab='danger']")
-    page.click("#d-retire")
-    confirm(page)
-    open_model(page, "MKM-X2-RET")  # reopen after list re-render
-    # Danger tab now shows the read-only note, not the retire card.
-    page.click("[data-dtab='danger']")
-    expect(page.locator("#dt-content")).to_contain_text("read-only")
-    expect(page.locator(".danger-zone")).to_have_count(0)
     # No edit pencils on any Overview row.
     page.click("[data-dtab='overview']")
     expect(page.locator("[data-edit]")).to_have_count(0)
-    # "Read only" badge is shown somewhere in the detail.
     expect(page.locator("#m-detail")).to_contain_text("retired")
+    # The Danger tab offers the way back rather than a dead end.
+    page.click("[data-dtab='danger']")
+    expect(page.locator("#dt-content")).to_contain_text("hibernated")
+    expect(page.locator("#d-reactivate")).to_be_visible()
 
 
 # test_org_scope_header_filters_inventory — retired.

@@ -145,11 +145,15 @@ def test_update_field_records_actor(client):
     assert response.get_json()["data"]["owner"] == "carol"
 
 
-def test_retire_marks_model(client):
+def test_there_is_no_route_that_retires_a_model_outright(client):
+    """Hibernating a model takes MRC ratification. The owner raises a request
+    (POST /request-retire) and only an approval appends ModelRetired — there is
+    deliberately no route that retires it directly. The full journey is covered
+    in test_mrc_retire_api.py."""
     _register(client)
     response = client.post("/api/models/M1/retire", json={"confirmed": True}, headers=HEADERS)
-    assert response.status_code == 200
-    assert response.get_json()["retired"] is True
+    assert response.status_code == 404
+    assert client.get("/api/models/M1").get_json()["retired"] is False
 
 
 def test_mutation_without_confirmation_is_409(client):

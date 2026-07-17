@@ -88,6 +88,30 @@ def test_amend_without_confirmation_is_gated_409(page: Page, base_url: str):
     assert ok.status == 201, ok.text()
 
 
+def _hibernate_via_mrc(page: Page, base_url: str, model_id: str) -> None:
+    """Put a model into hibernation the only way there is: the owner requests it
+    and the committee ratifies it."""
+    page.request.post(
+        base_url + "/api/reference/collections/mrc",
+        data={"fields": {"value": "MRC-RET", "name": "Company MRC", "level": "Company",
+                         "quorum_require_chair": "No", "quorum_require_secretary": "No",
+                         "quorum_min_voting": "0"}, "confirmed": True}, headers=_HEADERS,
+    )
+    page.request.post(
+        base_url + "/api/meetings",
+        data={"meeting_id": "MTG-RET", "title": "Retire", "date": "2026-11-11",
+              "fields": {"mrc": "MRC-RET"}, "confirmed": True}, headers=_HEADERS,
+    )
+    page.request.post(base_url + f"/api/models/{model_id}/request-retire",
+                      data={"confirmed": True}, headers=_HEADERS)
+    agenda = page.request.get(base_url + "/api/meetings/MTG-RET").json()["data"]["agenda"]
+    item = next(a for a in agenda if a.get("signoff_kind") == "retire")
+    page.request.post(
+        base_url + f"/api/meetings/MTG-RET/agenda/{item['item_id']}/approve-signoff",
+        data={"confirmed": True}, headers=_HEADERS,
+    )
+
+
 def test_editing_a_retired_model_is_rejected_400(page: Page, base_url: str):
     """The retired-model guard holds at the command layer even if the UI (which
     hides the edit pencils) is bypassed with a direct API call."""
@@ -96,10 +120,8 @@ def test_editing_a_retired_model_is_rejected_400(page: Page, base_url: str):
         data={"model_id": "RET-001", "name": "Retire Me", "fields": {}, "confirmed": True},
         headers=_HEADERS,
     )
-    page.request.post(
-        base_url + "/api/models/RET-001/retire",
-        data={"confirmed": True}, headers=_HEADERS,
-    )
+    _hibernate_via_mrc(page, base_url, "RET-001")
+    assert page.request.get(base_url + "/api/models/RET-001").json()["retired"] is True
 
     resp = page.request.post(
         base_url + "/api/models/RET-001/field",

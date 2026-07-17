@@ -40,7 +40,6 @@ from src.governance.model_inventory import (
     rebuild_inventory_view,
     register_model,
     remove_collection_item,
-    retire_model,
     update_collection_item,
     update_model_field,
 )
@@ -231,15 +230,10 @@ def update_field(model_id: str):
     return jsonify(get_model(model_id))
 
 
-@models_bp.post("/<model_id>/retire")
-def retire(model_id: str):
-    body = json_body()
-    dispatch(
-        "retire_model", retire_model, context=context_from_request(body),
-        model_id=model_id,
-    )
-    rebuild_inventory_view()
-    return jsonify(get_model(model_id))
+# Retiring a model is not something an owner does directly any more: it is
+# hibernation, and it takes MRC ratification. The owner raises a request
+# (POST /<model_id>/request-retire in api_models_signoff) and the committee
+# carries it out on approval, which is the only path that appends ModelRetired.
 
 
 @models_bp.post("/<model_id>/collections/<collection>")

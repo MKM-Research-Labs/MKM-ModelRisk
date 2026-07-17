@@ -107,6 +107,10 @@ def _request_lifecycle_change(model_id: str, *, kind: str, expect_retired: bool)
 
     The two are the same journey in opposite directions — the only difference is
     which state the model has to be in to ask — so they share one path.
+
+    Retiring takes two gates: the owner confirms the request (recording a reason),
+    and the MRC then ratifies it. This is the first of the two; nothing about the
+    model changes here.
     """
     model = get_model(model_id)
     if model is None:
@@ -121,6 +125,9 @@ def _request_lifecycle_change(model_id: str, *, kind: str, expect_retired: bool)
         return error
     body = json_body()
     ctx = context_from_request(body)
+    # Gated explicitly: asking to hibernate a model (or wake one) is significant
+    # enough to confirm, even though the committee has the final say.
+    require_confirmation(f"request_{kind}", ctx)
     raise_signoff(ctx, MODEL_SUBJECT, model_id, kind=kind,
                   target_mrc=mrc["value"], note=body.get("note"))
     return jsonify(get_model(model_id)), 201
