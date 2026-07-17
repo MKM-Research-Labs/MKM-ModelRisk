@@ -58,8 +58,8 @@ def _schedule(page: Page, base_url: str, meeting_id: str, title: str):
     page.fill("#sc-meeting_id", meeting_id)
     page.fill("#sc-title", title)
     page.fill("#sc-date", "2026-09-15")
-    page.click("#mt-schedule")
-    confirm(page)
+    page.click("#mt-schedule")   # scheduling a meeting is ungated — no confirm modal
+    expect(page.locator(f"tr.clickable[data-id='{meeting_id}']")).to_be_visible()
 
 
 def test_schedule_meeting_appears(page: Page, base_url: str):
@@ -249,9 +249,9 @@ def test_signoff_workflow_owner_requests_and_mrc_approves(page: Page, base_url: 
     # meeting, so the request attaches straight onto that agenda.
     page.click("[data-dtab='risk']")
     expect(page.locator("#req-signoff")).to_be_visible()
-    page.click("#req-signoff")
-    confirm(page)
-    # Pending-signoff panel shows on the model, attached to the meeting.
+    page.click("#req-signoff")   # raising a request is ungated — no confirm modal
+    # Pending-signoff panel shows on the model, attached to the meeting. This
+    # doubles as the wait for the async request to land.
     expect(page.locator("#dt-content")).to_contain_text("Pending MRC sign-off")
     expect(page.locator("#dt-content")).to_contain_text("MRC-SO")
     # MRC approves via the Models tab — sign-offs live under Models → Approvals
@@ -346,3 +346,33 @@ def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
 # but is no longer surfaced on the agenda UI: a sign-off item now offers only
 # Sign off / Reject / Next review. The Models/Participants tabs are covered in
 # tests/e2e/test_e2e_mrc_meeting.py.
+
+
+def test_retire_request_shows_in_approvals_and_can_be_ratified(page: Page, base_url: str):
+    """A retire request reaches the committee as its own decision — labelled as a
+    retirement rather than a blank rating — and approving it hibernates the model."""
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    post = lambda p, b: page.request.post(base_url + p, data=b, headers=headers)
+    post("/api/models", {"model_id": "MKM-RET-AP", "name": "Retire Approvals", "confirmed": True})
+    post("/api/reference/collections/mrc",
+         {"fields": {"value": "MRC-RET-AP", "name": "Company MRC", "level": "Company",
+                     "quorum_require_chair": "No", "quorum_require_secretary": "No",
+                     "quorum_min_voting": "0"}, "confirmed": True})
+    post("/api/meetings", {"meeting_id": "MTG-RET-AP", "title": "Retire mtg",
+                           "date": "2026-11-11", "fields": {"mrc": "MRC-RET-AP"}, "confirmed": True})
+    post("/api/models/MKM-RET-AP/request-retire", {"confirmed": True})
+
+    open_app(page, base_url)
+    open_tab(page, "mrc")
+    page.click("tr.clickable[data-id='MTG-RET-AP']")
+    page.click("[data-mtab='models_in_scope']")
+    # The Approvals row names it a retirement, not a (blank) rating.
+    body = page.locator("#mtd-content")
+    expect(body).to_contain_text("Retire")
+    expect(body).to_contain_text("hibernate")
+    # A retire carries no next-review date, so that input is not offered.
+    expect(page.locator("input[id^='ag-nextreview-']")).to_have_count(0)
+    # Approving ratifies the retire and hibernates the model.
+    page.locator("[data-agapprove]").first.click()
+    confirm(page)
+    assert page.request.get(base_url + "/api/models/MKM-RET-AP").json()["retired"] is True

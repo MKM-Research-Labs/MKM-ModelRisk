@@ -100,6 +100,9 @@ NOTICE_EXEMPT_NAMES = frozenset({"LICENSE"})
 # rather than directories, which EXCLUDE_DIRS already covers). Not first-party,
 # so the notice scan never reports — or reads — them. ``.env`` holds secrets.
 NOTICE_EXCLUDE_NAMES = frozenset({".DS_Store", ".coverage", "coverage.xml", ".env"})
+# Local-only notes (gitignored via ``*.local.md``, e.g. internal planning that is
+# never committed) are not first-party artefacts, so the notice scan skips them.
+LOCAL_ONLY_SUFFIX = ".local.md"
 
 # Package trees scanned for the R4 ``__init__.py`` inventory. Broader than
 # SOURCE_DIRS so the inventory lists every first-party package initialiser —

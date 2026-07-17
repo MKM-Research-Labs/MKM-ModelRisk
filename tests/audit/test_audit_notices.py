@@ -71,3 +71,11 @@ def test_generated_and_local_files_are_out_of_scope(tmp_path):
     """.env holds secrets; the rest are build artefacts — never first-party."""
     for name in (".env", ".DS_Store", "coverage.xml", ".coverage"):
         assert not _in_scope(tmp_path / name)
+
+
+def test_local_only_notes_are_out_of_scope(tmp_path):
+    """*.local.md is gitignored internal planning (e.g. PROJECT_PLAN.local.md);
+    it never ships, so the notice scan must not report it."""
+    assert not _in_scope(tmp_path / "PROJECT_PLAN.local.md")
+    # A committed .md is still in scope.
+    assert _in_scope(tmp_path / "README.md")

@@ -30,7 +30,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from config.audit import (FIRST_PARTY_DIRS, HEADER_EXTENSIONS,
-                          NOTICE_EXCLUDE_NAMES, NOTICE_EXEMPT_NAMES,
+                          LOCAL_ONLY_SUFFIX, NOTICE_EXCLUDE_NAMES, NOTICE_EXEMPT_NAMES,
                           NOTICE_MARKER, NOTICE_SIBLING_SUFFIX)
 
 from audit._walk import code_files, rel
@@ -51,7 +51,7 @@ def _in_scope(path: Path) -> bool:
         return False  # the header gate owns these
     if path.suffix == NOTICE_SIBLING_SUFFIX:
         return False  # a marker is not itself a subject
-    if path.name in NOTICE_EXCLUDE_NAMES:
+    if path.name in NOTICE_EXCLUDE_NAMES or path.name.endswith(LOCAL_ONLY_SUFFIX):
         return False  # generated or local-only, not first-party
     return path.name not in NOTICE_EXEMPT_NAMES
 
