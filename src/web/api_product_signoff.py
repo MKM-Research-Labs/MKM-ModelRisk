@@ -32,7 +32,13 @@ from src.governance.product import get_product
 from src.governance.reference import get_reference_lists
 from src.command import require_confirmation
 from src.web._helpers import context_from_request, json_body
-from src.web._signoff_routing import PRODUCT_SUBJECT, _newest, raise_signoff, revoke_signoff
+from src.web._signoff_routing import (
+    PRODUCT_SUBJECT,
+    REQUESTS,
+    _newest,
+    raise_signoff,
+    revoke_signoff,
+)
 from src.web.api_product import product_bp
 
 
@@ -49,7 +55,7 @@ def _product_mrc(product_data: dict):
 
 def _product_pending_signoff(product_data: dict) -> dict | None:
     """The product's current active (Pending or Attached) sign-off request."""
-    active = [r for r in (product_data.get("rag_signoff_requests") or [])
+    active = [r for r in (product_data.get(REQUESTS) or [])
               if r.get("status") in ("Pending", "Attached")]
     request = _newest(active)
     if request is None:

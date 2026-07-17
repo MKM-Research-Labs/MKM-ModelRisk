@@ -85,7 +85,7 @@ def test_request_attaches_to_scheduled_meeting(client):
     assert len(items) == 1
     assert items[0]["subject_product_id"] == "P1"
     assert items[0]["proposed_rag"] == "Amber"
-    req = resp.get_json()["data"]["rag_signoff_requests"][0]
+    req = resp.get_json()["data"]["signoff_requests"][0]
     assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
 
 
@@ -95,7 +95,7 @@ def test_request_without_meeting_queues_pending(client):
     _product(client)
     resp = _request(client)
     assert resp.status_code == 201
-    req = resp.get_json()["data"]["rag_signoff_requests"][0]
+    req = resp.get_json()["data"]["signoff_requests"][0]
     assert req["status"] == "Pending" and req["target_mrc"] == "MRC-CO"
 
 
@@ -127,7 +127,7 @@ def test_routing_uses_product_org_not_model(client):
     assert mrc["mrc"]["value"] == "MRC-MKTS" and mrc["level"] == "Division"
     resp = _request(client)
     assert resp.status_code == 201
-    assert resp.get_json()["data"]["rag_signoff_requests"][0]["target_mrc"] == "MRC-MKTS"
+    assert resp.get_json()["data"]["signoff_requests"][0]["target_mrc"] == "MRC-MKTS"
 
 
 def test_request_blocked_without_rag_rating(client):
@@ -154,7 +154,7 @@ def test_approve_stamps_signoff_date_meeting_and_history(client):
     assert product["mrc_signoff_date"] == "2026-09-15"
     assert product["mrc_signoff_meeting"] == "MTG1"
     assert product["rag_signoff_history"][0]["to_rating"] == "Green"
-    assert product["rag_signoff_requests"][0]["status"] == "Completed"
+    assert product["signoff_requests"][0]["status"] == "Completed"
     signoff = next(a for a in resp.get_json()["meeting"]["data"]["agenda"]
                    if a.get("subject_product_id"))
     assert signoff["status"] == "Completed"

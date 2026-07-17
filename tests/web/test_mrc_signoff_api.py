@@ -104,7 +104,7 @@ def test_request_signoff_attaches_to_scheduled_meeting_of_matching_mrc(client):
     assert items[0]["proposed_rag"] == "Green"
     assert items[0]["status"] == "Pending"
     # The model-side request is now Attached to that meeting.
-    req = response.get_json()["data"]["rag_signoff_requests"][0]
+    req = response.get_json()["data"]["signoff_requests"][0]
     assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
 
 
@@ -113,7 +113,7 @@ def test_request_signoff_without_meeting_queues_pending(client):
     _register_subject_model(client)
     response = _request_signoff(client)
     assert response.status_code == 201
-    reqs = response.get_json()["data"]["rag_signoff_requests"]
+    reqs = response.get_json()["data"]["signoff_requests"]
     assert len(reqs) == 1
     assert reqs[0]["status"] == "Pending" and reqs[0]["target_mrc"] == "MRC-CO"
 
@@ -126,7 +126,7 @@ def test_pending_request_drains_onto_newly_scheduled_meeting(client):
     agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
     items = _signoff_agenda_items(agenda)
     assert len(items) == 1 and items[0]["subject_model_id"] == "M1"
-    req = client.get("/api/models/M1").get_json()["data"]["rag_signoff_requests"][0]
+    req = client.get("/api/models/M1").get_json()["data"]["signoff_requests"][0]
     assert req["status"] == "Attached" and req["meeting_id"] == "MTG1"
 
 
@@ -163,7 +163,7 @@ def test_request_signoff_ignores_completed_meeting_and_stays_pending(client):
     response = _request_signoff(client)
     assert response.status_code == 201
     # A Completed meeting is not a valid target — the request waits as Pending.
-    assert response.get_json()["data"]["rag_signoff_requests"][0]["status"] == "Pending"
+    assert response.get_json()["data"]["signoff_requests"][0]["status"] == "Pending"
     agenda = client.get("/api/meetings/MTG1").get_json()["data"].get("agenda") or []
     assert not _signoff_agenda_items(agenda)   # no sign-off attached (standing items aside)
 
@@ -236,7 +236,7 @@ def test_reject_signoff_leaves_rating_and_marks_rejected(client):
     model = resp.get_json()["model"]["data"]
     assert model["rag_rating"] == "Amber"     # NOT promoted to the proposed Green
     assert model["next_review_date"] == "2027-03-31"
-    assert model["rag_signoff_requests"][0]["status"] == "Rejected"
+    assert model["signoff_requests"][0]["status"] == "Rejected"
     assert model["rag_signoff_history"][0]["outcome"] == "Rejected"
     assert _signoff_agenda_items(resp.get_json()["meeting"]["data"]["agenda"])[0]["status"] == "Rejected"
 

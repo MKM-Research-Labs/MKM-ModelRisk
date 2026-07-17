@@ -20,7 +20,7 @@
 """Sign-off request routing, shared by models and products.
 
 A Risk-rating sign-off request is raised by an owner and queued on the subject
-(a model or a product) against its responsible MRC (``rag_signoff_requests``). It
+(a model or a product) against its responsible MRC (``signoff_requests``). It
 waits as ``Pending`` until a meeting of that committee is scheduled, at which
 point it is pulled onto the agenda and marked ``Attached``; when the committee
 approves, the subject's rating/date are stamped and the request is ``Completed``.
@@ -58,6 +58,12 @@ from src.governance.product import (
     update_collection_item as _product_update,
     update_product_field,
 )
+
+
+# The single approvals queue. Every kind of decision the committee ratifies
+# (see VALID_SIGNOFF_KINDS) is raised onto this one collection, so a committee
+# has one list to work rather than one per decision type.
+REQUESTS = "signoff_requests"
 
 
 class Subject:
@@ -144,15 +150,22 @@ def earliest_scheduled_for_mrc(target_mrc: str, config=None) -> dict | None:
 
 
 def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
-                  proposed_rag: str, target_mrc: str, note: str | None = None) -> dict | None:
-    """Queue a sign-off request on the subject and attach it if a meeting exists."""
-    fields = {"proposed_rag": proposed_rag, "target_mrc": target_mrc, "status": "Pending"}
+                  target_mrc: str, kind: str = "rag", proposed_rag: str | None = None,
+                  note: str | None = None) -> dict | None:
+    """Queue a sign-off request on the subject and attach it if a meeting exists.
+
+    ``kind`` is what the committee is being asked to ratify (see
+    VALID_SIGNOFF_KINDS); ``proposed_rag`` only applies to a rating request.
+    """
+    fields = {"kind": kind, "target_mrc": target_mrc, "status": "Pending"}
+    if proposed_rag:
+        fields["proposed_rag"] = proposed_rag
     if note:
         fields["note"] = note
-    subject.add_item(ctx, subject_id, "rag_signoff_requests", fields)
+    subject.add_item(ctx, subject_id, REQUESTS, fields)
     subject.rebuild()
     refreshed = subject.get(subject_id) or {"data": {}}
-    request = _newest(refreshed["data"].get("rag_signoff_requests") or [])
+    request = _newest(refreshed["data"].get(REQUESTS) or [])
     meeting = earliest_scheduled_for_mrc(target_mrc)
     if meeting is not None and request is not None:
         attach_request(ctx, subject, subject_id, request, meeting)
@@ -204,7 +217,7 @@ def attach_request(ctx: CommandContext, subject: Subject, subject_id: str,
     ]
     agenda_item = _newest(agenda)
     subject.update_item(
-        ctx, subject_id, "rag_signoff_requests", request_item["item_id"],
+        ctx, subject_id, REQUESTS, request_item["item_id"],
         {"status": "Attached", "meeting_id": meeting_id,
          "agenda_item_id": (agenda_item or {}).get("item_id", "")},
     )
@@ -217,12 +230,12 @@ def complete_request_for_agenda(ctx: CommandContext, subject: Subject, subject_i
     Rejected) once the committee decides on its agenda item."""
     fresh = subject.get(subject_id) or {"data": {}}
     request = next(
-        (r for r in (fresh["data"].get("rag_signoff_requests") or [])
+        (r for r in (fresh["data"].get(REQUESTS) or [])
          if r.get("agenda_item_id") == agenda_item_id and r.get("status") == "Attached"),
         None,
     )
     if request is not None:
-        subject.update_item(ctx, subject_id, "rag_signoff_requests",
+        subject.update_item(ctx, subject_id, REQUESTS,
                             request["item_id"], {"status": status})
         subject.rebuild()
 
@@ -236,11 +249,11 @@ def drain_pending_for_meeting(ctx: CommandContext, meeting: dict, config=None) -
     for subject in SUBJECTS:
         for row in subject.list_all():
             data = row.get("data") or {}
-            for req in data.get("rag_signoff_requests") or []:
+            for req in data.get(REQUESTS) or []:
                 if req.get("status") == "Pending" and req.get("target_mrc") == target_mrc:
                     fresh = subject.get(row[subject.id_key]) or {"data": {}}
                     current = next(
-                        (r for r in (fresh["data"].get("rag_signoff_requests") or [])
+                        (r for r in (fresh["data"].get(REQUESTS) or [])
                          if r.get("item_id") == req.get("item_id")),
                         None,
                     )

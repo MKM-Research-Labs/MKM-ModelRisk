@@ -38,7 +38,7 @@ from src.governance.mrc import get_meeting, matching_mrc
 from src.governance.reference import get_reference_lists
 from src.command import require_confirmation
 from src.web._helpers import context_from_request, json_body
-from src.web._signoff_routing import MODEL_SUBJECT, _newest, raise_signoff, revoke_signoff
+from src.web._signoff_routing import MODEL_SUBJECT, REQUESTS, _newest, raise_signoff, revoke_signoff
 from src.web.api_models import models_bp
 
 
@@ -49,7 +49,7 @@ def pending_signoff(model_id: str) -> dict | None:
     resolves the meeting it landed on so the UI can link back.
     """
     model = get_model(model_id)
-    requests = (model["data"].get("rag_signoff_requests") or []) if model else []
+    requests = (model["data"].get(REQUESTS) or []) if model else []
     active = [r for r in requests if r.get("status") in ("Pending", "Attached")]
     request = _newest(active)
     if request is None:

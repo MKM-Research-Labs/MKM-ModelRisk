@@ -39,10 +39,15 @@ VALID_VERSION_LIFECYCLE = (
 # independent Yes/No because in practice an event may inform one and not the
 # other (e.g. internal noise that didn't reach the client).
 VALID_INFORMED = ("Yes", "No")
-# A queued Risk-rating sign-off request (owner-raised) as it moves from raised
-# to attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
+# A queued sign-off request (owner-raised) as it moves from raised to
+# attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
 # MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
 VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Rejected", "Withdrawn")
+# What a sign-off request asks the committee to ratify. One queue serves them all
+# so a committee has a single approvals list rather than one per decision type.
+# "rag" proposes a new risk rating; "retire" hibernates the subject (it drops out
+# of the active inventory); "reactivate" brings a hibernated subject back.
+VALID_SIGNOFF_KINDS = ("rag", "retire", "reactivate")
 # The committee's decision on a sign-off request.
 VALID_SIGNOFF_OUTCOME = ("Approved", "Rejected", "Revoked")
 
@@ -121,9 +126,14 @@ COLLECTION_SPECS = {
     # responsible MRC (``target_mrc``) and waits as Pending until a meeting of
     # that committee is scheduled, at which point it is pulled onto the agenda
     # and marked Attached (recording the meeting + agenda item it landed on).
-    "rag_signoff_requests": {"label": "Sign-off requests", "id_prefix": "SR", "fields": [
+    # One queue carries every kind of decision the committee ratifies, so
+    # ``kind`` says what is being asked and the kind-specific fields (e.g.
+    # ``proposed_rag`` for a rating) are only meaningful for that kind.
+    "signoff_requests": {"label": "Sign-off requests", "id_prefix": "SR", "fields": [
+        {"key": "kind", "label": "Kind", "type": "choice",
+         "options": VALID_SIGNOFF_KINDS, "required": True},
         {"key": "proposed_rag", "label": "Proposed RAG", "type": "choice",
-         "options": VALID_RAG_RATINGS, "required": True},
+         "options": VALID_RAG_RATINGS},
         {"key": "target_mrc", "label": "Target MRC", "type": "text"},
         {"key": "status", "label": "Status", "type": "choice",
          "options": VALID_SIGNOFF_REQUEST_STATUS},

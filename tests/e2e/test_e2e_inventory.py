@@ -111,7 +111,7 @@ def test_rag_change_routes_to_mrc_signoff(page: Page, base_url: str):
     model = page.request.get(base_url + "/api/models/MKM-E2E-007").json()
     data = model["data"]
     assert not data.get("rag_rating"), "rating must not change before MRC approval"
-    proposed = [r.get("proposed_rag") for r in (data.get("rag_signoff_requests") or [])]
+    proposed = [r.get("proposed_rag") for r in (data.get("signoff_requests") or [])]
     assert proposed == ["Amber"], f"expected one queued proposal, got {proposed}"
 
 
