@@ -22,6 +22,8 @@ from __future__ import annotations
 
 from playwright.sync_api import Page, expect
 
+from config.commands import CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS
+
 
 def open_app(page: Page, base_url: str) -> Page:
     """Load the console and wait for the inventory tab to be ready."""
@@ -40,6 +42,21 @@ def confirm(page: Page) -> None:
     expect(page.locator("#confirm-overlay")).to_be_visible()
     page.click("#confirm-ok")
     expect(page.locator("#confirm-overlay")).to_be_hidden()
+
+
+def maybe_confirm(page: Page, command: str, field: str | None = None) -> None:
+    """Accept the confirm modal only when the policy actually demands one.
+
+    Only the commands/fields named in ``config.commands`` are gated; everything
+    else applies immediately with no dialog. Deriving that here — rather than
+    assuming every mutation confirms — keeps these flows in lockstep with the
+    policy, so a change to it can never silently rot the suite again.
+    """
+    gated = command in CONFIRM_REQUIRED_COMMANDS or (
+        field is not None and field in CONFIRM_REQUIRED_FIELDS.get(command, frozenset())
+    )
+    if gated:
+        confirm(page)
 
 
 def register_model(page: Page, model_id: str, name: str, model_type: str | None = None) -> None:
@@ -98,21 +115,24 @@ def add_collection_item(page: Page, list_key: str, fields: dict[str, str]) -> st
         else:
             page.fill(selector, value)
     page.click(f"[data-add='{list_key}']")
-    confirm(page)
+    maybe_confirm(page, "add_collection_item")
     marker = page.locator(f"[data-ed^='{list_key}|'], [data-rm^='{list_key}|']").first
     expect(marker).to_be_visible()
     return marker.get_attribute("data-ed" if marker.get_attribute("data-ed") else "data-rm").split("|", 1)[1]
 
 
 def edit_model_field(page: Page, key: str, value: str, *, choice: bool = False) -> None:
-    """Edit one scalar field on a model's overview tab via confirm-to-amend."""
+    """Edit one scalar field on a model's overview tab.
+
+    Only the gated fields raise the confirm modal (see ``maybe_confirm``).
+    """
     page.click(f"[data-edit='{key}']")
     if choice:
         page.select_option("#ed-input", value)
     else:
         page.fill("#ed-input", value)
     page.click("#ed-save")
-    confirm(page)
+    maybe_confirm(page, "update_model_field", key)
     # Wait for the async re-render to settle — the inline editor is gone once the
     # detail has re-fetched and re-rendered. Otherwise a follow-on tab switch can
     # race the re-render and get clobbered back to the overview.
@@ -120,14 +140,17 @@ def edit_model_field(page: Page, key: str, value: str, *, choice: bool = False) 
 
 
 def edit_product_field(page: Page, key: str, value: str, *, choice: bool = False) -> None:
-    """Edit one scalar field on a Product's overview tab via confirm-to-amend."""
+    """Edit one scalar field on a Product's overview tab.
+
+    Only the gated fields raise the confirm modal (see ``maybe_confirm``).
+    """
     page.click(f"[data-edit='{key}']")
     if choice:
         page.select_option("#ped-input", value)
     else:
         page.fill("#ped-input", value)
     page.click("#ped-save")
-    confirm(page)
+    maybe_confirm(page, "update_product_field", key)
 
 
 def edit_collection_item(page: Page, list_key: str, item_id: str, fields: dict[str, str]) -> None:
@@ -139,7 +162,7 @@ def edit_collection_item(page: Page, list_key: str, item_id: str, fields: dict[s
         else:
             page.fill(selector, value)
     page.click("#ce-save")
-    confirm(page)
+    maybe_confirm(page, "update_collection_item")
 
 
 def remove_collection_item(page: Page, list_key: str, item_id: str) -> None:
