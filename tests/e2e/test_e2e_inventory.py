@@ -85,12 +85,34 @@ def test_edit_materiality_choice(page: Page, base_url: str):
     expect(page.locator("#row-materiality")).to_contain_text("High")
 
 
-def test_edit_rag_rating_choice(page: Page, base_url: str):
+def test_rag_change_routes_to_mrc_signoff(page: Page, base_url: str):
+    """A RAG change is a proposal, not an edit (W4c).
+
+    Choosing a rating raises a sign-off request routed to the model's MRC; the
+    rating itself must not move until the committee approves. This is the
+    governance guarantee, so assert the domain state, not just the screen.
+    """
+    headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
+    page.request.post(base_url + "/api/models",
+                      data={"model_id": "MKM-E2E-007", "name": "VaR Model",
+                            "confirmed": True}, headers=headers)
+    # _proposeRag refuses to route unless an MRC covers the model.
+    page.request.post(base_url + "/api/reference/collections/mrc",
+                      data={"fields": {"value": "MRC-E2E-RAG", "name": "Company MRC",
+                                       "level": "Company"}, "confirmed": True}, headers=headers)
     open_app(page, base_url)
-    register_model(page, "MKM-E2E-007", "VaR Model")
     open_model(page, "MKM-E2E-007")
-    edit_model_field(page, "rag_rating", "Amber", choice=True)
-    expect(page.locator("#row-rag_rating")).to_contain_text("Amber")
+    page.click("[data-edit='rag_rating']")
+    page.select_option("#ed-input", "Amber")
+    page.click("#ed-save")   # raises a request — not a gated field edit, so no modal
+    # On success the detail jumps to the Risk tab: use that as the sync point.
+    expect(page.locator("[data-dtab='risk'].active")).to_be_visible()
+
+    model = page.request.get(base_url + "/api/models/MKM-E2E-007").json()
+    data = model["data"]
+    assert not data.get("rag_rating"), "rating must not change before MRC approval"
+    proposed = [r.get("proposed_rag") for r in (data.get("rag_signoff_requests") or [])]
+    assert proposed == ["Amber"], f"expected one queued proposal, got {proposed}"
 
 
 def test_retire_model(page: Page, base_url: str):
@@ -180,15 +202,15 @@ def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
     expect(page.locator("#row-complexity")).to_contain_text("Low")
     page.click("[data-dtab='risk']")
     # Auto-routes to the model's Company-level MRC and attaches to its meeting.
+    # Raising a request is not gated — only the committee's decision is.
     page.click("#req-signoff")
-    confirm(page)
     # MRC approves from the Models tab — sign-offs live under Models → Approvals
     # now (data-agapprove hook), and the committee is quorate (quorum off above).
     open_tab(page, "mrc")
     page.click("tr.clickable[data-id='MRC-X1-SO']")
     page.click("[data-mtab='models_in_scope']")
     page.locator("[data-agapprove]").first.click()
-    confirm(page)
+    confirm(page)   # require_confirmation("signoff") — the decision is gated
     # Back to the model — Risk tab now shows the history table.
     open_tab(page, "inventory")
     open_model(page, "MKM-X1-SO-01")
