@@ -99,3 +99,43 @@ def test_status_empty_for_other_artifact(client):
 def test_status_requires_token(client):
     resp = client.get("/api/ingest/status/data-lineage")
     assert resp.status_code == 401
+
+
+# --- model-chain endpoint (migration Phase 2) ---
+
+CHAIN = {"description": "string of pearls",
+         "links": [{"from": "MKM-SI-001", "to": "MKM-SG-001", "data_handoff": "intensity"},
+                   {"from": "MKM-SG-001", "to": "MKM-GH-001", "data_handoff": "gauge series"}]}
+
+
+def _chain_body(chain=None):
+    return {"artifact": "model-chain", "provenance": PROV,
+            "payload": chain if chain is not None else CHAIN}
+
+
+def test_post_model_chain_created(client):
+    resp = client.post("/api/ingest/model-chain", json=_chain_body(), headers=AUTH)
+    assert resp.status_code == 201
+    body = resp.get_json()
+    assert body["artifact"] == "model-chain"
+    assert body["data"]["summary"]["link_count"] == 2
+
+
+def test_model_chain_repost_is_idempotent(client):
+    client.post("/api/ingest/model-chain", json=_chain_body(), headers=AUTH)
+    resp = client.post("/api/ingest/model-chain", json=_chain_body(), headers=AUTH)
+    assert resp.status_code == 200
+
+
+def test_model_chain_cycle_is_unprocessable(client):
+    cyclic = {"links": [{"from": "A", "to": "B"}, {"from": "B", "to": "A"}]}
+    resp = client.post("/api/ingest/model-chain", json=_chain_body(cyclic), headers=AUTH)
+    assert resp.status_code == 422
+    assert any("cycle" in d for d in resp.get_json()["details"])
+
+
+def test_model_chain_status_lists_receipt(client):
+    client.post("/api/ingest/model-chain", json=_chain_body(), headers=AUTH)
+    resp = client.get("/api/ingest/status/model-chain", headers=AUTH)
+    assert resp.status_code == 200
+    assert [r["data"]["source_repo"] for r in resp.get_json()["receipts"]] == ["PhysicalRisk"]

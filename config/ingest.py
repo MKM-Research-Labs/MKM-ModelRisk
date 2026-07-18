@@ -34,6 +34,7 @@ CONTRACT_VERSION = "v1"
 # artifact name -> schema file under contracts/ingest/<CONTRACT_VERSION>/.
 INGEST_ARTIFACTS = {
     "model-inventory": "model_inventory.schema.json",
+    "model-chain": "model_chain.schema.json",
     "data-lineage": "data_lineage.schema.json",
     "field-lineage": "field_lineage.schema.json",
     "document": "document.schema.json",

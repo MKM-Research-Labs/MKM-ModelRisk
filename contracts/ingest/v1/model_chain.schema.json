@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modelrisk.mkm/contracts/ingest/v1/model_chain.schema.json",
+  "title": "Model chain (v1)",
+  "description": "The 'string of pearls' model-dependency graph, pushed on its own. It is the same shape as the model_chain object carried inside model_inventory, extracted so a producer can push the chain independently. Only structural keys are required; producer-added fields are allowed. Graph integrity (links resolve, no self-loop, acyclic) is enforced server-side, not by this schema.",
+  "type": "object",
+  "required": ["links"],
+  "additionalProperties": true,
+  "properties": {
+    "description": { "type": "string" },
+    "links": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/link" }
+    }
+  },
+  "$defs": {
+    "link": {
+      "description": "A directed dependency: model 'from' hands data off to model 'to'.",
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": true,
+      "properties": {
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "data_handoff": { "type": "string" },
+        "granularity": { "type": "string" },
+        "compatibility": { "type": "string" },
+        "fields": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

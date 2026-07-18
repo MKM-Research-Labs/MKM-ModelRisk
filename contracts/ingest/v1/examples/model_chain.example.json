@@ -1,0 +1,48 @@
+{
+  "description": "String of pearls: Storm Intensity -> Storm-Gauge -> GEV Hazard -> PRS Pricing -> Delta Engine. Stress branch: Storm-Gauge -> Flood Classifier -> Delta Engine",
+  "links": [
+    {
+      "from": "MKM-BRI-001",
+      "to": "MKM-BRF-001",
+      "data_handoff": "BRI flood resilience score",
+      "granularity": "Per-property",
+      "compatibility": "Continuous 0-1 score (or letter grade via band mid-point) to floor-uplift ramp",
+      "fields": [
+        {
+          "name": "BRIFloodScore",
+          "type": "float",
+          "description": "Flood resilience sub-score in [0,1]; drives uplift(s) on the ramp [SCORE_LO, SCORE_HI] -> [0, MAX_M]"
+        },
+        {
+          "name": "BRIFloodRating",
+          "type": "string",
+          "description": "Letter grade (AA/A/B/NR) used as a fallback for assets without a numeric flood score; mapped to a representative score via BRI_FLOOR_RATING_SCORES"
+        }
+      ]
+    },
+    {
+      "from": "MKM-BRF-001",
+      "to": "MKM-PR-001",
+      "data_handoff": "BRI-adjusted effective floor level and resilient flood spread",
+      "granularity": "Per-property",
+      "compatibility": "Raised flood threshold removes severe-flood events from the count, lowering the resilient PRS spread (resilient <= pure)",
+      "fields": [
+        {
+          "name": "BRIAdjustedFloorLevelMeters",
+          "type": "float",
+          "description": "FloorLevelMeters + uplift(BRIFloodScore); compared against attenuated WSE in the PRS severe-flood filter"
+        },
+        {
+          "name": "spread_decomposition.bri_spread_bps",
+          "type": "float",
+          "description": "PRS flood spread computed on the BRI-adjusted flood count (the 'resilient' variant)"
+        },
+        {
+          "name": "resilience_effect_bps",
+          "type": "float",
+          "description": "pure_spread_bps - bri_spread_bps; the resilience credit, always >= 0"
+        }
+      ]
+    }
+  ]
+}

@@ -30,6 +30,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from src.governance.data_lineage import ingest_data_lineage, rebuild_data_lineage_view
+from src.governance.model_chain import ingest_model_chain, rebuild_model_chain_view
 from src.identity import ingest_principal
 from src.ingest._envelope import content_hash
 from src.ingest._validate import (
@@ -66,10 +67,33 @@ def _ingest_data_lineage(
     return get_receipt("data-lineage", source_repo, config=config), True
 
 
+def _ingest_model_chain(
+    payload: dict[str, Any], provenance: dict[str, Any], actor: str, config,
+) -> tuple[dict[str, Any] | None, bool]:
+    source_repo = provenance["source_repo"]
+    chash = content_hash(payload)
+    event = ingest_model_chain(
+        source_repo=source_repo, chain=payload, provenance=provenance,
+        content_hash=chash, actor=actor, reason="ingest model-chain", config=config,
+    )
+    if event is None:  # idempotent: identical chain already stored
+        return get_receipt("model-chain", source_repo, config=config), False
+    rebuild_model_chain_view(config=config)
+    summary = {"link_count": event.payload["link_count"], "chain_seq": event.global_seq}
+    record_receipt(
+        artifact="model-chain", source_repo=source_repo, content_hash=chash,
+        provenance=provenance, summary=summary, actor=actor,
+        reason="ingest model-chain", config=config,
+    )
+    rebuild_receipts_view(config=config)
+    return get_receipt("model-chain", source_repo, config=config), True
+
+
 # artifact -> handler(payload, provenance, actor, config) -> (receipt, created).
 # Only wired artifacts are reachable; others 422 via the guard below.
 _HANDLERS: dict[str, Callable[..., tuple[dict[str, Any] | None, bool]]] = {
     "data-lineage": _ingest_data_lineage,
+    "model-chain": _ingest_model_chain,
 }
 
 

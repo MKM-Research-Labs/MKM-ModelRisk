@@ -94,10 +94,42 @@ def _check_data_lineage(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
-# artifact -> cross-reference checker. model-inventory (chain integrity) and
-# field-lineage (pipeline_step resolves to a known step) are added in Phase 2/3.
+def _check_model_chain(payload: dict[str, Any]) -> list[str]:
+    """Graph integrity for the model chain — the generalised ``scan_model_chain``.
+
+    Each link is a directed edge ``from -> to``. A model must not depend on
+    itself, and the dependency graph must be acyclic (a cycle would mean the
+    'string of pearls' loops back on itself, which cannot be a real pipeline).
+    """
+    edges = [(l.get("from"), l.get("to")) for l in payload.get("links", [])]
+    errors = [f"link {a} -> {b}: a model cannot depend on itself"
+              for a, b in edges if a == b]
+    # Topological check: repeatedly strip nodes with no incoming edges. Whatever
+    # remains sits on a cycle.
+    nodes = {n for edge in edges for n in edge}
+    incoming = {n: 0 for n in nodes}
+    for _, b in edges:
+        incoming[b] += 1
+    ready = [n for n in nodes if incoming[n] == 0]
+    seen = 0
+    while ready:
+        node = ready.pop()
+        seen += 1
+        for a, b in edges:
+            if a == node:
+                incoming[b] -= 1
+                if incoming[b] == 0:
+                    ready.append(b)
+    if seen != len(nodes):
+        errors.append("the model chain has a cycle — the dependency graph must be acyclic")
+    return errors
+
+
+# artifact -> cross-reference checker. field-lineage (pipeline_step resolves to a
+# known step) is added with that artifact's ingestion.
 _CROSS_REFS: dict[str, Callable[[dict[str, Any]], list[str]]] = {
     "data-lineage": _check_data_lineage,
+    "model-chain": _check_model_chain,
 }
 
 

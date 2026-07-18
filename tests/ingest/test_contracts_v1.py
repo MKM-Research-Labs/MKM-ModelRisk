@@ -39,6 +39,7 @@ EXAMPLES = CONTRACTS / "examples"
 PAIRS = {
     "envelope.schema.json": "envelope.example.json",
     "model_inventory.schema.json": "model_inventory.example.json",
+    "model_chain.schema.json": "model_chain.example.json",
     "data_lineage.schema.json": "data_lineage.example.json",
     "field_lineage.schema.json": "field_lineage.example.json",
     "document.schema.json": "document.example.json",

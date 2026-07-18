@@ -78,3 +78,20 @@ def test_data_lineage_cross_reference_failure_raises():
     with pytest.raises(SchemaValidationError, match="cross-reference") as exc:
         validate_payload("data-lineage", payload)
     assert any("ghost" in e for e in exc.value.errors)
+
+
+def test_model_chain_valid_dag_passes():
+    validate_payload("model-chain", {"links": [
+        {"from": "A", "to": "B"}, {"from": "B", "to": "C"}]})
+
+
+def test_model_chain_cycle_is_rejected():
+    with pytest.raises(SchemaValidationError, match="cross-reference") as exc:
+        validate_payload("model-chain", {"links": [
+            {"from": "A", "to": "B"}, {"from": "B", "to": "A"}]})
+    assert any("cycle" in e for e in exc.value.errors)
+
+
+def test_model_chain_self_loop_is_rejected():
+    with pytest.raises(SchemaValidationError):
+        validate_payload("model-chain", {"links": [{"from": "A", "to": "A"}]})
