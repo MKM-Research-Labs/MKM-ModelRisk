@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.governance.latex import _esc, _section, _table, logo_asset, preamble, title_page
+from src.governance.latex import _esc, _section, _table, front_matter, logo_asset, preamble
 from src.governance.mrc.pack import compile_tex
 
 # The template's narrative sections and the content each expects. Kept here so the
@@ -140,8 +140,9 @@ def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | No
 
     return (
         preamble("Model Interoperability Validation") + "\\begin{document}\n"
-        + title_page("Model Interoperability Validation",
-                     from_id + " to " + to_id + " handover", date=as_of, logo=logo)
+        + front_matter("Model Interoperability Validation",
+                       from_id + " to " + to_id + " handover",
+                       "Interoperability validation generated", date=as_of, logo=logo)
         + body + "\\end{document}\n"
     )
 

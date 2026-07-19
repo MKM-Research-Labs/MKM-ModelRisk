@@ -27,7 +27,7 @@ the summary table followed by every rule's findings.
 from __future__ import annotations
 
 from config.audit import COVERAGE_MINIMUM
-from src.governance.latex import _section, _table, preamble, title_block
+from src.governance.latex import _section, _table, front_matter, logo_asset, preamble
 from src.governance.mrc import pack
 
 from audit.coverage import low_coverage_packages
@@ -202,11 +202,11 @@ REPORT_LABELS = {spec["filename"]: spec["label"]
                  for spec in (*REPORTS, *STANDALONE_REPORTS)}
 
 
-def _document(title: str, subtitle: str, as_of: str, body: str) -> str:
-    """Wrap a rule body in the shared LaTeX house style (preamble + title block)."""
+def _document(title: str, subtitle: str, as_of: str, body: str, *, logo: bool = False) -> str:
+    """Wrap a rule body in the shared house style: title page, Document History, body."""
     return (
         preamble(title) + "\\begin{document}\n"
-        + title_block(title, subtitle, date=as_of)
+        + front_matter(title, subtitle, subtitle, date=as_of, logo=logo)
         + body + "\\end{document}\n"
     )
 
@@ -239,27 +239,29 @@ def _summary_table(report: dict) -> str:
     )
 
 
-def build_report_tex(report: dict, spec: dict, as_of: str) -> str:
+def build_report_tex(report: dict, spec: dict, as_of: str, *, logo: bool = False) -> str:
     """Pure: render the LaTeX for one standalone per-rule report."""
-    return _document(spec["title"], spec["subtitle"], as_of, spec["body"](report))
+    return _document(spec["title"], spec["subtitle"], as_of, spec["body"](report), logo=logo)
 
 
-def build_audit_tex(report: dict, as_of: str) -> str:
+def build_audit_tex(report: dict, as_of: str, *, logo: bool = False) -> str:
     """Pure: render the consolidated report — summary table + every rule's findings."""
     body = _section("Summary", _summary_table(report))
     for spec in REPORTS:
         body += spec["body"](report)
-    return _document("Coding-Rule Audit Report", "Rules R1–R8", as_of, body)
+    return _document("Coding-Rule Audit Report", "Rules R1–R8", as_of, body, logo=logo)
 
 
 def render_report_pdf(report: dict, spec: dict, as_of: str) -> bytes:
     """Build and compile one standalone per-rule report to PDF bytes."""
-    return pack.compile_tex(build_report_tex(report, spec, as_of))
+    assets = logo_asset()
+    return pack.compile_tex(build_report_tex(report, spec, as_of, logo=bool(assets)), assets)
 
 
 def render_audit_pdf(report: dict, as_of: str) -> bytes:
     """Build and compile the consolidated coding-rule audit report to PDF bytes."""
-    return pack.compile_tex(build_audit_tex(report, as_of))
+    assets = logo_asset()
+    return pack.compile_tex(build_audit_tex(report, as_of, logo=bool(assets)), assets)
 
 
 def _suite_row(name: str, result: dict | None) -> list:
@@ -271,7 +273,7 @@ def _suite_row(name: str, result: dict | None) -> list:
             result["skipped"], status]
 
 
-def build_test_report_tex(results: dict, cov: dict, as_of: str) -> str:
+def build_test_report_tex(results: dict, cov: dict, as_of: str, *, logo: bool = False) -> str:
     """Pure: render the model/unit test-summary report (counts + coverage)."""
     body = _section("Test suites", _table(
         ["Suite", "Tests", "Failures", "Errors", "Skipped", "Status"],
@@ -287,9 +289,10 @@ def build_test_report_tex(results: dict, cov: dict, as_of: str) -> str:
              ["Gate", str(COVERAGE_MINIMUM) + "%"]]))
     else:
         body += ("Coverage was not measured for this run.\\par\\medskip\n")
-    return _document("Test Report", "Unit, e2e and coverage evidence", as_of, body)
+    return _document("Test Report", "Unit, e2e and coverage evidence", as_of, body, logo=logo)
 
 
 def render_test_report_pdf(results: dict, cov: dict, as_of: str) -> bytes:
     """Build and compile the test-summary report to PDF bytes."""
-    return pack.compile_tex(build_test_report_tex(results, cov, as_of))
+    assets = logo_asset()
+    return pack.compile_tex(build_test_report_tex(results, cov, as_of, logo=bool(assets)), assets)

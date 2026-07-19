@@ -111,9 +111,18 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
     )
 
 
-def title_block(title: str, subtitle: str = "", *, date: str = "") -> str:
-    """A compact centred title (no separate page) for short, single-purpose reports."""
-    sub = ("{\\large\\textcolor{gray}{" + _esc(subtitle) + "}\\\\[4pt]}\n" if subtitle else "")
-    when = ("{\\small as of " + _esc(date) + "}\\\\[6pt]\n" if date else "")
-    return ("\\begin{center}\n{\\Large\\bfseries\\textcolor{mkmblue}{" + _esc(title) +
-            "}}\\\\[4pt]\n" + sub + when + "\\end{center}\\bigskip\n")
+def history_page(date: str, description: str, *, org_name: str = "", version: str = "1.0") -> str:
+    """The template's Document History table (Date / Version / Description / Author),
+    then a page break — so every document opens the same way."""
+    rows = [[date, version, description, org_name or DEFAULT_ORG]]
+    return ("\\section*{Document History}\n"
+            + _table(["Date", "Version", "Description", "Author"], rows)
+            + "\\clearpage\n")
+
+
+def front_matter(title: str, subtitle: str, description: str, *, org_name: str = "",
+                 date: str = "", logo: bool = False, version: str = "1.0") -> str:
+    """The shared opening for every generated document: the title page followed by
+    the Document History — one consistent front matter across all PDFs."""
+    return (title_page(title, subtitle, org_name=org_name, date=date, version=version, logo=logo)
+            + history_page(date, description, org_name=org_name, version=version))

@@ -23,10 +23,10 @@ from __future__ import annotations
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import pack
-from src.governance.latex import _table, preamble, title_block
+from src.governance.latex import _table, front_matter, logo_asset, preamble
 
 
-def build_report_tex(models: list, settings: dict, as_of: str) -> str:
+def build_report_tex(models: list, settings: dict, as_of: str, *, logo: bool = False) -> str:
     """LaTeX source for the model risk report."""
     fields = settings.get("fields", {})
     counts = {"Acceptable": 0, "Conditional": 0, "Unacceptable": 0}
@@ -45,10 +45,11 @@ def build_report_tex(models: list, settings: dict, as_of: str) -> str:
     summary = (f"Models: {len(models)} \\quad Acceptable: {counts['Acceptable']} "
                f"\\quad Conditional: {counts['Conditional']} "
                f"\\quad Unacceptable: {counts['Unacceptable']}")
+    org = fields.get("org_name", "")
     return (
-        preamble("Model Risk Report", org_name=fields.get("org_name", ""))
-        + "\\begin{document}\n"
-        + title_block("Model Risk Report", "Status for the Model Risk Committee", date=as_of)
+        preamble("Model Risk Report", org_name=org) + "\\begin{document}\n"
+        + front_matter("Model Risk Report", "Status for the Model Risk Committee",
+                       "Model risk status generated", org_name=org, date=as_of, logo=logo)
         + "\\begin{center}" + summary + "\\end{center}\\bigskip\n"
         + _table(["Model", "Name", "Tier", "RAG", "Validation", "Risk", "Review"], rows)
         + "\\end{document}\n"
@@ -57,4 +58,5 @@ def build_report_tex(models: list, settings: dict, as_of: str) -> str:
 
 def render_report_pdf(models: list, settings: dict, as_of: str) -> bytes:
     """Build and compile the model risk report to PDF bytes."""
-    return pack.compile_tex(build_report_tex(models, settings, as_of))
+    assets = logo_asset()
+    return pack.compile_tex(build_report_tex(models, settings, as_of, logo=bool(assets)), assets)

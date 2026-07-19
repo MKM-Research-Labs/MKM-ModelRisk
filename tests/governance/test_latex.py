@@ -26,9 +26,10 @@ from src.governance import latex
 from src.governance.latex import (
     DEFAULT_ORG,
     LOGO_ASSET,
+    front_matter,
+    history_page,
     logo_asset,
     preamble,
-    title_block,
     title_page,
 )
 
@@ -61,11 +62,19 @@ def test_title_page_without_logo_omits_the_graphic():
     assert LOGO_ASSET not in tex
 
 
-def test_title_block_is_compact_and_optional():
-    full = title_block("Title", "subtitle", date="2026-07-19")
-    assert "subtitle" in full and "2026-07-19" in full
-    bare = title_block("Title")
-    assert "subtitle" not in bare and "as of" not in bare
+def test_history_page_is_the_document_history_table():
+    hist = history_page("2026-07-19", "Report generated", org_name="Acme", version="2.0")
+    assert "Document History" in hist
+    for cell in ("2026-07-19", "2.0", "Report generated", "Acme"):
+        assert cell in hist
+    assert "\\clearpage" in hist  # content starts on a fresh page
+
+
+def test_front_matter_is_title_page_then_history():
+    fm = front_matter("Doc", "sub", "generated", org_name="Acme", date="2026-07-19", logo=False)
+    # Title page comes before the Document History, so every doc opens the same way.
+    assert fm.index("titlepage") < fm.index("Document History")
+    assert "generated" in fm and "Acme" in fm
 
 
 def test_logo_asset_reads_the_cover_when_present():

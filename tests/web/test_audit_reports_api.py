@@ -93,7 +93,7 @@ def test_user_guide_runs_pandoc_then_house_style(tmp_path, monkeypatch):
         stdout = "\\section{Guide}\n"
 
     monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: (calls.append(cmd) or _Done()))
-    monkeypatch.setattr(mod, "compile_tex", lambda tex: b"%PDF-stub")
+    monkeypatch.setattr(mod, "compile_tex", lambda tex, assets=None: b"%PDF-stub")
     dest = tmp_path / "user_guide.pdf"
     mod._render_user_guide(dest)
     assert calls and calls[0][0] == "pandoc" and calls[0][-2:] == ["-t", "latex"]
@@ -109,7 +109,7 @@ def test_user_guide_skipped_without_tectonic(tmp_path, monkeypatch):
 
     monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: _Done())
 
-    def _boom(_tex):
+    def _boom(_tex, _assets=None):
         raise TectonicNotFound("no tectonic")
 
     monkeypatch.setattr(mod, "compile_tex", _boom)

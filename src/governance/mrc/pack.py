@@ -36,7 +36,7 @@ from src.files import extension, upload_path
 # The LaTeX string helpers and the shared house style live in one place now; this
 # module keeps re-exporting _esc/_table/_section for its existing callers.
 from src.governance.latex import (
-    _esc, _section, _table, LOGO_ASSET, logo_asset, preamble, title_page,
+    _esc, _section, _table, LOGO_ASSET, front_matter, logo_asset, preamble,
 )
 
 
@@ -121,7 +121,8 @@ def build_tex(
     org = fields.get("org_name", "")
     return (
         preamble(title, org_name=org) + "\\begin{document}\n"
-        + title_page(title, "MRC Meeting Pack", org_name=org, date=data.get("date", ""), logo=logo)
+        + front_matter(title, "MRC Meeting Pack", "MRC meeting pack generated",
+                       org_name=org, date=data.get("date", ""), logo=logo)
         + info + "\\par\\bigskip\n" +
         participants + agenda + signoffs + models_scope + minutes + decisions + actions + remediation +
         "\\end{document}\n"
