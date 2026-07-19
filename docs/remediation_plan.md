@@ -199,3 +199,7 @@ does **not** carry these PhysicalRisk defects — several were only fixed on
 - Sanity-check every number before acting. In the PhysicalRisk exercise a
   "1 GB" figure turned out to be 15.6 MB packed; measure the real cost before
   spending effort on it.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.
