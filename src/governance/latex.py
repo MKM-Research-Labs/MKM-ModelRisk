@@ -41,11 +41,11 @@ LOGO_ASSET = "logo.png"  # the name the title page references; the caller suppli
 
 
 def logo_asset() -> dict[str, bytes]:
-    """The cover graphic as a ``{name: bytes}`` asset for ``compile_tex``, or empty
-    if it is not on disk — so a missing image degrades to a text-only title page."""
-    from config.paths import FRONT_IMAGE
+    """The MKM logo as a ``{name: bytes}`` asset for ``compile_tex``, or empty if it
+    is not on disk — so a missing image degrades to a text-only title page."""
+    from config.paths import LOGO_IMAGE
     try:
-        return {LOGO_ASSET: FRONT_IMAGE.read_bytes()}
+        return {LOGO_ASSET: LOGO_IMAGE.read_bytes()}
     except OSError:
         return {}
 
@@ -96,7 +96,7 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
                date: str = "", author: str = "", logo: bool = False) -> str:
     """A full title page: optional cover graphic, brand-blue title, subtitle, and the
     org/version/date, closing with a CONFIDENTIAL mark (no proprietary assertion)."""
-    graphic = ("\\includegraphics[height=6cm]{" + LOGO_ASSET + "}\\\\[1.2cm]\n"
+    graphic = ("\\vspace*{1cm}\\includegraphics[width=0.4\\textwidth]{" + LOGO_ASSET + "}\\\\[1.5cm]\n"
                if logo else "\\vspace*{1cm}\n")
     author_line = "{\\large " + _esc(author) + "\\par}\\vspace{0.5cm}\n" if author else ""
     return (

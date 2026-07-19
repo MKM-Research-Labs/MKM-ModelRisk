@@ -36,5 +36,5 @@ MIGRATIONS_DIR = _REPO_ROOT / "src" / "database" / "migrations"
 # Frozen v1 ingest contract schemas, loaded by the ingest validator.
 CONTRACTS_V1_DIR = _REPO_ROOT / "contracts" / "ingest" / "v1"
 
-# Cover graphic embedded on generated PDF title pages (the shared house style).
-FRONT_IMAGE = _REPO_ROOT / "docs" / "shared" / "model_risk_front.png"
+# The MKM logo used as the masthead on generated PDF title pages (house style).
+LOGO_IMAGE = _REPO_ROOT / "docs" / "shared" / "MKM_logo.png"

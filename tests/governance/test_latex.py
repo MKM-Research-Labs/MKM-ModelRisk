@@ -82,6 +82,6 @@ def test_logo_asset_reads_the_cover_when_present():
 
 
 def test_logo_asset_is_empty_when_the_cover_is_missing(monkeypatch):
-    # A missing cover image must degrade to a text-only title page, not raise.
-    monkeypatch.setattr("config.paths.FRONT_IMAGE", Path("/no/such/cover.png"))
+    # A missing logo must degrade to a text-only title page, not raise.
+    monkeypatch.setattr("config.paths.LOGO_IMAGE", Path("/no/such/logo.png"))
     assert logo_asset() == {}
