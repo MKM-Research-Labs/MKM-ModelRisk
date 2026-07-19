@@ -79,16 +79,18 @@ def test_field_lineage_crud_through_the_api(client):
     _declare(client, "A", "B")
     add = client.post(
         "/api/handoffs/A~B/collections/field_lineage",
-        json={"fields": {"name": "spread", "type": "float", "units": "bps"}, "confirmed": True},
+        json={"fields": {"provider_field": "spread", "provider_type": "float",
+                         "consumer_field": "spread_in", "consumer_type": "float"},
+              "confirmed": True},
         headers=HEADERS,
     )
     assert add.status_code == 201
     item = add.get_json()["data"]["field_lineage"][0]
-    assert item["name"] == "spread"
+    assert item["provider_field"] == "spread" and item["consumer_field"] == "spread_in"
 
     client.post(
         f"/api/handoffs/A~B/collections/field_lineage/{item['item_id']}",
-        json={"fields": {"units": "percent"}, "confirmed": True}, headers=HEADERS,
+        json={"fields": {"consumer_units": "percent"}, "confirmed": True}, headers=HEADERS,
     )
     delete = client.post(
         f"/api/handoffs/A~B/collections/field_lineage/{item['item_id']}/delete",

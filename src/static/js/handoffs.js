@@ -21,12 +21,24 @@
 // The handoff editor: the field lineage + compatibility note on one chain edge.
 // Opened from the Model Chain screen. Declaring the handoff is idempotent (POST
 // returns the existing one), so opening an edge that has no handoff yet creates it.
-const FL_FIELDS = [
-  { key: "name", label: "Field", ph: "e.g. prs_spread" },
-  { key: "type", label: "Type", ph: "e.g. float" },
-  { key: "units", label: "Units", ph: "e.g. bps" },
-  { key: "meaning", label: "Meaning", ph: "what it represents" },
+// A field lineage row is a pair: the provider's (giver's) field mapped to the
+// consumer's (receiver's) field, so compatibility is stated field by field.
+const FL_PROVIDER = [
+  { key: "provider_field", label: "Field", ph: "e.g. prs_spread" },
+  { key: "provider_type", label: "Type", ph: "float" },
+  { key: "provider_units", label: "Units", ph: "bps" },
 ];
+const FL_CONSUMER = [
+  { key: "consumer_field", label: "Field", ph: "e.g. spread_in" },
+  { key: "consumer_type", label: "Type", ph: "float" },
+  { key: "consumer_units", label: "Units", ph: "bps" },
+];
+const FL_FIELDS = FL_PROVIDER.concat(FL_CONSUMER, [{ key: "note", label: "Note", ph: "mapping / compatibility" }]);
+
+function _fieldCell(name, type, units) {
+  const sub = [type, units].filter(Boolean).join(" · ");
+  return "<b>" + esc(name || "—") + "</b>" + (sub ? '<br><span class="muted">' + esc(sub) + "</span>" : "");
+}
 
 const Handoffs = {
   _hid: null,
@@ -79,28 +91,37 @@ const Handoffs = {
   _render(h) {
     const d = h.data || {};
     const rows = (d.field_lineage || []).map((f) =>
-      "<tr><td><b>" + esc(f.name) + "</b></td><td>" + esc(f.type || "—") + "</td><td>" +
-      esc(f.units || "—") + "</td><td>" + esc(f.meaning || "—") + "</td>" +
+      "<tr><td>" + _fieldCell(f.provider_field, f.provider_type, f.provider_units) +
+      "</td><td>" + _fieldCell(f.consumer_field, f.consumer_type, f.consumer_units) +
+      "</td><td>" + esc(f.note || "—") + "</td>" +
       '<td><button class="btn small danger" data-fl-rm="' + esc(f.item_id) + '">Remove</button></td></tr>'
-    ).join("") || '<tr><td colspan="5" class="muted">No fields declared yet.</td></tr>';
-    const addCells = FL_FIELDS.map((f) =>
-      '<td><input id="fl-' + f.key + '" placeholder="' + esc(f.ph) + '"></td>').join("");
+    ).join("") || '<tr><td colspan="4" class="muted">No field mappings declared yet.</td></tr>';
+    const side = (specs) => specs.map((f) =>
+      '<div class="field"><label>' + esc(f.label) + "</label>" +
+      '<input id="fl-' + f.key + '" placeholder="' + esc(f.ph) + '"></div>').join("");
     document.getElementById("chain-handoff").innerHTML =
       '<div class="card" style="margin-top:14px">' +
       '<div class="row" style="align-items:center;justify-content:space-between">' +
       "<h3>Handoff &mdash; " + esc(d.from_model) + " &rarr; " + esc(d.to_model) + "</h3>" +
       '<button class="btn small" id="ho-close">Close</button></div>' +
-      '<p class="muted">The fields that cross this edge, and a note on whether the producer\'s ' +
-      "output is compatible with what the consumer expects.</p>" +
+      '<p class="muted">Each row pairs a <b>provider</b> field (' + esc(d.from_model) +
+      ") with the <b>consumer</b> field it feeds (" + esc(d.to_model) +
+      "), so compatibility is stated field by field.</p>" +
       this._signoffPanel(d) +
       '<div class="field" style="max-width:none"><label>Compatibility note</label>' +
       '<textarea id="ho-compat" rows="3">' + esc(d.compatibility || "") + "</textarea>" +
       '<button class="btn small primary" id="ho-compat-save" style="margin-top:6px">Save note</button></div>' +
-      '<div class="section-header">Fields passed</div>' +
-      "<table><thead><tr><th>Field</th><th>Type</th><th>Units</th><th>Meaning</th><th></th></tr></thead>" +
-      "<tbody>" + rows + "</tbody>" +
-      "<tfoot><tr>" + addCells +
-      '<td><button class="btn small primary" id="fl-add">Add field</button></td></tr></tfoot></table></div>';
+      '<div class="section-header">Field lineage</div>' +
+      '<table><thead><tr><th>Provider &mdash; ' + esc(d.from_model) + "</th><th>Consumer &mdash; " +
+      esc(d.to_model) + "</th><th>Mapping / compatibility</th><th></th></tr></thead>" +
+      "<tbody>" + rows + "</tbody></table>" +
+      '<div class="row" style="gap:16px;margin-top:10px;align-items:flex-end">' +
+      '<div><div class="muted" style="font-size:11px;margin-bottom:2px">PROVIDER FIELD</div>' +
+      '<div class="row" style="gap:8px">' + side(FL_PROVIDER) + "</div></div>" +
+      '<div><div class="muted" style="font-size:11px;margin-bottom:2px">CONSUMER FIELD</div>' +
+      '<div class="row" style="gap:8px">' + side(FL_CONSUMER) + "</div></div>" +
+      '<div class="field"><label>Note</label><input id="fl-note" placeholder="mapping / compatibility"></div>' +
+      '<button class="btn small primary" id="fl-add">Add mapping</button></div></div>';
     this._bind();
   },
 

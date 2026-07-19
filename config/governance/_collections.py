@@ -126,13 +126,18 @@ COLLECTION_SPECS = {
         {"key": "note", "label": "Note", "type": "text"},
     ]},
     # The field lineage of a model-to-model handoff: one item per field that
-    # crosses the edge. Lives on a ModelHandoff aggregate, not a model — the
-    # handoff is the thing the MRC reviews for compatibility.
-    "field_lineage": {"label": "Fields passed", "id_prefix": "FL", "fields": [
-        {"key": "name", "label": "Field", "type": "text", "required": True},
-        {"key": "type", "label": "Type", "type": "text"},
-        {"key": "units", "label": "Units", "type": "text"},
-        {"key": "meaning", "label": "Meaning", "type": "text"},
+    # crosses the edge, stated as a *pair* — the provider's (giver's) field mapped
+    # to the consumer's (receiver's) field, so the interoperability template's
+    # provider→consumer handover is captured field by field. Lives on a
+    # ModelHandoff aggregate, not a model — the handoff is what the MRC reviews.
+    "field_lineage": {"label": "Field lineage", "id_prefix": "FL", "fields": [
+        {"key": "provider_field", "label": "Provider field", "type": "text", "required": True},
+        {"key": "provider_type", "label": "Provider type", "type": "text"},
+        {"key": "provider_units", "label": "Provider units", "type": "text"},
+        {"key": "consumer_field", "label": "Consumer field", "type": "text", "required": True},
+        {"key": "consumer_type", "label": "Consumer type", "type": "text"},
+        {"key": "consumer_units", "label": "Consumer units", "type": "text"},
+        {"key": "note", "label": "Mapping / compatibility note", "type": "text"},
     ]},
     # W4c — audit of the decisions the MRC took. One entry per decision; each
     # records what was decided, which meeting rubber-stamped it, and — for a

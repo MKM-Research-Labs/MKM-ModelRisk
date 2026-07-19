@@ -158,28 +158,32 @@ def test_declaring_the_same_edge_twice_is_refused():
         declare_handoff(from_model="A", to_model="B", actor="alice")
 
 
-def test_field_lineage_and_prose_ride_the_handoff():
+def test_field_lineage_pairs_provider_and_consumer_fields():
     _edge("A", "B")
     declare_handoff(from_model="A", to_model="B", actor="alice")
     hid = handoff_id("A", "B")
     update_handoff_field(handoff_id=hid, field="compatibility", value="units aligned", actor="alice")
     add_collection_item(
         handoff_id=hid, collection=FL,
-        fields={"name": "spread", "type": "float", "units": "bps"}, actor="alice",
+        fields={"provider_field": "spread", "provider_units": "bps",
+                "consumer_field": "spread_in", "consumer_units": "bps"}, actor="alice",
     )
     rebuild_handoff_view()
     doc = get_handoff_for_edge("A", "B")["data"]
     assert doc["compatibility"] == "units aligned"
-    assert doc[FL][0]["name"] == "spread" and doc[FL][0]["item_id"] == "FL-001"
+    item = doc[FL][0]
+    assert item["provider_field"] == "spread" and item["consumer_field"] == "spread_in"
+    assert item["item_id"] == "FL-001"
 
 
-def test_field_lineage_requires_a_field_name():
+def test_field_lineage_requires_both_sides():
     _edge("A", "B")
     declare_handoff(from_model="A", to_model="B", actor="alice")
     with pytest.raises(DomainError, match="required"):
+        # a provider field with no consumer field it maps to is incomplete
         add_collection_item(
             handoff_id=handoff_id("A", "B"), collection=FL,
-            fields={"type": "float"}, actor="alice",
+            fields={"provider_field": "spread"}, actor="alice",
         )
 
 
