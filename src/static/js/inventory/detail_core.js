@@ -108,6 +108,7 @@ const Detail = {
     const tabs = [
       ["overview", "Overview", null], ["remediation_steps", "Remediation", n("remediation_steps")],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
+      ["dependencies", "Dependencies", n("dependencies")],
       ["validation_questions", "Validation & Assumptions", cov],
       ["testing", "Testing", tst],
       ["operational_failure_events", "Events", n("operational_failure_events")],

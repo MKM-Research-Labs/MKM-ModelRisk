@@ -28,9 +28,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import DEFAULT_VQ_STATUS, SR262_QUESTIONS
+from config.governance import DEFAULT_VQ_STATUS, DEPENDENCIES_COLLECTION, SR262_QUESTIONS
 from src.database import Event, append_event, read_stream
 from src.governance import collections as coll
+from src.governance.errors import DomainError
+from src.governance.graph import has_cycle, self_loops
 from src.governance.model_inventory._rules import (
     decide_add_item,
     decide_reactivate,
@@ -138,6 +140,45 @@ def reactivate_model(
     return _record(model_id, decision, version, actor, reason, config)
 
 
+def _guard_dependency(model_id: str, new_state: ModelState, config) -> None:
+    """Cross-model invariants for a declared dependency — a cross-aggregate check
+    the pure rules cannot see. The related model must exist, a model may not depend
+    on itself, and the edge must not close a cycle in the whole derived chain."""
+    # Imported here (not at module load) because the derivation reads the
+    # inventory projection, which imports this module — a top-level import would
+    # be circular.
+    from src.governance.model_inventory.chain import edges_for_model
+    from src.governance.model_inventory.projection import get_model, list_models
+
+    items = new_state.collections.get(DEPENDENCIES_COLLECTION, ())
+    for item in items:
+        related = item.get("model_id")
+        if related and get_model(related, config=config) is None:
+            raise DomainError(f"unknown related model: {related}")
+    this_edges = edges_for_model(model_id, items)
+    if self_loops(this_edges):
+        raise DomainError("a model cannot depend on itself")
+    other_edges = [
+        edge
+        for other in list_models(config=config)
+        if other["model_id"] != model_id
+        for edge in edges_for_model(
+            other["model_id"],
+            other.get("data", {}).get(DEPENDENCIES_COLLECTION, []) or [],
+        )
+    ]
+    if has_cycle(this_edges + other_edges):
+        raise DomainError("declaring this dependency would create a cycle in the model chain")
+
+
+def _guard_if_dependency(
+    model_id: str, state: ModelState, decision: tuple[str, dict[str, Any]],
+    collection: str, config,
+) -> None:
+    if collection == DEPENDENCIES_COLLECTION:
+        _guard_dependency(model_id, apply(state, decision[0], decision[1]), config)
+
+
 def add_collection_item(
     *, model_id: str, collection: str, fields: dict[str, Any], actor: str,
     reason: str | None = None, config=None,
@@ -145,6 +186,7 @@ def add_collection_item(
     """Add an item to a structured collection (assumptions, limitations, …)."""
     state, version = _load(model_id, config)
     decision = decide_add_item(state, collection=collection, fields=fields)
+    _guard_if_dependency(model_id, state, decision, collection, config)
     return _record(model_id, decision, version, actor, reason, config)
 
 
@@ -157,6 +199,7 @@ def update_collection_item(
     decision = decide_update_item(
         state, collection=collection, item_id=item_id, fields=fields
     )
+    _guard_if_dependency(model_id, state, decision, collection, config)
     return _record(model_id, decision, version, actor, reason, config)
 
 

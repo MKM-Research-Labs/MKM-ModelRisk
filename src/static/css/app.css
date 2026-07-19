@@ -180,3 +180,7 @@ textarea { box-sizing: border-box; }
 .heatmap tbody th { text-align: right; width: 70px; white-space: nowrap; }
 .heatmap thead th:first-child { width: 70px; }
 .heatmap td.hcell { width: 90px; height: 60px; text-align: center; vertical-align: middle; border-radius: 6px; font-size: 12px; font-weight: 600; }
+
+/* Model Chain ("string of pearls") */
+.chain-canvas { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #fff; }
+.chain-swatch { display: inline-block; width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid; vertical-align: -2px; margin-right: 4px; }

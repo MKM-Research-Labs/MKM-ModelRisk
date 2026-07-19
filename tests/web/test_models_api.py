@@ -31,6 +31,14 @@ def _register(client, model_id="M1", name="Alpha", **fields):
     )
 
 
+def _declare_dep(client, model_id, direction, related):
+    return client.post(
+        f"/api/models/{model_id}/collections/dependencies",
+        json={"fields": {"direction": direction, "model_id": related}, "confirmed": True},
+        headers=HEADERS,
+    )
+
+
 def test_register_then_list_and_get(client):
     response = _register(client, tier=2, owner="bob")
     assert response.status_code == 201
@@ -46,6 +54,24 @@ def test_register_then_list_and_get(client):
 
 def test_get_unknown_model_is_404(client):
     assert client.get("/api/models/none").status_code == 404
+
+
+def test_chain_derives_the_string_of_pearls_from_declared_dependencies(client):
+    _register(client, model_id="A", name="Storm")
+    _register(client, model_id="B", name="Pricer")
+    assert _declare_dep(client, "A", "downstream", "B").status_code == 201
+    chain = client.get("/api/models/chain").get_json()
+    assert {n["model_id"] for n in chain["nodes"]} == {"A", "B"}
+    assert chain["links"] == [{"from": "A", "to": "B"}]
+
+
+def test_chain_refuses_a_dependency_that_would_form_a_cycle(client):
+    _register(client, model_id="A", name="Storm")
+    _register(client, model_id="B", name="Pricer")
+    _declare_dep(client, "A", "downstream", "B")  # A -> B
+    cycle = _declare_dep(client, "B", "downstream", "A")  # B -> A closes the loop
+    assert cycle.status_code == 400
+    assert "cycle" in cycle.get_json()["error"]
 
 
 def test_register_seeds_sr262_validation_questions(client):

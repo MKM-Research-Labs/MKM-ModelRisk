@@ -29,6 +29,10 @@ VALID_VQ_STATUSES = (
     "Addressed", "Partially Addressed", "Not Addressed", "Not Applicable",
 )
 VALID_DEPENDENCY_DIRECTIONS = ("upstream", "downstream")
+# The per-model collection of declared model-to-model dependencies. Named once so
+# the derivation (which reads it to build the 'string of pearls') and the
+# declaration-time acyclicity guard agree on the key.
+DEPENDENCIES_COLLECTION = "dependencies"
 # A version's place in the development lifecycle. "New" = a fresh version just
 # cut; "Being Enhanced" = active development against it; "No New Development" =
 # stable, still in use but frozen; "Marked for Removal" = scheduled to retire.

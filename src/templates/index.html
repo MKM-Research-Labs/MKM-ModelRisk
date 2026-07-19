@@ -25,6 +25,7 @@
   <nav class="tabs">
     <button class="tab" data-tab="mrc">MRC</button>
     <button class="tab active" data-tab="inventory">Models</button>
+    <button class="tab" data-tab="chain">Model Chain</button>
     <button class="tab" data-tab="product">Products</button>
     <button class="tab" data-tab="audit">Audit Trail</button>
     <button class="tab" data-tab="documents">Documents</button>
@@ -38,6 +39,7 @@
          tabs. It lives outside the panels so switching tabs never rebuilds it. -->
     <div id="region-nav" style="display:none"></div>
     <section id="tab-inventory" class="panel active"></section>
+    <section id="tab-chain" class="panel"></section>
     <section id="tab-product" class="panel"></section>
     <section id="tab-mrc" class="panel"></section>
     <section id="tab-documents" class="panel"></section>
@@ -128,6 +130,7 @@
   <script src="{{ url_for('static', filename='js/inventory/detail_core.js') }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/detail_overview.js') }}"></script>
   <script src="{{ url_for('static', filename='js/inventory_collections.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/chain.js') }}"></script>
   <script src="{{ url_for('static', filename='js/model_docs.js') }}"></script>
   <script src="{{ url_for('static', filename='js/doc_panel.js') }}"></script>
   <script src="{{ url_for('static', filename='js/product.js') }}"></script>

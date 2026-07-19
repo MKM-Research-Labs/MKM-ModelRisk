@@ -35,6 +35,7 @@ from jsonschema import Draft202012Validator
 
 from config.ingest import INGEST_ARTIFACTS
 from config.paths import CONTRACTS_V1_DIR
+from src.governance.graph import has_cycle, self_loops
 
 _ENVELOPE_SCHEMA = "envelope.schema.json"
 
@@ -103,24 +104,8 @@ def _check_model_chain(payload: dict[str, Any]) -> list[str]:
     """
     edges = [(l.get("from"), l.get("to")) for l in payload.get("links", [])]
     errors = [f"link {a} -> {b}: a model cannot depend on itself"
-              for a, b in edges if a == b]
-    # Topological check: repeatedly strip nodes with no incoming edges. Whatever
-    # remains sits on a cycle.
-    nodes = {n for edge in edges for n in edge}
-    incoming = {n: 0 for n in nodes}
-    for _, b in edges:
-        incoming[b] += 1
-    ready = [n for n in nodes if incoming[n] == 0]
-    seen = 0
-    while ready:
-        node = ready.pop()
-        seen += 1
-        for a, b in edges:
-            if a == node:
-                incoming[b] -= 1
-                if incoming[b] == 0:
-                    ready.append(b)
-    if seen != len(nodes):
+              for a, b in self_loops(edges)]
+    if has_cycle(edges):
         errors.append("the model chain has a cycle — the dependency graph must be acyclic")
     return errors
 

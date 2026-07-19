@@ -35,6 +35,7 @@ from src.governance.mrc_settings import get_settings
 from src.command import dispatch
 from src.governance.model_inventory import (
     add_collection_item,
+    derive_chain,
     get_model,
     list_models,
     rebuild_inventory_view,
@@ -159,6 +160,12 @@ def delete_document(model_id: str, item_id: str):
 @models_bp.get("")
 def list_all():
     return jsonify(list_models())
+
+
+@models_bp.get("/chain")
+def model_chain():
+    """The 'string of pearls' derived from every model's declared dependencies."""
+    return jsonify(derive_chain())
 
 
 @models_bp.get("/risk-report.pdf")
