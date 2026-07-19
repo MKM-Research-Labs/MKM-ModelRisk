@@ -39,6 +39,14 @@ from src.governance.model_inventory import (
     update_collection_item as _model_update,
     update_model_field,
 )
+from src.governance.model_handoff import (
+    add_collection_item as _handoff_add,
+    get_handoff,
+    list_handoffs,
+    rebuild_handoff_view,
+    update_collection_item as _handoff_update,
+    update_handoff_field,
+)
 from src.governance.product import (
     add_collection_item as _product_add,
     get_product,
@@ -125,7 +133,15 @@ PRODUCT_SUBJECT = Subject(
     field_cmd=update_product_field, rebuild=rebuild_product_view, id_kwarg="product_id",
     retire_cmd=retire_product,
 )
-SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT)
+# A handoff goes to the committee to have its compatibility ratified. It is never
+# retired/reactivated (those belong to the models it connects), so it carries
+# neither command — ``supports`` then keeps the committee from being offered them.
+HANDOFF_SUBJECT = Subject(
+    kind="handoff", agenda_id_field="subject_handoff_id", id_key="handoff_id",
+    get=get_handoff, list_all=list_handoffs, add_cmd=_handoff_add, update_cmd=_handoff_update,
+    field_cmd=update_handoff_field, rebuild=rebuild_handoff_view, id_kwarg="handoff_id",
+)
+SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT, HANDOFF_SUBJECT)
 
 
 def subject_for_agenda_item(item: dict) -> tuple[Subject | None, str | None]:

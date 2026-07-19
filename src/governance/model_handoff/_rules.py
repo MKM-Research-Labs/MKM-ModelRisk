@@ -37,10 +37,15 @@ from src.governance.model_handoff._state import (
     HandoffState,
 )
 
-STATUS_DRAFT = "Draft"
-# The prose fields an owner edits directly. ``compatibility`` is a single free-text
-# note for now; Phase B.2 expands it into the structured compatibility analysis.
-EDITABLE_FIELDS = ("data_handoff", "compatibility")
+# The fields a scalar update may set. The two prose fields are owner-edited (the
+# owner-facing HTTP route further restricts to these); the sign-off stamp and next
+# review are set by the committee through the sign-off Subject on ratification.
+# ``compatibility`` is a single free-text note for now; Phase B.2 expands it into
+# the structured compatibility analysis.
+SETTABLE_FIELDS = (
+    "data_handoff", "compatibility",
+    "mrc_signoff_date", "mrc_signoff_meeting", "next_review_date",
+)
 
 
 def decide_declare(
@@ -54,7 +59,7 @@ def decide_declare(
         raise DomainError("a handoff cannot loop a model to itself")
     return EVENT_DECLARED, {
         "from_model": from_model, "to_model": to_model,
-        "data_handoff": "", "compatibility": "", "status": STATUS_DRAFT,
+        "data_handoff": "", "compatibility": "",
     }
 
 
@@ -63,8 +68,8 @@ def decide_update_field(
 ) -> tuple[str, dict[str, Any]]:
     if not state.exists:
         raise DomainError("handoff does not exist")
-    if field not in EDITABLE_FIELDS:
-        raise DomainError(f"field not editable: {field}")
+    if field not in SETTABLE_FIELDS:
+        raise DomainError(f"field not settable: {field}")
     return EVENT_FIELD_UPDATED, {"field": field, "value": value}
 
 

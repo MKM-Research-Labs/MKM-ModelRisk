@@ -107,6 +107,9 @@ MRC_COLLECTION_SPECS = {
         {"key": "subject_model_id", "label": "Subject model",
          "type": "text", "reference": "model_inventory", "hidden": True},
         {"key": "subject_product_id", "label": "Subject product", "type": "text", "hidden": True},
+        # A "handoff" sign-off item links back to the model-to-model handoff
+        # ("from~to") the committee is being asked to approve. Set by the routing.
+        {"key": "subject_handoff_id", "label": "Subject handoff", "type": "text", "hidden": True},
         {"key": "signoff_kind", "label": "Sign-off kind", "type": "choice",
          "options": VALID_SIGNOFF_KINDS, "hidden": True},
         {"key": "proposed_rag", "label": "Proposed RAG",
@@ -128,6 +131,7 @@ MRC_COLLECTION_SPECS = {
         {"key": "presenter", "label": "Presenter", "type": "text"},
         {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
         {"key": "product_id", "label": "Product", "type": "text"},
+        {"key": "handoff_id", "label": "Handoff", "type": "text"},
         {"key": "text", "label": "Minutes", "type": "textarea"},
         # The agenda item this minute is filed under, so the Minutes tab reads as
         # a walk-through of the agenda. Blank = general/unfiled. Hidden.

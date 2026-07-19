@@ -56,6 +56,12 @@ def _minute_text(signoff_kind: str, subject, subject_id: str, owner_bit: str,
             f"{owner_bit} and has ratified it. The {subject.kind} returns to the "
             f"active inventory.",
         )
+    if signoff_kind == "handoff":
+        return (
+            f"Handoff compatibility approved — {subject_id}",
+            f"MRC has reviewed the field lineage and compatibility of the model "
+            f"handoff {subject_id}{owner_bit} and has approved it as compatible.",
+        )
     return (
         f"Sign-off approved — {subject_id}",
         f"MRC has reviewed the sign-off request from the {subject.kind} owner"
@@ -145,8 +151,10 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
             subject.retire(ctx, subject_id)
         elif signoff_kind == "reactivate":
             subject.reactivate(ctx, subject_id)
-        else:
+        elif signoff_kind == "rag":
             subject.set_field(ctx, subject_id, "rag_rating", proposed_rag)
+        # "handoff" carries no field to snap — approving it is recorded by the
+        # MRC sign-off stamp below, which is what makes the handoff "Approved".
     history_fields = {"kind": signoff_kind, "meeting_id": meeting_id, "outcome": outcome}
     # The rating fields only mean anything for a rating decision.
     if signoff_kind == "rag":
@@ -169,7 +177,7 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
     # from); a retire/reactivate is not a rating sign-off, so it leaves the stamp
     # alone — but every ratified decision is minuted.
     if approved:
-        if signoff_kind == "rag":
+        if signoff_kind in ("rag", "handoff"):
             if meeting_date:
                 subject.set_field(ctx, subject_id, "mrc_signoff_date", meeting_date)
             subject.set_field(ctx, subject_id, "mrc_signoff_meeting", meeting_id)

@@ -54,6 +54,28 @@ const Handoffs = {
     this._render(await App.get("/api/handoffs/" + encodeURIComponent(this._hid)));
   },
 
+  _signoffPanel(d) {
+    const status = d.status || "Draft";
+    if (status === "Approved") {
+      return '<div class="dz-row" style="border:1px solid #388e3c;background:#e8f5e9;padding:10px 14px;border-radius:6px;margin:8px 0">' +
+        '<div class="dz-text"><b>MRC compatibility sign-off — approved</b>' +
+        '<p class="muted">Ratified at ' + esc(d.mrc_signoff_meeting || "a meeting") +
+        (d.mrc_signoff_date ? " (" + esc(d.mrc_signoff_date) + ")" : "") +
+        ". Editing the field lineage or note does not currently re-open sign-off.</p></div></div>";
+    }
+    if (status === "Pending sign-off") {
+      return '<div class="dz-row" style="border:1px solid #f57c00;background:#fff8e1;padding:10px 14px;border-radius:6px;margin:8px 0">' +
+        '<div class="dz-text"><b>Pending MRC sign-off</b>' +
+        '<p class="muted">Queued for the consumer model\'s committee — it will be taken at that ' +
+        "committee's next scheduled meeting.</p></div></div>";
+    }
+    return '<div class="dz-row" style="border:1px solid var(--line);padding:10px 14px;border-radius:6px;margin:8px 0">' +
+      '<div class="dz-text"><b>Not yet submitted for sign-off</b>' +
+      '<p class="muted">When the field lineage and compatibility note are ready, ask the MRC to ' +
+      "ratify the handoff's compatibility.</p></div>" +
+      '<div class="dz-action"><button class="btn small primary" id="ho-request">Request MRC sign-off&hellip;</button></div></div>';
+  },
+
   _render(h) {
     const d = h.data || {};
     const rows = (d.field_lineage || []).map((f) =>
@@ -69,8 +91,8 @@ const Handoffs = {
       "<h3>Handoff &mdash; " + esc(d.from_model) + " &rarr; " + esc(d.to_model) + "</h3>" +
       '<button class="btn small" id="ho-close">Close</button></div>' +
       '<p class="muted">The fields that cross this edge, and a note on whether the producer\'s ' +
-      "output is compatible with what the consumer expects. Compatibility sign-off by the MRC " +
-      "comes next (Phase B.2).</p>" +
+      "output is compatible with what the consumer expects.</p>" +
+      this._signoffPanel(d) +
       '<div class="field" style="max-width:none"><label>Compatibility note</label>' +
       '<textarea id="ho-compat" rows="3">' + esc(d.compatibility || "") + "</textarea>" +
       '<button class="btn small primary" id="ho-compat-save" style="margin-top:6px">Save note</button></div>' +
@@ -84,6 +106,11 @@ const Handoffs = {
 
   _bind() {
     document.getElementById("ho-close").onclick = () => this.close();
+    const request = document.getElementById("ho-request");
+    if (request) request.onclick = async () => {
+      await App.send("POST", "/api/handoffs/" + encodeURIComponent(this._hid) + "/request-signoff", {});
+      this._reload();
+    };
     document.getElementById("ho-compat-save").onclick = async () => {
       await App.send("POST", "/api/handoffs/" + encodeURIComponent(this._hid) + "/field",
         { field: "compatibility", value: val("ho-compat") });

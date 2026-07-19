@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify
 
+from config.governance import SIGNOFF_REQUESTS_COLLECTION
 from src.command import dispatch
 from src.governance.model_handoff import (
     add_collection_item,
@@ -40,14 +41,40 @@ from src.governance.model_handoff import (
     update_collection_item,
     update_handoff_field,
 )
+from src.governance.model_inventory import get_model
+from src.governance.mrc import matching_mrc
+from src.governance.reference import get_reference_lists
 from src.web._helpers import context_from_request, json_body
+from src.web._signoff_routing import HANDOFF_SUBJECT, raise_signoff
 
 handoffs_bp = Blueprint("handoffs", __name__, url_prefix="/api/handoffs")
+
+# The owner edits only the prose. The sign-off stamp and review date are set by
+# the committee through the sign-off flow, never this route — so a handoff cannot
+# be marked approved by editing it directly.
+OWNER_FIELDS = ("data_handoff", "compatibility")
+
+
+def _status(data: dict) -> str:
+    """Derived lifecycle: approved once the MRC has stamped it, pending while a
+    request is in the queue, else a draft the owner is still filling in."""
+    if data.get("mrc_signoff_meeting"):
+        return "Approved"
+    active = [r for r in (data.get(SIGNOFF_REQUESTS_COLLECTION) or [])
+              if r.get("status") in ("Pending", "Attached")]
+    return "Pending sign-off" if active else "Draft"
+
+
+def _decorate(handoff: dict) -> dict:
+    """Add the derived status to a handoff document (read-side only). Callers only
+    ever pass a handoff that exists (a missing one is a 404 before this point)."""
+    handoff["data"]["status"] = _status(handoff["data"] or {})
+    return handoff
 
 
 @handoffs_bp.get("")
 def list_all():
-    return jsonify(list_handoffs())
+    return jsonify([_decorate(h) for h in list_handoffs()])
 
 
 @handoffs_bp.post("")
@@ -57,11 +84,11 @@ def declare():
     from_model, to_model = body.get("from_model"), body.get("to_model")
     existing = get_handoff_for_edge(from_model, to_model)
     if existing is not None:
-        return jsonify(existing), 200
+        return jsonify(_decorate(existing)), 200
     dispatch("declare_handoff", declare_handoff, context=context_from_request(body),
              from_model=from_model, to_model=to_model)
     rebuild_handoff_view()
-    return jsonify(get_handoff_for_edge(from_model, to_model)), 201
+    return jsonify(_decorate(get_handoff_for_edge(from_model, to_model))), 201
 
 
 @handoffs_bp.get("/<hid>")
@@ -69,16 +96,42 @@ def get_one(hid: str):
     handoff = get_handoff(hid)
     if handoff is None:
         return jsonify({"error": "handoff not found"}), 404
-    return jsonify(handoff)
+    return jsonify(_decorate(handoff))
 
 
 @handoffs_bp.post("/<hid>/field")
 def update_field(hid: str):
     body = json_body()
+    field = body.get("field")
+    if field not in OWNER_FIELDS:
+        return jsonify({"error": f"field not editable: {field}"}), 400
     dispatch("update_handoff_field", update_handoff_field, context=context_from_request(body),
-             handoff_id=hid, field=body.get("field"), value=body.get("value"))
+             handoff_id=hid, field=field, value=body.get("value"))
     rebuild_handoff_view()
-    return jsonify(get_handoff(hid))
+    return jsonify(_decorate(get_handoff(hid)))
+
+
+@handoffs_bp.post("/<hid>/request-signoff")
+def request_signoff(hid: str):
+    """The owner asks the MRC to ratify this handoff's compatibility. It is routed
+    to the committee responsible for the *consumer* model (the one relying on the
+    handoff) and queued; attached immediately if a meeting of that MRC is scheduled."""
+    handoff = get_handoff(hid)
+    if handoff is None:
+        return jsonify({"error": "handoff not found"}), 404
+    # The edge constraint guarantees the consumer was a registered model when the
+    # handoff was declared, and retiring never removes it from the inventory — so
+    # get_model here always resolves.
+    consumer = get_model((handoff["data"] or {}).get("to_model"))
+    data = consumer["data"] or {}
+    mrc, _level = matching_mrc(data.get("division"), data.get("department"), get_reference_lists())
+    if mrc is None:
+        return jsonify({"error": "no MRC committee covers the consumer model's "
+                                 "division/department — configure one under Admin → MRC first"}), 400
+    body = json_body()
+    raise_signoff(context_from_request(body), HANDOFF_SUBJECT, hid,
+                  kind="handoff", target_mrc=mrc["value"], note=body.get("note"))
+    return jsonify(_decorate(get_handoff(hid))), 201
 
 
 @handoffs_bp.post("/<hid>/collections/<collection>")
@@ -87,7 +140,7 @@ def add_item(hid: str, collection: str):
     dispatch("add_collection_item", add_collection_item, context=context_from_request(body),
              handoff_id=hid, collection=collection, fields=body.get("fields") or {})
     rebuild_handoff_view()
-    return jsonify(get_handoff(hid)), 201
+    return jsonify(_decorate(get_handoff(hid))), 201
 
 
 @handoffs_bp.post("/<hid>/collections/<collection>/<item_id>")
@@ -96,7 +149,7 @@ def update_item(hid: str, collection: str, item_id: str):
     dispatch("update_collection_item", update_collection_item, context=context_from_request(body),
              handoff_id=hid, collection=collection, item_id=item_id, fields=body.get("fields") or {})
     rebuild_handoff_view()
-    return jsonify(get_handoff(hid))
+    return jsonify(_decorate(get_handoff(hid)))
 
 
 @handoffs_bp.post("/<hid>/collections/<collection>/<item_id>/delete")
@@ -105,4 +158,4 @@ def delete_item(hid: str, collection: str, item_id: str):
     dispatch("remove_collection_item", remove_collection_item, context=context_from_request(body),
              handoff_id=hid, collection=collection, item_id=item_id)
     rebuild_handoff_view()
-    return jsonify(get_handoff(hid))
+    return jsonify(_decorate(get_handoff(hid)))

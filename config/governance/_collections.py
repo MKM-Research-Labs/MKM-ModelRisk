@@ -51,7 +51,7 @@ VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Rejected", 
 # so a committee has a single approvals list rather than one per decision type.
 # "rag" proposes a new risk rating; "retire" hibernates the subject (it drops out
 # of the active inventory); "reactivate" brings a hibernated subject back.
-VALID_SIGNOFF_KINDS = ("rag", "retire", "reactivate")
+VALID_SIGNOFF_KINDS = ("rag", "retire", "reactivate", "handoff")
 # Named once so the domain rules and the routing agree on it. A hibernated
 # subject is read-only *except* for this queue: a reactivate request has to be
 # raised on the very subject it would bring back, so exempting it is what keeps

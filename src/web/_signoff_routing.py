@@ -41,6 +41,7 @@ from src.command import CommandContext, dispatch
 # whole sign-off flow — re-exported so call sites import the routing and its
 # subjects from one place.
 from src.web._signoff_subject import (  # noqa: F401
+    HANDOFF_SUBJECT,
     MODEL_SUBJECT,
     PRODUCT_SUBJECT,
     SUBJECTS,
@@ -134,6 +135,8 @@ def agenda_title(signoff_kind: str, subject_id: str, proposed_rag: str | None) -
         return f"Retire (hibernate): {subject_id}"
     if signoff_kind == "reactivate":
         return f"Reactivate: {subject_id}"
+    if signoff_kind == "handoff":
+        return f"Handoff compatibility sign-off: {subject_id}"
     return f"Risk rating sign-off: {subject_id} → {proposed_rag}"
 
 

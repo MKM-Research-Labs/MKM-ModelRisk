@@ -69,10 +69,11 @@ def _edge(from_model, to_model):
 
 # --- pure ---
 
-def test_decide_declare_sets_endpoints_and_draft_status():
+def test_decide_declare_sets_endpoints():
     _, payload = decide_declare(initial_state(), from_model="A", to_model="B")
     assert payload["from_model"] == "A" and payload["to_model"] == "B"
-    assert payload["status"] == "Draft"
+    # A fresh handoff carries no MRC sign-off stamp — its status is derived as Draft.
+    assert "mrc_signoff_meeting" not in payload
 
 
 def test_decide_declare_rejects_self_edge():
@@ -125,7 +126,7 @@ def test_declare_on_a_real_edge_then_project():
     rebuild_handoff_view()
     doc = get_handoff_for_edge("A", "B")["data"]
     assert doc["from_model"] == "A" and doc["to_model"] == "B"
-    assert doc["status"] == "Draft"
+    assert not doc.get("mrc_signoff_meeting")  # not yet signed off
 
 
 def test_declare_on_a_missing_edge_is_refused():
