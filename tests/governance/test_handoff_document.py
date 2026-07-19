@@ -38,7 +38,7 @@ def _handoff(**data):
 def test_document_has_title_and_endpoints():
     tex = build_handover_tex(_handoff(), None, None, AS_OF)
     assert "Model Interoperability Validation" in tex
-    assert "A $\\rightarrow$ B" in tex
+    assert "A to B handover" in tex
 
 
 def test_all_template_sections_are_present():

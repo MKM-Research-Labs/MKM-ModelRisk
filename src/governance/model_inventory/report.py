@@ -23,7 +23,7 @@ from __future__ import annotations
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import pack
-from src.governance.mrc.pack import _esc, _table
+from src.governance.latex import _table, preamble, title_block
 
 
 def build_report_tex(models: list, settings: dict, as_of: str) -> str:
@@ -42,23 +42,16 @@ def build_report_tex(models: list, settings: dict, as_of: str) -> str:
             f"{addressed}/{len(questions)}", rating,
             compute_review_status(data.get("next_review_date"), as_of),
         ])
-    header = ""
-    if fields.get("org_name"):
-        header = "{\\large\\textbf{" + _esc(fields["org_name"]) + "}}\\\\\n"
     summary = (f"Models: {len(models)} \\quad Acceptable: {counts['Acceptable']} "
                f"\\quad Conditional: {counts['Conditional']} "
                f"\\quad Unacceptable: {counts['Unacceptable']}")
     return (
-        "\\documentclass[11pt]{article}\n"
-        "\\usepackage[a4paper,margin=20mm]{geometry}\n"
-        "\\usepackage{longtable}\\usepackage{array}\\usepackage{xcolor}\\usepackage{parskip}\n"
-        "\\begin{document}\n\\begin{center}\n" + header +
-        "{\\Large\\textbf{Model Risk Report}}\\\\[2pt]\n"
-        "{\\small Status for the Model Risk Committee --- as of " + _esc(as_of) + "}\\\\[6pt]\n"
-        + summary + "\\end{center}\\bigskip\n" +
-        _table(["Model", "Name", "Tier", "RAG", "Validation", "Risk", "Review"], rows) +
-        "\\vfill\\begin{center}\\small\\textcolor{gray}{" +
-        _esc(fields.get("framework", "")) + "}\\end{center}\n\\end{document}\n"
+        preamble("Model Risk Report", org_name=fields.get("org_name", ""))
+        + "\\begin{document}\n"
+        + title_block("Model Risk Report", "Status for the Model Risk Committee", date=as_of)
+        + "\\begin{center}" + summary + "\\end{center}\\bigskip\n"
+        + _table(["Model", "Name", "Tier", "RAG", "Validation", "Risk", "Review"], rows)
+        + "\\end{document}\n"
     )
 
 

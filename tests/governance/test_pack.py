@@ -26,6 +26,7 @@ import shutil
 import pytest
 
 from src.files import save_upload
+from src.governance.latex import LOGO_ASSET
 from src.governance.mrc.pack import (
     TectonicNotFound, build_tex, compile_tex, render_pack_pdf)
 
@@ -48,13 +49,11 @@ MEETING = {
 
 
 def test_build_tex_includes_logo_org_and_sections():
-    tex = build_tex(
-        MEETING,
-        {"fields": {"org_name": "MKM Labs", "org_address": "1 Risk Lane", "framework": "FW"}},
-        "logo.png",
-    )
+    tex = build_tex(MEETING, {"fields": {"org_name": "MKM Labs"}}, logo=True)
+    # The house style: a cover graphic on the title page, the org in the running
+    # header, and CONFIDENTIAL marking — no proprietary assertion.
     assert "\\includegraphics" in tex and "logo.png" in tex
-    assert "MKM Labs" in tex and "1 Risk Lane" in tex and "Q2 MRC" in tex
+    assert "MKM Labs" in tex and "Q2 MRC" in tex and "CONFIDENTIAL" in tex
     for section in ("Participants", "Agenda", "Minutes", "Decisions", "Actions"):
         assert section in tex
     assert tex.strip().endswith("\\end{document}")
@@ -95,10 +94,11 @@ def _stub_compile(monkeypatch):
     return captured
 
 
-def test_render_without_logo(monkeypatch):
+def test_render_falls_back_to_the_shared_cover(monkeypatch):
+    # With no uploaded org logo, the title-page cover is the shared front graphic.
     captured = _stub_compile(monkeypatch)
     assert render_pack_pdf(MEETING, {"fields": {}, "logo": None}) == b"%PDF-stub"
-    assert captured["assets"] == {}
+    assert LOGO_ASSET in captured["assets"]
 
 
 def test_render_embeds_uploaded_logo(monkeypatch):
@@ -106,21 +106,21 @@ def test_render_embeds_uploaded_logo(monkeypatch):
     save_upload("mrc", "logo.png", PNG)
     settings = {"fields": {}, "logo": {"filename": "logo.png", "original_name": "logo.png"}}
     render_pack_pdf(MEETING, settings)
-    assert "logo.png" in captured["assets"]
+    assert captured["assets"][LOGO_ASSET] == PNG  # the uploaded logo overrides the cover
 
 
-def test_render_skips_missing_logo_file(monkeypatch):
+def test_render_uses_cover_when_uploaded_logo_missing(monkeypatch):
     captured = _stub_compile(monkeypatch)
     settings = {"fields": {}, "logo": {"filename": "gone.png", "original_name": "gone.png"}}
     render_pack_pdf(MEETING, settings)
-    assert captured["assets"] == {}
+    assert LOGO_ASSET in captured["assets"]  # falls back to the shared cover
 
 
-def test_render_skips_non_image_logo(monkeypatch):
+def test_render_uses_cover_when_logo_is_non_image(monkeypatch):
     captured = _stub_compile(monkeypatch)
     settings = {"fields": {}, "logo": {"filename": "doc.pdf", "original_name": "doc.pdf"}}
     render_pack_pdf(MEETING, settings)
-    assert captured["assets"] == {}
+    assert LOGO_ASSET in captured["assets"]
 
 
 def test_build_tex_includes_remediation_for_in_scope_models():
@@ -138,7 +138,7 @@ def test_build_tex_includes_remediation_for_in_scope_models():
              "owner": "Alice", "priority": "High", "due_date": "2026-12-01", "status": "Open"},
         ],
     }
-    tex = build_tex(meeting, {"fields": {}}, None, remediations)
+    tex = build_tex(meeting, {"fields": {}}, remediations_by_model=remediations)
     assert "Model Remediation (in-scope)" in tex
     assert "MDL-A" in tex
     assert "Recalibrate vol surface" in tex
@@ -148,7 +148,7 @@ def test_build_tex_includes_remediation_for_in_scope_models():
 
 def test_build_tex_omits_remediation_when_empty():
     tex = build_tex({"meeting_id": "M", "data": {"models_in_scope": [{"model_id": "X"}]}},
-                    {"fields": {}}, None, {})
+                    {"fields": {}}, remediations_by_model={})
     assert "Model Remediation" not in tex
 
 
@@ -156,8 +156,8 @@ def test_render_pack_pulls_remediations_from_inventory(monkeypatch):
     """render_pack_pdf reaches into the inventory projection for open steps."""
     captured = _stub_compile(monkeypatch)
     monkeypatch.setattr("src.governance.mrc.pack.build_tex",
-                        lambda meeting, settings, logo, remediations:
-                        (captured.update(remediations=remediations) or "tex"))
+                        lambda meeting, settings, logo, remediations_by_model:
+                        (captured.update(remediations=remediations_by_model) or "tex"))
     monkeypatch.setattr("src.governance.model_inventory.get_model",
                         lambda mid: {"data": {"remediation_steps": [
                             {"item_id": "RM-1", "description": "Fix", "status": "Open"},

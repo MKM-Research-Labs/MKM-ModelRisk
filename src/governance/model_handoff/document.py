@@ -29,7 +29,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from src.governance.mrc.pack import _esc, _section, _table, compile_tex
+from src.governance.latex import _esc, _section, _table, logo_asset, preamble, title_page
+from src.governance.mrc.pack import compile_tex
 
 # The template's narrative sections and the content each expects. Kept here so the
 # generated document mirrors the interoperability template's structure even where
@@ -95,7 +96,7 @@ def _lineage_rows(handoff: dict) -> list[list[str]]:
 
 
 def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | None,
-                       as_of: str) -> str:
+                       as_of: str, *, logo: bool = False) -> str:
     """LaTeX source for the interoperability-validation document of one handoff."""
     data = handoff.get("data", {})
     from_id, to_id = data.get("from_model", "?"), data.get("to_model", "?")
@@ -138,14 +139,9 @@ def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | No
                      + _guidance(["Author sign-off", "Provider and consumer handover sign-off"]))
 
     return (
-        "\\documentclass[11pt]{article}\n"
-        "\\usepackage[a4paper,margin=20mm]{geometry}\n"
-        "\\usepackage{longtable}\\usepackage{array}\\usepackage{xcolor}\\usepackage{parskip}\n"
-        "\\usepackage{enumitem}\\setlist{nosep}\n"
-        "\\begin{document}\n\\begin{center}\n"
-        "{\\Large\\textbf{Model Interoperability Validation}}\\\\[2pt]\n"
-        "{\\large " + _esc(from_id) + " $\\rightarrow$ " + _esc(to_id) + "}\\\\[4pt]\n"
-        "{\\small As of " + _esc(as_of) + "}\\end{center}\\bigskip\n"
+        preamble("Model Interoperability Validation") + "\\begin{document}\n"
+        + title_page("Model Interoperability Validation",
+                     from_id + " to " + to_id + " handover", date=as_of, logo=logo)
         + body + "\\end{document}\n"
     )
 
@@ -153,4 +149,6 @@ def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | No
 def render_handover_pdf(handoff: dict, provider: dict | None, consumer: dict | None,
                         as_of: str) -> bytes:
     """Build and compile the handover document to PDF bytes."""
-    return compile_tex(build_handover_tex(handoff, provider, consumer, as_of))
+    assets = logo_asset()
+    tex = build_handover_tex(handoff, provider, consumer, as_of, logo=bool(assets))
+    return compile_tex(tex, assets=assets)

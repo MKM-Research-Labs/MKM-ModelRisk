@@ -33,29 +33,11 @@ from typing import Any
 
 from config.files import IMAGE_EXTENSIONS
 from src.files import extension, upload_path
-
-_LATEX_REPLACEMENTS = {
-    "\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#",
-    "_": r"\_", "{": r"\{", "}": r"\}", "~": r"\textasciitilde{}",
-    "^": r"\textasciicircum{}",
-}
-
-
-def _esc(value: Any) -> str:
-    text = "" if value is None else str(value)
-    return "".join(_LATEX_REPLACEMENTS.get(ch, ch) for ch in text)
-
-
-def _table(headers: list[str], rows: list[list[Any]]) -> str:
-    cols = "|" + "l|" * len(headers)
-    head = " & ".join("\\textbf{" + _esc(h) + "}" for h in headers) + " \\\\ \\hline"
-    body = "".join(" & ".join(_esc(c) for c in row) + " \\\\ \\hline\n" for row in rows)
-    return ("\\begin{longtable}{" + cols + "}\n\\hline " + head + "\n" + body +
-            "\\end{longtable}\n")
-
-
-def _section(title: str, body: str) -> str:
-    return "\\section*{" + _esc(title) + "}\n" + body
+# The LaTeX string helpers and the shared house style live in one place now; this
+# module keeps re-exporting _esc/_table/_section for its existing callers.
+from src.governance.latex import (
+    _esc, _section, _table, LOGO_ASSET, logo_asset, preamble, title_page,
+)
 
 
 def _model_remediation_section(
@@ -79,21 +61,13 @@ def _model_remediation_section(
 
 
 def build_tex(
-    meeting: dict, settings: dict, logo_filename: str | None = None,
+    meeting: dict, settings: dict, logo: bool = False,
     remediations_by_model: dict[str, list[dict]] | None = None,
 ) -> str:
-    """Render the LaTeX source for a meeting pack."""
+    """Render the LaTeX source for a meeting pack in the shared house style."""
     data = meeting.get("data", {})
     fields = settings.get("fields", {})
     title = data.get("title") or meeting.get("meeting_id", "MRC Meeting")
-
-    header = ""
-    if logo_filename:
-        header += "\\includegraphics[height=1.4cm]{" + logo_filename + "}\\\\[4pt]\n"
-    if fields.get("org_name"):
-        header += "{\\large\\textbf{" + _esc(fields["org_name"]) + "}}\\\\\n"
-    if fields.get("org_address"):
-        header += "{\\small " + _esc(fields["org_address"]) + "}\\\\\n"
 
     info = " \\quad ".join(
         "\\textbf{" + label + ":} " + _esc(data.get(key))
@@ -144,17 +118,12 @@ def build_tex(
         data.get("models_in_scope") or [], remediations_by_model or {},
     )
 
-    footer = _esc(fields.get("framework", "")) + " --- " + _esc(fields.get("handbook_reference", ""))
+    org = fields.get("org_name", "")
     return (
-        "\\documentclass[11pt]{article}\n"
-        "\\usepackage[a4paper,margin=20mm]{geometry}\n"
-        "\\usepackage{graphicx}\\usepackage{longtable}\\usepackage{array}\n"
-        "\\usepackage{xcolor}\\usepackage{parskip}\n"
-        "\\pagestyle{plain}\n\\begin{document}\n"
-        "\\begin{center}\n" + header + "\\end{center}\n"
-        "{\\Large\\textbf{" + _esc(title) + "}}\\\\[4pt]\n" + info + "\\par\\bigskip\n" +
+        preamble(title, org_name=org) + "\\begin{document}\n"
+        + title_page(title, "MRC Meeting Pack", org_name=org, date=data.get("date", ""), logo=logo)
+        + info + "\\par\\bigskip\n" +
         participants + agenda + signoffs + models_scope + minutes + decisions + actions + remediation +
-        "\\vfill\\begin{center}\\small\\textcolor{gray}{" + footer + "}\\end{center}\n"
         "\\end{document}\n"
     )
 
@@ -209,16 +178,15 @@ def _collect_remediations(meeting: dict) -> dict[str, list[dict]]:
 
 
 def render_pack_pdf(meeting: dict, settings: dict) -> bytes:
-    """Build and compile a meeting pack, embedding the logo if one is set."""
+    """Build and compile a meeting pack. The title-page cover is the org's uploaded
+    logo when one is set, otherwise the shared front graphic."""
+    assets = logo_asset()  # the shared front graphic by default
     logo = settings.get("logo")
-    assets: dict[str, bytes] = {}
-    logo_filename = None
     if logo and extension(logo["filename"]) in IMAGE_EXTENSIONS:
         path = upload_path("mrc", logo["filename"])
         if path.exists():
-            logo_filename = "logo." + extension(logo["filename"])
-            assets[logo_filename] = path.read_bytes()
+            assets = {LOGO_ASSET: path.read_bytes()}  # org logo overrides the cover
     return compile_tex(
-        build_tex(meeting, settings, logo_filename, _collect_remediations(meeting)),
+        build_tex(meeting, settings, logo=bool(assets), remediations_by_model=_collect_remediations(meeting)),
         assets,
     )
