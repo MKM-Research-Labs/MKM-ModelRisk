@@ -27,7 +27,12 @@ const BOX_W = 130, BOX_H = 42, COL_GAP = 34, ROW_GAP = 52, PAD = 20;
 
 const Chain = {
   async render() {
-    const chain = await App.get("/api/models/chain");
+    const [chain, handoffs] = await Promise.all([
+      App.get("/api/models/chain"), App.get("/api/handoffs"),
+    ]);
+    this._chain = chain;
+    const byId = {};
+    handoffs.forEach((h) => { byId[h.handoff_id] = h; });
     const panel = document.getElementById("tab-chain");
     const legend =
       '<div class="row" style="gap:18px;align-items:center;margin-bottom:10px;font-size:12px">' +
@@ -40,7 +45,40 @@ const Chain = {
       '<p class="muted">The string of pearls, derived from every model\'s declared ' +
       "dependencies. Arrows run producer &rarr; consumer. Declare links on a model\'s " +
       "Dependencies tab.</p>" + legend +
-      '<div class="chain-canvas" style="overflow:auto">' + this._svg(chain) + "</div></div>";
+      '<div class="chain-canvas" style="overflow:auto">' + this._svg(chain) + "</div>" +
+      this._edges(chain, byId) + "</div>" +
+      '<div id="chain-handoff"></div>';
+    this._bindEdges();
+  },
+
+  // Each edge, with its handoff's field-lineage count, and a button to open the
+  // handoff editor (field lineage + compatibility note).
+  _edges(chain, byId) {
+    const links = chain.links || [];
+    if (!links.length) return "";
+    const rows = links.map((l) => {
+      const h = byId[l.from + "~" + l.to];
+      const count = h ? (h.data.field_lineage || []).length : 0;
+      const status = h ? esc(h.data.status || "Draft") : "not defined";
+      return "<tr><td><b>" + esc(l.from) + "</b> &rarr; <b>" + esc(l.to) + "</b></td>" +
+        "<td>" + status + "</td><td>" + count + " field" + (count === 1 ? "" : "s") + "</td>" +
+        '<td><button class="btn small" data-edge="' + esc(l.from) + "|" + esc(l.to) +
+        '">' + (h ? "Edit handoff" : "Define handoff") + "</button></td></tr>";
+    }).join("");
+    return '<div class="section-header" style="margin-top:16px">Handoffs</div>' +
+      '<p class="muted">Each edge can carry the field lineage that crosses it and a ' +
+      "compatibility note the MRC reviews.</p>" +
+      "<table><thead><tr><th>Edge</th><th>Status</th><th>Field lineage</th><th></th></tr></thead>" +
+      "<tbody>" + rows + "</tbody></table>";
+  },
+
+  _bindEdges() {
+    document.querySelectorAll("[data-edge]").forEach((btn) => {
+      btn.onclick = () => {
+        const parts = btn.getAttribute("data-edge").split("|");
+        Handoffs.open(parts[0], parts[1], () => this.render());
+      };
+    });
   },
 
   // Longest-path layering: a node's rank is the longest chain of producers behind

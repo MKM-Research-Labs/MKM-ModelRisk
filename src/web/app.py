@@ -30,6 +30,7 @@ from src.web.api_audit import audit_bp
 from src.web.api_audit_reports import audit_reports_bp
 from src.web.api_bibliography import bib_bp
 from src.web.api_documents import documents_bp
+from src.web.api_handoffs import handoffs_bp
 from src.web.api_models import models_bp
 from src.web import api_models_signoff  # noqa: F401 — attaches endpoints to models_bp
 from src.web.api_mrc import mrc_bp
@@ -64,6 +65,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
     app.register_blueprint(views_bp)
     app.register_blueprint(models_bp)
+    app.register_blueprint(handoffs_bp)
     app.register_blueprint(product_bp)
     app.register_blueprint(mrc_bp)
     app.register_blueprint(settings_bp)

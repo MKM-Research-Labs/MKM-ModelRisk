@@ -125,6 +125,15 @@ COLLECTION_SPECS = {
         {"key": "model_id", "label": "Related model", "type": "text", "required": True},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
+    # The field lineage of a model-to-model handoff: one item per field that
+    # crosses the edge. Lives on a ModelHandoff aggregate, not a model — the
+    # handoff is the thing the MRC reviews for compatibility.
+    "field_lineage": {"label": "Fields passed", "id_prefix": "FL", "fields": [
+        {"key": "name", "label": "Field", "type": "text", "required": True},
+        {"key": "type", "label": "Type", "type": "text"},
+        {"key": "units", "label": "Units", "type": "text"},
+        {"key": "meaning", "label": "Meaning", "type": "text"},
+    ]},
     # W4c — audit of the decisions the MRC took. One entry per decision; each
     # records what was decided, which meeting rubber-stamped it, and — for a
     # rating decision — where the rating came from and went to. ``kind`` mirrors

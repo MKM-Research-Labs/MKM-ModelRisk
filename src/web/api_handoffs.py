@@ -1,0 +1,108 @@
+# Copyright (c) 2022-2026 MKM Research Labs.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""HTTP API for model-to-model handoffs — field lineage on a chain edge.
+
+A handoff hangs off a declared dependency edge. The UI opens one from the Model
+Chain screen: ``POST /api/handoffs`` declares it (or returns the existing one),
+then the field-lineage and prose are edited through the usual collection/field
+routes. Declaring on an edge that is not in the chain is a 400 (the domain guard).
+"""
+from __future__ import annotations
+
+from flask import Blueprint, jsonify
+
+from src.command import dispatch
+from src.governance.model_handoff import (
+    add_collection_item,
+    declare_handoff,
+    get_handoff,
+    get_handoff_for_edge,
+    list_handoffs,
+    rebuild_handoff_view,
+    remove_collection_item,
+    update_collection_item,
+    update_handoff_field,
+)
+from src.web._helpers import context_from_request, json_body
+
+handoffs_bp = Blueprint("handoffs", __name__, url_prefix="/api/handoffs")
+
+
+@handoffs_bp.get("")
+def list_all():
+    return jsonify(list_handoffs())
+
+
+@handoffs_bp.post("")
+def declare():
+    """Declare the handoff on an edge, or return it if already declared."""
+    body = json_body()
+    from_model, to_model = body.get("from_model"), body.get("to_model")
+    existing = get_handoff_for_edge(from_model, to_model)
+    if existing is not None:
+        return jsonify(existing), 200
+    dispatch("declare_handoff", declare_handoff, context=context_from_request(body),
+             from_model=from_model, to_model=to_model)
+    rebuild_handoff_view()
+    return jsonify(get_handoff_for_edge(from_model, to_model)), 201
+
+
+@handoffs_bp.get("/<hid>")
+def get_one(hid: str):
+    handoff = get_handoff(hid)
+    if handoff is None:
+        return jsonify({"error": "handoff not found"}), 404
+    return jsonify(handoff)
+
+
+@handoffs_bp.post("/<hid>/field")
+def update_field(hid: str):
+    body = json_body()
+    dispatch("update_handoff_field", update_handoff_field, context=context_from_request(body),
+             handoff_id=hid, field=body.get("field"), value=body.get("value"))
+    rebuild_handoff_view()
+    return jsonify(get_handoff(hid))
+
+
+@handoffs_bp.post("/<hid>/collections/<collection>")
+def add_item(hid: str, collection: str):
+    body = json_body()
+    dispatch("add_collection_item", add_collection_item, context=context_from_request(body),
+             handoff_id=hid, collection=collection, fields=body.get("fields") or {})
+    rebuild_handoff_view()
+    return jsonify(get_handoff(hid)), 201
+
+
+@handoffs_bp.post("/<hid>/collections/<collection>/<item_id>")
+def update_item(hid: str, collection: str, item_id: str):
+    body = json_body()
+    dispatch("update_collection_item", update_collection_item, context=context_from_request(body),
+             handoff_id=hid, collection=collection, item_id=item_id, fields=body.get("fields") or {})
+    rebuild_handoff_view()
+    return jsonify(get_handoff(hid))
+
+
+@handoffs_bp.post("/<hid>/collections/<collection>/<item_id>/delete")
+def delete_item(hid: str, collection: str, item_id: str):
+    body = json_body()
+    dispatch("remove_collection_item", remove_collection_item, context=context_from_request(body),
+             handoff_id=hid, collection=collection, item_id=item_id)
+    rebuild_handoff_view()
+    return jsonify(get_handoff(hid))

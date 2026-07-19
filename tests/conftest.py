@@ -129,4 +129,5 @@ def _clean_event_log():
             cur.execute("DELETE FROM data_lineage_view")
             cur.execute("DELETE FROM ingest_receipts_view")
             cur.execute("DELETE FROM model_chain_view")
+            cur.execute("DELETE FROM model_handoff_view")
     yield
