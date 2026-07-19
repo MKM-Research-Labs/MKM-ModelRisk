@@ -43,7 +43,7 @@ from audit.testsuite import SUITE_ACTIVE_ENV, run_test_suite
 from config.audit import (AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS,
                           COVERAGE_HTML_DIRNAME, COVERAGE_HTML_LABEL,
                           COVERAGE_XML_NAME, TEST_REPORT_PDF_NAME, USER_GUIDE_MD)
-from src.governance.latex import front_matter, logo_asset, preamble
+from src.governance.latex import front_matter, history_page, logo_asset, preamble
 from src.governance.model_inventory import list_models
 from src.governance.model_inventory.report import render_report_pdf
 from src.governance.mrc.pack import TectonicNotFound, compile_tex
@@ -195,9 +195,10 @@ def _render_user_guide(dest):
         # a fragment does not, so provide it here.
         + "\\providecommand{\\tightlist}{\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}\n"
         + "\\begin{document}\n"
-        + front_matter("User Guide", "MKM-ModelRisk", "User guide generated",
-                       date=as_of, logo=bool(assets))
-        + body + "\\end{document}\n"
+        + front_matter("User Guide", "MKM-ModelRisk", date=as_of, logo=bool(assets), toc=True)
+        + body
+        + history_page(as_of, "User guide generated")
+        + "\\end{document}\n"
     )
     try:
         dest.write_bytes(compile_tex(tex, assets))

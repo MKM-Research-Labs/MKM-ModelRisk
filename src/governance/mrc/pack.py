@@ -31,12 +31,10 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-from config.files import IMAGE_EXTENSIONS
-from src.files import extension, upload_path
 # The LaTeX string helpers and the shared house style live in one place now; this
 # module keeps re-exporting _esc/_table/_section for its existing callers.
 from src.governance.latex import (
-    _esc, _section, _table, LOGO_ASSET, front_matter, logo_asset, preamble,
+    _esc, _section, _table, front_matter, history_page, logo_asset, preamble,
 )
 
 
@@ -121,11 +119,12 @@ def build_tex(
     org = fields.get("org_name", "")
     return (
         preamble(title, org_name=org) + "\\begin{document}\n"
-        + front_matter(title, "MRC Meeting Pack", "MRC meeting pack generated",
-                       org_name=org, date=data.get("date", ""), logo=logo)
-        + info + "\\par\\bigskip\n" +
-        participants + agenda + signoffs + models_scope + minutes + decisions + actions + remediation +
-        "\\end{document}\n"
+        + front_matter(title, "MRC Meeting Pack", org_name=org, date=data.get("date", ""),
+                       author=data.get("chair", ""), logo=logo, toc=True)
+        + info + "\\par\\bigskip\n"
+        + participants + agenda + signoffs + models_scope + minutes + decisions + actions + remediation
+        + history_page(data.get("date", ""), "MRC meeting pack generated", org_name=org)
+        + "\\end{document}\n"
     )
 
 
@@ -179,14 +178,8 @@ def _collect_remediations(meeting: dict) -> dict[str, list[dict]]:
 
 
 def render_pack_pdf(meeting: dict, settings: dict) -> bytes:
-    """Build and compile a meeting pack. The title-page cover is the org's uploaded
-    logo when one is set, otherwise the shared front graphic."""
-    assets = logo_asset()  # the shared front graphic by default
-    logo = settings.get("logo")
-    if logo and extension(logo["filename"]) in IMAGE_EXTENSIONS:
-        path = upload_path("mrc", logo["filename"])
-        if path.exists():
-            assets = {LOGO_ASSET: path.read_bytes()}  # org logo overrides the cover
+    """Build and compile a meeting pack, using the org's uploaded logo if one is set."""
+    assets = logo_asset(settings)
     return compile_tex(
         build_tex(meeting, settings, logo=bool(assets), remediations_by_model=_collect_remediations(meeting)),
         assets,

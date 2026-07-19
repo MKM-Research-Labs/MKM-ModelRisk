@@ -27,7 +27,9 @@ the summary table followed by every rule's findings.
 from __future__ import annotations
 
 from config.audit import COVERAGE_MINIMUM
-from src.governance.latex import _section, _table, front_matter, logo_asset, preamble
+from src.governance.latex import (
+    _section, _table, front_matter, history_page, logo_asset, preamble,
+)
 from src.governance.mrc import pack
 
 from audit.coverage import low_coverage_packages
@@ -202,12 +204,16 @@ REPORT_LABELS = {spec["filename"]: spec["label"]
                  for spec in (*REPORTS, *STANDALONE_REPORTS)}
 
 
-def _document(title: str, subtitle: str, as_of: str, body: str, *, logo: bool = False) -> str:
-    """Wrap a rule body in the shared house style: title page, Document History, body."""
+def _document(title: str, subtitle: str, as_of: str, body: str, *,
+              logo: bool = False, toc: bool = False) -> str:
+    """Wrap a rule body in the shared house style: title page (+ optional Contents),
+    the body, then the Document History at the end."""
     return (
         preamble(title) + "\\begin{document}\n"
-        + front_matter(title, subtitle, subtitle, date=as_of, logo=logo)
-        + body + "\\end{document}\n"
+        + front_matter(title, subtitle, date=as_of, logo=logo, toc=toc)
+        + body
+        + history_page(as_of, subtitle)
+        + "\\end{document}\n"
     )
 
 
@@ -249,7 +255,7 @@ def build_audit_tex(report: dict, as_of: str, *, logo: bool = False) -> str:
     body = _section("Summary", _summary_table(report))
     for spec in REPORTS:
         body += spec["body"](report)
-    return _document("Coding-Rule Audit Report", "Rules R1–R8", as_of, body, logo=logo)
+    return _document("Coding-Rule Audit Report", "Rules R1–R8", as_of, body, logo=logo, toc=True)
 
 
 def render_report_pdf(report: dict, spec: dict, as_of: str) -> bytes:
@@ -289,7 +295,7 @@ def build_test_report_tex(results: dict, cov: dict, as_of: str, *, logo: bool = 
              ["Gate", str(COVERAGE_MINIMUM) + "%"]]))
     else:
         body += ("Coverage was not measured for this run.\\par\\medskip\n")
-    return _document("Test Report", "Unit, e2e and coverage evidence", as_of, body, logo=logo)
+    return _document("Test Report", "Unit, e2e and coverage evidence", as_of, body, logo=logo, toc=True)
 
 
 def render_test_report_pdf(results: dict, cov: dict, as_of: str) -> bytes:

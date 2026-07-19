@@ -50,9 +50,9 @@ MEETING = {
 
 def test_build_tex_includes_logo_org_and_sections():
     tex = build_tex(MEETING, {"fields": {"org_name": "MKM Labs"}}, logo=True)
-    # The house style: a cover graphic on the title page, the org in the running
-    # header, and CONFIDENTIAL marking — no proprietary assertion.
-    assert "\\includegraphics" in tex and "logo.png" in tex
+    # The house style: the uploaded logo on the title page (graphicx picks its
+    # extension), the org in the running header, and CONFIDENTIAL marking.
+    assert "\\includegraphics" in tex and "{" + LOGO_ASSET + "}" in tex
     assert "MKM Labs" in tex and "Q2 MRC" in tex and "CONFIDENTIAL" in tex
     for section in ("Participants", "Agenda", "Minutes", "Decisions", "Actions"):
         assert section in tex
@@ -94,33 +94,33 @@ def _stub_compile(monkeypatch):
     return captured
 
 
-def test_render_falls_back_to_the_shared_cover(monkeypatch):
-    # With no uploaded org logo, the title-page cover is the shared front graphic.
+def test_render_is_text_only_without_an_uploaded_logo(monkeypatch):
+    # No uploaded org logo -> a text-only title page, never a bundled image.
     captured = _stub_compile(monkeypatch)
     assert render_pack_pdf(MEETING, {"fields": {}, "logo": None}) == b"%PDF-stub"
-    assert LOGO_ASSET in captured["assets"]
+    assert captured["assets"] == {}
 
 
-def test_render_embeds_uploaded_logo(monkeypatch):
+def test_render_embeds_the_uploaded_logo(monkeypatch):
     captured = _stub_compile(monkeypatch)
     save_upload("mrc", "logo.png", PNG)
     settings = {"fields": {}, "logo": {"filename": "logo.png", "original_name": "logo.png"}}
     render_pack_pdf(MEETING, settings)
-    assert captured["assets"][LOGO_ASSET] == PNG  # the uploaded logo overrides the cover
+    assert captured["assets"] == {"logo.png": PNG}  # the org's uploaded logo
 
 
-def test_render_uses_cover_when_uploaded_logo_missing(monkeypatch):
+def test_render_ignores_a_missing_logo_file(monkeypatch):
     captured = _stub_compile(monkeypatch)
     settings = {"fields": {}, "logo": {"filename": "gone.png", "original_name": "gone.png"}}
     render_pack_pdf(MEETING, settings)
-    assert LOGO_ASSET in captured["assets"]  # falls back to the shared cover
+    assert captured["assets"] == {}  # text-only, no bundled fallback
 
 
-def test_render_uses_cover_when_logo_is_non_image(monkeypatch):
+def test_render_ignores_a_non_image_logo(monkeypatch):
     captured = _stub_compile(monkeypatch)
     settings = {"fields": {}, "logo": {"filename": "doc.pdf", "original_name": "doc.pdf"}}
     render_pack_pdf(MEETING, settings)
-    assert LOGO_ASSET in captured["assets"]
+    assert captured["assets"] == {}
 
 
 def test_build_tex_includes_remediation_for_in_scope_models():

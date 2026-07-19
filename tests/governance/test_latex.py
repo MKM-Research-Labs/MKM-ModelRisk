@@ -62,26 +62,40 @@ def test_title_page_without_logo_omits_the_graphic():
     assert LOGO_ASSET not in tex
 
 
-def test_history_page_is_the_document_history_table():
+def test_history_page_is_a_numbered_document_history_section():
     hist = history_page("2026-07-19", "Report generated", org_name="Acme", version="2.0")
-    assert "Document History" in hist
+    # Numbered section (no star), matching the protocol; goes at the end of a doc.
+    assert "\\section{Document History}" in hist
     for cell in ("2026-07-19", "2.0", "Report generated", "Acme"):
         assert cell in hist
-    assert "\\clearpage" in hist  # content starts on a fresh page
 
 
-def test_front_matter_is_title_page_then_history():
-    fm = front_matter("Doc", "sub", "generated", org_name="Acme", date="2026-07-19", logo=False)
-    # Title page comes before the Document History, so every doc opens the same way.
-    assert fm.index("titlepage") < fm.index("Document History")
-    assert "generated" in fm and "Acme" in fm
+def test_front_matter_is_title_page_then_optional_contents():
+    plain = front_matter("Doc", "sub", org_name="Acme", date="2026-07-19", author="A")
+    assert "titlepage" in plain and "A" in plain
+    assert "tableofcontents" not in plain  # no TOC unless asked
+    with_toc = front_matter("Doc", "sub", date="2026-07-19", toc=True)
+    assert "tableofcontents" in with_toc
 
 
-def test_logo_asset_reads_the_cover_when_present():
-    assert LOGO_ASSET in logo_asset()
+def test_front_matter_defaults_the_author():
+    from src.governance.latex import DEFAULT_AUTHOR
+    assert DEFAULT_AUTHOR in front_matter("Doc", "sub", date="2026-07-19")
 
 
-def test_logo_asset_is_empty_when_the_cover_is_missing(monkeypatch):
-    # A missing logo must degrade to a text-only title page, not raise.
-    monkeypatch.setattr("config.paths.LOGO_IMAGE", Path("/no/such/logo.png"))
-    assert logo_asset() == {}
+def test_logo_asset_uses_the_uploaded_org_logo():
+    import base64
+
+    from src.files import save_upload
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPw9fUFAAHSAOhesXztAAAAAElFTkSuQmCC")
+    save_upload("mrc", "brand.png", png)
+    assets = logo_asset({"logo": {"filename": "brand.png"}})
+    # The uploaded logo is embedded under its real extension; none is bundled.
+    assert assets == {"logo.png": png}
+
+
+def test_logo_asset_is_empty_when_no_logo_uploaded():
+    # No uploaded logo -> text-only title page, never a bundled image.
+    assert logo_asset({"logo": None}) == {}
+    assert logo_asset({}) == {}

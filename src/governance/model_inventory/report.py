@@ -23,7 +23,7 @@ from __future__ import annotations
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import pack
-from src.governance.latex import _table, front_matter, logo_asset, preamble
+from src.governance.latex import _table, front_matter, history_page, logo_asset, preamble
 
 
 def build_report_tex(models: list, settings: dict, as_of: str, *, logo: bool = False) -> str:
@@ -49,14 +49,15 @@ def build_report_tex(models: list, settings: dict, as_of: str, *, logo: bool = F
     return (
         preamble("Model Risk Report", org_name=org) + "\\begin{document}\n"
         + front_matter("Model Risk Report", "Status for the Model Risk Committee",
-                       "Model risk status generated", org_name=org, date=as_of, logo=logo)
+                       org_name=org, date=as_of, logo=logo)
         + "\\begin{center}" + summary + "\\end{center}\\bigskip\n"
         + _table(["Model", "Name", "Tier", "RAG", "Validation", "Risk", "Review"], rows)
+        + history_page(as_of, "Model risk status generated", org_name=org)
         + "\\end{document}\n"
     )
 
 
 def render_report_pdf(models: list, settings: dict, as_of: str) -> bytes:
     """Build and compile the model risk report to PDF bytes."""
-    assets = logo_asset()
+    assets = logo_asset(settings)
     return pack.compile_tex(build_report_tex(models, settings, as_of, logo=bool(assets)), assets)

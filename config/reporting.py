@@ -32,3 +32,7 @@ DEFAULT_CLASSIFICATION = "CONFIDENTIAL"
 # Fallback organisation name for document headers/title pages when the singleton
 # MRC settings ``org_name`` has not been set.
 DEFAULT_ORG = "MKM Research Labs"
+
+# "Prepared by" line on generated title pages. These documents are produced by the
+# platform rather than a named person, so the author is the system by default.
+DEFAULT_AUTHOR = "MKM-ModelRisk"

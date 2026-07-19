@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.reporting import DEFAULT_CLASSIFICATION, DEFAULT_ORG
+from config.reporting import DEFAULT_AUTHOR, DEFAULT_CLASSIFICATION, DEFAULT_ORG
 
 _LATEX_REPLACEMENTS = {
     "\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#",
@@ -37,16 +37,25 @@ _LATEX_REPLACEMENTS = {
     "^": r"\textasciicircum{}",
 }
 
-LOGO_ASSET = "logo.png"  # the name the title page references; the caller supplies bytes
+LOGO_ASSET = "logo"  # \includegraphics{logo}; graphicx picks the actual extension
 
 
-def logo_asset() -> dict[str, bytes]:
-    """The MKM logo as a ``{name: bytes}`` asset for ``compile_tex``, or empty if it
-    is not on disk — so a missing image degrades to a text-only title page."""
-    from config.paths import LOGO_IMAGE
+def logo_asset(settings=None) -> dict[str, bytes]:
+    """The organisation's uploaded logo as a ``compile_tex`` asset, or empty if none
+    is uploaded. The logo is supplied by the adopting institution at runtime (via MRC
+    settings) — never bundled in the repo. No logo means a text-only title page."""
     try:
-        return {LOGO_ASSET: LOGO_IMAGE.read_bytes()}
-    except OSError:
+        from config.files import IMAGE_EXTENSIONS
+        from src.files import extension, upload_path
+        if settings is None:
+            from src.governance.mrc_settings import get_settings
+            settings = get_settings()
+        logo = (settings or {}).get("logo")
+        ext = extension((logo or {}).get("filename", ""))
+        if not logo or ext not in IMAGE_EXTENSIONS:
+            return {}
+        return {LOGO_ASSET + "." + ext: upload_path("mrc", logo["filename"]).read_bytes()}
+    except Exception:
         return {}
 
 
@@ -64,7 +73,8 @@ def _table(headers: list[str], rows: list[list[Any]]) -> str:
 
 
 def _section(title: str, body: str) -> str:
-    return "\\section*{" + _esc(title) + "}\n" + body
+    # Numbered sections, as the model-documentation protocol uses.
+    return "\\section{" + _esc(title) + "}\n" + body
 
 
 def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") -> str:
@@ -112,17 +122,20 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
 
 
 def history_page(date: str, description: str, *, org_name: str = "", version: str = "1.0") -> str:
-    """The template's Document History table (Date / Version / Description / Author),
-    then a page break — so every document opens the same way."""
+    """The Document History section (Date / Version / Description / Author). Numbered,
+    and placed at the END of the document, as the model-documentation protocol does."""
     rows = [[date, version, description, org_name or DEFAULT_ORG]]
-    return ("\\section*{Document History}\n"
-            + _table(["Date", "Version", "Description", "Author"], rows)
-            + "\\clearpage\n")
+    return "\\section{Document History}\n" + _table(
+        ["Date", "Version", "Description", "Author"], rows)
 
 
-def front_matter(title: str, subtitle: str, description: str, *, org_name: str = "",
-                 date: str = "", logo: bool = False, version: str = "1.0") -> str:
-    """The shared opening for every generated document: the title page followed by
-    the Document History — one consistent front matter across all PDFs."""
-    return (title_page(title, subtitle, org_name=org_name, date=date, version=version, logo=logo)
-            + history_page(date, description, org_name=org_name, version=version))
+def front_matter(title: str, subtitle: str, *, org_name: str = "", date: str = "",
+                 author: str = "", logo: bool = False, version: str = "1.0",
+                 toc: bool = False) -> str:
+    """A document's opening: the title page, then (for multi-section documents) a
+    Table of Contents. The Document History goes at the end via ``history_page``."""
+    front = title_page(title, subtitle, org_name=org_name, date=date,
+                       author=author or DEFAULT_AUTHOR, version=version, logo=logo)
+    if toc:
+        front += "\\tableofcontents\n\\clearpage\n"
+    return front
