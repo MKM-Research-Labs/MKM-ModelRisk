@@ -103,7 +103,10 @@ const Handoffs = {
       '<div class="card" style="margin-top:14px">' +
       '<div class="row" style="align-items:center;justify-content:space-between">' +
       "<h3>Handoff &mdash; " + esc(d.from_model) + " &rarr; " + esc(d.to_model) + "</h3>" +
-      '<button class="btn small" id="ho-close">Close</button></div>' +
+      '<div class="row" style="gap:8px">' +
+      '<a class="btn small" href="/api/handoffs/' + encodeURIComponent(this._hid) +
+      '/handover.pdf" target="_blank">↓ Handover document</a>' +
+      '<button class="btn small" id="ho-close">Close</button></div></div>' +
       '<p class="muted">Each row pairs a <b>provider</b> field (' + esc(d.from_model) +
       ") with the <b>consumer</b> field it feeds (" + esc(d.to_model) +
       "), so compatibility is stated field by field.</p>" +

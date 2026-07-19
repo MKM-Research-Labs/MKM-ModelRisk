@@ -119,3 +119,29 @@ def test_list_handoffs(client):
     _declare(client, "A", "B")
     listing = client.get("/api/handoffs").get_json()
     assert [h["handoff_id"] for h in listing] == ["A~B"]
+
+
+def test_handover_pdf_is_served(client, monkeypatch):
+    # Stub the LaTeX compile so the endpoint is exercised without tectonic.
+    from src.governance.model_handoff import document
+    monkeypatch.setattr(document, "compile_tex", lambda tex, assets=None: b"%PDF-stub")
+    _edge(client, "A", "B")
+    _declare(client, "A", "B")
+    res = client.get("/api/handoffs/A~B/handover.pdf")
+    assert res.status_code == 200
+    assert res.mimetype == "application/pdf"
+    assert res.data.startswith(b"%PDF")
+
+
+def test_handover_pdf_is_503_without_tectonic(client, monkeypatch):
+    from src.governance.mrc import pack
+    monkeypatch.setattr(pack.shutil, "which", lambda _name: None)
+    _edge(client, "A", "B")
+    _declare(client, "A", "B")
+    res = client.get("/api/handoffs/A~B/handover.pdf")
+    assert res.status_code == 503
+    assert "tectonic" in res.get_json()["error"]
+
+
+def test_handover_pdf_unknown_handoff_is_404(client):
+    assert client.get("/api/handoffs/no~such/handover.pdf").status_code == 404

@@ -26,7 +26,9 @@ routes. Declaring on an edge that is not in the chain is a 400 (the domain guard
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+from datetime import date
+
+from flask import Blueprint, Response, jsonify
 
 from config.governance import SIGNOFF_REQUESTS_COLLECTION
 from src.command import dispatch
@@ -41,8 +43,10 @@ from src.governance.model_handoff import (
     update_collection_item,
     update_handoff_field,
 )
+from src.governance.model_handoff.document import render_handover_pdf
 from src.governance.model_inventory import get_model
 from src.governance.mrc import matching_mrc
+from src.governance.mrc.pack import TectonicNotFound
 from src.governance.reference import get_reference_lists
 from src.web._helpers import context_from_request, json_body
 from src.web._signoff_routing import HANDOFF_SUBJECT, raise_signoff
@@ -97,6 +101,24 @@ def get_one(hid: str):
     if handoff is None:
         return jsonify({"error": "handoff not found"}), 404
     return jsonify(_decorate(handoff))
+
+
+@handoffs_bp.get("/<hid>/handover.pdf")
+def handover_document(hid: str):
+    """The Model Interoperability Validation document for this handoff, as a PDF."""
+    handoff = get_handoff(hid)
+    if handoff is None:
+        return jsonify({"error": "handoff not found"}), 404
+    data = handoff["data"] or {}
+    provider = get_model(data.get("from_model"))
+    consumer = get_model(data.get("to_model"))
+    try:
+        pdf = render_handover_pdf(handoff, provider, consumer, date.today().isoformat())
+    except TectonicNotFound as exc:
+        return jsonify({"error": str(exc)}), 503
+    return Response(pdf, mimetype="application/pdf", headers={
+        "Content-Disposition": f'inline; filename="handover_{hid}.pdf"',
+    })
 
 
 @handoffs_bp.post("/<hid>/field")

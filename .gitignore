@@ -27,3 +27,8 @@ pgctl.sh
 # for the handover (see "remove internal planning docs and third-party
 # references"), so planning stays local and is never committed.
 *.local.md
+
+# Local-only reference material (e.g. source templates) — kept on the machine but
+# never committed to the handover repo. Outside every first-party dir so the
+# licence-notice audit does not scan it either.
+local/
