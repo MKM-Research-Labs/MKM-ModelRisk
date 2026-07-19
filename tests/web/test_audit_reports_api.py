@@ -23,6 +23,7 @@ from __future__ import annotations
 import audit.__main__ as audit_main
 import src.web.api_audit_reports as mod
 from src.governance.mrc import pack
+from src.governance.mrc.pack import TectonicNotFound
 from tests.web.conftest import HEADERS
 
 
@@ -82,12 +83,39 @@ def test_user_guide_skipped_without_pandoc(tmp_path, monkeypatch):
     assert not dest.exists()
 
 
-def test_user_guide_runs_pandoc_when_available(tmp_path, monkeypatch):
+def test_user_guide_runs_pandoc_then_house_style(tmp_path, monkeypatch):
+    # The guide is pandoc'd to a LaTeX fragment, then wrapped in the shared house
+    # style and compiled — so it matches every other generated PDF.
     monkeypatch.setattr(mod.shutil, "which", lambda _name: "/usr/bin/pandoc")
     calls = []
-    monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: calls.append(cmd))
-    mod._render_user_guide(tmp_path / "user_guide.pdf")
-    assert calls and calls[0][0] == "pandoc" and "--pdf-engine=tectonic" in calls[0]
+
+    class _Done:
+        stdout = "\\section{Guide}\n"
+
+    monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: (calls.append(cmd) or _Done()))
+    monkeypatch.setattr(mod, "compile_tex", lambda tex: b"%PDF-stub")
+    dest = tmp_path / "user_guide.pdf"
+    mod._render_user_guide(dest)
+    assert calls and calls[0][0] == "pandoc" and calls[0][-2:] == ["-t", "latex"]
+    assert dest.read_bytes() == b"%PDF-stub"
+
+
+def test_user_guide_skipped_without_tectonic(tmp_path, monkeypatch):
+    # pandoc present but tectonic absent: no half-written file, no crash.
+    monkeypatch.setattr(mod.shutil, "which", lambda _name: "/usr/bin/pandoc")
+
+    class _Done:
+        stdout = "\\section{Guide}\n"
+
+    monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: _Done())
+
+    def _boom(_tex):
+        raise TectonicNotFound("no tectonic")
+
+    monkeypatch.setattr(mod, "compile_tex", _boom)
+    dest = tmp_path / "user_guide.pdf"
+    mod._render_user_guide(dest)
+    assert not dest.exists()
 
 
 def test_coverage_refresh_rebuilds_reports_and_clears_running(tmp_path, monkeypatch):

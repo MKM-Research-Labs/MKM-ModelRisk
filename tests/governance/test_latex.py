@@ -44,6 +44,13 @@ def test_preamble_defaults_the_org():
     assert DEFAULT_ORG in preamble("X")
 
 
+def test_classification_is_config_driven(monkeypatch):
+    # An adopter re-labels every document by changing the config value, not code.
+    monkeypatch.setattr(latex, "DEFAULT_CLASSIFICATION", "OFFICIAL-SENSITIVE")
+    assert "OFFICIAL-SENSITIVE" in preamble("X")
+    assert "OFFICIAL-SENSITIVE" in title_page("T", "s", logo=False)
+
+
 def test_title_page_with_logo_references_the_cover_asset():
     tex = title_page("T", "sub", logo=True, author="Alice")
     assert LOGO_ASSET in tex and "Alice" in tex and "CONFIDENTIAL" in tex

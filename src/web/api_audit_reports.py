@@ -43,9 +43,10 @@ from audit.testsuite import SUITE_ACTIVE_ENV, run_test_suite
 from config.audit import (AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS,
                           COVERAGE_HTML_DIRNAME, COVERAGE_HTML_LABEL,
                           COVERAGE_XML_NAME, TEST_REPORT_PDF_NAME, USER_GUIDE_MD)
+from src.governance.latex import preamble, title_block
 from src.governance.model_inventory import list_models
 from src.governance.model_inventory.report import render_report_pdf
-from src.governance.mrc.pack import TectonicNotFound
+from src.governance.mrc.pack import TectonicNotFound, compile_tex
 from src.governance.mrc_settings import get_settings
 
 # Module-level so tests can point it at a temporary directory.
@@ -178,12 +179,27 @@ def serve_report(filename: str):
 
 
 def _render_user_guide(dest):
-    """Publish the user guide as a PDF (skipped if pandoc is not installed)."""
+    """Publish the user guide as a PDF in the shared house style (skipped if pandoc
+    or tectonic is absent). The markdown body is converted to a LaTeX fragment and
+    wrapped in the standard preamble/title, so the guide matches every other PDF."""
     if shutil.which("pandoc") is None:
         return
-    subprocess.run(
-        ["pandoc", str(USER_GUIDE_MD), "-o", str(dest), "--pdf-engine=tectonic"],
-        check=True, capture_output=True)
+    body = subprocess.run(
+        ["pandoc", str(USER_GUIDE_MD), "-t", "latex"],
+        check=True, capture_output=True, text=True).stdout
+    tex = (
+        preamble("User Guide")
+        # pandoc's LaTeX uses \tightlist, which its standalone template defines;
+        # a fragment does not, so provide it here.
+        + "\\providecommand{\\tightlist}{\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}\n"
+        + "\\begin{document}\n"
+        + title_block("User Guide", "MKM-ModelRisk", date=date.today().isoformat())
+        + body + "\\end{document}\n"
+    )
+    try:
+        dest.write_bytes(compile_tex(tex))
+    except TectonicNotFound:
+        return
 
 
 @audit_reports_bp.post("/generate")

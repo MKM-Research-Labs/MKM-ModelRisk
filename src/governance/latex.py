@@ -29,13 +29,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.reporting import DEFAULT_CLASSIFICATION, DEFAULT_ORG
+
 _LATEX_REPLACEMENTS = {
     "\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#",
     "_": r"\_", "{": r"\{", "}": r"\}", "~": r"\textasciitilde{}",
     "^": r"\textasciicircum{}",
 }
 
-DEFAULT_ORG = "MKM Research Labs"
 LOGO_ASSET = "logo.png"  # the name the title page references; the caller supplies bytes
 
 
@@ -76,6 +77,8 @@ def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") ->
         "\\usepackage{graphicx}\\usepackage{longtable}\\usepackage{array}\\usepackage{booktabs}\n"
         "\\usepackage{xcolor}\\usepackage{parskip}\\usepackage{enumitem}\\setlist{nosep}\n"
         "\\usepackage{float}\\usepackage{lastpage}\\usepackage{fancyhdr}\\usepackage{hyperref}\n"
+        # calc backs the \real{} column widths pandoc emits for the user guide's tables.
+        "\\usepackage{calc}\n"
         "\\usepackage{geometry}\\geometry{a4paper, total={170mm,247mm}, left=20mm, top=25mm, bottom=25mm}\n"
         "\\usepackage{setspace}\\onehalfspacing\n"
         "\\definecolor{mkmblue}{HTML}{1565C0}\n"
@@ -83,7 +86,7 @@ def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") ->
         "\\pagestyle{fancy}\\fancyhf{}\n"
         "\\fancyhead[L]{\\small\\textcolor{gray}{" + org + "}}\n"
         "\\fancyhead[R]{\\small\\textcolor{gray}{" + _esc(doc_title) + " --- v" + _esc(doc_version) + "}}\n"
-        "\\fancyfoot[C]{\\small\\textcolor{gray}{CONFIDENTIAL}}\n"
+        "\\fancyfoot[C]{\\small\\textcolor{gray}{" + _esc(DEFAULT_CLASSIFICATION) + "}}\n"
         "\\fancyfoot[R]{\\small\\textcolor{gray}{Page \\thepage\\ of \\pageref{LastPage}}}\n"
         "\\renewcommand{\\headrulewidth}{0.4pt}\\renewcommand{\\footrulewidth}{0.4pt}\n"
     )
@@ -103,7 +106,7 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
         "{\\large " + _esc(org_name or DEFAULT_ORG) + "\\par}\\vspace{0.5cm}\n"
         "{\\large Version " + _esc(version) + " --- " + _esc(date) + "\\par}\\vspace{0.5cm}\n"
         + author_line +
-        "\\vspace{2cm}\\textcolor{red}{\\textbf{CONFIDENTIAL}}\n"
+        "\\vspace{2cm}\\textcolor{red}{\\textbf{" + _esc(DEFAULT_CLASSIFICATION) + "}}\n"
         "\\end{center}\\end{titlepage}\n"
     )
 
