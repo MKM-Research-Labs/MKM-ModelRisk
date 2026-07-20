@@ -110,6 +110,9 @@ MRC_COLLECTION_SPECS = {
         # A "handoff" sign-off item links back to the model-to-model handoff
         # ("from~to") the committee is being asked to approve. Set by the routing.
         {"key": "subject_handoff_id", "label": "Subject handoff", "type": "text", "hidden": True},
+        # An "event review" agenda item links to a product's operational-failure
+        # event (the event's item id, with subject_product_id naming the product).
+        {"key": "subject_event_id", "label": "Subject event", "type": "text", "hidden": True},
         {"key": "signoff_kind", "label": "Sign-off kind", "type": "choice",
          "options": VALID_SIGNOFF_KINDS, "hidden": True},
         {"key": "proposed_rag", "label": "Proposed RAG",

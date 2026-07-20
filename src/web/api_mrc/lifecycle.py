@@ -45,6 +45,7 @@ from src.governance.mrc.pack import render_pack_pdf
 from src.governance.mrc_settings import get_settings
 from src.web._helpers import context_from_request, json_body, request_actor
 from src.web._signoff_routing import drain_pending_for_meeting
+from src.web._event_review import allocate_events_for_meeting
 from src.web.api_mrc._bp import mrc_bp
 
 
@@ -270,6 +271,8 @@ def schedule():
     # Pull any queued sign-off requests for this committee onto the new agenda.
     # (They carry the subject id + proposed RAG but render in the Models tab.)
     drain_pending_for_meeting(ctx, get_meeting_raw(meeting_id) or {"meeting_id": meeting_id, "data": {}})
+    # Feed up operational events from this committee's products as agenda items.
+    allocate_events_for_meeting(ctx, get_meeting_raw(meeting_id) or {"meeting_id": meeting_id, "data": {}})
     return jsonify(get_meeting(meeting_id)), 201
 
 

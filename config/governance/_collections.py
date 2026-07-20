@@ -46,6 +46,9 @@ VALID_INFORMED = ("Yes", "No")
 # The four RACI accountabilities, defining who does what for a product's use of
 # models in production (the RACI operating model, held at the product level).
 VALID_RACI_CODES = ("Responsible", "Accountable", "Consulted", "Informed")
+# An operational event's MRC review state. "Pending" = raised on the product,
+# awaiting a committee; "Received" = the MRC reviewed and formally received it.
+VALID_EVENT_REVIEW_STATUS = ("Pending", "Received")
 # A queued sign-off request (owner-raised) as it moves from raised to
 # attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
 # MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
@@ -195,6 +198,12 @@ COLLECTION_SPECS = {
          "type": "choice", "options": VALID_INFORMED},
         {"key": "informed_senior_mgmt", "label": "Informed: Senior management",
          "type": "choice", "options": VALID_INFORMED},
+        # MRC review of the event (W4b feed-up). Set by the committee when it
+        # receives the event at a meeting; not edited on the add form.
+        {"key": "mrc_status", "label": "MRC status", "type": "choice",
+         "options": VALID_EVENT_REVIEW_STATUS, "hidden": True},
+        {"key": "review_comments", "label": "MRC comments", "type": "text", "hidden": True},
+        {"key": "mrc_meeting", "label": "Received at meeting", "type": "text", "hidden": True},
     ]},
     # The RACI operating model for a product: who is Responsible / Accountable /
     # Consulted / Informed for the product's use of models in production. Held at
