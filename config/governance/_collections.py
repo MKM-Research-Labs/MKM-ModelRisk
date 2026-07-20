@@ -122,7 +122,8 @@ COLLECTION_SPECS = {
     "dependencies": {"label": "Model dependencies", "id_prefix": "DEP", "fields": [
         {"key": "direction", "label": "Direction", "type": "choice",
          "options": VALID_DEPENDENCY_DIRECTIONS, "required": True},
-        {"key": "model_id", "label": "Related model", "type": "text", "required": True},
+        {"key": "model_id", "label": "Related model", "type": "text",
+         "reference": "model_inventory", "required": True},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
     # The field lineage of a model-to-model handoff: one item per field that
