@@ -21,9 +21,12 @@
 
 Run the governance console with ``python app.py`` (applies DB migrations on
 startup). ``app`` is exposed at module level so a WSGI server can serve it too,
-e.g. ``gunicorn app:app``.
+e.g. ``gunicorn app:app``. ``python app.py phys`` populates the instance from the
+PhysicalRisk model inventory (demo seed) instead of starting the server.
 """
 from __future__ import annotations
+
+import sys
 
 from config.web import WEB_HOST, WEB_PORT
 from src.web import create_app
@@ -31,4 +34,7 @@ from src.web import create_app
 app = create_app()
 
 if __name__ == "__main__":  # pragma: no cover
+    if sys.argv[1:2] == ["phys"]:
+        from scripts.migrate_phys import main as seed_phys
+        raise SystemExit(seed_phys())
     app.run(host=WEB_HOST, port=WEB_PORT, debug=True)

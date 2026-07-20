@@ -1,0 +1,227 @@
+# Copyright (c) 2022-2026 MKM Research Labs.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Populate a ModelRisk instance from the PhysicalRisk model inventory (demo seed).
+
+Registers every source model with as much of its governance data as maps cleanly
+(scalar fields, assumptions, limitations, weaknesses, remediation, version history,
+and the SR 26-2 validation-question statuses), attaches each model's guide PDF where
+one is on disk, backfills the model chain (dependencies + handoffs), and creates the
+single PRS product. Idempotent at the model level (an already-registered model is
+skipped), so run it against a fresh database for a clean demo.
+
+Run as:  python -m scripts.migrate_phys   (or  python app.py phys)
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from config.governance import MODEL_FIELD_SPECS, VALID_VQ_STATUSES
+from src.governance.documents import add_document
+from src.governance.model_inventory import (
+    add_collection_item,
+    get_model,
+    register_model,
+    rebuild_inventory_view,
+    update_collection_item,
+)
+from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
+
+PHYS_ROOT = Path("/Users/newdavid/Documents/PhysicalRisk")
+SOURCE = PHYS_ROOT / "docs" / "models" / "governance_data" / "model_inventory.json"
+ACTOR = "migrate_phys"
+
+# Source scalar fields that map to a ModelRisk model field of the same key.
+SCALAR_FIELDS = (
+    "short_name", "description", "category", "tier", "materiality", "complexity",
+    "tier_rationale", "methodology", "methodology_rationale", "source_module", "owner",
+    "model_owner_role", "peer_reviewer", "status", "lifecycle_stage", "version",
+    "validation_status", "rag_rating", "review_frequency", "last_review_date",
+    "next_review_date", "mrc_signoff_date", "recertification_date", "validation_date",
+)
+# Source collection -> (ModelRisk collection, {source_key: modelrisk_key}).
+COLLECTION_MAP = {
+    "assumptions": ("assumptions",
+                    {"description": "description", "impact": "impact",
+                     "monitoring": "monitoring", "mitigation": "mitigation"}),
+    "limitations": ("limitations",
+                    {"description": "description", "impact": "impact",
+                     "monitoring_trigger": "monitoring_trigger",
+                     "compensating_control": "compensating_control"}),
+    "remediation_steps": ("remediation_steps",
+                          {"description": "description", "owner": "owner",
+                           "priority": "priority", "due_date": "due_date", "status": "status"}),
+    "version_history": ("version_history",
+                        {"version": "version", "date": "date", "description": "description",
+                         "author": "author", "document": "ref_document"}),
+    "change_history": ("change_history",
+                       {"version": "version", "date": "date", "author": "author",
+                        "change_type": "change_type", "description": "description"}),
+}
+
+
+def _valid(field_key: str, value) -> bool:
+    """Keep a value only if the field accepts it (choice fields validate their set)."""
+    if value in (None, ""):
+        return False
+    spec = MODEL_FIELD_SPECS.get(field_key)
+    if spec and spec.get("type") == "choice":
+        return value in spec.get("options", [])
+    return True
+
+
+def _scalar_fields(model: dict) -> dict:
+    return {k: model[k] for k in SCALAR_FIELDS if k in model and _valid(k, model.get(k))}
+
+
+def _map_item(mapping: dict, item: dict) -> dict:
+    fields = {mapping[k]: v for k, v in item.items() if k in mapping and v not in (None, "")}
+    return fields
+
+
+def _add_collections(model_id: str, model: dict, config) -> None:
+    for source_key, (target, mapping) in COLLECTION_MAP.items():
+        for item in model.get(source_key) or []:
+            if isinstance(item, dict):
+                fields = _map_item(mapping, item)
+                if fields.get("description"):
+                    add_collection_item(model_id=model_id, collection=target, fields=fields,
+                                        actor=ACTOR, config=config)
+    # Known failure modes are free-text strings in the source -> model weaknesses.
+    for weakness in model.get("known_failure_modes") or []:
+        if isinstance(weakness, str) and weakness.strip():
+            add_collection_item(model_id=model_id, collection="model_weaknesses",
+                                fields={"description": weakness}, actor=ACTOR, config=config)
+
+
+def _update_validation_questions(model_id: str, model: dict, config) -> None:
+    """The nine SR 26-2 questions are seeded at registration; carry the source
+    status/evidence onto them (matched by question number)."""
+    for question in model.get("validation_questions") or []:
+        try:
+            number = int(question.get("question_id"))
+        except (TypeError, ValueError):
+            continue
+        fields = {}
+        if question.get("status") in VALID_VQ_STATUSES:
+            fields["status"] = question["status"]
+        if question.get("evidence"):
+            fields["evidence"] = question["evidence"]
+        if fields:
+            update_collection_item(model_id=model_id, collection="validation_questions",
+                                   item_id=f"VQ-{number:03d}", fields=fields, actor=ACTOR, config=config)
+
+
+def _attach_documents(model_id: str, model: dict, config) -> int:
+    attached = 0
+    for doc in model.get("documents") or []:
+        rel = doc.get("path") if isinstance(doc, dict) else None
+        if not rel:
+            continue
+        path = PHYS_ROOT / rel
+        if not path.is_file():
+            continue  # stale path — a gap for the owner to fill manually
+        add_document(aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
+                     scope=f"model/{model_id}", category="Core Documentation",
+                     filename=path.name, data=path.read_bytes(),
+                     description=doc.get("name") or "Model documentation",
+                     actor=ACTOR, config=config)
+        attached += 1
+    return attached
+
+
+def migrate_model(model: dict, config=None) -> tuple[bool, int]:
+    """Register one source model with its data. Returns (registered, docs_attached).
+    An already-registered model is left untouched (idempotent)."""
+    model_id = model.get("model_id")
+    if not model_id or get_model(model_id, config=config) is not None:
+        return False, 0
+    register_model(model_id=model_id, name=model.get("name") or model_id,
+                   fields=_scalar_fields(model), actor=ACTOR, config=config)
+    _add_collections(model_id, model, config)
+    _update_validation_questions(model_id, model, config)
+    docs = _attach_documents(model_id, model, config)
+    return True, docs
+
+
+def create_prs_product(config=None) -> bool:
+    """Create the single PRS product, bound to the PRS pricing model, with a RACI role
+    and a sample operational event so the RACI feed-up is demonstrable."""
+    from src.governance.product import (
+        add_collection_item as product_add,
+        get_product,
+        register_product,
+        rebuild_product_view,
+    )
+    if get_product("PRD-PRS", config=config) is not None:
+        return False
+    register_product(product_id="PRD-PRS", product="Physical Risk Swap (PRS)",
+                     fields={"analytics_model": "MKM-PR-001",
+                             "market_data_model": "Hazard curves (MKM-GH-001)",
+                             "calculating_agent": "QuantLib", "tier": 1,
+                             "owner": "David K Kelly"}, actor=ACTOR, config=config)
+    rebuild_product_view(config=config)
+    product_add(product_id="PRD-PRS", collection="raci_roles", actor=ACTOR, config=config,
+                fields={"role": "Operations Lead", "raci": "Responsible",
+                        "description": "Reruns failed production pricing jobs"})
+    product_add(product_id="PRD-PRS", collection="raci_roles", actor=ACTOR, config=config,
+                fields={"role": "Model Owner", "raci": "Accountable",
+                        "assigned_to": "David K Kelly", "description": "Owns the PRS pricing model"})
+    product_add(product_id="PRD-PRS", collection="operational_failure_events", actor=ACTOR, config=config,
+                fields={"date": "2026-06-01", "description": "Hazard-curve feed outage delayed the "
+                        "overnight PRS spread run", "responsible": "David K Kelly"})
+    rebuild_product_view(config=config)
+    return True
+
+
+def migrate(config=None) -> dict:
+    """Run the whole demo migration. Returns a count summary."""
+    from scripts.backfill_chain import backfill
+    from scripts.migrate_model_chain import load_model_chain
+
+    inventory = json.loads(SOURCE.read_text(encoding="utf-8"))
+    registered = docs = 0
+    for model in inventory.get("models", []):
+        did, attached = migrate_model(model, config=config)
+        registered += 1 if did else 0
+        docs += attached
+    rebuild_inventory_view(config=config)
+    # Ingest the source chain, then backfill dependencies + handoffs onto the models.
+    load_model_chain(SOURCE, source_repo="PhysicalRisk", config=config)
+    chain = backfill(source_repo="PhysicalRisk", config=config)
+    product = create_prs_product(config=config)
+    return {"models_registered": registered, "documents_attached": docs,
+            "dependencies": chain["dependencies"], "handoffs": chain["handoffs"],
+            "prs_product": product}
+
+
+def main() -> int:
+    from src.database import run_migrations
+    run_migrations()
+    result = migrate()
+    print(f"models registered: {result['models_registered']}, "
+          f"documents attached: {result['documents_attached']}, "
+          f"dependencies: {result['dependencies']}, handoffs: {result['handoffs']}, "
+          f"PRS product created: {result['prs_product']}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
