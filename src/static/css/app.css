@@ -184,3 +184,8 @@ textarea { box-sizing: border-box; }
 /* Model Chain ("string of pearls") */
 .chain-canvas { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #fff; }
 .chain-swatch { display: inline-block; width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid; vertical-align: -2px; margin-right: 4px; }
+.chain-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.chain-item { display: flex; align-items: baseline; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: #fff; }
+.chain-item:hover { border-color: var(--accent); background: #f7fbff; }
+.chain-item-id { font-weight: 700; color: var(--text); }
+.chain-item-name { color: var(--muted); font-size: 13px; }

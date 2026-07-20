@@ -26,28 +26,91 @@
 const BOX_W = 130, BOX_H = 42, COL_GAP = 34, ROW_GAP = 52, PAD = 20;
 
 const Chain = {
+  _tab: "chain",
+
   async render() {
     const [chain, handoffs] = await Promise.all([
       App.get("/api/models/chain"), App.get("/api/handoffs"),
     ]);
     this._chain = chain;
-    const byId = {};
-    handoffs.forEach((h) => { byId[h.handoff_id] = h; });
-    const panel = document.getElementById("tab-chain");
+    this._byId = {};
+    handoffs.forEach((h) => { this._byId[h.handoff_id] = h; });
+    // Split the models into the three views. A model is *in a chain* only if it
+    // takes part in at least one edge; a model with no declared dependency at all
+    // is isolated and shows in none of these views (it is not part of any chain).
+    // Of the in-chain models, one with no consumer is a terminal output; a retired
+    // model is hibernated (retirement wins, mirroring how the graph greys it out).
+    const nodes = chain.nodes || [], links = chain.links || [];
+    const hasDownstream = {}, inChain = new Set();
+    links.forEach((l) => { hasDownstream[l.from] = true; inChain.add(l.from); inChain.add(l.to); });
+    this._chainNodes = nodes.filter((n) => inChain.has(n.model_id));
+    this._terminal = this._chainNodes.filter((n) => !n.retired && !hasDownstream[n.model_id]);
+    this._hibernated = nodes.filter((n) => n.retired);
+    this._draw();
+  },
+
+  _draw() {
+    const tabs = [["chain", "Chain", this._chainNodes.length],
+                  ["terminal", "Terminal", this._terminal.length],
+                  ["hibernated", "Hibernated", this._hibernated.length]];
+    const bar = '<div class="dtabs">' + tabs.map((t) =>
+      '<button class="dtab' + (t[0] === this._tab ? " active" : "") +
+      '" data-ctab="' + t[0] + '">' + t[1] + " (" + t[2] + ")</button>").join("") + "</div>";
+    let body;
+    if (this._tab === "terminal") {
+      body = this._list(this._terminal, "Terminal outputs — models with no downstream " +
+        "consumer. These are the ends of the string of pearls.");
+    } else if (this._tab === "hibernated") {
+      body = this._list(this._hibernated, "Hibernated (retired) models, kept for history. " +
+        "They stay in the chain, greyed out.");
+    } else {
+      body = this._chainBody();
+    }
+    document.getElementById("tab-chain").innerHTML =
+      '<div class="card"><h3>Model Chain</h3>' +
+      '<p class="muted">The string of pearls, derived from every model\'s declared ' +
+      "dependencies. Arrows run producer &rarr; consumer. Declare links on a model\'s " +
+      "Dependencies tab.</p>" + bar + body + "</div>" +
+      '<div id="chain-handoff"></div>';
+    this._bind();
+  },
+
+  _chainBody() {
     const legend =
       '<div class="row" style="gap:18px;align-items:center;margin-bottom:10px;font-size:12px">' +
       '<span><span class="chain-swatch" style="background:#e3f2fd;border-color:#1976d2"></span> model in the chain</span>' +
       '<span><span class="chain-swatch" style="background:#e0f2f1;border-color:#00897b"></span> terminal output (no downstream)</span>' +
       '<span><span class="chain-swatch" style="background:#f5f5f5;border-color:#bbb"></span> hibernated</span>' +
       "</div>";
-    panel.innerHTML =
-      '<div class="card"><h3>Model Chain</h3>' +
-      '<p class="muted">The string of pearls, derived from every model\'s declared ' +
-      "dependencies. Arrows run producer &rarr; consumer. Declare links on a model\'s " +
-      "Dependencies tab.</p>" + legend +
-      '<div class="chain-canvas" style="overflow:auto">' + this._svg(chain) + "</div>" +
-      this._edges(chain, byId) + "</div>" +
-      '<div id="chain-handoff"></div>';
+    // The graph shows only models that are in a chain (in at least one edge).
+    const graph = { nodes: this._chainNodes, links: this._chain.links || [] };
+    return legend + '<div class="chain-canvas" style="overflow:auto">' + this._svg(graph) + "</div>" +
+      this._edges(this._chain, this._byId);
+  },
+
+  // A plain vertical list of models (Terminal / Hibernated tabs). Each row opens
+  // the model on the Models tab.
+  _list(models, blurb) {
+    const intro = '<p class="muted">' + blurb + "</p>";
+    if (!models.length) return intro + '<div class="empty">None.</div>';
+    const rows = models.map((m) =>
+      '<div class="chain-item" data-open="' + esc(m.model_id) + '">' +
+      '<span class="chain-item-id">' + esc(m.model_id) + "</span>" +
+      '<span class="chain-item-name">' + esc(m.name || "") + "</span></div>").join("");
+    return intro + '<div class="chain-list">' + rows + "</div>";
+  },
+
+  _bind() {
+    document.querySelectorAll("[data-ctab]").forEach((b) => {
+      b.onclick = () => { this._tab = b.getAttribute("data-ctab"); this._draw(); };
+    });
+    document.querySelectorAll("[data-open]").forEach((row) => {
+      row.onclick = async () => {
+        const id = row.getAttribute("data-open");
+        await Nav.show("inventory");
+        if (typeof Detail !== "undefined") Detail.show(id);
+      };
+    });
     this._bindEdges();
   },
 
