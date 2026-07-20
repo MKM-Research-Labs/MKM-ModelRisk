@@ -57,7 +57,7 @@ Object.assign(MeetingDetail, {
         '<button class="btn small" data-agenda-unlock="1">Unlock</button></span></div>'
       : '<div class="row" style="justify-content:flex-end;margin-bottom:10px">' +
         '<button class="btn small" data-agenda-lock="1">Finalise agenda for distribution&hellip;</button></div>';
-    let html = bar + '<div id="agenda-list">' + cards + "</div>";
+    let html = bar + '<div id="agenda-list">' + cards + "</div>" + this._eventReviewSection();
     if (!locked) {
       const names = this._participantNames(this._meeting.data || {});
       const presenterOpts = ['<option value=""></option>'].concat(
@@ -90,6 +90,36 @@ Object.assign(MeetingDetail, {
       '<div style="margin-top:6px;font-size:12px">' + this._agendaDoc(item) + "</div></div>";
   },
 
+  // Operational events fed up from products (allocated when the meeting was
+  // scheduled). The committee receives each one with comments and action items.
+  _eventReviewItems() {
+    return ((this._meeting.data || {}).agenda || []).filter((it) => it.subject_event_id);
+  },
+
+  _eventReviewSection() {
+    const items = this._eventReviewItems();
+    if (!items.length) return "";
+    return '<div class="section-header" style="margin-top:16px">Operational events for review</div>' +
+      '<p class="muted">Events raised on this committee’s products. Receive each one, ' +
+      "recording comments and any action items from the discussion.</p>" +
+      items.map((it) => this._eventCard(it)).join("");
+  },
+
+  _eventCard(item) {
+    const title = "<b>" + esc(item.title || "") + "</b>";
+    if (item.status === "Completed") {
+      return '<div class="card" style="margin-bottom:8px">' + title +
+        ' <span class="badge" style="background:#388e3c">Received</span></div>';
+    }
+    const id = esc(item.item_id);
+    return '<div class="card" style="margin-bottom:8px" id="evrow-' + id + '">' + title +
+      '<div class="field" style="max-width:none;margin-top:8px"><label>Comments</label>' +
+      '<textarea id="ev-comments-' + id + '" rows="2"></textarea></div>' +
+      '<div class="field" style="max-width:none"><label>Action items (one per line)</label>' +
+      '<textarea id="ev-actions-' + id + '" rows="2" placeholder="e.g. Add a feed heartbeat alarm"></textarea></div>' +
+      '<button class="btn small primary" data-receive-event="' + id + '">Receive event&hellip;</button></div>';
+  },
+
   // A document attach/replace/download control for an agenda item.
   _agendaDoc(item) {
     return '<input type="file" id="agdoc-file-' + esc(item.item_id) + '" style="display:none">' +
@@ -115,6 +145,19 @@ Object.assign(MeetingDetail, {
       () => self.show(self._id, "agenda"));
     this._bindStandingAgenda();
     this._bindAgendaDocs();
+    // Receiving an event is a committee decision — allowed even once the agenda is
+    // finalised (it does not add/edit/remove agenda items on the fly).
+    document.querySelectorAll("[data-receive-event]").forEach(function (btn) {
+      const id = btn.getAttribute("data-receive-event");
+      btn.onclick = function () {
+        const comments = val("ev-comments-" + id);
+        const actions = val("ev-actions-" + id).split("\n").map((s) => s.trim())
+          .filter(Boolean).map((description) => ({ description: description }));
+        App.amend("Receive this operational event on behalf of the committee?", "POST",
+          "/api/meetings/" + self._id + "/agenda/" + id + "/receive-event",
+          { comments: comments, actions: actions }, () => self.show(self._id, "agenda"));
+      };
+    });
     if (this._agendaLocked()) return;   // no add/edit/remove while finalised
     document.getElementById("ag-add").onclick = function () {
       const title = val("ag-add-title");
