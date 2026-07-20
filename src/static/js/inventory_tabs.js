@@ -127,7 +127,7 @@ const DetailTabs = {
       "</tbody></table>";
   },
 
-  risk(rating) {
+  risk(rating, showEvents = true) {
     const color = RISK_COLORS[rating.rating] || "#9e9e9e";
     const pct = Math.round(rating.score * 100);
     const hm = rating.heatmap || {};
@@ -144,9 +144,11 @@ const DetailTabs = {
         '<div class="muted" style="text-align:center">HEATMAP RATING</div>' +
         '<div style="text-align:center;font-size:16px" class="muted">Set Materiality and Complexity on Overview to place this model on the heatmap.</div>' +
         "</div>";
-    const events = '<div class="row" style="gap:16px;margin:12px 0"><div class="scard" ' +
+    // Events are a product-level (production) concern, so the count shows only on
+    // products, not models.
+    const events = showEvents ? '<div class="row" style="gap:16px;margin:12px 0"><div class="scard" ' +
       'style="border-left-color:#1976d2"><div class="lbl">Events (past ' + rating.events_window_days +
-      ' days)</div><div class="val">' + rating.events_in_window + "</div></div></div>";
+      ' days)</div><div class="val">' + rating.events_in_window + "</div></div></div>" : "";
     const comps = rating.components.map(function (c) {
       const s = Math.round(c.score * 100);
       return '<div style="margin-bottom:10px"><div><b>' + esc(c.label) + '</b> <span class="muted">(' +

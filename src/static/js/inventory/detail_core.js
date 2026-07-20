@@ -36,7 +36,7 @@ const TESTING_DOC_CATEGORY = {
 };
 // Collection tabs that carry an in-context supporting-documents panel.
 const COLLECTION_DOC_CATEGORY = {
-  operational_failure_events: "Event Evidence", remediation_steps: "Remediation Evidence",
+  remediation_steps: "Remediation Evidence",
 };
 const HEADER_DATES = ["next_review_date"];
 
@@ -111,7 +111,6 @@ const Detail = {
       ["dependencies", "Dependencies", n("dependencies")],
       ["validation_questions", "Validation & Assumptions", cov],
       ["testing", "Testing", tst],
-      ["operational_failure_events", "Events", n("operational_failure_events")],
       ["risk", "Risk Rating", null],
       ["decisions", "MRC linkage",
         (d.signoff_history || []).length + this._decisions.length],
@@ -133,15 +132,15 @@ const Detail = {
     const box = document.getElementById("dt-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
     if (this._tab === "risk") {
-      box.innerHTML = DetailTabs.risk(this._risk);
+      box.innerHTML = DetailTabs.risk(this._risk, false);  // events are product-only
       this._bindSignoffRequest(); return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
     if (this._tab === "decisions") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "docs") {
-      // Remediation / Event Evidence are captured in-context on the Remediation
-      // and Events tabs, so they are not offered as standalone Docs categories.
+      // Remediation Evidence is captured in-context on the Remediation tab, so it
+      // is not offered as a standalone Docs category. (Events are product-only.)
       const cats = (this._specs.doc_categories || []).filter(
         (c) => c !== "Remediation Evidence" && c !== "Event Evidence");
       ModelDocs.render(this._id, d.documents || [], cats, this._model.retired);
@@ -191,7 +190,6 @@ const Detail = {
     box.innerHTML = html;
     this._bindCollection(this._tab);
     if (docCat) DocPanel.bind(docOpts);
-    if (this._tab === "operational_failure_events") this._defaultAccountable(d);
   },
 
   _collSection(key, d) {
@@ -218,15 +216,6 @@ const Detail = {
     Collections.bind("/api/models/" + this._id + "/collections/",
       { collections: keys.map((k) => this.collSpec(k)) },
       this._model.retired, () => this.show(this._id, this._tab), this._model.data);
-  },
-
-  // Pre-fill an Event's Accountable field with the model's owner so the chair
-  // can capture an incident without re-typing who owns the model.
-  _defaultAccountable(d) {
-    const accountable = document.getElementById("add-operational_failure_events-accountable");
-    if (accountable && d.owner && [...accountable.options].some((o) => o.value === d.owner)) {
-      accountable.value = d.owner;
-    }
   },
 
   _bindCollection(key) { this._bindCollections([key]); },

@@ -203,3 +203,29 @@ def test_product_document_missing_file_is_404(client):
 
 # The Product ↔ analytics-model company check retired with Phase MRC-5: the
 # instance is a single institution, so every model belongs to it by default.
+
+
+def test_raci_roles_collection_on_a_product(client):
+    # RACI folds into Product: the operating-model roles are defined at product level.
+    _live_model(client)
+    _register(client)
+    resp = client.post(
+        "/api/products/Product-0001/collections/raci_roles",
+        json={"fields": {"role": "Operations Lead", "raci": "Responsible",
+                         "description": "Reruns failed production jobs"}, "confirmed": True},
+        headers=HEADERS,
+    )
+    assert resp.status_code == 201
+    role = resp.get_json()["data"]["raci_roles"][0]
+    assert role["role"] == "Operations Lead" and role["raci"] == "Responsible"
+
+
+def test_raci_role_rejects_an_invalid_raci_code(client):
+    _live_model(client)
+    _register(client)
+    resp = client.post(
+        "/api/products/Product-0001/collections/raci_roles",
+        json={"fields": {"role": "X", "raci": "Bystander"}, "confirmed": True},
+        headers=HEADERS,
+    )
+    assert resp.status_code == 400

@@ -99,6 +99,7 @@ const ProductDetail = {
       ["remediation_steps", "Remediation", n("remediation_steps")],
       ["validation_questions", "Validation", n("validation_questions")],
       ["operational_failure_events", "Events", n("operational_failure_events")],
+      ["raci_roles", "RACI", n("raci_roles")],
       ["risk", "Risk Rating", null], ["linkage", "MRC", null],
       ["docs", "Docs", n("documents")],
       // Audit is the final tab — the complete, read-only record of every change,

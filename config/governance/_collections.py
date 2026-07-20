@@ -43,6 +43,9 @@ VALID_VERSION_LIFECYCLE = (
 # independent Yes/No because in practice an event may inform one and not the
 # other (e.g. internal noise that didn't reach the client).
 VALID_INFORMED = ("Yes", "No")
+# The four RACI accountabilities, defining who does what for a product's use of
+# models in production (the RACI operating model, held at the product level).
+VALID_RACI_CODES = ("Responsible", "Accountable", "Consulted", "Informed")
 # A queued sign-off request (owner-raised) as it moves from raised to
 # attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
 # MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
@@ -192,6 +195,18 @@ COLLECTION_SPECS = {
          "type": "choice", "options": VALID_INFORMED},
         {"key": "informed_senior_mgmt", "label": "Informed: Senior management",
          "type": "choice", "options": VALID_INFORMED},
+    ]},
+    # The RACI operating model for a product: who is Responsible / Accountable /
+    # Consulted / Informed for the product's use of models in production. Held at
+    # the product level (a product uses models in production); the per-event R/A/C/I
+    # on operational_failure_events records who acted on a specific incident.
+    "raci_roles": {"label": "RACI roles", "id_prefix": "RC", "fields": [
+        {"key": "role", "label": "Role", "type": "text", "required": True},
+        {"key": "raci", "label": "RACI", "type": "choice",
+         "options": VALID_RACI_CODES, "required": True},
+        {"key": "assigned_to", "label": "Assigned to", "type": "text", "reference": "people"},
+        {"key": "backup", "label": "Backup", "type": "text", "reference": "people"},
+        {"key": "description", "label": "Description", "type": "text"},
     ]},
     # Outstanding action items owned by the model — the MRC revisits and updates
     # these at committee level. Each action carries a history of dated updates to

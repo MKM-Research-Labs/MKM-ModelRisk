@@ -98,6 +98,9 @@ PRODUCT_COLLECTION_SPECS = {
     # (impact). Give the product the same risk assessment as a model.
     "validation_questions": COLLECTION_SPECS["validation_questions"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
+    # The RACI operating model — who is R/A/C/I for this product's use of models
+    # in production. Defined at the product level (RACI folds into Product).
+    "raci_roles": COLLECTION_SPECS["raci_roles"],
     # The MRC sign-off queue + history, shared shape with the model inventory.
     "signoff_requests": COLLECTION_SPECS["signoff_requests"],
     "signoff_history": COLLECTION_SPECS["signoff_history"],
