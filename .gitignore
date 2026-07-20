@@ -32,3 +32,9 @@ pgctl.sh
 # never committed to the handover repo. Outside every first-party dir so the
 # licence-notice audit does not scan it either.
 local/
+
+# Bibliography / reference PDFs — large third-party documents kept locally and
+# uploaded into the app's Documents store, never committed (both case variants,
+# as macOS is case-insensitive but git patterns are not).
+docs/bib/
+docs/Bib/
