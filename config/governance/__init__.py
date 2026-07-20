@@ -35,8 +35,6 @@ from config.governance._collections import (
     VALID_VQ_STATUSES,
 )
 from config.governance._documents import (
-    BIBLIOGRAPHY_SPEC,
-    BIBLIOGRAPHY_SPECS,
     DOC_CATEGORIES,
 )
 from config.governance._inventory import (
@@ -99,7 +97,7 @@ from config.governance._reference import (
 )
 
 __all__ = [
-    "BIBLIOGRAPHY_SPEC", "BIBLIOGRAPHY_SPECS", "COLLECTION_SPECS", "COMPLEXITY_ORDER",
+    "COLLECTION_SPECS", "COMPLEXITY_ORDER",
     "DEPENDENCIES_COLLECTION",
     "SIGNOFF_COLLECTIONS", "SIGNOFF_HISTORY_COLLECTION", "SIGNOFF_REQUESTS_COLLECTION",
     "DEFAULT_MEETING_STATUS", "DEFAULT_VQ_STATUS", "DOC_CATEGORIES", "EDITABLE_FIELDS",

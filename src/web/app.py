@@ -28,7 +28,6 @@ from src.governance.errors import DomainError
 from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
 from src.web.api_audit_reports import audit_reports_bp
-from src.web.api_bibliography import bib_bp
 from src.web.api_documents import documents_bp
 from src.web.api_handoffs import handoffs_bp
 from src.web.api_models import models_bp
@@ -71,7 +70,6 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(settings_bp)
     app.register_blueprint(reference_bp)
     app.register_blueprint(documents_bp)
-    app.register_blueprint(bib_bp)
     app.register_blueprint(audit_bp)
     app.register_blueprint(audit_reports_bp)
     app.register_blueprint(ingest_bp)

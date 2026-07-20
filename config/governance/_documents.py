@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Document categories and bibliography field specs (coding rule R1)."""
+"""Document categories (coding rule R1)."""
 
 # Per-model document categories (each a sub-tab on the model Docs tab). The
 # Unit/Integration/Benchmark Test, Event Evidence and Remediation Evidence
@@ -28,15 +28,3 @@ DOC_CATEGORIES = (
     "Unit Test", "Integration Test", "Benchmark Test",
     "Event Evidence", "Remediation Evidence",
 )
-
-# Bibliography reference fields (top-level References tab + BibTeX export).
-BIBLIOGRAPHY_SPEC = {"label": "References", "id_prefix": "REF", "fields": [
-    {"key": "authors", "label": "Author(s)", "type": "text", "required": True},
-    {"key": "year", "label": "Year", "type": "text"},
-    {"key": "title", "label": "Title", "type": "text", "required": True},
-    {"key": "journal", "label": "Journal / Publisher", "type": "text"},
-    {"key": "category", "label": "Category", "type": "text"},
-    {"key": "url", "label": "URL", "type": "text"},
-    {"key": "notes", "label": "Notes", "type": "textarea"},
-]}
-BIBLIOGRAPHY_SPECS = {"references": BIBLIOGRAPHY_SPEC}
