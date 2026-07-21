@@ -25,20 +25,21 @@ was instead confirmed from the title page of the PDF in that folder, so the mapp
 is evidence rather than a guess at folder names. It takes precedence over the
 inventory path; models absent here fall back to whatever the inventory says.
 
-Confirmed titles, in folder order: "Gauge Historical Daily Synthetic Generation
-Model", "Insurance Premium Model", "Property Flood Response Model", "Property
-Valuation Model", "Spatial Interpolation Model", "Storm Sequence Generator ...
-(MKM-SS-001)", "Stress Test Pipeline", "Building Fire-Resilience Credit Model",
-"Building Seismic-Resilience Credit Model", "Tropical Cyclone Progression and
-Wind-Field - Test Results".
+Confirmed titles, in folder order: "BRI-Adjusted Floor Level Model", "Gauge
+Historical Daily Synthetic Generation Model", "Insurance Premium Model", "Property
+Flood Response Model", "Property Valuation Model", "Spatial Interpolation Model",
+"Storm Sequence Generator ... (MKM-SS-001)", "Stress Test Pipeline", "Building
+Fire-Resilience Credit Model", "Building Seismic-Resilience Credit Model", "Tropical
+Cyclone Progression and Wind-Field Model", "Wind Damage Model", "Event Wind Lookup
+Model".
 
-MKM-BRF-001, MKM-WS-001 and MKM-WD-001 are deliberately absent: they have no
-documentation in the source at all.
+Every model in the source inventory now has a folder here.
 """
 
 from pathlib import Path
 
 MODEL_FOLDERS = {
+    "MKM-BRF-001": "bri_floor",
     "MKM-GHD-001": "gaugehd_synthetic",
     "MKM-IP-001": "insurance_premium",
     "MKM-PF-001": "property_flood_response",
@@ -49,6 +50,8 @@ MODEL_FOLDERS = {
     "MKM-FIRE-001": "fire_resilience",
     "MKM-SEIS-001": "seismic_resilience",
     "MKM-TC-001": "typhoon",
+    "MKM-WD-001": "wind_damage",
+    "MKM-WS-001": "wind_speed",
 }
 
 
