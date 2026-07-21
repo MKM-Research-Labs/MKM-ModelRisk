@@ -47,6 +47,7 @@ from src.governance.model_inventory import (
 )
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from scripts._phys_folders import folder_for
+from scripts._phys_lineage import apply_field_renames
 
 PHYS_ROOT = Path("/Users/newdavid/Documents/PhysicalRisk")
 MODELS_ROOT = PHYS_ROOT / "docs" / "models"
@@ -272,6 +273,7 @@ def migrate(config=None) -> dict:
     docs = attach_documents(inventory, config=config)
     product = create_prs_product(config=config)
     return {"models_registered": registered, "documents_attached": docs["attached"],
+            "field_renames": apply_field_renames(ACTOR, config=config),
             "documents_ambiguous": docs["ambiguous"], "documents_unresolved": docs["unresolved"],
             "dependencies": chain["dependencies"], "declared_edges": edges,
             "handoffs": chain["handoffs"], "prs_product": product}
@@ -284,14 +286,13 @@ def main() -> int:
     print(f"models registered: {result['models_registered']}, "
           f"documents attached: {result['documents_attached']}, "
           f"chain: {result['dependencies']} backfilled + {result['declared_edges']} declared, "
-          f"handoffs: {result['handoffs']}, PRS product created: {result['prs_product']}")
+          f"handoffs: {result['handoffs']} ({result['field_renames']} field renames), "
+          f"PRS product created: {result['prs_product']}")
     # Gaps the source cannot resolve, so the owner knows what to fill in by hand.
-    if result["documents_ambiguous"]:
-        print("  no documents (two models share one source folder): "
-              + ", ".join(result["documents_ambiguous"]))
-    if result["documents_unresolved"]:
-        print("  no documents (no source folder on disk): "
-              + ", ".join(result["documents_unresolved"]))
+    for why, ids in (("two models share one source folder", result["documents_ambiguous"]),
+                     ("no source folder on disk", result["documents_unresolved"])):
+        if ids:
+            print(f"  no documents ({why}): " + ", ".join(ids))
     return 0
 
 

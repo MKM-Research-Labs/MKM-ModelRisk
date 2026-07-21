@@ -143,6 +143,39 @@ def test_attach_documents_is_idempotent(tmp_path, monkeypatch):
     assert migrate_phys.attach_documents(inventory)["attached"] == 0
 
 
+def test_apply_field_renames_records_the_consumer_name_and_its_evidence(monkeypatch):
+    from scripts import _phys_lineage
+    from src.governance.model_handoff import (
+        declare_handoff, get_handoff_for_edge, rebuild_handoff_view)
+    from src.governance.model_handoff.commands import add_collection_item as add_field
+    from src.governance.model_inventory import add_collection_item as declare_dependency
+
+    for model_id in ("MKM-A-001", "MKM-B-001"):
+        register_model(model_id=model_id, name=model_id, actor="a")
+    rebuild_inventory_view()          # the dependency guard checks the view
+    declare_dependency(model_id="MKM-A-001", collection="dependencies", actor="a",
+                       fields={"direction": "downstream", "model_id": "MKM-B-001"})
+    rebuild_inventory_view()
+    declare_handoff(from_model="MKM-A-001", to_model="MKM-B-001", actor="a")
+    rebuild_handoff_view()
+    hid = get_handoff_for_edge("MKM-A-001", "MKM-B-001")["handoff_id"]
+    for name in ("raw_mm", "untouched"):
+        add_field(handoff_id=hid, collection="field_lineage", actor="a",
+                  fields={"provider_field": name, "consumer_field": name, "note": "as supplied"})
+    rebuild_handoff_view()
+    monkeypatch.setattr(_phys_lineage, "FIELD_RENAMES",
+                        {("MKM-A-001", "MKM-B-001"): {"raw_mm": ("scaled_mm", "src/x.py:1")}})
+
+    assert _phys_lineage.apply_field_renames("tester") == 1
+    fields = {f["provider_field"]: f for f in
+              get_handoff_for_edge("MKM-A-001", "MKM-B-001")["data"]["field_lineage"]}
+    assert fields["raw_mm"]["consumer_field"] == "scaled_mm"
+    assert "scaled_mm" in fields["raw_mm"]["note"] and "src/x.py:1" in fields["raw_mm"]["note"]
+    # A field with no rename is untouched, and re-running appends nothing.
+    assert fields["untouched"]["consumer_field"] == "untouched"
+    assert _phys_lineage.apply_field_renames("tester") == 0
+
+
 def test_declare_source_edges_adds_per_model_upstream_and_downstream():
     for model_id in ("MKM-P-001", "MKM-Q-001", "MKM-R-001"):
         register_model(model_id=model_id, name=model_id, actor="a")
