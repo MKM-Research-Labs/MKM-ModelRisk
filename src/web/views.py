@@ -30,6 +30,6 @@ views_bp = Blueprint("views", __name__)
 @views_bp.get("/")
 def index():
     # Pre-fill the "Acting as" field with the resolved principal: the SSO user in
-    # a deployment, or the configured dev fallback (MKM_IDENTITY_DEV_FALLBACK)
+    # a deployment, or the configured dev fallback (IDENTITY_DEV_FALLBACK)
     # locally — so a demo attributes changes to the operator, not dev@localhost.
     return render_template("index.html", actor_default=resolve_principal(request.headers).actor)

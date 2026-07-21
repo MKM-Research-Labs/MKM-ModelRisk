@@ -25,6 +25,7 @@ the ingest validator, so no source or script module walks the tree with
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # Repository root (config/ lives directly under it).
@@ -35,3 +36,14 @@ MIGRATIONS_DIR = _REPO_ROOT / "src" / "database" / "migrations"
 
 # Frozen v1 ingest contract schemas, loaded by the ingest validator.
 CONTRACTS_V1_DIR = _REPO_ROOT / "contracts" / "ingest" / "v1"
+
+# Root of the producing repository a migration reads from. Machine-specific, so
+# it comes from the environment; the default assumes it sits beside this clone,
+# which is the usual layout. Never a hardcoded absolute path (rule R1).
+PRODUCER_ROOT = Path(os.environ.get("PRODUCER_ROOT", str(_REPO_ROOT.parent / "PhysicalRisk")))
+
+# The producing repo's model inventory — the source artifact the phys migration
+# reads (models, collections, the declared chain).
+PRODUCER_INVENTORY = (
+    PRODUCER_ROOT / "docs" / "models" / "governance_data" / "model_inventory.json"
+)

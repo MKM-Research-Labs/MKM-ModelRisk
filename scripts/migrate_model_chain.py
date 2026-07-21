@@ -43,13 +43,14 @@ from typing import Any
 
 from src.database import run_migrations
 from src.governance.model_chain import get_chain
+from config.paths import PRODUCER_INVENTORY
 from src.ingest import ingest_payload
 
 PRODUCER = "migrate_model_chain"
 PRODUCER_VERSION = "1.0.0"
 # The canonical location of the governance data in the source repo.
 DEFAULT_SOURCE = Path(
-    "/Users/newdavid/Documents/PhysicalRisk/docs/models/governance_data/model_inventory.json"
+    str(PRODUCER_INVENTORY)
 )
 
 

@@ -22,5 +22,5 @@ from __future__ import annotations
 
 import os
 
-WEB_HOST = os.environ.get("MKM_WEB_HOST", "127.0.0.1")
-WEB_PORT = int(os.environ.get("MKM_WEB_PORT", "5015"))
+WEB_HOST = os.environ.get("WEB_HOST", "127.0.0.1")
+WEB_PORT = int(os.environ.get("WEB_PORT", "5015"))

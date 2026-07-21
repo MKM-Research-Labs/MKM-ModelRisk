@@ -49,7 +49,7 @@ def test_run_pins_the_test_database_and_repo_root(monkeypatch):
 
     monkeypatch.setattr(ts.subprocess, "run", _fake_run)
     assert ts._run(["pytest"]) == "done"
-    assert captured["env"]["MKM_DB_NAME"] == "mkm_modelrisk_test"
+    assert captured["env"]["DB_NAME"] == "mkm_modelrisk_test"
     assert captured["env"][ts.SUITE_ACTIVE_ENV] == "1"        # marks nested runs
     assert captured["cwd"] == str(ts.REPO_ROOT)
 

@@ -32,16 +32,16 @@ import os
 # N, found 0", tamper-evidence and sign-off failures. Isolating the database per
 # process makes concurrent runs impossible to corrupt (and serial runs unchanged).
 _TEST_DB_BASE = (
-    os.environ.get("MKM_TEST_DB_BASE")
-    or os.environ.get("MKM_DB_NAME")
+    os.environ.get("TEST_DB_BASE")
+    or os.environ.get("DB_NAME")
     or "mkm_modelrisk_test"
 )
 if _TEST_DB_BASE != "mkm_modelrisk":  # never shadow the dev database
     # Worker id is stable per xdist worker; PID isolates independent invocations.
     _suffix = os.environ.get("PYTEST_XDIST_WORKER") or f"p{os.getpid()}"
     # Keep a stable base so xdist workers don't double-suffix the mutated name.
-    os.environ["MKM_TEST_DB_BASE"] = _TEST_DB_BASE
-    os.environ["MKM_DB_NAME"] = f"{_TEST_DB_BASE}_{_suffix}"
+    os.environ["TEST_DB_BASE"] = _TEST_DB_BASE
+    os.environ["DB_NAME"] = f"{_TEST_DB_BASE}_{_suffix}"
 
 import time  # noqa: E402
 

@@ -30,16 +30,16 @@ function Step($m) { Write-Host "`n==> $m" -ForegroundColor Cyan }
 function Fail($m) { Write-Host "ERROR: $m" -ForegroundColor Red; exit 1 }
 
 # Settings mirror config/database.py and scripts/pg.sh.
-$DbHost  = if ($env:MKM_DB_HOST) { $env:MKM_DB_HOST } else { '127.0.0.1' }
-$Port    = if ($env:MKM_DB_PORT) { $env:MKM_DB_PORT } else { '5433' }
-$Owner   = if ($env:MKM_DB_OWNER_USER) { $env:MKM_DB_OWNER_USER } else { 'mkm_owner' }
-$OwnerPw = if ($env:MKM_DB_OWNER_PASSWORD) { $env:MKM_DB_OWNER_PASSWORD } else { 'mkm_dev_pw' }
-$DbName  = if ($env:MKM_DB_NAME) { $env:MKM_DB_NAME } else { 'mkm_modelrisk' }
-$Data    = if ($env:MKM_PG_DATA_DIR) { $env:MKM_PG_DATA_DIR } else { Join-Path $PWD '.pgdata' }
-$Locale  = if ($env:MKM_PG_LOCALE) { $env:MKM_PG_LOCALE } else { 'C' }
+$DbHost  = if ($env:DB_HOST) { $env:DB_HOST } else { '127.0.0.1' }
+$Port    = if ($env:DB_PORT) { $env:DB_PORT } else { '5433' }
+$Owner   = if ($env:DB_OWNER_USER) { $env:DB_OWNER_USER } else { 'mkm_owner' }
+$OwnerPw = if ($env:DB_OWNER_PASSWORD) { $env:DB_OWNER_PASSWORD } else { 'mkm_dev_pw' }
+$DbName  = if ($env:DB_NAME) { $env:DB_NAME } else { 'mkm_modelrisk' }
+$Data    = if ($env:PG_DATA_DIR) { $env:PG_DATA_DIR } else { Join-Path $PWD '.pgdata' }
+$Locale  = if ($env:PG_LOCALE) { $env:PG_LOCALE } else { 'C' }
 
 # --- Locate PostgreSQL 16 --------------------------------------------------
-$PgBin = $env:MKM_PG_BIN
+$PgBin = $env:PG_BIN
 if (-not $PgBin) {
     foreach ($c in @("$env:ProgramFiles\PostgreSQL\16\bin",
                      "${env:ProgramFiles(x86)}\PostgreSQL\16\bin")) {
@@ -55,8 +55,8 @@ if (-not $PgBin) {
 PostgreSQL 16 not found. Install it, then re-run:
   winget install -e --id PostgreSQL.PostgreSQL.16
 or download the installer from https://www.postgresql.org/download/windows/
-If it is installed somewhere unusual, set MKM_PG_BIN to the folder holding initdb.exe:
-  `$env:MKM_PG_BIN = 'D:\PostgreSQL\16\bin'
+If it is installed somewhere unusual, set PG_BIN to the folder holding initdb.exe:
+  `$env:PG_BIN = 'D:\PostgreSQL\16\bin'
 "@
 }
 $InitDb   = Join-Path $PgBin 'initdb.exe'
@@ -164,10 +164,10 @@ if (-not (Test-Db)) { Fail "the database is not accepting connections on port $P
 Write-Host "cluster is accepting connections on port $Port"
 
 # --- 4. Identity used for the audit trail ---------------------------------
-if ($Identity) { $env:MKM_IDENTITY_DEV_FALLBACK = $Identity }
-if (-not $env:MKM_IDENTITY_DEV_FALLBACK) {
+if ($Identity) { $env:IDENTITY_DEV_FALLBACK = $Identity }
+if (-not $env:IDENTITY_DEV_FALLBACK) {
     $id = Read-Host "`nIdentity your changes are attributed to [dev@localhost]"
-    $env:MKM_IDENTITY_DEV_FALLBACK = if ($id) { $id } else { 'dev@localhost' }
+    $env:IDENTITY_DEV_FALLBACK = if ($id) { $id } else { 'dev@localhost' }
 }
 
 if ($Seed) {
@@ -176,8 +176,8 @@ if ($Seed) {
 }
 
 # --- 5. Run ----------------------------------------------------------------
-$WebHost = if ($env:MKM_WEB_HOST) { $env:MKM_WEB_HOST } else { '127.0.0.1' }
-$WebPort = if ($env:MKM_WEB_PORT) { $env:MKM_WEB_PORT } else { '5015' }
+$WebHost = if ($env:WEB_HOST) { $env:WEB_HOST } else { '127.0.0.1' }
+$WebPort = if ($env:WEB_PORT) { $env:WEB_PORT } else { '5015' }
 if (-not $NoRun) {
     Step "Starting MKM-ModelRisk on http://${WebHost}:${WebPort}"
     Write-Host "Press Ctrl-C to stop."

@@ -54,16 +54,16 @@ class DatabaseConfig:
     @classmethod
     def from_env(cls) -> "DatabaseConfig":
         return cls(
-            host=os.environ.get("MKM_DB_HOST", _DEFAULTS["host"]),
-            port=int(os.environ.get("MKM_DB_PORT", _DEFAULTS["port"])),
-            name=os.environ.get("MKM_DB_NAME", _DEFAULTS["name"]),
-            owner_user=os.environ.get("MKM_DB_OWNER_USER", _DEFAULTS["owner_user"]),
+            host=os.environ.get("DB_HOST", _DEFAULTS["host"]),
+            port=int(os.environ.get("DB_PORT", _DEFAULTS["port"])),
+            name=os.environ.get("DB_NAME", _DEFAULTS["name"]),
+            owner_user=os.environ.get("DB_OWNER_USER", _DEFAULTS["owner_user"]),
             owner_password=os.environ.get(
-                "MKM_DB_OWNER_PASSWORD", _DEFAULTS["owner_password"]
+                "DB_OWNER_PASSWORD", _DEFAULTS["owner_password"]
             ),
-            app_user=os.environ.get("MKM_DB_APP_USER", _DEFAULTS["app_user"]),
+            app_user=os.environ.get("DB_APP_USER", _DEFAULTS["app_user"]),
             app_password=os.environ.get(
-                "MKM_DB_APP_PASSWORD", _DEFAULTS["app_password"]
+                "DB_APP_PASSWORD", _DEFAULTS["app_password"]
             ),
         )
 

@@ -29,13 +29,13 @@ from __future__ import annotations
 import os
 
 # Header carrying the authenticated user's stable identifier.
-IDENTITY_HEADER = os.environ.get("MKM_IDENTITY_HEADER", "X-Auth-Request-User")
+IDENTITY_HEADER = os.environ.get("IDENTITY_HEADER", "X-Auth-Request-User")
 
 # Header carrying a human-friendly display name (optional).
 IDENTITY_NAME_HEADER = os.environ.get(
-    "MKM_IDENTITY_NAME_HEADER", "X-Auth-Request-Preferred-Username"
+    "IDENTITY_NAME_HEADER", "X-Auth-Request-Preferred-Username"
 )
 
 # Actor used for local development when no SSO header is present. Only honoured
 # when the caller explicitly allows a fallback (never in a hardened deployment).
-IDENTITY_DEV_FALLBACK = os.environ.get("MKM_IDENTITY_DEV_FALLBACK", "dev@localhost")
+IDENTITY_DEV_FALLBACK = os.environ.get("IDENTITY_DEV_FALLBACK", "dev@localhost")

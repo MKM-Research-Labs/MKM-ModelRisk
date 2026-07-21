@@ -89,10 +89,10 @@ def live_server(tmp_path_factory) -> str:
     workdir = tmp_path_factory.mktemp("e2e")
     log = workdir / "server.log"
     env = {
-        "MKM_DB_NAME": E2E_DB,
-        "MKM_WEB_HOST": "127.0.0.1",
-        "MKM_WEB_PORT": str(port),
-        "MKM_UPLOAD_DIR": str(workdir / "uploads"),
+        "DB_NAME": E2E_DB,
+        "WEB_HOST": "127.0.0.1",
+        "WEB_PORT": str(port),
+        "UPLOAD_DIR": str(workdir / "uploads"),
         "PYTHONPATH": str(REPO_ROOT),
         "PATH": __import__("os").environ.get("PATH", ""),
     }

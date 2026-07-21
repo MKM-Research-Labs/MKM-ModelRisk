@@ -25,7 +25,7 @@ from pathlib import Path
 
 # Where uploaded files (logos, meeting documents) are stored on disk.
 UPLOAD_DIR = Path(
-    os.environ.get("MKM_UPLOAD_DIR", str(Path(__file__).resolve().parents[1] / "uploads"))
+    os.environ.get("UPLOAD_DIR", str(Path(__file__).resolve().parents[1] / "uploads"))
 )
 
 # ``tex`` is allowed so a generated document can be filed alongside its PDF: the

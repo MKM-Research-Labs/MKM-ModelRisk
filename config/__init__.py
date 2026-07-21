@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """Configuration package — the single home for parameters (coding rule R1)."""
+# Imported first so .env populates the environment before any module reads it.
+from config import env  # noqa: F401
 from config.database import DatabaseConfig
 
 __all__ = ["DatabaseConfig"]

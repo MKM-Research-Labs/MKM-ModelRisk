@@ -34,6 +34,7 @@ import json
 from pathlib import Path
 
 from config.governance import MODEL_FIELD_SPECS, VALID_VQ_STATUSES
+from config.paths import PRODUCER_INVENTORY as SOURCE, PRODUCER_ROOT as PHYS_ROOT
 from src.governance.documents import add_document
 from src.governance.errors import DomainError
 from src.governance.model_inventory import (
@@ -49,9 +50,7 @@ from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGR
 from scripts._phys_folders import folder_for
 from scripts._phys_lineage import apply_field_renames
 
-PHYS_ROOT = Path("/Users/newdavid/Documents/PhysicalRisk")
 MODELS_ROOT = PHYS_ROOT / "docs" / "models"
-SOURCE = MODELS_ROOT / "governance_data" / "model_inventory.json"
 ACTOR = "migrate_phys"
 
 # Source scalar fields that map to a ModelRisk model field of the same key.

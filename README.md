@@ -148,7 +148,7 @@ initdb --version 2>/dev/null || ls -d /usr/lib/postgresql/16 /usr/pgsql-16 \
 > (`/usr/lib/postgresql/16/bin`), Fedora/RHEL (`/usr/pgsql-16/bin`), and finally
 > your `PATH`. On Debian/Ubuntu the binaries are deliberately **not** on `PATH`,
 > which is normal — the script finds them anyway. If yours lives somewhere else,
-> set `MKM_PG_BIN` to the directory containing `initdb`.
+> set `PG_BIN` to the directory containing `initdb`.
 
 ---
 
@@ -306,17 +306,17 @@ Stop the app with **Ctrl-C**. Stop the database with `bash scripts/pg.sh stop`
 
 | Symptom | Fix |
 |---|---|
-| `PostgreSQL 16 not found` from `pg.sh` | The version-16 binaries aren't in a known location. Find them (`ls /usr/lib/postgresql/*/bin` on Debian/Ubuntu, `ls /usr/pgsql-*/bin` on Fedora/RHEL) and set `MKM_PG_BIN` to that directory. |
+| `PostgreSQL 16 not found` from `pg.sh` | The version-16 binaries aren't in a known location. Find them (`ls /usr/lib/postgresql/*/bin` on Debian/Ubuntu, `ls /usr/pgsql-*/bin` on Fedora/RHEL) and set `PG_BIN` to that directory. |
 | `command not found: python3.13` | **Linux:** install it (see [Prerequisites](#prerequisites)); on Ubuntu ≤24.04 you need the deadsnakes PPA. **macOS:** Homebrew isn't on `PATH` — add `/opt/homebrew/bin` (Apple Silicon) or `/usr/local/bin` (Intel) and open a **new** terminal. |
 | `No module named venv` / `ensurepip is not available` (Debian/Ubuntu) | The venv module is a separate package: `sudo apt install python3.13-venv`. |
-| `initdb: invalid locale` / `locale not found` | Your image lacks the locale. `pg.sh` now falls back to `C.UTF-8`/`C` automatically — if you still hit it, force one: `MKM_PG_LOCALE=C.UTF-8 bash scripts/pg.sh init`. |
+| `initdb: invalid locale` / `locale not found` | Your image lacks the locale. `pg.sh` now falls back to `C.UTF-8`/`C` automatically — if you still hit it, force one: `PG_LOCALE=C.UTF-8 bash scripts/pg.sh init`. |
 | `scripts/pg.sh: Permission denied` | Invoke it via `bash scripts/pg.sh …` (as shown above). |
 | `initdb: cannot be run as root` | Run as your normal user, not with `sudo`. The cluster lives in the repo's `./.pgdata`, so no root is needed. |
 | **Windows:** `… cannot be loaded because running scripts is disabled` | Execution policy. Launch it as `powershell -ExecutionPolicy Bypass -File scripts\start.ps1` (no permanent change needed). |
 | **Windows:** `initdb: cannot be run as Administrator` | Close the elevated prompt and run in a **normal** PowerShell window. |
-| **Windows:** `PostgreSQL 16 not found` | Install it (`winget install -e --id PostgreSQL.PostgreSQL.16`), or point at it: `$env:MKM_PG_BIN = 'D:\PostgreSQL\16\bin'`. |
+| **Windows:** `PostgreSQL 16 not found` | Install it (`winget install -e --id PostgreSQL.PostgreSQL.16`), or point at it: `$env:PG_BIN = 'D:\PostgreSQL\16\bin'`. |
 | **Windows:** `Python 3.13+ not found` | `winget install -e --id Python.Python.3.13`, then **reopen PowerShell** so `PATH` refreshes. |
-| `pg_ctl: could not start server` on `init`/`start` | A cluster is **already running** on port 5433 — check `bash scripts/pg.sh status`. If a different PostgreSQL owns 5433, stop it (or set `MKM_DB_PORT`). On Debian/Ubuntu the distro auto-starts a cluster on 5432, which does **not** clash. |
+| `pg_ctl: could not start server` on `init`/`start` | A cluster is **already running** on port 5433 — check `bash scripts/pg.sh status`. If a different PostgreSQL owns 5433, stop it (or set `DB_PORT`). On Debian/Ubuntu the distro auto-starts a cluster on 5432, which does **not** clash. |
 | `psql: could not connect` / `connection refused` | The cluster isn't running. `bash scripts/pg.sh start` (Linux/macOS) or `scripts\start.ps1 -NoRun` (Windows). |
 | `Address already in use` on port 5015 | An app instance is still up: `lsof -tiTCP:5015 \| xargs kill` (or `fuser -k 5015/tcp` on Linux), then retry. |
 | PDF exports return **503** | Install the optional engines — `sudo apt install tectonic pandoc` / `brew install tectonic pandoc`. |
@@ -370,21 +370,24 @@ parameters, and over-long files.
 
 ## Configuration
 
-Defaults match `scripts/pg.sh`; override via environment variables (copy
-`.env.example` to `.env`):
+Defaults match `scripts/pg.sh`. Copy `.env.example` to `.env` and override there —
+`config/env.py` loads it at import, so every entry point (`python app.py`, a WSGI
+server, the start scripts, pytest) sees the same settings. A real environment
+variable always wins over the file.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `MKM_DB_HOST` / `MKM_DB_PORT` | `127.0.0.1` / `5433` | Database host/port |
-| `MKM_DB_NAME` | `mkm_modelrisk` | Database name |
-| `MKM_DB_OWNER_USER` / `MKM_DB_OWNER_PASSWORD` | `mkm_owner` / `mkm_dev_pw` | Owner role (migrations) |
-| `MKM_DB_APP_USER` / `MKM_DB_APP_PASSWORD` | `mkm_app` / `mkm_app_dev_pw` | Runtime role (insert-only) |
-| `MKM_WEB_HOST` / `MKM_WEB_PORT` | `127.0.0.1` / `5015` | Console host/port |
-| `MKM_PG_DATA_DIR` | `./.pgdata` | Cluster data directory (`scripts/pg.sh`) |
-| `MKM_PG_BIN` | auto-detected | Directory holding `initdb`/`pg_ctl`, if PostgreSQL 16 isn't in a standard location (`scripts/pg.sh`) |
-| `MKM_PG_LOCALE` | auto-detected | Locale used to `initdb` the cluster; falls back `en_US.UTF-8` → `C.UTF-8` → `C` (`scripts/pg.sh`) |
-| `MKM_IDENTITY_DEV_FALLBACK` | `dev@localhost` | Local "Acting as" identity when there is no SSO header |
-| `MKM_UPLOAD_DIR` | `./uploads` | Where uploaded files (and audit PDFs) are stored |
+| `DB_HOST` / `DB_PORT` | `127.0.0.1` / `5433` | Database host/port |
+| `DB_NAME` | `mkm_modelrisk` | Database name |
+| `DB_OWNER_USER` / `DB_OWNER_PASSWORD` | `mkm_owner` / `mkm_dev_pw` | Owner role (migrations) |
+| `DB_APP_USER` / `DB_APP_PASSWORD` | `mkm_app` / `mkm_app_dev_pw` | Runtime role (insert-only) |
+| `WEB_HOST` / `WEB_PORT` | `127.0.0.1` / `5015` | Console host/port |
+| `PG_DATA_DIR` | `./.pgdata` | Cluster data directory (`scripts/pg.sh`); point at an external volume to keep the clone free of data |
+| `PG_BIN` | auto-detected | Directory holding `initdb`/`pg_ctl`, if PostgreSQL 16 isn't in a standard location (`scripts/pg.sh`) |
+| `PG_LOCALE` | auto-detected | Locale used to `initdb` the cluster; falls back `en_US.UTF-8` → `C.UTF-8` → `C` (`scripts/pg.sh`) |
+| `IDENTITY_DEV_FALLBACK` | `dev@localhost` | Local "Acting as" identity when there is no SSO header |
+| `UPLOAD_DIR` | `./uploads` | Where uploaded files (and audit PDFs) are stored |
+| `PRODUCER_ROOT` | `../PhysicalRisk` | Root of the producing repo a migration reads from |
 
 A WSGI server can serve the app object directly, e.g. `gunicorn app:app`.
 

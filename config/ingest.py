@@ -41,9 +41,9 @@ INGEST_ARTIFACTS = {
 }
 
 # Largest single payload accepted (bytes). Enforced at the HTTP boundary.
-MAX_PAYLOAD_BYTES = int(os.environ.get("MKM_INGEST_MAX_BYTES", str(8 * 1024 * 1024)))
+MAX_PAYLOAD_BYTES = int(os.environ.get("INGEST_MAX_BYTES", str(8 * 1024 * 1024)))
 
 # Phase 0 shared-token auth stub. A real API-key / mTLS scheme replaces this
 # before any external producer is onboarded.
-INGEST_TOKEN_HEADER = os.environ.get("MKM_INGEST_TOKEN_HEADER", "X-Ingest-Token")
-INGEST_DEV_TOKEN = os.environ.get("MKM_INGEST_DEV_TOKEN", "dev-ingest-token")
+INGEST_TOKEN_HEADER = os.environ.get("INGEST_TOKEN_HEADER", "X-Ingest-Token")
+INGEST_DEV_TOKEN = os.environ.get("INGEST_DEV_TOKEN", "dev-ingest-token")

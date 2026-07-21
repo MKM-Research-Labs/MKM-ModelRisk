@@ -13,8 +13,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && { set -a; . ./.env; set +a; }
 
-if [ -n "${MKM_PG_BIN:-}" ]; then
-  PGBIN="$MKM_PG_BIN"
+if [ -n "${PG_BIN:-}" ]; then
+  PGBIN="$PG_BIN"
 elif [ -d /opt/homebrew/opt/postgresql@16/bin ]; then
   PGBIN=/opt/homebrew/opt/postgresql@16/bin   # Apple Silicon Homebrew
 elif [ -d /usr/local/opt/postgresql@16/bin ]; then
@@ -30,34 +30,34 @@ else
   echo "  macOS:          brew install postgresql@16" >&2
   echo "  Debian/Ubuntu:  sudo apt install postgresql-16" >&2
   echo "  Fedora/RHEL:    sudo dnf install postgresql16-server" >&2
-  echo "Or set MKM_PG_BIN to the directory containing initdb/pg_ctl." >&2
+  echo "Or set PG_BIN to the directory containing initdb/pg_ctl." >&2
   exit 1
 fi
-DATA="${MKM_PG_DATA_DIR:-$PWD/.pgdata}"
-HOST="${MKM_DB_HOST:-127.0.0.1}"
-PORT="${MKM_DB_PORT:-5433}"
-OWNER="${MKM_DB_OWNER_USER:-mkm_owner}"
-OWNER_PW="${MKM_DB_OWNER_PASSWORD:-mkm_dev_pw}"
-DBNAME="${MKM_DB_NAME:-mkm_modelrisk}"
+DATA="${PG_DATA_DIR:-$PWD/.pgdata}"
+HOST="${DB_HOST:-127.0.0.1}"
+PORT="${DB_PORT:-5433}"
+OWNER="${DB_OWNER_USER:-mkm_owner}"
+OWNER_PW="${DB_OWNER_PASSWORD:-mkm_dev_pw}"
+DBNAME="${DB_NAME:-mkm_modelrisk}"
 export PATH="$PGBIN:$PATH"
 # Pick a UTF-8 locale that actually exists. Minimal Linux images frequently ship
 # without en_US.UTF-8, and initdb fails outright on an unknown locale.
-if [ -z "${MKM_PG_LOCALE:-}" ]; then
+if [ -z "${PG_LOCALE:-}" ]; then
   if locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
-    MKM_PG_LOCALE=en_US.UTF-8
+    PG_LOCALE=en_US.UTF-8
   elif locale -a 2>/dev/null | grep -qiE '^C\.utf-?8$'; then
-    MKM_PG_LOCALE=C.UTF-8
+    PG_LOCALE=C.UTF-8
   else
-    MKM_PG_LOCALE=C
+    PG_LOCALE=C
   fi
 fi
-export LC_ALL="$MKM_PG_LOCALE" LANG="$MKM_PG_LOCALE"
+export LC_ALL="$PG_LOCALE" LANG="$PG_LOCALE"
 
 case "${1:-status}" in
   init)
     [ -d "$DATA" ] && { echo "Data dir already exists: $DATA" >&2; exit 1; }
     initdb -D "$DATA" -U "$OWNER" -A scram-sha-256 \
-      --pwfile=<(printf '%s' "$OWNER_PW") --locale="$MKM_PG_LOCALE" -E UTF-8
+      --pwfile=<(printf '%s' "$OWNER_PW") --locale="$PG_LOCALE" -E UTF-8
     pg_ctl -D "$DATA" -o "-p $PORT" -l "$DATA/server.log" start
     sleep 2
     PGPASSWORD="$OWNER_PW" createdb -h "$HOST" -p "$PORT" -U "$OWNER" "$DBNAME"

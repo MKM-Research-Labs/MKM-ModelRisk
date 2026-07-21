@@ -21,7 +21,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --no-run)  RUN_APP=0 ;;
     --seed)    SEED=1 ;;
-    --identity) shift; export MKM_IDENTITY_DEV_FALLBACK="${1:-}" ;;
+    --identity) shift; export IDENTITY_DEV_FALLBACK="${1:-}" ;;
     -h|--help) sed -n '4,11p' "$0"; exit 0 ;;
     *) fail "unknown option: $1 (try --help)" ;;
   esac
@@ -59,9 +59,9 @@ echo "dependencies installed"
 
 # --- 3. PostgreSQL cluster -------------------------------------------------
 step "Starting the PostgreSQL cluster"
-DATA="${MKM_PG_DATA_DIR:-$PWD/.pgdata}"
+DATA="${PG_DATA_DIR:-$PWD/.pgdata}"
 if bash scripts/pg.sh status >/dev/null 2>&1; then
-  echo "a cluster is already serving port ${MKM_DB_PORT:-5433} — leaving it alone"
+  echo "a cluster is already serving port ${DB_PORT:-5433} — leaving it alone"
 elif [ -d "$DATA" ]; then
   bash scripts/pg.sh start
 else
@@ -69,12 +69,12 @@ else
 fi
 bash scripts/pg.sh status >/dev/null 2>&1 \
   || fail "the database is not accepting connections. Run 'bash scripts/pg.sh status' to see why."
-echo "cluster is accepting connections on port ${MKM_DB_PORT:-5433}"
+echo "cluster is accepting connections on port ${DB_PORT:-5433}"
 
 # --- 4. Identity used for the audit trail ---------------------------------
-if [ -z "${MKM_IDENTITY_DEV_FALLBACK:-}" ] && [ -t 0 ]; then
+if [ -z "${IDENTITY_DEV_FALLBACK:-}" ] && [ -t 0 ]; then
   read -rp $'\nIdentity your changes are attributed to [dev@localhost]: ' ID || true
-  export MKM_IDENTITY_DEV_FALLBACK="${ID:-dev@localhost}"
+  export IDENTITY_DEV_FALLBACK="${ID:-dev@localhost}"
 fi
 
 if [ "$SEED" = "1" ]; then
@@ -84,7 +84,7 @@ fi
 
 # --- 5. Run ----------------------------------------------------------------
 if [ "$RUN_APP" = "1" ]; then
-  step "Starting MKM-ModelRisk on http://${MKM_WEB_HOST:-127.0.0.1}:${MKM_WEB_PORT:-5015}"
+  step "Starting MKM-ModelRisk on http://${WEB_HOST:-127.0.0.1}:${WEB_PORT:-5015}"
   exec python app.py
 fi
 step "Setup complete"
@@ -92,5 +92,5 @@ cat <<EOF
 To start the app:
   source .venv/bin/activate
   python app.py
-Then open http://${MKM_WEB_HOST:-127.0.0.1}:${MKM_WEB_PORT:-5015}
+Then open http://${WEB_HOST:-127.0.0.1}:${WEB_PORT:-5015}
 EOF

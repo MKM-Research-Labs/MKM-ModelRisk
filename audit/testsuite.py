@@ -45,7 +45,7 @@ _TIMEOUT = 900
 # Set on every suite subprocess so a nested audit run — e.g. an e2e test that
 # POSTs to /generate while the e2e suite is itself running under an audit run —
 # can detect it is inside a suite and refuse to spawn another one (recursion).
-SUITE_ACTIVE_ENV = "MKM_AUDIT_SUITE_ACTIVE"
+SUITE_ACTIVE_ENV = "AUDIT_SUITE_ACTIVE"
 
 
 def _unit_cmd(output_dir: Path, python_exe: str) -> list[str]:
@@ -64,7 +64,7 @@ def _e2e_cmd(output_dir: Path, python_exe: str) -> list[str]:
 
 def _run(cmd: list[str]) -> subprocess.CompletedProcess:
     """Run a pytest command from the repo root, pinned to the test database."""
-    env = {**os.environ, "PYTHONUNBUFFERED": "1", "MKM_DB_NAME": _TEST_DB,
+    env = {**os.environ, "PYTHONUNBUFFERED": "1", "DB_NAME": _TEST_DB,
            SUITE_ACTIVE_ENV: "1"}
     return subprocess.run(cmd, cwd=str(REPO_ROOT), env=env,
                           capture_output=True, timeout=_TIMEOUT, check=False)
