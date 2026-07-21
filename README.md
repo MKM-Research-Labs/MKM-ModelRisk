@@ -213,9 +213,19 @@ cd MKM-ModelRisk
 
 **Step 2 — Create the Python environment.**
 
+*Linux / macOS*
+
 ```bash
 python3.13 -m venv .venv
 source .venv/bin/activate          # ← run this in EVERY new terminal
+pip install -e ".[dev]"
+```
+
+*Windows (PowerShell)*
+
+```powershell
+py -3.13 -m venv .venv
+.venv\Scripts\Activate.ps1         # ← run this in EVERY new terminal
 pip install -e ".[dev]"
 ```
 
@@ -223,12 +233,21 @@ pip install -e ".[dev]"
 
 **Step 3 — Create the database cluster (one-off).**
 
+*Linux / macOS*
+
 ```bash
 bash scripts/pg.sh init            # creates ./.pgdata on port 5433, then starts it
 ```
 
+*Windows (PowerShell)* — there is no `pg.sh` on Windows; the start script does the
+cluster setup (it will skip the venv work already done in Step 2):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -NoRun
+```
+
 ✓ You should see `Cluster ready on port 5433; database 'mkm_modelrisk' created.`
-Confirm it is up with `bash scripts/pg.sh status` → `... accepting connections`.
+On Linux/macOS confirm with `bash scripts/pg.sh status` → `... accepting connections`.
 
 **Step 4 — Launch the app.**
 
@@ -250,6 +269,8 @@ already done and just launches the app.
 
 To do it by hand in a fresh terminal (the database persists between runs):
 
+*Linux / macOS*
+
 ```bash
 cd MKM-ModelRisk
 source .venv/bin/activate
@@ -257,7 +278,18 @@ bash scripts/pg.sh start
 python app.py
 ```
 
-Stop the app with **Ctrl-C**; stop the database with `bash scripts/pg.sh stop`.
+*Windows (PowerShell)*
+
+```powershell
+cd MKM-ModelRisk
+.venv\Scripts\Activate.ps1
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -NoRun   # starts the cluster
+python app.py
+```
+
+Stop the app with **Ctrl-C**. Stop the database with `bash scripts/pg.sh stop`
+(Linux/macOS) or `powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -StopDb`
+(Windows).
 
 > **Note.** The database starts empty; `python scripts/seed_demo.py` populates the
 > inventory with a few example models. Defaults work out of the box; only create a
@@ -279,10 +311,10 @@ Stop the app with **Ctrl-C**; stop the database with `bash scripts/pg.sh stop`.
 | **Windows:** `PostgreSQL 16 not found` | Install it (`winget install -e --id PostgreSQL.PostgreSQL.16`), or point at it: `$env:MKM_PG_BIN = 'D:\PostgreSQL\16\bin'`. |
 | **Windows:** `Python 3.13+ not found` | `winget install -e --id Python.Python.3.13`, then **reopen PowerShell** so `PATH` refreshes. |
 | `pg_ctl: could not start server` on `init`/`start` | A cluster is **already running** on port 5433 — check `bash scripts/pg.sh status`. If a different PostgreSQL owns 5433, stop it (or set `MKM_DB_PORT`). On Debian/Ubuntu the distro auto-starts a cluster on 5432, which does **not** clash. |
-| `psql: could not connect` / `connection refused` | The cluster isn't running: `bash scripts/pg.sh start`. |
+| `psql: could not connect` / `connection refused` | The cluster isn't running. `bash scripts/pg.sh start` (Linux/macOS) or `scripts\start.ps1 -NoRun` (Windows). |
 | `Address already in use` on port 5015 | An app instance is still up: `lsof -tiTCP:5015 \| xargs kill` (or `fuser -k 5015/tcp` on Linux), then retry. |
 | PDF exports return **503** | Install the optional engines — `sudo apt install tectonic pandoc` / `brew install tectonic pandoc`. |
-| Want a clean slate | `bash scripts/pg.sh start && dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk && python app.py`. |
+| Want a clean slate | Drop and recreate the database: `dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk && python app.py` (start the cluster first). On Windows use `"C:\Program Files\PostgreSQL\16\bin\dropdb.exe"` with the same arguments. To wipe everything, delete the `.pgdata` folder and re-run the start script. |
 
 ### Verify the checkout (optional but recommended)
 
@@ -293,7 +325,9 @@ pytest                           # unit + integration suite (e2e excluded by def
 
 > **Tip:** the database is the only stateful piece. It lives in the cluster's data
 > directory (`./.pgdata` by default, gitignored). Manage it with
-> `scripts/pg.sh start|stop|status`; the data persists across stop/start.
+> `bash scripts/pg.sh start|stop|status` on Linux/macOS, or
+> `scripts\start.ps1 -NoRun` / `-StopDb` on Windows; the data persists across
+> stop/start.
 
 ---
 
@@ -311,6 +345,9 @@ pytest tests/e2e -m e2e
 # Coding-rule audit (large files, hardcoding, embedded JS, __init__, duplication)
 python -m audit
 ```
+
+These commands are identical on Windows once the virtualenv is active
+(`.venv\Scripts\Activate.ps1`) and the cluster is up.
 
 The unit and e2e suites use **separate databases** (`mkm_modelrisk_test` and
 `mkm_modelrisk_e2e`), created automatically in the same PostgreSQL cluster, so
