@@ -19,8 +19,17 @@ elif [ -d /opt/homebrew/opt/postgresql@16/bin ]; then
   PGBIN=/opt/homebrew/opt/postgresql@16/bin   # Apple Silicon Homebrew
 elif [ -d /usr/local/opt/postgresql@16/bin ]; then
   PGBIN=/usr/local/opt/postgresql@16/bin      # Intel Homebrew
+elif [ -d /usr/lib/postgresql/16/bin ]; then
+  PGBIN=/usr/lib/postgresql/16/bin            # Debian / Ubuntu
+elif [ -d /usr/pgsql-16/bin ]; then
+  PGBIN=/usr/pgsql-16/bin                     # RHEL / Fedora (PGDG)
+elif command -v initdb >/dev/null 2>&1; then
+  PGBIN="$(dirname "$(command -v initdb)")"   # already on PATH
 else
-  echo "postgresql@16 not found. Install with: brew install postgresql@16" >&2
+  echo "PostgreSQL 16 not found. Install it with one of:" >&2
+  echo "  macOS:          brew install postgresql@16" >&2
+  echo "  Debian/Ubuntu:  sudo apt install postgresql-16" >&2
+  echo "  Fedora/RHEL:    sudo dnf install postgresql16-server" >&2
   echo "Or set MKM_PG_BIN to the directory containing initdb/pg_ctl." >&2
   exit 1
 fi
@@ -31,13 +40,24 @@ OWNER="${MKM_DB_OWNER_USER:-mkm_owner}"
 OWNER_PW="${MKM_DB_OWNER_PASSWORD:-mkm_dev_pw}"
 DBNAME="${MKM_DB_NAME:-mkm_modelrisk}"
 export PATH="$PGBIN:$PATH"
-export LC_ALL="${LC_ALL:-en_US.UTF-8}" LANG="${LANG:-en_US.UTF-8}"
+# Pick a UTF-8 locale that actually exists. Minimal Linux images frequently ship
+# without en_US.UTF-8, and initdb fails outright on an unknown locale.
+if [ -z "${MKM_PG_LOCALE:-}" ]; then
+  if locale -a 2>/dev/null | grep -qiE '^en_US\.utf-?8$'; then
+    MKM_PG_LOCALE=en_US.UTF-8
+  elif locale -a 2>/dev/null | grep -qiE '^C\.utf-?8$'; then
+    MKM_PG_LOCALE=C.UTF-8
+  else
+    MKM_PG_LOCALE=C
+  fi
+fi
+export LC_ALL="$MKM_PG_LOCALE" LANG="$MKM_PG_LOCALE"
 
 case "${1:-status}" in
   init)
     [ -d "$DATA" ] && { echo "Data dir already exists: $DATA" >&2; exit 1; }
     initdb -D "$DATA" -U "$OWNER" -A scram-sha-256 \
-      --pwfile=<(printf '%s' "$OWNER_PW") --locale=en_US.UTF-8 -E UTF-8
+      --pwfile=<(printf '%s' "$OWNER_PW") --locale="$MKM_PG_LOCALE" -E UTF-8
     pg_ctl -D "$DATA" -o "-p $PORT" -l "$DATA/server.log" start
     sleep 2
     PGPASSWORD="$OWNER_PW" createdb -h "$HOST" -p "$PORT" -U "$OWNER" "$DBNAME"

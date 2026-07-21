@@ -3,9 +3,9 @@
 A generic, model-agnostic **model-risk-governance platform**. It manages the
 full governance lifecycle around *whatever* quantitative models an institution
 owns — the model inventory, validation against the SR 26-2 / supervisory
-questions, remediation tracking, Model Risk Committee (MRC) meetings, document
-control, a literature bibliography, and committee reporting — on top of an
-**immutable, event-sourced (CQRS) store on PostgreSQL**.
+questions, remediation tracking, the model chain and its field-level handoffs,
+products, Model Risk Committee (MRC) meetings, document control, and committee
+reporting — on top of an **immutable, event-sourced (CQRS) store on PostgreSQL**.
 
 Every change is captured as an event in an append-only, hash-chained log, so the
 audit trail is the system of record rather than an afterthought. Identity comes
@@ -29,11 +29,18 @@ and reason.
   currency, and assumption/limitation risk.
 - **Structured registers** — assumptions, limitations, versions, change history,
   remediation steps, and model dependencies, all event-sourced.
+- **Model chain** — the "string of pearls" derived from each model's declared
+  dependencies, split into **Chain / Terminal / Hibernated** views. Every edge
+  carries a **handoff**: the provider-field ↔ consumer-field lineage and a
+  compatibility note the MRC reviews.
+- **Products** — bind a product to its analytics model, market-data model and
+  calculating agent, with **RACI roles** and **operational events** that feed up
+  to the MRC as agenda items for the committee to receive.
 - **MRC meetings** — schedule meetings with agenda, minutes, participants,
   models-in-scope, decisions, and actions; export a **Meeting Pack PDF**.
-- **Document control** — upload supporting documents per model (four categories)
+- **Document control** — upload supporting documents per model (nine categories,
+  from Core Documentation and Test Results to Event and Remediation Evidence)
   and governance-wide.
-- **Bibliography** — manage references and export **BibTeX**.
 - **Model Risk Report** — a committee-facing **PDF status report** across the
   whole inventory.
 - **Audit Reports** — an in-app tab that generates and serves PDF reports (the
@@ -64,20 +71,68 @@ the single `src/database/` utility.
 
 ## Prerequisites
 
-You need two things installed; the other three are optional and only affect PDF
-export and one extra audit check.
+You need **two** things: PostgreSQL 16 and Python 3.13. The other three are
+optional and only affect PDF export and one extra audit check.
 
-| Requirement | Required? | Install (macOS / Homebrew) |
+| Requirement | Required? | Purpose |
 |---|---|---|
-| **PostgreSQL 16** | **Yes** — the database, run natively (no Docker). | `brew install postgresql@16` |
-| **Python 3.13** | **Yes** — the application runtime. | `brew install python@3.13` |
-| **tectonic** | Optional — LaTeX engine for the Meeting Pack, Model Risk Report, and the Audit Report PDFs (one per audit rule R1–R8 plus the consolidated coding-rule audit). Without it, those exports return a 503; everything else works. | `brew install tectonic` |
-| **pandoc** | Optional — renders the User Guide PDF in the Audit Reports tab. | `brew install pandoc` |
-| **Node + jscpd** | Optional — only the duplicate-code section of `python -m audit`. | `brew install node` |
+| **PostgreSQL 16** | **Yes** | The database, run natively (no Docker). |
+| **Python 3.13** | **Yes** | The application runtime. |
+| **tectonic** | Optional | LaTeX engine for the Meeting Pack, Model Risk Report and Audit Report PDFs. Without it those exports return a 503; everything else works. |
+| **pandoc** | Optional | Renders the User Guide PDF in the Audit Reports tab. |
+| **Node + jscpd** | Optional | Only the duplicate-code section of `python -m audit`. |
 
-> On **Intel** Macs Homebrew lives under `/usr/local`; on **Apple Silicon** under
-> `/opt/homebrew`. `scripts/pg.sh` auto-detects `postgresql@16` in either. For a
-> non-Homebrew PostgreSQL, set `MKM_PG_BIN` to the directory that contains `initdb`.
+### Install them
+
+**Debian / Ubuntu**
+
+```bash
+sudo apt update
+sudo apt install -y git postgresql-16 python3.13 python3.13-venv
+# Optional extras
+sudo apt install -y tectonic pandoc nodejs npm
+```
+
+> **Ubuntu 24.04 and older ship Python 3.12, not 3.13.** If `apt` cannot find
+> `python3.13`, add the deadsnakes PPA first:
+> ```bash
+> sudo add-apt-repository -y ppa:deadsnakes/ppa && sudo apt update
+> sudo apt install -y python3.13 python3.13-venv
+> ```
+> Likewise, if `postgresql-16` is unavailable, add the PostgreSQL APT repository
+> (<https://www.postgresql.org/download/linux/ubuntu/>).
+
+**Fedora / RHEL**
+
+```bash
+sudo dnf install -y git postgresql16-server python3.13
+sudo dnf install -y tectonic pandoc nodejs        # optional extras
+```
+
+**macOS (Homebrew)**
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew install postgresql@16 python@3.13
+brew install tectonic pandoc node                 # optional extras
+```
+
+Verify before continuing — both must succeed:
+
+```bash
+python3.13 --version                       # → Python 3.13.x
+
+# PostgreSQL 16 — at least one of these should print a path or a version
+initdb --version 2>/dev/null || ls -d /usr/lib/postgresql/16 /usr/pgsql-16 \
+  /opt/homebrew/opt/postgresql@16 /usr/local/opt/postgresql@16 2>/dev/null
+```
+
+> **Finding PostgreSQL.** `scripts/pg.sh` looks for the version-16 binaries in
+> the usual places — Homebrew (`/opt/homebrew`, `/usr/local`), Debian/Ubuntu
+> (`/usr/lib/postgresql/16/bin`), Fedora/RHEL (`/usr/pgsql-16/bin`), and finally
+> your `PATH`. On Debian/Ubuntu the binaries are deliberately **not** on `PATH`,
+> which is normal — the script finds them anyway. If yours lives somewhere else,
+> set `MKM_PG_BIN` to the directory containing `initdb`.
 
 ---
 
@@ -101,7 +156,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 # Local PostgreSQL cluster: initialise on first run, otherwise just start it.
-if [ -d .pgdata ]; then scripts/pg.sh start 2>/dev/null || true; else scripts/pg.sh init; fi
+if [ -d .pgdata ]; then bash scripts/pg.sh start 2>/dev/null || true; else bash scripts/pg.sh init; fi
 
 # Create, migrate and serve the database.
 python app.py
@@ -114,36 +169,17 @@ Then open **http://127.0.0.1:5015** — the **Acting as** field is pre-filled wi
 the host id you entered. (Prerequisites: **PostgreSQL 16** and **Python 3.13**; see
 [Prerequisites](#prerequisites) above.)
 
-### First-time setup, step by step (macOS)
+### First-time setup, step by step
 
-Follow these in order from a fresh clone. **Steps 0–4 are one-off**; after that,
-running the app again is just the three commands in
-[Running it again](#running-it-again). Each step says what you should see, so you
-can confirm it worked before moving on.
+Works the same on Linux and macOS. Follow these in order from a fresh clone.
+**Steps 0–4 are one-off**; after that, running the app again is just the three
+commands in [Running it again](#running-it-again). Each step says what you should
+see, so you can confirm it worked before moving on.
 
-**Step 0 — Install the tools (one-off).** Skip to Step 1 if `brew --version`,
-`psql --version` and `python3.13 --version` already work.
-
-```bash
-# Homebrew — skip if `brew --version` already prints a version
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# The two required tools (PostgreSQL 16 + Python 3.13)
-brew install postgresql@16 python@3.13
-
-# Optional — only needed for PDF exports (Meeting Pack, reports, User Guide)
-brew install tectonic pandoc
-```
-
-Verify before continuing:
-
-```bash
-psql --version         # → psql (PostgreSQL) 16.x
-python3.13 --version   # → Python 3.13.x
-```
-
-If either is `command not found`, Homebrew isn't on your `PATH` — see
-[Troubleshooting](#troubleshooting).
+**Step 0 — Install the tools (one-off).** See
+[Prerequisites](#prerequisites) above for the `apt` / `dnf` / `brew` commands.
+Skip to Step 1 if `python3.13 --version` already prints a version and PostgreSQL 16
+is installed.
 
 **Step 1 — Get the code.**
 
@@ -205,19 +241,23 @@ Stop the app with **Ctrl-C**; stop the database with `bash scripts/pg.sh stop`.
 
 | Symptom | Fix |
 |---|---|
-| `command not found: python3.13` or `psql` | Homebrew's tools aren't on your `PATH`. Ensure `/opt/homebrew/bin` (Apple Silicon) or `/usr/local/bin` (Intel) is on `PATH`, then open a **new** terminal. Re-run `brew install postgresql@16 python@3.13` if needed. |
+| `PostgreSQL 16 not found` from `pg.sh` | The version-16 binaries aren't in a known location. Find them (`ls /usr/lib/postgresql/*/bin` on Debian/Ubuntu, `ls /usr/pgsql-*/bin` on Fedora/RHEL) and set `MKM_PG_BIN` to that directory. |
+| `command not found: python3.13` | **Linux:** install it (see [Prerequisites](#prerequisites)); on Ubuntu ≤24.04 you need the deadsnakes PPA. **macOS:** Homebrew isn't on `PATH` — add `/opt/homebrew/bin` (Apple Silicon) or `/usr/local/bin` (Intel) and open a **new** terminal. |
+| `No module named venv` / `ensurepip is not available` (Debian/Ubuntu) | The venv module is a separate package: `sudo apt install python3.13-venv`. |
+| `initdb: invalid locale` / `locale not found` | Your image lacks the locale. `pg.sh` now falls back to `C.UTF-8`/`C` automatically — if you still hit it, force one: `MKM_PG_LOCALE=C.UTF-8 bash scripts/pg.sh init`. |
 | `scripts/pg.sh: Permission denied` | Invoke it via `bash scripts/pg.sh …` (as shown above). |
-| `pg_ctl: could not start server` on `init`/`start` | A cluster is **already running** on port 5433 — check `bash scripts/pg.sh status`. If a different PostgreSQL owns 5433, stop it (or set `MKM_DB_PORT`). |
+| `initdb: cannot be run as root` | Run as your normal user, not with `sudo`. The cluster lives in the repo's `./.pgdata`, so no root is needed. |
+| `pg_ctl: could not start server` on `init`/`start` | A cluster is **already running** on port 5433 — check `bash scripts/pg.sh status`. If a different PostgreSQL owns 5433, stop it (or set `MKM_DB_PORT`). On Debian/Ubuntu the distro auto-starts a cluster on 5432, which does **not** clash. |
 | `psql: could not connect` / `connection refused` | The cluster isn't running: `bash scripts/pg.sh start`. |
-| `Address already in use` on port 5015 | An app instance is still up: `lsof -tiTCP:5015 \| xargs kill`, then retry. |
-| PDF exports return **503** | Install the optional engines: `brew install tectonic pandoc`. |
+| `Address already in use` on port 5015 | An app instance is still up: `lsof -tiTCP:5015 \| xargs kill` (or `fuser -k 5015/tcp` on Linux), then retry. |
+| PDF exports return **503** | Install the optional engines — `sudo apt install tectonic pandoc` / `brew install tectonic pandoc`. |
 | Want a clean slate | `bash scripts/pg.sh start && dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk && python app.py`. |
 
 ### Verify the checkout (optional but recommended)
 
 ```bash
 python -m audit                  # coding-rule audit — exits non-zero on any finding
-pytest --cov                     # unit + integration suite, 100% coverage
+pytest                           # unit + integration suite (e2e excluded by default)
 ```
 
 > **Tip:** the database is the only stateful piece. It lives in the cluster's data
@@ -230,7 +270,7 @@ pytest --cov                     # unit + integration suite, 100% coverage
 
 ```bash
 # Unit + integration suite (applies migrations automatically), with coverage
-pytest --cov                                     # ~317 tests, 100% coverage
+coverage run -m pytest && coverage report        # ~747 tests, ≥99% coverage (gated)
 
 # End-to-end browser suite (Playwright against a live server). The Python
 # packages are part of `[dev]`; only the browser binary is a separate step.
@@ -267,6 +307,9 @@ Defaults match `scripts/pg.sh`; override via environment variables (copy
 | `MKM_DB_APP_USER` / `MKM_DB_APP_PASSWORD` | `mkm_app` / `mkm_app_dev_pw` | Runtime role (insert-only) |
 | `MKM_WEB_HOST` / `MKM_WEB_PORT` | `127.0.0.1` / `5015` | Console host/port |
 | `MKM_PG_DATA_DIR` | `./.pgdata` | Cluster data directory (`scripts/pg.sh`) |
+| `MKM_PG_BIN` | auto-detected | Directory holding `initdb`/`pg_ctl`, if PostgreSQL 16 isn't in a standard location (`scripts/pg.sh`) |
+| `MKM_PG_LOCALE` | auto-detected | Locale used to `initdb` the cluster; falls back `en_US.UTF-8` → `C.UTF-8` → `C` (`scripts/pg.sh`) |
+| `MKM_IDENTITY_DEV_FALLBACK` | `dev@localhost` | Local "Acting as" identity when there is no SSO header |
 | `MKM_UPLOAD_DIR` | `./uploads` | Where uploaded files (and audit PDFs) are stored |
 
 A WSGI server can serve the app object directly, e.g. `gunicorn app:app`.
@@ -281,13 +324,15 @@ src/
   database/    The only data-access utility (rule R6): event store, hash chain, migrations
   command/     Confirm-to-amend dispatch (threads the SSO actor + reason)
   identity/    Resolves the acting user from SSO headers (dev fallback)
-  governance/  The domain: model_inventory, mrc, reference, documents, bibliography, collections
+  governance/  The domain: model_inventory, model_chain, model_handoff, product,
+               mrc, mrc_settings, reference, documents, data_lineage, collections
+  ingest/      Inbound artifact contract (schema-validated ingest from producers)
   files/       Upload storage
   web/         Flask app factory + API blueprints
   static/      Front-end assets — js/ and css/ (rule R7)
   templates/   Jinja templates (rule R7)
 audit/         Self-checking coding-rule audit suite (python -m audit)
-scripts/       Operational scripts (seed_demo.py, pg.sh)
+scripts/       Operational scripts (pg.sh, seed_demo.py, migration/backfill loaders)
 tests/         Unit/integration tests + tests/e2e (Playwright browser suite)
 docs/          User guide, dependency manifest, coding rules
 ```
