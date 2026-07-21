@@ -140,6 +140,11 @@ DATA_TREE_NAMES = ("uploads",)
 EXCLUDE_DIRS = frozenset({
     "__pycache__", ".git", ".venv", "node_modules", "uploads",
     ".pytest_cache", "htmlcov", "build", "dist", ".claude",
+    # Gitignored, third-party material that is never part of the source tree:
+    # "local" holds machine-only scripts and database dumps, "bib"/"Bib" the
+    # reference PDFs uploaded into the app. Neither is first-party, so no rule
+    # (least of all the licence-notice scan) should read or report them.
+    "local", "bib", "Bib",
 })
 
 # Coding rule R6 (JSON-file audit) — MKM-ModelRisk persists through the Postgres

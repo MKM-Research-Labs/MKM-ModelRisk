@@ -26,7 +26,9 @@ attaches a guide PDF where one is on disk. Idempotent at the model level.
 from __future__ import annotations
 
 from scripts import migrate_phys
-from src.governance.model_inventory import get_model, register_model, rebuild_inventory_view
+from src.governance.model_inventory import (
+    derive_chain, get_model, register_model, rebuild_inventory_view,
+)
 
 MODEL = {
     "model_id": "MKM-XX-001", "name": "Test Model", "short_name": "XX",
@@ -48,9 +50,8 @@ MODEL = {
 
 
 def test_migrate_model_maps_fields_collections_and_validation_questions():
-    registered, docs = migrate_phys.migrate_model(MODEL)
+    assert migrate_phys.migrate_model(MODEL) is True
     rebuild_inventory_view()
-    assert (registered, docs) == (True, 0)
     data = get_model("MKM-XX-001")["data"]
     assert data["materiality"] == "High" and data["rag_rating"] == "Amber"
     assert data["lifecycle_stage"] == "Production" and data["owner"] == "Alice"
@@ -67,7 +68,7 @@ def test_migrate_model_maps_fields_collections_and_validation_questions():
 def test_migrate_model_skips_an_already_registered_model():
     register_model(model_id="MKM-XX-001", name="Already here", actor="someone")
     rebuild_inventory_view()
-    assert migrate_phys.migrate_model(MODEL) == (False, 0)
+    assert migrate_phys.migrate_model(MODEL) is False
     # The pre-existing registration is untouched — no assumptions were added.
     assert not get_model("MKM-XX-001")["data"].get("assumptions")
 
@@ -78,14 +79,64 @@ def test_scalar_fields_drops_unknown_and_invalid_choice_values():
     assert fields == {"materiality": "High"}  # invalid choice, unknown field, and blank dropped
 
 
-def test_attach_documents_reads_a_pdf_on_disk_and_skips_stale_paths(tmp_path, monkeypatch):
+def _inventory_with_docs(tmp_path, monkeypatch):
+    """Two models with their own folder, one whose source path is stale, and two
+    that wrongly point at the *same* folder (the MKM-IP-001 / MKM-PV-001 case)."""
     monkeypatch.setattr(migrate_phys, "PHYS_ROOT", tmp_path)
-    (tmp_path / "docs").mkdir()
-    (tmp_path / "docs" / "guide.pdf").write_bytes(b"%PDF-1.4 demo")
-    register_model(model_id="MKM-YY-001", name="Docs", actor="a")
+    for folder, names in (("alpha", ("alpha.pdf", "analysis.pdf", "test_results.pdf")),
+                          ("shared", ("shared.pdf",))):
+        (tmp_path / folder).mkdir()
+        for name in names:
+            (tmp_path / folder / name).write_bytes(b"%PDF-1.4 demo")
+    return {"models": [
+        {"model_id": "MKM-AA-001", "documents": [{"path": "alpha/alpha.pdf"}]},
+        {"model_id": "MKM-BB-001", "documents": [{"path": "gone/missing.pdf"}]},
+        {"model_id": "MKM-CC-001", "documents": [{"path": "shared/shared.pdf"}]},
+        {"model_id": "MKM-DD-001", "documents": [{"path": "shared/shared.pdf"}]},
+    ]}
+
+
+def test_attach_documents_walks_the_folder_and_categorises_by_filename(tmp_path, monkeypatch):
+    inventory = _inventory_with_docs(tmp_path, monkeypatch)
+    for model_id in ("MKM-AA-001", "MKM-BB-001", "MKM-CC-001", "MKM-DD-001"):
+        register_model(model_id=model_id, name=model_id, actor="a")
     rebuild_inventory_view()
-    model = {"documents": [{"path": "docs/guide.pdf", "name": "Guide"},
-                           {"path": "docs/missing.pdf"}, "a bare string entry"]}
-    assert migrate_phys._attach_documents("MKM-YY-001", model, None) == 1
+
+    result = migrate_phys.attach_documents(inventory)
     rebuild_inventory_view()
-    assert get_model("MKM-YY-001")["data"]["documents"][0]["filename"] == "guide.pdf"
+    # Only the unambiguous model gets documents — all three PDFs in its folder.
+    assert result["attached"] == 3
+    docs = {d["filename"]: d["category"] for d in get_model("MKM-AA-001")["data"]["documents"]}
+    assert docs == {"alpha.pdf": "Core Documentation", "analysis.pdf": "Analysis",
+                    "test_results.pdf": "Test Results"}
+    # A stale path leaves the model unresolved; a shared folder makes both ambiguous.
+    assert result["unresolved"] == ["MKM-BB-001"]
+    assert result["ambiguous"] == ["MKM-CC-001", "MKM-DD-001"]
+    for model_id in ("MKM-BB-001", "MKM-CC-001", "MKM-DD-001"):
+        assert not get_model(model_id)["data"].get("documents")
+
+
+def test_attach_documents_is_idempotent(tmp_path, monkeypatch):
+    inventory = _inventory_with_docs(tmp_path, monkeypatch)
+    register_model(model_id="MKM-AA-001", name="A", actor="a")
+    rebuild_inventory_view()
+    migrate_phys.attach_documents(inventory)
+    rebuild_inventory_view()
+    assert migrate_phys.attach_documents(inventory)["attached"] == 0
+
+
+def test_declare_source_edges_adds_per_model_upstream_and_downstream():
+    for model_id in ("MKM-P-001", "MKM-Q-001", "MKM-R-001"):
+        register_model(model_id=model_id, name=model_id, actor="a")
+    rebuild_inventory_view()
+    inventory = {"models": [
+        {"model_id": "MKM-Q-001", "upstream_models": ["MKM-P-001"],
+         "downstream_models": ["MKM-R-001"]},
+        # Unregistered endpoints and self-loops are skipped, not fatal.
+        {"model_id": "MKM-R-001", "upstream_models": ["MKM-NOPE-001", "MKM-R-001"]},
+    ]}
+    assert migrate_phys.declare_source_edges(inventory) == 2
+    edges = {(link["from"], link["to"]) for link in derive_chain()["links"]}
+    assert edges == {("MKM-P-001", "MKM-Q-001"), ("MKM-Q-001", "MKM-R-001")}
+    # Re-running declares nothing new.
+    assert migrate_phys.declare_source_edges(inventory) == 0

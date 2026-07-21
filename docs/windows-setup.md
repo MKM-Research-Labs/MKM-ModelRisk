@@ -99,3 +99,7 @@ To stop the application, close the black window.
 
 > **Note.** The database runs on port **5433**, deliberately not the usual 5432,
 > so it will not interfere with any other PostgreSQL already on the machine.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

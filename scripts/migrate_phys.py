@@ -20,11 +20,11 @@
 """Populate a ModelRisk instance from the PhysicalRisk model inventory (demo seed).
 
 Registers every source model with as much of its governance data as maps cleanly
-(scalar fields, assumptions, limitations, weaknesses, remediation, version history,
-and the SR 26-2 validation-question statuses), attaches each model's guide PDF where
-one is on disk, backfills the model chain (dependencies + handoffs), and creates the
-single PRS product. Idempotent at the model level (an already-registered model is
-skipped), so run it against a fresh database for a clean demo.
+(scalar fields, collections and the SR 26-2 validation-question statuses), attaches
+the PDFs in each model's documentation folder, builds the model chain from both the
+migrated chain artifact and each model's declared upstream/downstream, and creates
+the PRS product. Idempotent, so it is safe to re-run; gaps the source cannot resolve
+are reported rather than guessed.
 
 Run as:  python -m scripts.migrate_phys   (or  python app.py phys)
 """
@@ -35,9 +35,12 @@ from pathlib import Path
 
 from config.governance import MODEL_FIELD_SPECS, VALID_VQ_STATUSES
 from src.governance.documents import add_document
+from src.governance.errors import DomainError
 from src.governance.model_inventory import (
     add_collection_item,
+    derive_chain,
     get_model,
+    list_models,
     register_model,
     rebuild_inventory_view,
     update_collection_item,
@@ -92,8 +95,7 @@ def _scalar_fields(model: dict) -> dict:
 
 
 def _map_item(mapping: dict, item: dict) -> dict:
-    fields = {mapping[k]: v for k, v in item.items() if k in mapping and v not in (None, "")}
-    return fields
+    return {mapping[k]: v for k, v in item.items() if k in mapping and v not in (None, "")}
 
 
 def _add_collections(model_id: str, model: dict, config) -> None:
@@ -129,47 +131,108 @@ def _update_validation_questions(model_id: str, model: dict, config) -> None:
                                    item_id=f"VQ-{number:03d}", fields=fields, actor=ACTOR, config=config)
 
 
-def _attach_documents(model_id: str, model: dict, config) -> int:
+def _category(filename: str) -> str:
+    """Bucket a document by filename, so a folder lands across the right tabs
+    rather than everything being filed as Core Documentation."""
+    low = filename.lower()
+    for hint, category in (("analysis", "Analysis"), ("test", "Test Results"),
+                           ("monitor", "Monitoring")):
+        if hint in low:
+            return category
+    return "Core Documentation"
+
+
+def _doc_dirs(inventory: dict) -> tuple[dict, list, list]:
+    """Map each model to its documentation folder, from the first source path that
+    resolves on disk. Returns ``(dirs, ambiguous, unresolved)``. A folder belongs to
+    exactly one model, so where two point at the same one the source is wrong (an
+    observed case) and both are skipped rather than risk filing another model's docs.
+    """
+    claims: dict = {}
+    unresolved = []
+    for model in inventory.get("models", []):
+        paths = (doc.get("path") for doc in model.get("documents") or [] if isinstance(doc, dict))
+        folder = next(((PHYS_ROOT / p).parent for p in paths if p and (PHYS_ROOT / p).is_file()), None)
+        if folder is None:
+            unresolved.append(model.get("model_id"))
+        else:
+            claims.setdefault(folder, []).append(model.get("model_id"))
+    dirs, ambiguous = {}, []
+    for folder, model_ids in claims.items():
+        if len(model_ids) == 1:
+            dirs[model_ids[0]] = folder
+        else:
+            ambiguous.extend(model_ids)
+    return dirs, sorted(ambiguous), sorted(unresolved)
+
+
+def attach_documents(inventory: dict, config=None) -> dict:
+    """Attach every PDF in each model's documentation folder, categorised by name.
+    Idempotent — a document already attached is skipped."""
+    dirs, ambiguous, unresolved = _doc_dirs(inventory)
     attached = 0
-    for doc in model.get("documents") or []:
-        rel = doc.get("path") if isinstance(doc, dict) else None
-        if not rel:
+    for model_id, folder in sorted(dirs.items()):
+        model = get_model(model_id, config=config)
+        if model is None:
             continue
-        path = PHYS_ROOT / rel
-        if not path.is_file():
-            continue  # stale path — a gap for the owner to fill manually
-        add_document(aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
-                     scope=f"model/{model_id}", category="Core Documentation",
-                     filename=path.name, data=path.read_bytes(),
-                     description=doc.get("name") or "Model documentation",
-                     actor=ACTOR, config=config)
-        attached += 1
-    return attached
+        have = {(d.get("original_name") or d.get("filename"))
+                for d in (model["data"].get("documents") or [])}
+        for pdf in sorted(folder.glob("*.pdf")):
+            if pdf.name in have:
+                continue
+            add_document(aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
+                         scope=f"model/{model_id}", category=_category(pdf.name),
+                         filename=pdf.name, data=pdf.read_bytes(),
+                         description="", actor=ACTOR, config=config)
+            attached += 1
+    return {"attached": attached, "ambiguous": ambiguous, "unresolved": unresolved}
 
 
-def migrate_model(model: dict, config=None) -> tuple[bool, int]:
-    """Register one source model with its data. Returns (registered, docs_attached).
-    An already-registered model is left untouched (idempotent)."""
+def declare_source_edges(inventory: dict, config=None) -> int:
+    """Declare each model's ``upstream_models`` / ``downstream_models``. The migrated
+    chain artifact holds only part of the lineage; most of it lives here."""
+    registered = {m["model_id"] for m in list_models(config=config)}
+    existing = {(link["from"], link["to"]) for link in derive_chain(config=config)["links"]}
+    wanted = set()
+    for model in inventory.get("models", []):
+        model_id = model.get("model_id")
+        for producer in model.get("upstream_models") or []:
+            wanted.add((producer, model_id))
+        for consumer in model.get("downstream_models") or []:
+            wanted.add((model_id, consumer))
+    declared = 0
+    for producer, consumer in sorted(wanted - existing):
+        if producer not in registered or consumer not in registered:
+            continue
+        try:
+            add_collection_item(
+                model_id=producer, collection="dependencies", actor=ACTOR, config=config,
+                fields={"direction": "downstream", "model_id": consumer})
+        except DomainError:
+            continue  # a self-loop or cycle the guard rejects — leave the chain intact
+        rebuild_inventory_view(config=config)
+        declared += 1
+    return declared
+
+
+def migrate_model(model: dict, config=None) -> bool:
+    """Register one source model with its data. An already-registered model is left
+    untouched (idempotent). Documents are attached separately, across the inventory."""
     model_id = model.get("model_id")
     if not model_id or get_model(model_id, config=config) is not None:
-        return False, 0
+        return False
     register_model(model_id=model_id, name=model.get("name") or model_id,
                    fields=_scalar_fields(model), actor=ACTOR, config=config)
     _add_collections(model_id, model, config)
     _update_validation_questions(model_id, model, config)
-    docs = _attach_documents(model_id, model, config)
-    return True, docs
+    return True
 
 
 def create_prs_product(config=None) -> bool:
     """Create the single PRS product, bound to the PRS pricing model, with a RACI role
     and a sample operational event so the RACI feed-up is demonstrable."""
     from src.governance.product import (
-        add_collection_item as product_add,
-        get_product,
-        register_product,
-        rebuild_product_view,
-    )
+        add_collection_item as product_add, get_product, register_product, rebuild_product_view)
     if get_product("PRD-PRS", config=config) is not None:
         return False
     register_product(product_id="PRD-PRS", product="Physical Risk Swap (PRS)",
@@ -197,19 +260,22 @@ def migrate(config=None) -> dict:
     from scripts.migrate_model_chain import load_model_chain
 
     inventory = json.loads(SOURCE.read_text(encoding="utf-8"))
-    registered = docs = 0
+    registered = 0
     for model in inventory.get("models", []):
-        did, attached = migrate_model(model, config=config)
-        registered += 1 if did else 0
-        docs += attached
+        if migrate_model(model, config=config):
+            registered += 1
     rebuild_inventory_view(config=config)
     # Ingest the source chain, then backfill dependencies + handoffs onto the models.
     load_model_chain(SOURCE, source_repo="PhysicalRisk", config=config)
     chain = backfill(source_repo="PhysicalRisk", config=config)
+    # The chain artifact is only part of the lineage; the rest is declared per model.
+    edges = declare_source_edges(inventory, config=config)
+    docs = attach_documents(inventory, config=config)
     product = create_prs_product(config=config)
-    return {"models_registered": registered, "documents_attached": docs,
-            "dependencies": chain["dependencies"], "handoffs": chain["handoffs"],
-            "prs_product": product}
+    return {"models_registered": registered, "documents_attached": docs["attached"],
+            "documents_ambiguous": docs["ambiguous"], "documents_unresolved": docs["unresolved"],
+            "dependencies": chain["dependencies"], "declared_edges": edges,
+            "handoffs": chain["handoffs"], "prs_product": product}
 
 
 def main() -> int:
@@ -218,8 +284,15 @@ def main() -> int:
     result = migrate()
     print(f"models registered: {result['models_registered']}, "
           f"documents attached: {result['documents_attached']}, "
-          f"dependencies: {result['dependencies']}, handoffs: {result['handoffs']}, "
-          f"PRS product created: {result['prs_product']}")
+          f"chain: {result['dependencies']} backfilled + {result['declared_edges']} declared, "
+          f"handoffs: {result['handoffs']}, PRS product created: {result['prs_product']}")
+    # Gaps the source cannot resolve, so the owner knows what to fill in by hand.
+    if result["documents_ambiguous"]:
+        print("  no documents (two models share one source folder): "
+              + ", ".join(result["documents_ambiguous"]))
+    if result["documents_unresolved"]:
+        print("  no documents (no source folder on disk): "
+              + ", ".join(result["documents_unresolved"]))
     return 0
 
 
