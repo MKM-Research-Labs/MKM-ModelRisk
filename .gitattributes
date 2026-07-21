@@ -1,0 +1,14 @@
+# Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+#
+# Windows scripts must keep CRLF line endings: cmd.exe can mis-parse a batch file
+# with LF-only endings (labels and goto in particular). `git archive` applies
+# these attributes, so the "Download ZIP" a non-technical user gets from GitHub
+# carries the correct endings too.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Everything else stays LF.
+*.sh  text eol=lf
+*.py  text eol=lf
+*.js  text eol=lf

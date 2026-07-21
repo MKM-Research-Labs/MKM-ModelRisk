@@ -108,6 +108,16 @@ foreach ($cand in @(@('py', '-3.13'), @('py', '-3'), @('python'), @('python3')))
     if ((Invoke-Quiet $exe ($pre + @('-c', $probe))) -eq 0) { $PyExe = $exe; $PyArgs = $pre; break }
 }
 if (-not $PyExe) {
+    # A Python installed moments ago is not on PATH until the shell restarts, so
+    # look in the standard install locations before giving up.
+    foreach ($p in @("$env:LOCALAPPDATA\Programs\Python\Python313\python.exe",
+                     "$env:ProgramFiles\Python313\python.exe")) {
+        if ((Test-Path $p) -and ((Invoke-Quiet $p @('-c', $probe)) -eq 0)) {
+            $PyExe = $p; $PyArgs = @(); break
+        }
+    }
+}
+if (-not $PyExe) {
     Fail @"
 Python 3.13+ not found. Install it, then re-run:
   winget install -e --id Python.Python.3.13

@@ -177,6 +177,12 @@ cd MKM-ModelRisk
 powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 ```
 
+> **No command line at all?** Double-click **`START-HERE.bat`** in the repo root.
+> It installs Python and PostgreSQL via winget if they are missing, then runs the
+> setup — no terminal, no git, nothing pre-installed.
+> [**docs/windows-setup.md**](docs/windows-setup.md) is a click-by-click walkthrough
+> from downloading a ZIP onwards, written for a non-technical user.
+
 > Run it as your **normal user, not elevated** — `initdb` refuses to run as
 > Administrator, and the cluster lives inside the repo so no admin rights are needed.
 
