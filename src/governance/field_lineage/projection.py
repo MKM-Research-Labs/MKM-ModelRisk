@@ -1,0 +1,75 @@
+# Copyright (c) 2022-2026 MKM Research Labs.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Field-lineage read model.
+
+A current-state projection of the latest registry per producing repo into
+``field_lineage_view``. Derived and fully rebuildable:
+``rebuild_field_lineage_view`` replays the log from zero.
+"""
+from __future__ import annotations
+
+from typing import Any
+
+from src.database import read_all, read_view, replace_view
+from src.governance.field_lineage._rules import field_count
+from src.governance.field_lineage._state import apply, initial_state
+from src.governance.field_lineage.commands import AGGREGATE_TYPE
+
+_VIEW = "field_lineage_view"
+_COLUMNS = ("source_repo", "data", "content_hash", "version")
+
+
+def _document(state) -> dict[str, Any]:
+    """The stored registry plus provenance and derived counts, as one JSONB doc.
+
+    Only ever called for aggregates that have an ingested registry, so
+    ``state.registry`` is always a dict here.
+    """
+    return {
+        "registry": state.registry,
+        "provenance": state.provenance,
+        "report_count": len(state.registry.get("reports") or {}),
+        "field_count": field_count(state.registry),
+    }
+
+
+def rebuild_field_lineage_view(config=None) -> int:
+    """Rebuild the read model from the event log; return the repo count."""
+    states: dict[str, tuple] = {}
+    for event in read_all(config=config):
+        if event.aggregate_type != AGGREGATE_TYPE:
+            continue
+        state, version = states.get(event.aggregate_id, (initial_state(), 0))
+        states[event.aggregate_id] = (apply(state, event.event_type, event.payload), version + 1)
+    rows = [(repo, _document(state), state.content_hash, version)
+            for repo, (state, version) in sorted(states.items()) if state.exists]
+    replace_view(_VIEW, _COLUMNS, rows, config=config)
+    return len(rows)
+
+
+def get_registry(source_repo: str, config=None) -> dict[str, Any] | None:
+    """The stored field-lineage registry for one repo, or ``None``."""
+    rows = read_view(_VIEW, _COLUMNS, where="source_repo", value=source_repo, config=config)
+    return rows[0] if rows else None
+
+
+def list_registries(config=None) -> list[dict[str, Any]]:
+    """Every stored registry, ordered by repo."""
+    return read_view(_VIEW, _COLUMNS, config=config)

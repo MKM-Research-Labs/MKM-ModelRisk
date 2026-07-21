@@ -30,6 +30,10 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from src.governance.data_lineage import ingest_data_lineage, rebuild_data_lineage_view
+from src.governance.field_lineage import (
+    ingest_field_lineage,
+    rebuild_field_lineage_view,
+)
 from src.governance.model_chain import ingest_model_chain, rebuild_model_chain_view
 from src.identity import ingest_principal
 from src.ingest._envelope import content_hash
@@ -89,10 +93,37 @@ def _ingest_model_chain(
     return get_receipt("model-chain", source_repo, config=config), True
 
 
+def _ingest_field_lineage(
+    payload: dict[str, Any], provenance: dict[str, Any], actor: str, config,
+) -> tuple[dict[str, Any] | None, bool]:
+    source_repo = provenance["source_repo"]
+    chash = content_hash(payload)
+    event = ingest_field_lineage(
+        source_repo=source_repo, registry=payload, provenance=provenance,
+        content_hash=chash, actor=actor, reason="ingest field-lineage", config=config,
+    )
+    if event is None:  # idempotent: identical registry already stored
+        return get_receipt("field-lineage", source_repo, config=config), False
+    rebuild_field_lineage_view(config=config)
+    summary = {
+        "report_count": event.payload["report_count"],
+        "field_count": event.payload["field_count"],
+        "registry_seq": event.global_seq,
+    }
+    record_receipt(
+        artifact="field-lineage", source_repo=source_repo, content_hash=chash,
+        provenance=provenance, summary=summary, actor=actor,
+        reason="ingest field-lineage", config=config,
+    )
+    rebuild_receipts_view(config=config)
+    return get_receipt("field-lineage", source_repo, config=config), True
+
+
 # artifact -> handler(payload, provenance, actor, config) -> (receipt, created).
 # Only wired artifacts are reachable; others 422 via the guard below.
 _HANDLERS: dict[str, Callable[..., tuple[dict[str, Any] | None, bool]]] = {
     "data-lineage": _ingest_data_lineage,
+    "field-lineage": _ingest_field_lineage,
     "model-chain": _ingest_model_chain,
 }
 

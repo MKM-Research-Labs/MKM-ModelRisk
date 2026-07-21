@@ -139,3 +139,23 @@ def test_model_chain_status_lists_receipt(client):
     resp = client.get("/api/ingest/status/model-chain", headers=AUTH)
     assert resp.status_code == 200
     assert [r["data"]["source_repo"] for r in resp.get_json()["receipts"]] == ["PhysicalRisk"]
+
+
+REGISTRY = {
+    "version": "1.0.0",
+    "reports": {"eod_report": {"label": "End of Day", "sections": {
+        "summary": {"label": "Summary", "fields": {
+            "total_pnl": {"source_file": "blotter.json", "source_field": "pnl"}}}}}},
+}
+
+
+def test_post_field_lineage_created_and_idempotent(client):
+    """The field-lineage catalogue (BCBS 239 Principle 3) has its own ingest pipe."""
+    body = {"artifact": "field-lineage", "provenance": PROV, "payload": REGISTRY}
+    resp = client.post("/api/ingest/field-lineage", json=body, headers=AUTH)
+    assert resp.status_code == 201
+    summary = resp.get_json()["data"]["summary"]
+    assert summary["report_count"] == 1 and summary["field_count"] == 1
+    # An identical push is a no-op, reported as 200 rather than 201.
+    assert client.post("/api/ingest/field-lineage", json=body,
+                       headers=AUTH).status_code == 200

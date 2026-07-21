@@ -70,9 +70,9 @@ def test_invalid_envelope_is_rejected():
 
 
 def test_artifact_without_handler_is_rejected():
-    # field-lineage has a schema but no wired handler in Phase 0.
+    # model-inventory has a schema but is not yet wired for ingestion.
     with pytest.raises(SchemaValidationError, match="no ingest handler"):
-        ingest_payload("field-lineage", _body())
+        ingest_payload("model-inventory", _body())
 
 
 def test_cross_reference_failure_is_rejected():

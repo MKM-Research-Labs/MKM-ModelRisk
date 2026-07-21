@@ -21,6 +21,11 @@
 from src.web.api_ingest._bp import ingest_bp
 
 # Side-effect imports attach every endpoint to ingest_bp.
-from src.web.api_ingest import data_lineage, model_chain, status  # noqa: F401
+from src.web.api_ingest import (  # noqa: F401
+    data_lineage,
+    field_lineage,
+    model_chain,
+    status,
+)
 
 __all__ = ["ingest_bp"]
