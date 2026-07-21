@@ -87,6 +87,9 @@ def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") ->
         "\\usepackage{graphicx}\\usepackage{longtable}\\usepackage{array}\\usepackage{booktabs}\n"
         "\\usepackage{xcolor}\\usepackage{parskip}\\usepackage{enumitem}\\setlist{nosep}\n"
         "\\usepackage{float}\\usepackage{lastpage}\\usepackage{fancyhdr}\\usepackage{hyperref}\n"
+        # amsmath so model documentation can carry mathematics; \text{} inside a
+        # formula is undefined without it, which silently fails a whole compile.
+        "\\usepackage{amsmath}\n"
         # calc backs the \real{} column widths pandoc emits for the user guide's tables.
         "\\usepackage{calc}\n"
         "\\usepackage{geometry}\\geometry{a4paper, total={170mm,247mm}, left=20mm, top=25mm, bottom=25mm}\n"
