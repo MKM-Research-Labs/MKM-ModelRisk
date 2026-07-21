@@ -9,8 +9,11 @@
 #   powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -Seed
 #   powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -StopDb
 #
-# Do NOT run this elevated — initdb refuses to run as Administrator, and the
+# Do NOT run this elevated - initdb refuses to run as Administrator, and the
 # cluster lives inside the repo so no admin rights are needed.
+#
+# Kept deliberately ASCII-only: Windows PowerShell 5.1 reads a UTF-8 file with no
+# BOM as ANSI, which mangles non-ASCII characters.
 #Requires -Version 5.1
 [CmdletBinding()]
 param(
@@ -61,23 +64,48 @@ $PgCtl    = Join-Path $PgBin 'pg_ctl.exe'
 $CreateDb = Join-Path $PgBin 'createdb.exe'
 $PgReady  = Join-Path $PgBin 'pg_isready.exe'
 
-function Test-Db { & $PgReady -h $DbHost -p $Port 2>&1 | Out-Null; return ($LASTEXITCODE -eq 0) }
+# Run a native command quietly and return its exit code. Windows PowerShell 5.1
+# turns native stderr into a *terminating* error when $ErrorActionPreference is
+# 'Stop', so probes that are expected to fail (pg_isready with no server yet,
+# a Python that is too old) must run with it relaxed or they abort the script.
+function Invoke-Quiet {
+    param([string]$Exe, [string[]]$Arguments = @())
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & $Exe @Arguments 2>&1 | Out-Null
+        return $LASTEXITCODE
+    } finally { $ErrorActionPreference = $prev }
+}
+
+function Test-Db { return (Invoke-Quiet $PgReady @('-h', $DbHost, '-p', $Port)) -eq 0 }
+
+# Run a native command with its output shown, failing only on a non-zero exit
+# code. Same reasoning as above: pip and initdb write progress and warnings to
+# stderr, which must not be mistaken for a fatal error.
+function Invoke-Native {
+    param([string]$Exe, [string[]]$Arguments = @(), [string]$What = 'command')
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & $Exe @Arguments } finally { $ErrorActionPreference = $prev }
+    if ($LASTEXITCODE -ne 0) { Fail "$What failed (exit code $LASTEXITCODE)" }
+}
 
 if ($StopDb) {
     Step "Stopping the cluster"
-    & $PgCtl -D $Data stop
+    Invoke-Native $PgCtl @('-D', $Data, 'stop') 'stopping the cluster'
     exit 0
 }
 
 # --- 1. Python 3.13+ -------------------------------------------------------
 Step "Checking Python"
 $PyExe = $null; $PyArgs = @()
+$probe = 'import sys; raise SystemExit(0 if sys.version_info>=(3,13) else 1)'
 foreach ($cand in @(@('py', '-3.13'), @('py', '-3'), @('python'), @('python3'))) {
     $exe = $cand[0]
     if (-not (Get-Command $exe -ErrorAction SilentlyContinue)) { continue }
     $pre = if ($cand.Count -gt 1) { @($cand[1]) } else { @() }
-    & $exe @pre -c "import sys; raise SystemExit(0 if sys.version_info>=(3,13) else 1)" 2>$null
-    if ($LASTEXITCODE -eq 0) { $PyExe = $exe; $PyArgs = $pre; break }
+    if ((Invoke-Quiet $exe ($pre + @('-c', $probe))) -eq 0) { $PyExe = $exe; $PyArgs = $pre; break }
 }
 if (-not $PyExe) {
     Fail @"
@@ -87,16 +115,17 @@ Python 3.13+ not found. Install it, then re-run:
  "Add python.exe to PATH" during installation)
 "@
 }
-& $PyExe @PyArgs --version
+Invoke-Native $PyExe ($PyArgs + @('--version')) 'checking the Python version'
 
 # --- 2. Virtualenv + dependencies -----------------------------------------
 Step "Setting up the virtualenv (.venv)"
 $VenvPy = Join-Path $PWD '.venv\Scripts\python.exe'
-if (-not (Test-Path $VenvPy)) { & $PyExe @PyArgs -m venv .venv }
+if (-not (Test-Path $VenvPy)) {
+    Invoke-Native $PyExe ($PyArgs + @('-m', 'venv', '.venv')) 'creating the virtualenv'
+}
 if (-not (Test-Path $VenvPy)) { Fail "virtualenv creation failed (expected $VenvPy)" }
-& $VenvPy -m pip install --quiet --upgrade pip
-& $VenvPy -m pip install --quiet -e ".[dev]"
-if ($LASTEXITCODE -ne 0) { Fail "dependency installation failed" }
+Invoke-Native $VenvPy @('-m', 'pip', 'install', '--quiet', '--upgrade', 'pip') 'upgrading pip'
+Invoke-Native $VenvPy @('-m', 'pip', 'install', '--quiet', '-e', '.[dev]') 'installing dependencies'
 Write-Host "dependencies installed"
 
 # --- 3. PostgreSQL cluster -------------------------------------------------
@@ -104,20 +133,21 @@ Step "Starting the PostgreSQL cluster"
 if (Test-Db) {
     Write-Host "a cluster is already serving port $Port - leaving it alone"
 } elseif (Test-Path $Data) {
-    & $PgCtl -D $Data -o "-p $Port" -l (Join-Path $Data 'server.log') start
+    Invoke-Native $PgCtl @('-D', $Data, '-o', "-p $Port", '-l', (Join-Path $Data 'server.log'), 'start') 'starting the cluster'
     Start-Sleep -Seconds 2
 } else {
     $PwFile = [System.IO.Path]::GetTempFileName()
     try {
         # No BOM and no trailing newline, or the password will not match.
         [System.IO.File]::WriteAllText($PwFile, $OwnerPw, (New-Object System.Text.UTF8Encoding($false)))
-        & $InitDb -D $Data -U $Owner -A scram-sha-256 --pwfile=$PwFile --locale=$Locale -E UTF-8
-        if ($LASTEXITCODE -ne 0) { Fail "initdb failed (are you running as Administrator? don't)" }
+        Invoke-Native $InitDb @('-D', $Data, '-U', $Owner, '-A', 'scram-sha-256',
+                                "--pwfile=$PwFile", "--locale=$Locale", '-E', 'UTF-8') `
+                      'initdb (if it says "cannot be run as Administrator", use a normal PowerShell window)'
     } finally { Remove-Item $PwFile -Force -ErrorAction SilentlyContinue }
-    & $PgCtl -D $Data -o "-p $Port" -l (Join-Path $Data 'server.log') start
+    Invoke-Native $PgCtl @('-D', $Data, '-o', "-p $Port", '-l', (Join-Path $Data 'server.log'), 'start') 'starting the cluster'
     Start-Sleep -Seconds 2
     $env:PGPASSWORD = $OwnerPw
-    & $CreateDb -h $DbHost -p $Port -U $Owner $DbName
+    Invoke-Native $CreateDb @('-h', $DbHost, '-p', $Port, '-U', $Owner, $DbName) "creating database '$DbName'"
     Write-Host "Cluster ready on port $Port; database '$DbName' created."
 }
 if (-not (Test-Db)) { Fail "the database is not accepting connections on port $Port" }
@@ -130,14 +160,22 @@ if (-not $env:MKM_IDENTITY_DEV_FALLBACK) {
     $env:MKM_IDENTITY_DEV_FALLBACK = if ($id) { $id } else { 'dev@localhost' }
 }
 
-if ($Seed) { Step "Seeding example models"; & $VenvPy scripts\seed_demo.py }
+if ($Seed) {
+    Step "Seeding example models"
+    Invoke-Native $VenvPy @('scripts\seed_demo.py') 'seeding example models'
+}
 
 # --- 5. Run ----------------------------------------------------------------
 $WebHost = if ($env:MKM_WEB_HOST) { $env:MKM_WEB_HOST } else { '127.0.0.1' }
 $WebPort = if ($env:MKM_WEB_PORT) { $env:MKM_WEB_PORT } else { '5015' }
 if (-not $NoRun) {
     Step "Starting MKM-ModelRisk on http://${WebHost}:${WebPort}"
-    & $VenvPy app.py
+    Write-Host "Press Ctrl-C to stop."
+    # Flask logs to stderr, and Ctrl-C exits non-zero, so run this relaxed and
+    # without an exit-code check - neither is an error.
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & $VenvPy app.py } finally { $ErrorActionPreference = $prev }
 } else {
     Step "Setup complete"
     Write-Host @"
