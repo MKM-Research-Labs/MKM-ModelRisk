@@ -46,9 +46,11 @@ from src.governance.model_inventory import (
     update_collection_item,
 )
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
+from scripts._phys_folders import folder_for
 
 PHYS_ROOT = Path("/Users/newdavid/Documents/PhysicalRisk")
-SOURCE = PHYS_ROOT / "docs" / "models" / "governance_data" / "model_inventory.json"
+MODELS_ROOT = PHYS_ROOT / "docs" / "models"
+SOURCE = MODELS_ROOT / "governance_data" / "model_inventory.json"
 ACTOR = "migrate_phys"
 
 # Source scalar fields that map to a ModelRisk model field of the same key.
@@ -143,16 +145,13 @@ def _category(filename: str) -> str:
 
 
 def _doc_dirs(inventory: dict) -> tuple[dict, list, list]:
-    """Map each model to its documentation folder, from the first source path that
-    resolves on disk. Returns ``(dirs, ambiguous, unresolved)``. A folder belongs to
-    exactly one model, so where two point at the same one the source is wrong (an
-    observed case) and both are skipped rather than risk filing another model's docs.
-    """
+    """Map each model to its folder -> ``(dirs, ambiguous, unresolved)``. A folder
+    belongs to exactly one model, so any two claiming the same one are both skipped
+    rather than risk filing another model's documents."""
     claims: dict = {}
     unresolved = []
     for model in inventory.get("models", []):
-        paths = (doc.get("path") for doc in model.get("documents") or [] if isinstance(doc, dict))
-        folder = next(((PHYS_ROOT / p).parent for p in paths if p and (PHYS_ROOT / p).is_file()), None)
+        folder = folder_for(model, PHYS_ROOT, MODELS_ROOT)
         if folder is None:
             unresolved.append(model.get("model_id"))
         else:

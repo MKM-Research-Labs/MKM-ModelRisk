@@ -116,6 +116,24 @@ def test_attach_documents_walks_the_folder_and_categorises_by_filename(tmp_path,
         assert not get_model(model_id)["data"].get("documents")
 
 
+def test_confirmed_folder_wins_over_a_wrong_inventory_path(tmp_path, monkeypatch):
+    """The source points MKM-IP-001 at another model's folder, so the confirmed
+    mapping must take precedence rather than filing the wrong model's documents."""
+    from scripts._phys_folders import folder_for
+    (tmp_path / "insurance_premium").mkdir()
+    (tmp_path / "property_valuation").mkdir()
+    (tmp_path / "property_valuation" / "property_valuation.pdf").write_bytes(b"%PDF-1.4")
+    model = {"model_id": "MKM-IP-001",
+             "documents": [{"path": "property_valuation/property_valuation.pdf"}]}
+    assert folder_for(model, tmp_path, tmp_path).name == "insurance_premium"
+    # A model with no confirmed folder still falls back to the inventory path.
+    other = {"model_id": "MKM-ZZ-999",
+             "documents": [{"path": "property_valuation/property_valuation.pdf"}]}
+    assert folder_for(other, tmp_path, tmp_path).name == "property_valuation"
+    # And one with neither resolves to nothing.
+    assert folder_for({"model_id": "MKM-ZZ-998"}, tmp_path, tmp_path) is None
+
+
 def test_attach_documents_is_idempotent(tmp_path, monkeypatch):
     inventory = _inventory_with_docs(tmp_path, monkeypatch)
     register_model(model_id="MKM-AA-001", name="A", actor="a")
