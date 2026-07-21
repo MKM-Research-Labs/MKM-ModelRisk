@@ -28,8 +28,11 @@ UPLOAD_DIR = Path(
     os.environ.get("MKM_UPLOAD_DIR", str(Path(__file__).resolve().parents[1] / "uploads"))
 )
 
+# ``tex`` is allowed so a generated document can be filed alongside its PDF: the
+# LaTeX source is the auditable original. Uploads are only ever stored and served
+# back, never compiled, so no LaTeX is executed on the server.
 ALLOWED_UPLOAD_EXTENSIONS = frozenset(
-    {"pdf", "doc", "docx", "xls", "xlsx", "csv", "txt", "png", "jpg", "jpeg", "svg"}
+    {"pdf", "doc", "docx", "xls", "xlsx", "csv", "txt", "tex", "png", "jpg", "jpeg", "svg"}
 )
 IMAGE_EXTENSIONS = frozenset({"png", "jpg", "jpeg"})
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024

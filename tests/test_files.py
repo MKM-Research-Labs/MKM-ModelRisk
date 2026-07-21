@@ -31,6 +31,13 @@ def test_save_and_read_round_trip(tmp_path):
     assert upload_path("mrc", meta["filename"], base=tmp_path).read_bytes() == b"abc"
 
 
+def test_accepts_latex_source(tmp_path):
+    """A generated document's .tex is filed alongside its PDF as the auditable
+    original; uploads are stored and served back, never compiled."""
+    meta = save_upload("mrc", "handover.tex", rb"\documentclass{article}", base=tmp_path)
+    assert meta["original_name"] == "handover.tex"
+
+
 def test_rejects_disallowed_extension(tmp_path):
     with pytest.raises(UploadError):
         save_upload("mrc", "evil.exe", b"x", base=tmp_path)
