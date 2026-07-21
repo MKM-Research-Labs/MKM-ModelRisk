@@ -117,6 +117,22 @@ brew install postgresql@16 python@3.13
 brew install tectonic pandoc node                 # optional extras
 ```
 
+**Windows 10/11 (winget, in PowerShell)**
+
+```powershell
+winget install -e --id Git.Git
+winget install -e --id Python.Python.3.13
+winget install -e --id PostgreSQL.PostgreSQL.16
+winget install -e --id JohnMacFarlane.Pandoc      # optional extras
+winget install -e --id OpenJS.NodeJS
+```
+
+> Close and reopen PowerShell afterwards so the new `PATH` takes effect. The
+> PostgreSQL installer puts its binaries in `C:\Program Files\PostgreSQL\16\bin`,
+> which `start.ps1` finds automatically — you do **not** need them on `PATH`, and
+> you do **not** need the bundled server running as a Windows service (the repo
+> runs its own cluster in `.\.pgdata` on port 5433).
+
 Verify before continuing — both must succeed:
 
 ```bash
@@ -140,34 +156,41 @@ initdb --version 2>/dev/null || ls -d /usr/lib/postgresql/16 /usr/pgsql-16 \
 
 ### Quick start — one command
 
-From the repo root after cloning, this prompts for your **host id** (the identity
-your changes are attributed to — the "Acting as" author), then sets up the virtual
-environment, the local database cluster, and launches the app. It is
-safe to re-run.
+After [installing the prerequisites](#prerequisites) and cloning, one script does
+everything: checks the toolchain, creates the virtualenv, installs dependencies,
+brings up the local PostgreSQL cluster, and launches the app. **Safe to re-run** —
+every step is idempotent, and it leaves an already-running cluster alone.
+
+**Linux / macOS**
 
 ```bash
-# Prompt for the identity recorded as the author of your changes.
-read -rp "Host id (author of your changes) [dev@localhost]: " HOST_ID
-export MKM_IDENTITY_DEV_FALLBACK="${HOST_ID:-dev@localhost}"
-
-# Python venv + dependencies (runtime + dev tooling).
-[ -d .venv ] || python3.13 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-
-# Local PostgreSQL cluster: initialise on first run, otherwise just start it.
-if [ -d .pgdata ]; then bash scripts/pg.sh start 2>/dev/null || true; else bash scripts/pg.sh init; fi
-
-# Create, migrate and serve the database.
-python app.py
-
-# Optional: populate the inventory with a few example models.
-python scripts/seed_demo.py
+git clone https://github.com/MKM-Research-Labs/MKM-ModelRisk.git
+cd MKM-ModelRisk
+bash scripts/start.sh
 ```
 
-Then open **http://127.0.0.1:5015** — the **Acting as** field is pre-filled with
-the host id you entered. (Prerequisites: **PostgreSQL 16** and **Python 3.13**; see
-[Prerequisites](#prerequisites) above.)
+**Windows 10/11 (PowerShell)**
+
+```powershell
+git clone https://github.com/MKM-Research-Labs/MKM-ModelRisk.git
+cd MKM-ModelRisk
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1
+```
+
+> Run it as your **normal user, not elevated** — `initdb` refuses to run as
+> Administrator, and the cluster lives inside the repo so no admin rights are needed.
+
+Then open **http://127.0.0.1:5015**. The script asks for the identity your changes
+are attributed to (the "Acting as" author) and pre-fills it.
+
+Both scripts take the same options:
+
+| Option (bash / PowerShell) | Effect |
+|---|---|
+| `--no-run` / `-NoRun` | Set everything up but don't launch the app |
+| `--seed` / `-Seed` | Also load a few example models |
+| `--identity me@corp` / `-Identity me@corp` | Skip the prompt and use this author id |
+| `--help` / `-StopDb` | Show usage / stop the database cluster |
 
 ### First-time setup, step by step
 
@@ -221,7 +244,11 @@ follow the [**User Guide**](docs/user_guide.md).
 
 #### Running it again
 
-In a fresh terminal (the database persists between runs):
+Simplest: re-run the start script — `bash scripts/start.sh` (or
+`powershell -ExecutionPolicy Bypass -File scripts\start.ps1`). It skips whatever is
+already done and just launches the app.
+
+To do it by hand in a fresh terminal (the database persists between runs):
 
 ```bash
 cd MKM-ModelRisk
@@ -247,6 +274,10 @@ Stop the app with **Ctrl-C**; stop the database with `bash scripts/pg.sh stop`.
 | `initdb: invalid locale` / `locale not found` | Your image lacks the locale. `pg.sh` now falls back to `C.UTF-8`/`C` automatically — if you still hit it, force one: `MKM_PG_LOCALE=C.UTF-8 bash scripts/pg.sh init`. |
 | `scripts/pg.sh: Permission denied` | Invoke it via `bash scripts/pg.sh …` (as shown above). |
 | `initdb: cannot be run as root` | Run as your normal user, not with `sudo`. The cluster lives in the repo's `./.pgdata`, so no root is needed. |
+| **Windows:** `… cannot be loaded because running scripts is disabled` | Execution policy. Launch it as `powershell -ExecutionPolicy Bypass -File scripts\start.ps1` (no permanent change needed). |
+| **Windows:** `initdb: cannot be run as Administrator` | Close the elevated prompt and run in a **normal** PowerShell window. |
+| **Windows:** `PostgreSQL 16 not found` | Install it (`winget install -e --id PostgreSQL.PostgreSQL.16`), or point at it: `$env:MKM_PG_BIN = 'D:\PostgreSQL\16\bin'`. |
+| **Windows:** `Python 3.13+ not found` | `winget install -e --id Python.Python.3.13`, then **reopen PowerShell** so `PATH` refreshes. |
 | `pg_ctl: could not start server` on `init`/`start` | A cluster is **already running** on port 5433 — check `bash scripts/pg.sh status`. If a different PostgreSQL owns 5433, stop it (or set `MKM_DB_PORT`). On Debian/Ubuntu the distro auto-starts a cluster on 5432, which does **not** clash. |
 | `psql: could not connect` / `connection refused` | The cluster isn't running: `bash scripts/pg.sh start`. |
 | `Address already in use` on port 5015 | An app instance is still up: `lsof -tiTCP:5015 \| xargs kill` (or `fuser -k 5015/tcp` on Linux), then retry. |
@@ -332,7 +363,8 @@ src/
   static/      Front-end assets — js/ and css/ (rule R7)
   templates/   Jinja templates (rule R7)
 audit/         Self-checking coding-rule audit suite (python -m audit)
-scripts/       Operational scripts (pg.sh, seed_demo.py, migration/backfill loaders)
+scripts/       Setup + operations: start.sh / start.ps1 (one-command bootstrap),
+               pg.sh (cluster), seed_demo.py, migration/backfill loaders
 tests/         Unit/integration tests + tests/e2e (Playwright browser suite)
 docs/          User guide, dependency manifest, coding rules
 ```
