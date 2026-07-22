@@ -78,9 +78,14 @@ Object.assign(MeetingDetail, {
     const meta = [];
     if (item.presenter) meta.push("Presenter: <b>" + esc(item.presenter) + "</b>");
     meta.push("Status: " + statusBadge(item.status));
-    const actions = this._agendaLocked() ? "" :
+    // Edit/Remove disappear once the agenda is locked for distribution, but
+    // acknowledging an item does not: that is what happens *during* the meeting.
+    const done = item.status === "Completed";
+    const actions = (this._agendaLocked() ? "" :
       '<button class="btn small" data-aged="' + esc(item.item_id) + '">Edit</button> ' +
-      '<button class="btn small danger" data-agrm="' + esc(item.item_id) + '">Remove</button>';
+      '<button class="btn small danger" data-agrm="' + esc(item.item_id) + '">Remove</button> ') +
+      (done ? "" : '<button class="btn small primary" data-agdone="' + esc(item.item_id) +
+        '">Mark reviewed</button>');
     return '<div class="card" style="margin-bottom:8px" id="agrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b>" +
@@ -178,6 +183,48 @@ Object.assign(MeetingDetail, {
     document.querySelectorAll("[data-aged]").forEach(function (btn) {
       btn.onclick = () => self._agendaEdit(byId("data-aged", btn));
     });
+    document.querySelectorAll("[data-agdone]").forEach(function (btn) {
+      const id = btn.getAttribute("data-agdone");
+      btn.onclick = () => self._confirmManual(id);
+    });
+  },
+
+  // The minute recorded when the committee acknowledges a manually-added item.
+  // It names the item, who presented it and the paper tabled with it, so the
+  // minutes say what was actually reviewed rather than just "item 5 completed".
+  _manualMinute(item) {
+    const title = item.title || "Agenda item";
+    const paper = item.document_original_name
+      ? " The paper tabled with it (" + item.document_original_name + ") was reviewed."
+      : "";
+    return {
+      title: title,
+      presenter: item.presenter || "",
+      text: "The committee reviewed " + title + "." + paper,
+    };
+  },
+
+  _confirmManual(id) {
+    const item = this._agendaItems().find((it) => it.item_id === id);
+    if (!item) return;
+    this._completeAgendaItem(id, this._manualMinute(item));
+  },
+
+  // Record an agenda item's minute, then mark the item Completed. Shared by the
+  // standing items and the manually-added ones so both leave the same trail: a
+  // minute linked to the item, and the item closed off.
+  _completeAgendaItem(id, minute) {
+    const self = this;
+    App.amend("Confirm — " + minute.title + ".", "POST",
+      "/api/meetings/" + this._id + "/collections/minutes",
+      { fields: { title: minute.title, text: minute.text, agenda_item_id: id,
+                  presenter: minute.presenter || "" } },
+      () => {
+        App.send("POST", "/api/meetings/" + self._id + "/collections/agenda/" + id,
+          { fields: { status: "Completed" }, confirmed: true })
+          .then(() => self.show(self._id, "agenda"))
+          .catch(() => self.show(self._id, "agenda"));
+      });
   },
 
   // Wire the per-item document upload buttons (manual + minutes-sign-off items).

@@ -150,20 +150,9 @@ Object.assign(MeetingDetail, {
     return { title: "Any other business", text: "Any other business was invited by the chair." };
   },
 
-  // Confirming a rollcall / minutes item records a minute, then marks the agenda
-  // item Completed (the status update is pre-confirmed, so no second modal).
+  // Confirming a standing item records its minute and closes the item off, via
+  // the shared completion path in detail_agenda.js.
   _confirmStanding(kind, id) {
-    const d = this._meeting.data || {};
-    const self = this;
-    const minute = this._standingMinute(kind, d);
-    App.amend("Confirm — " + minute.title + ".", "POST",
-      "/api/meetings/" + this._id + "/collections/minutes",
-      { fields: { title: minute.title, text: minute.text, agenda_item_id: id } },
-      () => {
-        App.send("POST", "/api/meetings/" + self._id + "/collections/agenda/" + id,
-          { fields: { status: "Completed" }, confirmed: true })
-          .then(() => self.show(self._id, "agenda"))
-          .catch(() => self.show(self._id, "agenda"));
-      });
+    this._completeAgendaItem(id, this._standingMinute(kind, this._meeting.data || {}));
   },
 });

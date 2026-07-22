@@ -35,7 +35,8 @@ from config.governance import CLOSED_REMEDIATION_STATUS
 # The LaTeX string helpers and the shared house style live in one place now; this
 # module keeps re-exporting _esc/_table/_section for its existing callers.
 from src.governance.latex import (
-    _esc, _section, _table, front_matter, history_page, logo_asset, preamble,
+    _esc, _para_table, _section, _table, front_matter, history_page, logo_asset,
+    preamble,
 )
 
 
@@ -79,10 +80,14 @@ def build_tex(
         ["Name", "Role", "Organisation", "Status"],
         [[p.get("name"), p.get("role"), p.get("organisation"), p.get("status")]
          for p in data.get("participants", [])])) if data.get("participants") else ""
-    agenda = _section("Agenda", _table(
+    # A wrapping table: agenda titles can be long (an event review carries the
+    # event's summary), and a fixed-width table pushed the Status column — which
+    # is where an item shows as reviewed — off the right edge of the page.
+    agenda = _section("Agenda", _para_table(
         ["#", "Title", "Presenter", "Status"],
         [[i + 1, a.get("title"), a.get("presenter"), a.get("status")]
-         for i, a in enumerate(data.get("agenda", []))])) if data.get("agenda") else ""
+         for i, a in enumerate(data.get("agenda", []))],
+        [0.06, 0.60, 0.17, 0.17])) if data.get("agenda") else ""
     # Sign-off agenda items (a model/product + a proposed RAG) called out on
     # their own, with the outcome.
     signoff_items = [
@@ -101,8 +106,12 @@ def build_tex(
          for m in in_scope])) if in_scope else ""
     minutes = ""
     if data.get("minutes"):
+        # The presenter is only named when one was recorded; minutes captured by
+        # acknowledging an agenda item may have none, and "Title ():" reads as a
+        # rendering fault rather than as an absent presenter.
         body = "".join(
-            "\\textbf{" + _esc(m.get("title")) + "} (" + _esc(m.get("presenter")) + "): " +
+            "\\textbf{" + _esc(m.get("title")) + "}" +
+            (" (" + _esc(m.get("presenter")) + ")" if m.get("presenter") else "") + ": " +
             _esc(m.get("text")) + "\\par\\medskip\n" for m in data["minutes"])
         minutes = _section("Minutes", body)
     decisions = _section("Decisions", _table(
