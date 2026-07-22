@@ -80,7 +80,6 @@ const Detail = {
   },
 
   _header(d) {
-    const warn = this._risk.rating === "Unacceptable" ? "&#9888; " : "";
     const sub = esc(this._id) + (d.version ? " · v" + esc(d.version) : "") + (d.category ? " · " + esc(d.category) : "");
     const dates = HEADER_DATES.map((k) => {
       // MRC sign-off shows the granting meeting id (not the date) once approved.
@@ -90,10 +89,13 @@ const Detail = {
         ":</span> <b>" + value + "</b></span>";
     }).join("");
     return '<div class="detail-header"><div>' +
-      '<div class="name">' + warn + esc(d.name || this._id) + "</div>" +
+      '<div class="name">' + esc(d.name || this._id) + "</div>" +
       '<div class="sub">' + sub + "</div>" +
+      // The composite rating is not shown here: the RAG rating is the governed
+      // one, and a second, differently-derived verdict in the header invited the
+      // question "where does that come from?" without answering it.
       '<div style="margin-top:8px">' + tierBadge(d.tier) + ' <span class="muted">' +
-      esc(tierFullLabel(d.tier)) + "</span> &nbsp; " + riskBadge(this._risk.rating) + "</div>" +
+      esc(tierFullLabel(d.tier)) + "</span></div>" +
       '<div class="dh-dates">' + dates + "</div></div>" +
       '<div class="right"><div class="olabel">OWNER</div>' +
       '<div class="oname">' + fieldDisplay(d.owner) + "</div>" +
