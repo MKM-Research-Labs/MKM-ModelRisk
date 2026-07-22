@@ -108,7 +108,8 @@ const Chain = {
       row.onclick = async () => {
         const id = row.getAttribute("data-open");
         await Nav.show("inventory");
-        if (typeof Detail !== "undefined") Detail.show(id);
+        // Always land on Overview: Detail remembers the last tab it showed.
+        if (typeof Detail !== "undefined") Detail.show(id, "overview");
       };
     });
     this._bindEdges();
@@ -202,7 +203,10 @@ const Chain = {
       let fill = "#e3f2fd", stroke = "#1976d2";
       if (!hasDownstream[n.model_id]) { fill = "#e0f2f1"; stroke = "#00897b"; }
       if (n.retired) { fill = "#f5f5f5"; stroke = "#bbb"; }
-      return '<g>' +
+      // The whole node is a click target onto that model's Overview; the title
+      // gives the same affordance on hover for anyone using a pointer.
+      return '<g class="chain-node" data-open="' + esc(n.model_id) + '">' +
+        "<title>" + esc(n.model_id) + " — open this model</title>" +
         '<rect x="' + p.x + '" y="' + p.y + '" width="' + BOX_W + '" height="' + BOX_H +
         '" rx="7" fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"' +
         (n.retired ? ' stroke-dasharray="4 3"' : "") + "/>" +
