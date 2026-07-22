@@ -47,7 +47,7 @@ def test_header_lookup_is_case_insensitive():
 
 def test_fallback_actor_when_no_header_and_allowed():
     principal = resolve_principal({}, allow_fallback=True)
-    assert principal.actor == "dev@localhost"
+    assert principal.actor == "david.kelly@mkmresearchlabs.com"
     assert principal.source == SOURCE_FALLBACK
 
 

@@ -400,7 +400,7 @@ variable always wins over the file.
 | `PG_DATA_DIR` | `./.pgdata` | Cluster data directory (`scripts/pg.sh`); point at an external volume to keep the clone free of data |
 | `PG_BIN` | auto-detected | Directory holding `initdb`/`pg_ctl`, if PostgreSQL 16 isn't in a standard location (`scripts/pg.sh`) |
 | `PG_LOCALE` | auto-detected | Locale used to `initdb` the cluster; falls back `en_US.UTF-8` → `C.UTF-8` → `C` (`scripts/pg.sh`) |
-| `IDENTITY_DEV_FALLBACK` | `dev@localhost` | Local "Acting as" identity when there is no SSO header |
+| `IDENTITY_DEV_FALLBACK` | `david.kelly@mkmresearchlabs.com` | Local "Acting as" identity when there is no SSO header |
 | `UPLOAD_DIR` | `./uploads` | Where uploaded files (and audit PDFs) are stored |
 | `PRODUCER_ROOT` | `../PhysicalRisk` | Root of the producing repo a migration reads from |
 

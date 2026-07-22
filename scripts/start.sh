@@ -73,8 +73,8 @@ echo "cluster is accepting connections on port ${DB_PORT:-5433}"
 
 # --- 4. Identity used for the audit trail ---------------------------------
 if [ -z "${IDENTITY_DEV_FALLBACK:-}" ] && [ -t 0 ]; then
-  read -rp $'\nIdentity your changes are attributed to [dev@localhost]: ' ID || true
-  export IDENTITY_DEV_FALLBACK="${ID:-dev@localhost}"
+  read -rp $'\nIdentity your changes are attributed to [david.kelly@mkmresearchlabs.com]: ' ID || true
+  export IDENTITY_DEV_FALLBACK="${ID:-david.kelly@mkmresearchlabs.com}"
 fi
 
 if [ "$SEED" = "1" ]; then

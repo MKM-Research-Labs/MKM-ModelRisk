@@ -70,7 +70,7 @@ bindings) and the system resolves the rest.
 There is **no separate admin role** today — every authenticated user can administer
 everything. Access is controlled at the perimeter (an SSO proxy) and the console
 reads your identity from a trusted request header. Running locally without a proxy,
-you are `dev@localhost` by default.
+you are `david.kelly@mkmresearchlabs.com` by default.
 
 **What to do:**
 

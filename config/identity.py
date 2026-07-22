@@ -38,4 +38,4 @@ IDENTITY_NAME_HEADER = os.environ.get(
 
 # Actor used for local development when no SSO header is present. Only honoured
 # when the caller explicitly allows a fallback (never in a hardened deployment).
-IDENTITY_DEV_FALLBACK = os.environ.get("IDENTITY_DEV_FALLBACK", "dev@localhost")
+IDENTITY_DEV_FALLBACK = os.environ.get("IDENTITY_DEV_FALLBACK", "david.kelly@mkmresearchlabs.com")

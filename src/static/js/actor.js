@@ -33,7 +33,7 @@ const Actor = {
   async init() {
     const el = document.getElementById("actor-input");
     if (!el) return;
-    const fallback = el.getAttribute("data-default") || "dev@localhost";
+    const fallback = el.getAttribute("data-default") || "david.kelly@mkmresearchlabs.com";
     let people = [];
     try {
       // /api/reference returns {collections: [specs], data: {list: [rows]}}.

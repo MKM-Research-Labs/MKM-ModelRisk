@@ -294,8 +294,8 @@ def test_per_model_audit_tab_shows_recorded_events(page: Page, base_url: str):
     # Register + field-update events should both appear as event-type rows.
     expect(body).to_contain_text("ModelRegistered")
     expect(body).to_contain_text("ModelFieldUpdated")
-    # Actor stamped on each row (dev@localhost is the fallback SSO identity).
-    expect(body).to_contain_text("dev@localhost")
+    # Actor stamped on each row (david.kelly@mkmresearchlabs.com is the fallback SSO identity).
+    expect(body).to_contain_text("david.kelly@mkmresearchlabs.com")
 
 
 # test_model_actions_with_update_history — retired.

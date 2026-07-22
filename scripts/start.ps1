@@ -166,8 +166,8 @@ Write-Host "cluster is accepting connections on port $Port"
 # --- 4. Identity used for the audit trail ---------------------------------
 if ($Identity) { $env:IDENTITY_DEV_FALLBACK = $Identity }
 if (-not $env:IDENTITY_DEV_FALLBACK) {
-    $id = Read-Host "`nIdentity your changes are attributed to [dev@localhost]"
-    $env:IDENTITY_DEV_FALLBACK = if ($id) { $id } else { 'dev@localhost' }
+    $id = Read-Host "`nIdentity your changes are attributed to [david.kelly@mkmresearchlabs.com]"
+    $env:IDENTITY_DEV_FALLBACK = if ($id) { $id } else { 'david.kelly@mkmresearchlabs.com' }
 }
 
 if ($Seed) {

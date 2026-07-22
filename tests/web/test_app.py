@@ -46,7 +46,7 @@ def test_index_actor_field_prefills_from_sso_header(client):
 def test_index_actor_field_falls_back_when_no_header(client):
     # With no SSO header, it falls back to the configured dev identity.
     html = client.get("/").get_data(as_text=True)
-    assert 'id="actor-input" data-default="dev@localhost"' in html
+    assert 'id="actor-input" data-default="david.kelly@mkmresearchlabs.com"' in html
 
 
 def test_create_app_runs_migrations_by_default():

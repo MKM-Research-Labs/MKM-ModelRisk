@@ -57,7 +57,7 @@ Please DOUBLE-CLICK THIS FILE ONE MORE TIME to finish setup.
 This time it sets up the database and starts the application. It will ask:
 
 ```
-Identity your changes are attributed to [dev@localhost]:
+Identity your changes are attributed to [david.kelly@mkmresearchlabs.com]:
 ```
 
 Type your email address and press **Enter**. Everything you change in the system

@@ -35,7 +35,7 @@ const App = {
   _pending: null,
 
   actor() {
-    return document.getElementById("actor-input").value.trim() || "dev@localhost";
+    return document.getElementById("actor-input").value.trim() || "david.kelly@mkmresearchlabs.com";
   },
 
   headers() {
