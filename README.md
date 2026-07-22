@@ -295,7 +295,22 @@ python app.py
 
 Stop the app with **Ctrl-C**. Stop the database with `bash scripts/pg.sh stop`
 (Linux/macOS) or `powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -StopDb`
-(Windows).
+(Windows). `start` and `stop` are both idempotent — running either twice is a
+no-op, not an error.
+
+> **Stop the database before shutting down or unmounting its volume.** The
+> cluster does not auto-start, so after a reboot `python app.py` fails with
+> `connection to server at "127.0.0.1", port 5433 failed: Connection refused` —
+> that just means the database is not running, so `bash scripts/pg.sh start`
+> fixes it. Pulling the volume out from under a *running* cluster is the harmful
+> case: it forces crash recovery on the next start and can leave a stale
+> `postmaster.pid`.
+
+> **Keeping the data off the working copy.** `PG_DATA_DIR` and `UPLOAD_DIR` both
+> default to inside the clone. Point them at another volume in `.env` to keep the
+> checkout free of data — but move **both** together: the database holds each
+> document's metadata while `UPLOAD_DIR` holds its bytes, so splitting them leaves
+> documents that list but will not download.
 
 > **Note.** The database starts empty; `python scripts/seed_demo.py` populates the
 > inventory with a few example models. Defaults work out of the box; only create a

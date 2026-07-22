@@ -63,8 +63,23 @@ case "${1:-status}" in
     PGPASSWORD="$OWNER_PW" createdb -h "$HOST" -p "$PORT" -U "$OWNER" "$DBNAME"
     echo "Cluster ready on port $PORT; database '$DBNAME' created."
     ;;
-  start)  pg_ctl -D "$DATA" -o "-p $PORT" -l "$DATA/server.log" start ;;
-  stop)   pg_ctl -D "$DATA" stop ;;
+  start)
+    # Idempotent: starting an already-running cluster is a no-op, not an error.
+    # pg_ctl would otherwise fail with "could not start server", which reads as a
+    # fault when nothing is wrong.
+    if pg_isready -h "$HOST" -p "$PORT" >/dev/null 2>&1; then
+      echo "Cluster already accepting connections on port $PORT."
+    else
+      pg_ctl -D "$DATA" -o "-p $PORT" -l "$DATA/server.log" start
+    fi
+    ;;
+  stop)
+    if pg_isready -h "$HOST" -p "$PORT" >/dev/null 2>&1; then
+      pg_ctl -D "$DATA" stop
+    else
+      echo "No cluster is running on port $PORT."
+    fi
+    ;;
   status) pg_isready -h "$HOST" -p "$PORT" ;;
   *)      echo "usage: $0 {init|start|stop|status}" >&2; exit 1 ;;
 esac
