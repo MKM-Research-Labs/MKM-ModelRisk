@@ -142,6 +142,60 @@ function mrcStatusBadge(data) {
   return '<span style="color:' + color + ';font-weight:600">' + esc(outcome) + "</span>";
 }
 
+// Every uploaded document is stored, but the console lists each one once and only
+// where a reader can do something with it. Defaults mirror config/files.py;
+// configure() makes the server's configuration authoritative once specs load.
+const DocLinks = {
+  _hidden: ["tex"],
+  _inline: ["pdf", "png", "jpg", "jpeg", "txt"],
+
+  configure(specs) {
+    if (!specs) return;
+    if (specs.hidden_doc_extensions) this._hidden = specs.hidden_doc_extensions;
+    if (specs.inline_view_extensions) this._inline = specs.inline_view_extensions;
+  },
+
+  _ext(name) {
+    const parts = String(name || "").split(".");
+    return parts.length > 1 ? parts.pop().toLowerCase() : "";
+  },
+
+  // The documents of one category that the console shows. A hidden extension (the
+  // LaTeX source filed beside its PDF) stays stored and can still be replaced by
+  // re-uploading it — it is simply not listed as a second row saying the same thing.
+  visible(docs, category) {
+    const self = this;
+    return (docs || []).filter((d) =>
+      d.category === category && self._hidden.indexOf(self._ext(d.original_name)) < 0);
+  },
+
+  // How many documents a panel actually lists, for its tab badge — counting the
+  // stored total instead would promise rows the tab does not show.
+  countIn(docs, categories) {
+    const self = this;
+    return (categories || []).reduce((total, c) => total + self.visible(docs, c).length, 0);
+  },
+
+  // "View" opens the document in a new tab, for the formats a browser renders;
+  // anything else is download-only.
+  actions(base, id, doc) {
+    const url = base + esc(id) + "/documents/" + esc(doc.item_id) + "/download";
+    const view = this._inline.indexOf(this._ext(doc.original_name)) < 0 ? "" :
+      '<a href="' + url + '?inline=1" target="_blank" rel="noopener">View</a> ';
+    return view + '<a href="' + url + '">Download</a>';
+  },
+};
+
+// Mirrors config CLOSED_REMEDIATION_STATUS.
+const CLOSED_REMEDIATION_STATUS = "Closed";
+
+// How many remediation steps are still outstanding. The tab badge answers "how much
+// is left to do?", not "how many were ever raised", so a closed step stops counting.
+// The tab itself still lists every step — closing one is history, not deletion.
+function openRemediationCount(steps) {
+  return (steps || []).filter((s) => s.status !== CLOSED_REMEDIATION_STATUS).length;
+}
+
 // Human-readable file size.
 function fmtSize(bytes) {
   if (bytes === null || bytes === undefined) return "—";

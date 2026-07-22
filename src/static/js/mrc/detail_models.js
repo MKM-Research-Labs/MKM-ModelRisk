@@ -24,10 +24,10 @@
 // and products behave identically.
 Object.assign(MeetingDetail, {
   // Org-scope filter shared by both kinds: the most specific level set on the
-  // meeting (derived from its bound MRC) — department > division > all.
+  // meeting (derived from its bound MRC) — line of business > division > all.
   _scopeFilter() {
     const md = this._meeting.data || {};
-    if (md.department) return { key: "department", value: md.department };
+    if (md.line_of_business) return { key: "line_of_business", value: md.line_of_business };
     if (md.division) return { key: "division", value: md.division };
     return null;
   },

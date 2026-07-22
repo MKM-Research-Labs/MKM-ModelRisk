@@ -22,45 +22,45 @@
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 
-# Order: the Division/Department org tree first, then the MRC committees
+# Order: the Division/Line of Business org tree first, then the MRC committees
 # anchored to that tree, then the Product platform (Calculating Agent), then
 # the People directory. Company is no longer a reference list — it's implicit:
 # every instance IS a single institution, and its name lives in the singleton
 # MRC settings under org_name. Market Data Models live in the Model Inventory
 # tagged type="Market Data Model".
 REFERENCE_LISTS = (
-    "division", "department", "mrc", "calculating_agent", "people",
+    "division", "line_of_business", "mrc", "calculating_agent", "people",
 )
 
-# MRC committees are anchored to one of the three org tiers. A Department-level
-# MRC only sees models in that department; Division sees everything across its
-# departments; Company sees the whole inventory. Approvals can be escalated up
+# MRC committees are anchored to one of the three org tiers. A Line of Business-level
+# MRC only sees models in that line of business; Division sees everything across its
+# lines of business; Company sees the whole inventory. Approvals can be escalated up
 # this hierarchy manually (never automatic).
-VALID_MRC_LEVELS = ("Company", "Division", "Department")
+VALID_MRC_LEVELS = ("Company", "Division", "Line of Business")
 VALID_MRC_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 
-# The org hierarchy cascades: a Division is just a name; a Department belongs to a
-# Division. (Divisions/Departments no longer carry an Owner — model ownership is
+# The org hierarchy cascades: a Division is just a name; a Line of Business belongs to a
+# Division. (Divisions/Lines of Business no longer carry an Owner — model ownership is
 # set on the model itself.)
 REFERENCE_SPECS = {
     "division": {"label": "Division", "id_prefix": "DV", "display": "value", "fields": [
         {"key": "value", "label": "Division", "type": "text", "required": True},
     ]},
-    "department": {"label": "Department", "id_prefix": "DP", "display": "value", "fields": [
-        {"key": "value", "label": "Department", "type": "text", "required": True},
+    "line_of_business": {"label": "Line of Business", "id_prefix": "LOB", "display": "value", "fields": [
+        {"key": "value", "label": "Line of Business", "type": "text", "required": True},
         {"key": "division", "label": "Division", "type": "text", "reference": "division", "required": True},
     ]},
     # --- MRC committees anchored to the org hierarchy ---
     # ``value`` is the MRC's unique identifier (e.g. MRC-EMEA-RATES); ``name`` is
     # the human-readable label. ``level`` fixes which org tier this committee
-    # sits at; ``scope_value`` is which specific Division/Department it covers
+    # sits at; ``scope_value`` is which specific Division/Line of Business it covers
     # (unused for a Company-level MRC).
     "mrc": {"label": "MRC", "id_prefix": "MRC", "display": "value", "fields": [
         {"key": "value", "label": "MRC ID", "type": "text", "required": True},
         {"key": "name", "label": "Name", "type": "text", "required": True},
         {"key": "level", "label": "Level", "type": "choice",
          "options": VALID_MRC_LEVELS, "required": True},
-        {"key": "scope_value", "label": "Division / Department", "type": "text"},
+        {"key": "scope_value", "label": "Division / Line of Business", "type": "text"},
         {"key": "frequency", "label": "Frequency", "type": "choice",
          "options": VALID_MRC_FREQUENCIES},
         # Membership roster — chosen from people within the committee's org scope.
@@ -96,7 +96,7 @@ REFERENCE_SPECS = {
                           "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
-    # People carry an org unit — Division + Department, backed by the admin lists,
+    # People carry an org unit — Division + Line of Business, backed by the admin lists,
     # exactly like a model's org fields. This anchoring is what makes a person
     # eligible to sit on a given MRC or own a model in that scope. Role and
     # organisation are not tracked — every person belongs to this institution.
@@ -104,6 +104,6 @@ REFERENCE_SPECS = {
         {"key": "name", "label": "Name", "type": "text", "required": True},
         {"key": "email", "label": "Email", "type": "text"},
         {"key": "division", "label": "Division", "type": "text", "reference": "division"},
-        {"key": "department", "label": "Department", "type": "text", "reference": "department"},
+        {"key": "line_of_business", "label": "Line of Business", "type": "text", "reference": "line_of_business"},
     ]},
 }

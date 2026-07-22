@@ -36,7 +36,7 @@ def test_update_option_edits_fields():
 
 def test_lists_empty_initially():
     assert get_reference_lists() == {
-        "people": [], "division": [], "department": [],
+        "people": [], "division": [], "line_of_business": [],
         "calculating_agent": [], "mrc": [],
     }
 
@@ -52,14 +52,14 @@ def test_add_person_record():
     add_option(
         list_name="people",
         fields={"name": "Jane Doe", "email": "jane@firm",
-                "division": "Markets", "department": "Rates"},
+                "division": "Markets", "line_of_business": "Rates"},
         actor="admin",
     )
     person = get_reference_lists()["people"][0]
     assert person["item_id"] == "PE-001"
     assert person["name"] == "Jane Doe"
     assert person["division"] == "Markets"
-    assert person["department"] == "Rates"
+    assert person["line_of_business"] == "Rates"
 
 
 def test_add_multiple_options_increment_ids():

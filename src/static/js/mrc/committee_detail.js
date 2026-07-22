@@ -55,12 +55,12 @@ Object.assign(Committees, {
   },
 
   // People eligible for this committee: those whose org unit matches its scope.
-  // Department-level → that department; Division-level → that division (any
-  // department); Company-level (or unset) → everyone.
+  // Line of Business-level → that line of business; Division-level → that division (any
+  // line of business); Company-level (or unset) → everyone.
   _scopePeople(item) {
     const people = this._ref.people || [];
-    if (item.level === "Department" && item.scope_value) {
-      return people.filter((p) => p.department === item.scope_value);
+    if (item.level === "Line of Business" && item.scope_value) {
+      return people.filter((p) => p.line_of_business === item.scope_value);
     }
     if (item.level === "Division" && item.scope_value) {
       return people.filter((p) => p.division === item.scope_value);
@@ -172,7 +172,7 @@ Object.assign(Committees, {
 
   _editField(item, f) {
     const row = document.getElementById("crow-" + f.key);
-    // The scope picker is a Division/Department list matching the committee's
+    // The scope picker is a Division/Line of Business list matching the committee's
     // current level (and disabled for a Company-level MRC).
     const control = f.key === "scope_value"
       ? this._scopeControl("ced-input", item.level, item.scope_value)

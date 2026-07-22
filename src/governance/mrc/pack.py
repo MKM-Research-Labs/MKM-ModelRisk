@@ -31,6 +31,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from config.governance import CLOSED_REMEDIATION_STATUS
 # The LaTeX string helpers and the shared house style live in one place now; this
 # module keeps re-exporting _esc/_table/_section for its existing callers.
 from src.governance.latex import (
@@ -70,7 +71,7 @@ def build_tex(
     info = " \\quad ".join(
         "\\textbf{" + label + ":} " + _esc(data.get(key))
         for label, key in (("Division", "division"),
-                            ("Department", "department"), ("Date", "date"), ("Time", "time"),
+                            ("Line of Business", "line_of_business"), ("Date", "date"), ("Time", "time"),
                             ("Location", "location"), ("Chair", "chair"), ("Status", "status"))
     )
 
@@ -171,7 +172,8 @@ def _collect_remediations(meeting: dict) -> dict[str, list[dict]]:
             continue
         model = get_model(model_id)
         steps = (model or {}).get("data", {}).get("remediation_steps") or []
-        open_steps = [s for s in steps if (s.get("status") or "Open") != "Closed"]
+        open_steps = [s for s in steps
+                      if (s.get("status") or "Open") != CLOSED_REMEDIATION_STATUS]
         if open_steps:
             out[model_id] = open_steps
     return out

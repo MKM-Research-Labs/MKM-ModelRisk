@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Product MRC sign-off: request → route via the product's Division/Department → approve."""
+"""Product MRC sign-off: request → route via the product's Division/Line of Business → approve."""
 from __future__ import annotations
 
 from tests.web.conftest import HEADERS
@@ -47,7 +47,7 @@ def _product(client, product_id="P1", analytics_model="M1", rag="Amber", **org):
                       "fields": {"analytics_model": analytics_model,
                                  "market_data_model": "m", "calculating_agent": "c"},
                       "confirmed": True}, headers=HEADERS)
-    # Org fields (division/department) are set via the detail field editor.
+    # Org fields (division / line of business) are set via the detail field editor.
     for field, value in org.items():
         client.post(f"/api/products/{product_id}/field",
                     json={"field": field, "value": value, "confirmed": True}, headers=HEADERS)

@@ -25,7 +25,7 @@
 const Committees = {
   _spec: null,
   _items: [],
-  _ref: {},             // reference data (divisions/departments) for scope pickers
+  _ref: {},             // reference data (divisions/lines of business) for scope pickers
   _openId: null,        // survives a re-render so the open detail re-opens
 
   _visible() {
@@ -36,12 +36,12 @@ const Committees = {
   // "true" via the standard update endpoint.
   _isArchived(item) { return item.archived === "true"; },
 
-  // The Division/Department scope depends on the committee's level: a
+  // The Division/Line of Business scope depends on the committee's level: a
   // Company-level MRC has no scope; a Division-level one picks a Division; a
-  // Department-level one picks a Department.
+  // Line of Business-level one picks a Line of Business.
   _scopeOptions(level) {
     if (level === "Division") return (this._ref.division || []).map((d) => d.value);
-    if (level === "Department") return (this._ref.department || []).map((d) => d.value);
+    if (level === "Line of Business") return (this._ref.line_of_business || []).map((d) => d.value);
     return null;  // Company-level, or no level chosen yet
   },
 

@@ -23,7 +23,7 @@
 // per-field editing augment Detail from detail_overview.js, loaded after.
 // Description is promoted to a full-width summary band above the two columns.
 // Tier + its rating rationale sit at the foot of Model Details, below Complexity.
-const OVERVIEW_LEFT = ["division", "department", "methodology", "source_module",
+const OVERVIEW_LEFT = ["division", "line_of_business", "methodology", "source_module",
   "materiality", "complexity", "tier", "rating_rationale"];
 // Governance: MRC (derived) sits at the top; the MRC sets sign-off + next review
 // at sign-off, so recertification / review frequency / last review are dropped.
@@ -34,6 +34,9 @@ const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
 const TESTING_DOC_CATEGORY = {
   unit_tests: "Unit Test", integration_tests: "Integration Test", benchmark_tests: "Benchmark Test",
 };
+// The model-wide test evidence pack, shown at the top of the Testing tab. Mirrors
+// the first entry of config TESTING_DOC_CATEGORIES.
+const TEST_RESULTS_CATEGORY = "Test Results";
 // Collection tabs that carry an in-context supporting-documents panel.
 const COLLECTION_DOC_CATEGORY = {
   remediation_steps: "Remediation Evidence",
@@ -108,7 +111,7 @@ const Detail = {
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
     const tst = TESTING_FIELDS.filter((k) => d[k] === "Yes").length + "/" + TESTING_FIELDS.length;
     const tabs = [
-      ["overview", "Overview", null], ["remediation_steps", "Remediation", n("remediation_steps")],
+      ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
       ["dependencies", "Dependencies", n("dependencies")],
       ["validation_questions", "Validation & Assumptions", cov],
@@ -116,7 +119,7 @@ const Detail = {
       ["risk", "Risk Rating", null],
       ["decisions", "MRC linkage",
         (d.signoff_history || []).length + this._decisions.length],
-      ["docs", "Docs", n("documents")],
+      ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
@@ -141,11 +144,24 @@ const Detail = {
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
     if (this._tab === "decisions") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "docs") {
-      // Remediation Evidence is captured in-context on the Remediation tab, so it
-      // is not offered as a standalone Docs category. (Events are product-only.)
-      const cats = (this._specs.doc_categories || []).filter(
-        (c) => c !== "Remediation Evidence" && c !== "Event Evidence");
-      ModelDocs.render(this._id, d.documents || [], cats, this._model.retired);
+      // Docs is the model's own documentation and supporting analysis. Testing
+      // evidence lives on the Testing tab and Remediation Evidence on the
+      // Remediation tab, each beside what it evidences, so nothing is listed twice.
+      // The Model Risk Document is generated from the inventory on request, so it
+      // is offered as an action rather than filed as one more uploaded row that
+      // could go stale against the record it describes.
+      box.innerHTML =
+        '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">' +
+        '<span class="muted" style="font-size:12px">The full write-up for this model, ' +
+        "generated from the current record — on its own, or zipped with its PDF evidence " +
+        "to send on.</span>" +
+        '<span><a class="btn small" href="/api/models/' + esc(this._id) +
+        '/pack.zip">Client pack (ZIP)</a> ' +
+        '<a class="btn small primary" target="_blank" rel="noopener" href="/api/models/' +
+        esc(this._id) + '/risk-document.pdf">Model Risk Document (PDF)</a></span></div>' +
+        '<div id="docs-host"></div>';
+      ModelDocs.render(this._id, d.documents || [], this._specs.doc_tab_categories || [],
+        this._model.retired, "/api/models/", () => this.show(this._id, "docs"), "docs-host");
       return;
     }
     // Validation & Assumptions overlap — one tab: the SR 26-2 questions plus
@@ -163,17 +179,21 @@ const Detail = {
         this._collSection("change_history", d);
       this._bindCollections(["version_history", "change_history"]); return;
     }
-    // Testing tab: the unit / integration / benchmark test fields, each with its
-    // own in-context supporting-documents panel.
+    // Testing tab: every piece of testing evidence for the model. The overall test
+    // results pack sits at the top, then the unit / integration / benchmark fields,
+    // each with its own in-context upload panel. None of this appears under Docs.
     if (this._tab === "testing") {
       const docOpts = (cat) => ({ category: cat, docs: d.documents || [], base: "/api/models/",
         id: this._id, retired: this._model.retired, refresh: () => this.show(this._id, "testing") });
-      box.innerHTML = '<div class="section-header">Testing</div>' +
+      box.innerHTML = '<div class="section-header">Test results</div>' +
+        DocPanel.html(docOpts(TEST_RESULTS_CATEGORY)) +
+        '<div class="section-header" style="margin-top:14px">Testing</div>' +
         TESTING_FIELDS.map((k) =>
           '<div class="inforow" id="row-' + k + '"><div class="k">' + esc(this.specByKey(k).label) +
           '</div><div class="v">' + yesNo(d[k]) + "</div>" + this._editLink(k) + "</div>" +
           DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
       this._bindEdits();
+      DocPanel.bind(docOpts(TEST_RESULTS_CATEGORY));
       TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k]))); return;
     }
     // Limitations tab: Model weaknesses + Limitations.

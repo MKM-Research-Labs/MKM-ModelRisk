@@ -20,7 +20,7 @@
 """HTTP API for the Product aggregate."""
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, jsonify, request
 
 from config.governance import (
     DOC_CATEGORIES,
@@ -51,7 +51,9 @@ from src.web._helpers import (
     json_body,
     reference_options,
     request_actor,
+    document_specs,
     resolve_field,
+    send_document,
 )
 
 product_bp = Blueprint("product", __name__, url_prefix="/api/products")
@@ -112,7 +114,7 @@ def field_specs():
         "register": list(PRODUCT_REGISTER_FIELDS),
         "bindings": list(PRODUCT_BINDINGS),
         "collections": _collection_specs(),
-        "doc_categories": list(DOC_CATEGORIES),
+        **document_specs(),
     })
 
 
@@ -236,7 +238,7 @@ def download_document(product_id: str, item_id: str):
     path = upload_path(_product_scope(product_id), doc["filename"])
     if not path.exists():
         return jsonify({"error": "file missing"}), 404
-    return send_file(str(path), as_attachment=True, download_name=doc["original_name"])
+    return send_document(path, doc, inline=request.args.get("inline") == "1")
 
 
 @product_bp.post("/<product_id>/documents/<item_id>/delete")

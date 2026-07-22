@@ -146,10 +146,10 @@ def request_signoff(hid: str):
     # get_model here always resolves.
     consumer = get_model((handoff["data"] or {}).get("to_model"))
     data = consumer["data"] or {}
-    mrc, _level = matching_mrc(data.get("division"), data.get("department"), get_reference_lists())
+    mrc, _level = matching_mrc(data.get("division"), data.get("line_of_business"), get_reference_lists())
     if mrc is None:
         return jsonify({"error": "no MRC committee covers the consumer model's "
-                                 "division/department — configure one under Admin → MRC first"}), 400
+                                 "division / line of business — configure one under Admin → MRC first"}), 400
     body = json_body()
     raise_signoff(context_from_request(body), HANDOFF_SUBJECT, hid,
                   kind="handoff", target_mrc=mrc["value"], note=body.get("note"))

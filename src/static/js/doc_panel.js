@@ -32,11 +32,11 @@ const DocPanel = {
   // array (filtered to `category` here); `refresh` re-renders the host tab.
   html(opts) {
     const p = this._slug(opts.category);
-    const items = (opts.docs || []).filter((d) => d.category === opts.category);
+    const items = DocLinks.visible(opts.docs, opts.category);
     const rows = items.length
       ? items.map((d) =>
-          '<div class="dp-doc"><a href="' + opts.base + esc(opts.id) + "/documents/" +
-          esc(d.item_id) + '/download">' + esc(d.original_name) + "</a>" +
+          '<div class="dp-doc">' + esc(d.original_name) + " " +
+          DocLinks.actions(opts.base, opts.id, d) +
           (d.description ? ' <span class="muted">— ' + esc(d.description) + "</span>" : "") +
           (opts.retired ? "" : ' <button class="btn small danger" data-' + p + '-rm="' +
             esc(d.item_id) + '">&times;</button>') + "</div>").join("")

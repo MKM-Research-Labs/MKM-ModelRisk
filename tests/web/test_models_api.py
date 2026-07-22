@@ -103,6 +103,35 @@ def test_risk_report_pdf(client, monkeypatch):
     assert response.data.startswith(b"%PDF")
 
 
+def test_model_risk_document_pdf(client, monkeypatch):
+    """One model's client-facing document, generated from the inventory on request."""
+    monkeypatch.setattr("src.governance.mrc.pack.compile_tex", lambda tex, assets=None: b"%PDF-stub")
+    _register(client)
+    response = client.get("/api/models/M1/risk-document.pdf")
+    assert response.status_code == 200
+    assert response.mimetype == "application/pdf"
+    assert "M1_model_risk_document.pdf" in response.headers["Content-Disposition"]
+
+
+def test_model_risk_document_unknown_model_is_404(client):
+    assert client.get("/api/models/none/risk-document.pdf").status_code == 404
+
+
+def test_model_client_pack_zip(client, monkeypatch):
+    """The pack downloads as an attachment: it is a file to send on, not to read."""
+    monkeypatch.setattr("src.governance.mrc.pack.compile_tex", lambda tex, assets=None: b"%PDF-stub")
+    _register(client)
+    response = client.get("/api/models/M1/pack.zip")
+    assert response.status_code == 200
+    assert response.mimetype == "application/zip"
+    assert "attachment" in response.headers["Content-Disposition"]
+    assert "M1_model_risk_pack.zip" in response.headers["Content-Disposition"]
+
+
+def test_model_client_pack_unknown_model_is_404(client):
+    assert client.get("/api/models/none/pack.zip").status_code == 404
+
+
 def test_field_specs_endpoint(client):
     specs = client.get("/api/models/fields").get_json()
     group_names = [g["group"] for g in specs["groups"]]
@@ -110,7 +139,7 @@ def test_field_specs_endpoint(client):
     org = next(g for g in specs["groups"] if g["group"] == "Organisation")
     org_keys = [f["key"] for f in org["fields"]]
     # Phase MRC-5: Company retired — the instance is a single institution.
-    assert org_keys == ["division", "department", "repo_location", "codebase"]
+    assert org_keys == ["division", "line_of_business", "repo_location", "codebase"]
     # A choice field carries its options for the UI to render a dropdown.
     rag = next(f for g in specs["groups"] for f in g["fields"] if f["key"] == "rag_rating")
     assert rag["type"] == "choice"
@@ -258,6 +287,6 @@ def test_decisions_and_actions_unknown_model_is_404(client):
 
 
 def test_register_still_open_without_org_fields(client):
-    """A model with no org fields set is still valid (division/department optional)."""
+    """A model with no org fields set is still valid (division / line of business optional)."""
     response = _register(client, model_id="M-no-org")
     assert response.status_code == 201

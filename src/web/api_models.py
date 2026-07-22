@@ -22,16 +22,15 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, Response, jsonify, request, send_file
+from flask import Blueprint, jsonify, request
 
 from config.governance import COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPECS, REGISTER_FIELDS
 from src.files import UploadError, upload_path
-from src.governance.documents import add_document, find_document, remove_document
+from src.governance.documents import (add_document, find_document, model_scope,
+                                      remove_document)
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
-from src.governance.model_inventory.report import render_report_pdf
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import meeting_items_for_model
-from src.governance.mrc_settings import get_settings
 from src.command import dispatch
 from src.governance.model_inventory import (
     add_collection_item,
@@ -50,12 +49,11 @@ from src.web._helpers import (
     reference_options,
     request_actor,
     resolve_field,
+    document_specs,
     resolve_mrc_for_org,
+    send_document,
 )
 
-
-def _model_scope(model_id: str) -> str:
-    return f"model/{model_id}"
 
 models_bp = Blueprint("models", __name__, url_prefix="/api/models")
 
@@ -101,7 +99,7 @@ def field_specs():
         "groups": _grouped_specs(reference_options()),
         "register": list(REGISTER_FIELDS),
         "collections": _collection_specs(),
-        "doc_categories": list(DOC_CATEGORIES),
+        **document_specs(),
     })
 
 
@@ -112,7 +110,7 @@ def model_mrc(model_id: str):
     if model is None:
         return jsonify({"error": "model not found"}), 404
     data = model["data"] or {}
-    return jsonify(resolve_mrc_for_org(data.get("division"), data.get("department")))
+    return jsonify(resolve_mrc_for_org(data.get("division"), data.get("line_of_business")))
 
 
 @models_bp.post("/<model_id>/documents")
@@ -127,7 +125,7 @@ def upload_document(model_id: str):
         return jsonify({"error": "no file provided"}), 400
     try:
         add_document(
-            aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id, scope=_model_scope(model_id),
+            aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id, scope=model_scope(model_id),
             category=category, filename=file.filename, data=file.read(),
             description=request.form.get("description", ""), actor=request_actor(),
         )
@@ -142,10 +140,10 @@ def download_document(model_id: str, item_id: str):
     doc = find_document(MODEL_AGGREGATE, model_id, item_id)
     if doc is None:
         return jsonify({"error": "document not found"}), 404
-    path = upload_path(_model_scope(model_id), doc["filename"])
+    path = upload_path(model_scope(model_id), doc["filename"])
     if not path.exists():
         return jsonify({"error": "file missing"}), 404
-    return send_file(str(path), as_attachment=True, download_name=doc["original_name"])
+    return send_document(path, doc, inline=request.args.get("inline") == "1")
 
 
 @models_bp.post("/<model_id>/documents/<item_id>/delete")
@@ -166,15 +164,6 @@ def list_all():
 def model_chain():
     """The 'string of pearls' derived from every model's declared dependencies."""
     return jsonify(derive_chain())
-
-
-@models_bp.get("/risk-report.pdf")
-def risk_report():
-    """The Model Risk Report (MRC status) as a LaTeX-generated PDF."""
-    pdf = render_report_pdf(list_models(), get_settings(), date.today().isoformat())
-    return Response(pdf, mimetype="application/pdf", headers={
-        "Content-Disposition": 'inline; filename="model_risk_report.pdf"',
-    })
 
 
 @models_bp.get("/<model_id>")

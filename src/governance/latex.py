@@ -72,9 +72,36 @@ def _table(headers: list[str], rows: list[list[Any]]) -> str:
             "\\end{longtable}\n")
 
 
+def _wrappable(value: Any) -> str:
+    """Escaped text that may break after an underscore or a slash. Identifiers and
+    module paths (``BRI_FLOOR_UPLIFT``, ``config/bri.py``) have no hyphenation points,
+    so in a narrow column they otherwise run straight over the right margin."""
+    return _esc(value).replace("\\_", "\\_\\allowbreak{}").replace("/", "/\\allowbreak{}")
+
+
+def _para_table(headers: list[str], rows: list[list[Any]], weights: list[float]) -> str:
+    """A longtable whose columns wrap, for tables carrying prose rather than codes.
+
+    ``weights`` are each column's share of the text width and should sum to 1; they
+    are scaled down slightly to leave room for the inter-column padding, otherwise
+    the table runs over the right margin. Columns are ragged-right: justifying a
+    column this narrow leaves rivers of white space between the words."""
+    col = ">{\\raggedright\\arraybackslash}p{%.4f\\textwidth}"
+    cols = "|" + "|".join(col % (w * 0.93) for w in weights) + "|"
+    head = " & ".join("\\textbf{" + _esc(h) + "}" for h in headers) + " \\\\ \\hline"
+    body = "".join(" & ".join(_wrappable(c) for c in row) + " \\\\ \\hline\n" for row in rows)
+    return ("\\begin{longtable}{" + cols + "}\n\\hline " + head + "\n\\endhead\n" + body +
+            "\\end{longtable}\n")
+
+
 def _section(title: str, body: str) -> str:
     # Numbered sections, as the model-documentation protocol uses.
     return "\\section{" + _esc(title) + "}\n" + body
+
+
+def _subsection(title: str, body: str) -> str:
+    """A numbered subsection, for documents that break a section down per topic."""
+    return "\\subsection{" + _esc(title) + "}\n" + body
 
 
 def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") -> str:

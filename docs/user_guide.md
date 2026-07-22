@@ -15,7 +15,7 @@ needs a committee). For installation, see the [README](../README.md).
 1. [Core concepts](#1-core-concepts)
 2. [Set yourself up as admin](#2-set-yourself-up-as-admin)
 3. [Define the Company](#3-define-the-company)
-4. [Divisions and Departments](#4-divisions-and-departments)
+4. [Divisions and Lines of Business](#4-divisions-and-lines-of-business)
 5. [Add People](#5-add-people)
 6. [Add Calculating Agents](#6-add-calculating-agents)
 7. [Define an MRC and upload its ToR](#7-define-an-mrc-and-upload-its-tor)
@@ -38,8 +38,8 @@ needs a committee). For installation, see the [README](../README.md).
 A few ideas underpin every screen.
 
 **One institution.** The console runs for a single firm. "Company" is not a list
-you add to — it is a singleton (a name and a logo). Divisions and Departments sit
-beneath it, and everything hangs off that Company -> Division -> Department tree.
+you add to — it is a singleton (a name and a logo). Divisions and Lines of Business sit
+beneath it, and everything hangs off that Company -> Division -> Line of Business tree.
 
 **Identity ("Acting as").** The console does not log you in — in production your
 SSO identifies you at the perimeter. Locally, the **Acting as** field in the header
@@ -60,7 +60,7 @@ model, product and meeting is preserved, nothing is ever truly deleted, and the
 
 **Derived, not duplicated.** Many links are computed, not typed. A model's
 responsible committee, a product's committee (via its analytics model), a meeting's
-Division / Department / Chair — all derived. You set the *anchors* (org tier,
+Division / Line of Business / Chair — all derived. You set the *anchors* (org tier,
 bindings) and the system resolves the rest.
 
 ---
@@ -80,7 +80,7 @@ you are `dev@localhost` by default.
    actor stamped on every change you make.
 3. The main tabs are: **Model Inventory, Products, MRC, Documents, Bibliography,
    Audit Trail, Audit Reports, Admin**.
-4. Click **Admin**. Its sub-tabs are **Company, Division, Department, MRC, Calc
+4. Click **Admin**. Its sub-tabs are **Company, Division, Line of Business, MRC, Calc
    Agent, People**. All setup below happens here.
 
 ---
@@ -98,15 +98,15 @@ you are `dev@localhost` by default.
 
 ---
 
-## 4. Divisions and Departments
+## 4. Divisions and Lines of Business
 
 The org tree scopes committees, people and models. Create Divisions first, then
-Departments (a Department must belong to a Division).
+Lines of Business (a Line of Business must belong to a Division).
 
 **Admin -> Division:** type a Division name (e.g. *Markets*, *Treasury*), **Add**,
 confirm. Repeat for each.
 
-**Admin -> Department:** type a Department name (e.g. *Rates Trading*), pick its
+**Admin -> Line of Business:** type a Line of Business name (e.g. *Rates Trading*), pick its
 **Division** from the dropdown, **Add**, confirm. Repeat (e.g. *Equity Derivatives*
 under Markets, *Funding and Liquidity* under Treasury).
 
@@ -126,16 +126,16 @@ dropdowns are populated.
 |---|---|---|
 | **Name** | yes | Full name — this is what shows in dropdowns |
 | **Email** | no | |
-| **Org level** | yes | `Company`, `Division`, or `Department` |
-| **Division / Department** | no | Which specific unit — leave blank for Company-level |
+| **Org level** | yes | `Company`, `Division`, or `Line of Business` |
+| **Division / Line of Business** | no | Which specific unit — leave blank for Company-level |
 
-The **Org level** plus **Division / Department** anchor a person to the org tree. A
-Company-level person is firm-wide; a Department-level person is scoped to one
-department. This anchoring is what determines whether they are eligible to sit on a
+The **Org level** plus **Division / Line of Business** anchor a person to the org tree. A
+Company-level person is firm-wide; a Line of Business-level person is scoped to one
+line of business. This anchoring is what determines whether they are eligible to sit on a
 given committee or own a model in that scope.
 
 Example spread: *David K Kelly* (CRO) -> Company; *Priya Anand* (Head of Rates) ->
-Department / Rates Trading; *Marcus Reid* (Treasurer) -> Division / Treasury.
+Line of Business / Rates Trading; *Marcus Reid* (Treasurer) -> Division / Treasury.
 
 ---
 
@@ -159,8 +159,8 @@ That anchoring drives which models and products it is responsible for.
 |---|---|---|
 | **MRC ID** | yes | Unique code, e.g. `MRC-AM` |
 | **Name** | yes | Human-readable, e.g. *Asset Management MRC* |
-| **Level** | yes | `Company`, `Division`, or `Department` |
-| **Division / Department** | no | The specific unit it covers (n/a for Company). The scope picker reacts to the Level. |
+| **Level** | yes | `Company`, `Division`, or `Line of Business` |
+| **Division / Line of Business** | no | The specific unit it covers (n/a for Company). The scope picker reacts to the Level. |
 | **Chair** | no | Dropdown of **People** (add the person first) |
 | **Frequency** | no | `Monthly`, `Quarterly`, `Semi-annual`, `Annual` |
 
@@ -169,11 +169,11 @@ Click **Add committee**, confirm.
 **What Level means (the coverage rule):**
 
 - **Company** — covers the whole inventory (the backstop).
-- **Division** — covers everything in that division and its departments.
-- **Department** — covers only that department's models.
+- **Division** — covers everything in that division and its lines of business.
+- **Line of Business** — covers only that line of business's models.
 
 When a model needs a committee, the system picks the **most specific** active
-committee that covers it: Department, then Division, then Company. Archived
+committee that covers it: Line of Business, then Division, then Company. Archived
 committees never match.
 
 **Upload the Terms of Reference (ToR):**
@@ -200,9 +200,9 @@ At registration you only need:
 | **Model ID** | yes |
 | **Name** | yes |
 | **Type** | no (`Analytical Model`, `Market Data Model`, `Other`) |
-| **Division** / **Department** | no (dropdowns from your org tree) |
+| **Division** / **Line of Business** | no (dropdowns from your org tree) |
 
-Set **Division/Department** at registration or soon after — this is what links the
+Set **Division/Line of Business** at registration or soon after — this is what links the
 model to its MRC (section 17). A model with no org tier can only match a
 Company-level committee. **Type** matters for products: an *analytics model*
 binding accepts non-Market-Data models; a *market data model* binding accepts only
@@ -335,7 +335,7 @@ works the same way for models and products.
 rating, then click **Request MRC sign-off**. The request is:
 
 1. **Routed** to the responsible committee automatically — a model via its
-   division/department, a product via its analytics model's division/department.
+   division/line of business, a product via its analytics model's division/line of business.
 2. **Attached** immediately to that committee's next **Scheduled** meeting agenda
    if one exists; otherwise **queued (Pending)** and drained onto the agenda the
    moment such a meeting is scheduled.
@@ -359,7 +359,7 @@ sign-off requests** for that committee onto the agenda.
 
 **Open a meeting** (double-click its row). The header shows:
 
-- **Row 1 (read-only, derived from the committee):** MRC, Division, Department,
+- **Row 1 (read-only, derived from the committee):** MRC, Division, Line of Business,
   Chair.
 - **Row 2:** Date, Time, Location (fixed at scheduling, read-only) and **Status**
   (editable inline — this is how you move a meeting `Scheduled -> Completed`).
@@ -389,8 +389,8 @@ RAG) show two extra actions while **Pending**:
 - **Participants** — added one at a time: Name, Role, Organisation, Status
   (`Invited / Attended / Apologies / Declined`).
 - **Models** — a multi-select of inventory models "in scope" for the meeting,
-  **pre-filtered to the committee's remit** (a Department-level MRC shows only that
-  department's models; toggle **Show all models** to override). Tick the models and
+  **pre-filtered to the committee's remit** (a Line of Business-level MRC shows only that
+  line of business's models; toggle **Show all models** to override). Tick the models and
   **Save selection**. In-scope models' open remediation steps appear in the Meeting
   Pack PDF.
 
@@ -441,9 +441,12 @@ category, URL — with a category filter and per-row Edit / Del. **Export BibTeX
 downloads the whole bibliography as a `.bib` file.
 
 **Audit Reports.** Several PDFs are produced on demand (all require `tectonic`):
-the **Model Risk Report** (inventory-wide committee status — also on the Model
-Inventory tab), the per-meeting **Meeting Pack**, the **Coding-Rule Audit**, and
-**this User Guide**. Open the **Audit Reports** tab, click **Generate reports**,
+the **Model Risk Report** (the portfolio profile, the inventory table, and then a
+full dossier per model — classification, methodology, governance, validation
+questions and evidence, assumptions, limitations, weaknesses, remediation,
+dependencies, change history, MRC sign-offs and attached documents; also on the
+Model Inventory tab), the per-meeting **Meeting Pack**, the **Coding-Rule Audit**,
+and **this User Guide**. Open the **Audit Reports** tab, click **Generate reports**,
 then **View** or **Download** each; files are written to `uploads/audit/`.
 
 ---
@@ -453,14 +456,14 @@ then **View** or **Download** each; files are written to `uploads/audit/`.
 The whole point is that nothing floats free. The chain, top to bottom:
 
 - **Company** (singleton: name + logo)
-  - **Division** then **Department** — the org tree (Admin)
+  - **Division** then **Line of Business** — the org tree (Admin)
     - **People** — anchored by Org level + scope; become chairs / owners / roles
     - **MRC committee** — anchored by Level + scope, carries a ToR; covers the
       models in its scope
-    - **Model** — tagged with Division/Department
+    - **Model** — tagged with Division/Line of Business
       - Risk rating: Materiality x Complexity x Tier -> RAG
       - Validation (9 x SR 26-2) and Owner feed the composite health score
-      - matches an MRC (Department, else Division, else Company)
+      - matches an MRC (Line of Business, else Division, else Company)
       - sign-off request -> committee meeting -> approved RAG
     - **Product** — binds Analytics Model + Market Data Model + Calc Agent
       - inherits its MRC via the Analytics Model's org
@@ -473,11 +476,11 @@ The whole point is that nothing floats free. The chain, top to bottom:
 **Recommended build order** (each step feeds the next):
 
 1. **Company** name and logo.
-2. **Divisions**, then **Departments**.
+2. **Divisions**, then **Lines of Business**.
 3. **People** (needed for chairs and owners).
 4. **Calculating Agents** (needed for products).
 5. **MRC committee** and **ToR** (chair picks from People).
-6. **Models** — set Division/Department so they match a committee; set
+6. **Models** — set Division/Line of Business so they match a committee; set
    Materiality / Complexity / Tier for a RAG; answer validation questions.
 7. **Products** — bind to existing models plus a calc agent.
 8. **Request sign-off** on a model or product.

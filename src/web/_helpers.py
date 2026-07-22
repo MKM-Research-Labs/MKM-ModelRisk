@@ -22,12 +22,38 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import request
+from flask import request, send_file
 
-from config.governance import REFERENCE_SPECS
+from config.files import HIDDEN_DOC_EXTENSIONS, INLINE_VIEW_EXTENSIONS
+from config.governance import (DOC_CATEGORIES, DOC_TAB_CATEGORIES, REFERENCE_SPECS,
+                               TESTING_DOC_CATEGORIES)
 from src.command import CommandContext, context_from_headers
+from src.files import extension
 from src.governance.model_inventory import list_models
 from src.governance.reference import get_reference_lists
+
+
+def document_specs() -> dict:
+    """How the console should surface documents: which categories each panel offers,
+    which extensions stay stored but unlisted, and which may be viewed inline. Served
+    with every aggregate's field specs so the two consoles cannot drift apart."""
+    return {
+        "doc_categories": list(DOC_CATEGORIES),
+        "doc_tab_categories": list(DOC_TAB_CATEGORIES),
+        "testing_doc_categories": list(TESTING_DOC_CATEGORIES),
+        "hidden_doc_extensions": sorted(HIDDEN_DOC_EXTENSIONS),
+        "inline_view_extensions": sorted(INLINE_VIEW_EXTENSIONS),
+    }
+
+
+def send_document(path, doc: dict, *, inline: bool = False):
+    """Serve an uploaded document, inline (opened in a browser tab) only when the
+    caller asked for it AND the extension is one we are willing to render in this
+    origin. An uploaded file shown inline executes as this application, so the
+    allow-list is the security boundary, not the query parameter."""
+    viewable = extension(doc.get("original_name", "")) in INLINE_VIEW_EXTENSIONS
+    return send_file(str(path), as_attachment=not (inline and viewable),
+                     download_name=doc["original_name"])
 
 
 def json_body() -> dict[str, Any]:
@@ -35,7 +61,7 @@ def json_body() -> dict[str, Any]:
     return request.get_json(silent=True) or {}
 
 
-def resolve_mrc_for_org(division: str | None, department: str | None) -> dict[str, Any]:
+def resolve_mrc_for_org(division: str | None, line_of_business: str | None) -> dict[str, Any]:
     """The MRC committee responsible for a given org location, as a JSON block.
 
     Returns ``{"mrc": <committee or None>, "level": <match level or None>}`` —
@@ -43,7 +69,7 @@ def resolve_mrc_for_org(division: str | None, department: str | None) -> dict[st
     router to decide where a request goes.
     """
     from src.governance.mrc import matching_mrc  # lazy: avoids an import cycle
-    mrc, level = matching_mrc(division, department, get_reference_lists())
+    mrc, level = matching_mrc(division, line_of_business, get_reference_lists())
     return {"mrc": mrc, "level": level}
 
 

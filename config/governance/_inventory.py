@@ -52,19 +52,19 @@ TIER_MAX = 3
 
 # Fields captured on the registration form (besides the mandatory id + name).
 # Company is NOT here — it comes from the org-scope selector in the header, so a
-# model is defined by its ID within the selected Company. Division and Department
+# model is defined by its ID within the selected Company. Division and Line of Business
 # are captured on the form.
 REGISTER_FIELDS = (
-    "division", "department", "repo_location", "codebase", "type", "category", "tier", "owner",
+    "division", "line_of_business", "repo_location", "codebase", "type", "category", "tier", "owner",
 )
 
 # Ordered scalar field specifications. type is one of: text | choice | date | tier.
 MODEL_FIELD_SPECS = {
-    # --- Organisation (division/department are backed by admin-managed
+    # --- Organisation (division / line of business are backed by admin-managed
     #     reference lists; every model belongs to the singleton institution
     #     whose name is on the MRC settings under org_name). ---
     "division": {"label": "Division", "type": "text", "group": "Organisation", "reference": "division"},
-    "department": {"label": "Department", "type": "text", "group": "Organisation", "reference": "department"},
+    "line_of_business": {"label": "Line of Business", "type": "text", "group": "Organisation", "reference": "line_of_business"},
     "repo_location": {"label": "Repository location", "type": "text", "group": "Organisation"},
     "codebase": {"label": "Codebase", "type": "text", "group": "Organisation"},
     # --- Classification ---

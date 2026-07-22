@@ -53,9 +53,9 @@ def test_fields_endpoint(client):
     assert fields["analytics_model"]["type"] == "choice" and "MKM-AN-001" in fields["analytics_model"]["options"]
     assert fields["owner"]["type"] == "choice" and "Jane" in fields["owner"]["options"]
     # Org fields resolve to reference-backed dropdowns once the list is populated,
-    # exactly like a model's (department stays text here — none seeded yet).
+    # exactly like a model's (line_of_business stays text here — none seeded yet).
     assert fields["division"]["type"] == "choice" and "Markets" in fields["division"]["options"]
-    assert "department" in fields
+    assert "line_of_business" in fields
     assert fields["notes"]["type"] == "text"
     assert any(c["key"] == "limitations" for c in specs["collections"])
 

@@ -19,12 +19,20 @@
 # SOFTWARE.
 """Document categories (coding rule R1)."""
 
-# Per-model document categories (each a sub-tab on the model Docs tab). The
-# Unit/Integration/Benchmark Test, Event Evidence and Remediation Evidence
-# categories back the in-context upload panels on the Testing block and the
-# Events / Remediation tabs (they still appear on the Docs tab too).
-DOC_CATEGORIES = (
-    "Core Documentation", "Test Results", "Analysis", "Monitoring",
-    "Unit Test", "Integration Test", "Benchmark Test",
-    "Event Evidence", "Remediation Evidence",
-)
+# Every document category is surfaced in exactly one place, so a document is never
+# listed twice in the console. The category still identifies the document wherever
+# it is read back (the Model Risk Report groups by it), and uploads may use any of
+# them; these tuples only decide which panel offers and lists each one.
+
+# The Docs tab: the model's own documentation and the analysis supporting it.
+DOC_TAB_CATEGORIES = ("Core Documentation", "Analysis", "Monitoring")
+
+# The Testing tab. "Test Results" is the overall evidence pack; the other three back
+# the in-context upload panel beside each unit / integration / benchmark test field.
+TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", "Benchmark Test")
+
+# Attached in context on the Events and Remediation tabs, beside the item they
+# evidence, so they are not offered as standalone Docs categories.
+EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
+
+DOC_CATEGORIES = DOC_TAB_CATEGORIES + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES

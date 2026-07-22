@@ -55,7 +55,7 @@ REVIEW_UPCOMING_DAYS = 90
 # Scalar meeting fields (title/date are mandatory at scheduling time). Each
 # meeting belongs to an MRC committee (the ``mrc`` binding, chosen from the
 # Admin > MRC list) — that committee carries the chair, level and cadence and
-# the org scope (company/division/department). All five of those are derived
+# the org scope (company/division / line of business). All five of those are derived
 # on read from the MRC entry; they're not stored on the meeting.
 MEETING_FIELD_SPECS = {
     "mrc": {"label": "MRC", "type": "text", "reference": "mrc"},
@@ -72,7 +72,7 @@ MEETING_FIELD_SPECS = {
     "minutes_original_name": {"label": "Minutes name", "type": "text", "hidden": True},
 }
 # ``company`` is not a meeting field — the institution is a singleton
-# (see MRC settings org_name). Division/department are derived from the MRC.
+# (see MRC settings org_name). Division / line of business are derived from the MRC.
 MEETING_FIELDS = tuple(MEETING_FIELD_SPECS.keys())
 
 # Structured collections on a meeting — same generic engine as the inventory.

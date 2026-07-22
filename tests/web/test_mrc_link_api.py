@@ -50,7 +50,7 @@ def _register_product(client, product_id="P-1", analytics_model="M1", **org):
               "confirmed": True},
         headers=HEADERS,
     )
-    # Org fields (division/department) are set via the detail field editor.
+    # Org fields (division / line of business) are set via the detail field editor.
     for field, value in org.items():
         client.post(f"/api/products/{product_id}/field",
                     json={"field": field, "value": value, "confirmed": True}, headers=HEADERS)

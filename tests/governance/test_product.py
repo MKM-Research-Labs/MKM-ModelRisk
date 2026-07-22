@@ -63,26 +63,26 @@ def test_register_and_derived_identifier():
 
 
 def test_register_inherits_org_from_analytics_model():
-    # A product's division/department follow its analytics model, so it lands
+    # A product's division / line of business follow its analytics model, so it lands
     # under the right MRC region instead of unscoped (and hidden from the list).
     register_model(model_id="MKM-AN-001", name="Analytics engine", actor="admin",
-                   fields={"division": "ANALYTICS", "department": "Asset Management"})
+                   fields={"division": "ANALYTICS", "line_of_business": "Asset Management"})
     rebuild_inventory_view()
     _register()
     data = get_product("Product-0001")["data"]
     assert data["division"] == "ANALYTICS"
-    assert data["department"] == "Asset Management"
+    assert data["line_of_business"] == "Asset Management"
 
 
 def test_register_org_can_be_overridden_explicitly():
     register_model(model_id="MKM-AN-001", name="Analytics engine", actor="admin",
-                   fields={"division": "ANALYTICS", "department": "Asset Management"})
+                   fields={"division": "ANALYTICS", "line_of_business": "Asset Management"})
     rebuild_inventory_view()
     _register(division="RATINGS")
     data = get_product("Product-0001")["data"]
-    # An explicit division wins; department still falls back to the model's.
+    # An explicit division wins; line_of_business still falls back to the model's.
     assert data["division"] == "RATINGS"
-    assert data["department"] == "Asset Management"
+    assert data["line_of_business"] == "Asset Management"
 
 
 def test_register_requires_each_binding():

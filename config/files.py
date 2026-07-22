@@ -36,3 +36,14 @@ ALLOWED_UPLOAD_EXTENSIONS = frozenset(
 )
 IMAGE_EXTENSIONS = frozenset({"png", "jpg", "jpeg"})
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
+# Extensions a document may be served inline for (opened in a browser tab rather
+# than downloaded). Deliberately narrow: an uploaded file rendered inline runs in
+# this application's origin, so ``svg`` and any markup format are excluded -- an
+# SVG can carry script. Everything else is still served, as a download.
+INLINE_VIEW_EXTENSIONS = frozenset({"pdf", "png", "jpg", "jpeg", "txt"})
+
+# Extensions kept on file but never listed in the console. The LaTeX source of a
+# generated document is stored beside its PDF as the auditable original and can be
+# replaced by re-uploading it, but listing both doubles every row for no reader.
+HIDDEN_DOC_EXTENSIONS = frozenset({"tex"})

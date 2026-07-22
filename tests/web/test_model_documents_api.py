@@ -43,6 +43,35 @@ def test_fields_endpoint_lists_doc_categories(client):
     assert "Core Documentation" in cats and "Monitoring" in cats
 
 
+def test_fields_endpoint_surfaces_each_category_in_one_place(client):
+    """Every category belongs to exactly one panel, so the console never lists the
+    same document twice. Testing evidence belongs to the Testing tab, not Docs."""
+    specs = client.get("/api/models/fields").get_json()
+    assert specs["doc_tab_categories"] == ["Core Documentation", "Analysis", "Monitoring"]
+    assert "Test Results" in specs["testing_doc_categories"]
+    for testing_cat in specs["testing_doc_categories"]:
+        assert testing_cat not in specs["doc_tab_categories"]
+    assert specs["hidden_doc_extensions"] == ["tex"]
+
+
+def test_download_serves_pdf_inline_only_when_asked(client):
+    _register(client)
+    doc = _upload(client).get_json()["data"]["documents"][0]
+    url = "/api/models/M1/documents/" + doc["item_id"] + "/download"
+    assert "attachment" in client.get(url).headers["Content-Disposition"]
+    assert "inline" in client.get(url + "?inline=1").headers["Content-Disposition"]
+
+
+def test_download_never_serves_an_unlisted_format_inline(client):
+    """A .tex stays retrievable so it can be replaced, but is never rendered in this
+    origin: inline display of an uploaded file runs as the application."""
+    _register(client)
+    doc = _upload(client, name="source.tex").get_json()["data"]["documents"][0]
+    response = client.get("/api/models/M1/documents/" + doc["item_id"] + "/download?inline=1")
+    assert response.status_code == 200
+    assert "attachment" in response.headers["Content-Disposition"]
+
+
 def test_upload_download_delete(client):
     _register(client)
     upload = _upload(client)

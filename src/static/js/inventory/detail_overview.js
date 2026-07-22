@@ -65,7 +65,7 @@ Object.assign(Detail, {
       '</div><span class="edit-btn" data-open-linkage="1">view</span></div>';
   },
 
-  // The MRC responsible for this model, derived from its division/department.
+  // The MRC responsible for this model, derived from its division / line of business.
   // A missing committee is flagged in red — sign-off can't be routed without one.
   _mrcRow() {
     const m = this._mrc || {};
@@ -76,7 +76,7 @@ Object.assign(Detail, {
         '<span class="muted" style="font-size:11px">' + esc(m.level || "") + "-level</span></div></div>";
     }
     const d = this._model.data || {};
-    const org = [d.division, d.department].filter(Boolean).join(" / ") || "no division/department set";
+    const org = [d.division, d.line_of_business].filter(Boolean).join(" / ") || "no division / line of business set";
     return '<div class="inforow"><div class="k">MRC</div>' +
       '<div class="v" style="color:var(--red)">&#9888; No committee covers this model (' +
       esc(org) + "). Set one up under Admin &rarr; MRC.</div></div>";

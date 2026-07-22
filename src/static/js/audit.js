@@ -31,13 +31,13 @@ function auditValue(v) {
 }
 
 const Audit = {
-  _ref: {},                       // reference data (mrc / division / department)
+  _ref: {},                       // reference data (mrc / division / line_of_business)
   _committees: [],
   _events: [],
   _modelMap: {},                  // model_id   -> model data (for MRC scoping)
   _productMap: {},                // product_id -> product data
 
-  // The division/department of the entity an event touched, for MRC scoping.
+  // The division / line of business of the entity an event touched, for MRC scoping.
   // Model and Product events map to their record; every other event (MRC
   // meetings, reference, settings) is unscoped and appears only under "All".
   _scopeData(e) {

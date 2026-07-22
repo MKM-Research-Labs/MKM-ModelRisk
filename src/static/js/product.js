@@ -30,12 +30,13 @@ function productStatusBadge(status, retired) {
 // Products (Product Valuation Models): one Analytics Model can underpin many Products.
 const Product = {
   _specs: null,
-  _ref: {},                       // reference data (mrc / division / department)
+  _ref: {},                       // reference data (mrc / division / line_of_business)
   _committees: [],
 
   async specs() {
     // Re-fetch so new inventory models / reference values populate the dropdowns.
     this._specs = await App.get("/api/products/fields");
+    DocLinks.configure(this._specs);
     return this._specs;
   },
 

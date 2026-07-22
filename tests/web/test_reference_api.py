@@ -53,10 +53,10 @@ def _add_person(client, name):
 
 def test_get_reference_empty(client):
     res = client.get("/api/reference").get_json()
-    assert res["data"] == {"division": [], "department": [],
+    assert res["data"] == {"division": [], "line_of_business": [],
                            "calculating_agent": [], "mrc": [], "people": []}
     assert [c["key"] for c in res["collections"]] == [
-        "division", "department", "mrc", "calculating_agent", "people"]
+        "division", "line_of_business", "mrc", "calculating_agent", "people"]
 
 
 def test_mrc_tor_fields_are_hidden_in_specs(client):
@@ -108,13 +108,13 @@ def test_update_division_via_api(client):
     assert res.get_json()["division"][0]["value"] == "Global Markets"
 
 
-def test_department_division_field_becomes_dropdown(client):
-    """Once a division exists, the Department form's Division field is a dropdown."""
+def test_line_of_business_division_field_becomes_dropdown(client):
+    """Once a division exists, the Line of Business form's Division field is a dropdown."""
     client.post("/api/reference/collections/division",
                 json={"fields": {"value": "Markets"}, "confirmed": True}, headers=HEADERS)
     res = client.get("/api/reference").get_json()
-    department = next(c for c in res["collections"] if c["key"] == "department")
-    division_field = next(f for f in department["fields"] if f["key"] == "division")
+    line_of_business = next(c for c in res["collections"] if c["key"] == "line_of_business")
+    division_field = next(f for f in line_of_business["fields"] if f["key"] == "division")
     assert division_field["type"] == "choice"
     assert "Markets" in division_field["options"]
 

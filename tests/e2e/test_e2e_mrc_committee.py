@@ -142,26 +142,26 @@ def test_committee_edit_frequency_choice(page: Page, base_url: str):
     expect(page.locator("#crow-frequency .v")).to_contain_text("Annual")
 
 
-def test_committee_scoped_to_department(page: Page, base_url: str):
-    """A Department-level committee keeps its org anchor (level + scope) on the row."""
-    # Seed the org tree (Division + Department) via API so the scope picker has
+def test_committee_scoped_to_line_of_business(page: Page, base_url: str):
+    """A Line of Business-level committee keeps its org anchor (level + scope) on the row."""
+    # Seed the org tree (Division + Line of Business) via API so the scope picker has
     # options; the Committee admin drives its scope select from those lists.
     headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
     page.request.post(base_url + "/api/reference/collections/division",
                       data={"fields": {"value": "Markets"}, "confirmed": True}, headers=headers)
-    page.request.post(base_url + "/api/reference/collections/department",
+    page.request.post(base_url + "/api/reference/collections/line_of_business",
                       data={"fields": {"value": "Rates Trading", "division": "Markets"},
                             "confirmed": True}, headers=headers)
     _open_mrc_admin(page, base_url)
     item_id = _add_committee(page, {
         "value": "MRC-DEPT-RATES",
         "name": "Rates MRC",
-        "level": "Department",
+        "level": "Line of Business",
         "scope_value": "Rates Trading",
         "frequency": "Monthly",
     })
     row = page.locator(f"tr.clickable[data-cid='{item_id}']")
-    expect(row).to_contain_text("Department")
+    expect(row).to_contain_text("Line of Business")
     expect(row).to_contain_text("Rates Trading")
 
 

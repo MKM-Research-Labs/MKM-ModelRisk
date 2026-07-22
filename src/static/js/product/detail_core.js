@@ -23,7 +23,7 @@
 // field rows, inline editors, sign-off panel and Danger tab augment ProductDetail
 // from detail_edit.js, loaded after. The identifier is derived from the bindings.
 const PRODUCT_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
-const PRODUCT_OVERVIEW_ORG = ["division", "department"];
+const PRODUCT_OVERVIEW_ORG = ["division", "line_of_business"];
 const PRODUCT_OVERVIEW_CLASS = ["tier", "materiality", "complexity"];
 const PRODUCT_OVERVIEW_MONITORING = ["monitoring_approach", "monitoring_results"];
 const PRODUCT_OVERVIEW_GOV = ["status", "owner", "mrc_signoff_date", "next_review_date",
@@ -96,12 +96,12 @@ const ProductDetail = {
     const tabs = [
       ["overview", "Overview", null], ["limitations", "Limitations", n("limitations")],
       ["assumptions", "Assumptions", n("assumptions")],
-      ["remediation_steps", "Remediation", n("remediation_steps")],
+      ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
       ["validation_questions", "Validation", n("validation_questions")],
       ["operational_failure_events", "Events", n("operational_failure_events")],
       ["raci_roles", "RACI", n("raci_roles")],
       ["risk", "Risk Rating", null], ["linkage", "MRC", null],
-      ["docs", "Docs", n("documents")],
+      ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
@@ -124,11 +124,9 @@ const ProductDetail = {
     if (this._tab === "linkage") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
-      // Remediation / Event Evidence are captured in-context on the Remediation
-      // and Events tabs, so they are not offered as standalone Docs categories.
-      const cats = (this._specs.doc_categories || []).filter(
-        (c) => c !== "Remediation Evidence" && c !== "Event Evidence");
-      ModelDocs.render(this._id, d.documents || [], cats,
+      // Docs is the product's own documentation and supporting analysis; testing
+      // and evidence categories are captured in-context on their own tabs.
+      ModelDocs.render(this._id, d.documents || [], this._specs.doc_tab_categories || [],
         this._product.retired, "/api/products/", () => this.show(this._id, "docs"), "pt-content");
       return;
     }
@@ -166,8 +164,8 @@ const ProductDetail = {
     return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" + status;
   },
 
-  // The MRC responsible for this product, derived from its Division/Department
-  // (Department-level → Division-level → Company). Flags red when none covers it.
+  // The MRC responsible for this product, derived from its Division/Line of Business
+  // (Line of Business-level → Division-level → Company). Flags red when none covers it.
   _mrcRow(d) {
     const m = this._mrc || {};
     const head = '<div class="section-header">MRC</div>';
@@ -177,9 +175,9 @@ const ProductDetail = {
         esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
         '<span class="muted" style="font-size:11px">' + esc(m.level || "") + "-level</div></div>";
     }
-    const org = [d.division, d.department].filter(Boolean).join(" / ") || "no division/department set";
+    const org = [d.division, d.line_of_business].filter(Boolean).join(" / ") || "no division / line of business set";
     return head + '<div class="inforow"><div class="v" style="color:var(--red)">&#9888; ' +
-      "No committee covers this product (" + esc(org) + "). Set its Division/Department, " +
+      "No committee covers this product (" + esc(org) + "). Set its Division/Line of Business, " +
       "or configure an MRC under Admin &rarr; MRC.</div></div>";
   },
 

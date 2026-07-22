@@ -41,7 +41,7 @@ RECEIVED = "Received"
 
 
 def _product_mrc(data: dict) -> str | None:
-    mrc, _level = matching_mrc(data.get("division"), data.get("department"), get_reference_lists())
+    mrc, _level = matching_mrc(data.get("division"), data.get("line_of_business"), get_reference_lists())
     return mrc["value"] if mrc else None
 
 

@@ -98,18 +98,18 @@ def test_meeting_items_for_model_finds_linked_decisions_and_actions():
 
 # --- Phase MRC-2: org-scope derivation from the MRC binding -----------------
 
-def test_derive_org_scope_department_resolves_division_from_parent():
-    """A department-level MRC resolves department → division."""
+def test_derive_org_scope_line_of_business_resolves_division_from_parent():
+    """A line_of_business-level MRC resolves line_of_business → division."""
     from src.governance.mrc import derive_org_scope
     refs = {
-        "mrc": [{"value": "MRC-DEPT", "level": "Department",
+        "mrc": [{"value": "MRC-DEPT", "level": "Line of Business",
                  "scope_value": "Rates Trading", "chair": "Priya", "frequency": "Monthly"}],
-        "department": [{"value": "Rates Trading", "division": "Markets"}],
+        "line_of_business": [{"value": "Rates Trading", "division": "Markets"}],
         "division": [{"value": "Markets"}],
     }
     assert derive_org_scope("MRC-DEPT", refs) == {
         "chair": "Priya", "frequency": "Monthly",
-        "department": "Rates Trading", "division": "Markets",
+        "line_of_business": "Rates Trading", "division": "Markets",
     }
 
 

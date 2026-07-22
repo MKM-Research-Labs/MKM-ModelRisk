@@ -125,23 +125,23 @@ def test_mrc_tor_download_when_file_is_gone_is_404(client):
     assert client.get(f"/api/reference/collections/mrc/{item_id}/tor").status_code == 404
 
 
-def test_mrc_resolution_matches_department_then_division(client):
-    """matching_mrc prefers a Department-level committee, then Division-level."""
+def test_mrc_resolution_matches_line_of_business_then_division(client):
+    """matching_mrc prefers a Line of Business-level committee, then Division-level."""
     client.post("/api/reference/collections/mrc",
-                json={"fields": {"value": "MRC-DEPT", "name": "Dept", "level": "Department",
+                json={"fields": {"value": "MRC-DEPT", "name": "Dept", "level": "Line of Business",
                                  "scope_value": "Rates"}, "confirmed": True}, headers=HEADERS)
     client.post("/api/reference/collections/mrc",
                 json={"fields": {"value": "MRC-DIV", "name": "Div", "level": "Division",
                                  "scope_value": "Markets"}, "confirmed": True}, headers=HEADERS)
-    # A model in Markets/Rates resolves to the Department committee.
+    # A model in Markets/Rates resolves to the Line of Business committee.
     client.post("/api/models",
                 json={"model_id": "MD", "name": "Dept model", "confirmed": True,
-                      "fields": {"division": "Markets", "department": "Rates"}}, headers=HEADERS)
-    dept = client.get("/api/models/MD/mrc").get_json()
-    assert dept["mrc"]["value"] == "MRC-DEPT" and dept["level"] == "Department"
-    # A model in Markets with no matching department falls back to Division.
+                      "fields": {"division": "Markets", "line_of_business": "Rates"}}, headers=HEADERS)
+    lob = client.get("/api/models/MD/mrc").get_json()
+    assert lob["mrc"]["value"] == "MRC-DEPT" and lob["level"] == "Line of Business"
+    # A model in Markets with no matching line_of_business falls back to Division.
     client.post("/api/models",
                 json={"model_id": "MV", "name": "Div model", "confirmed": True,
-                      "fields": {"division": "Markets", "department": "Unmatched"}}, headers=HEADERS)
+                      "fields": {"division": "Markets", "line_of_business": "Unmatched"}}, headers=HEADERS)
     div = client.get("/api/models/MV/mrc").get_json()
     assert div["mrc"]["value"] == "MRC-DIV" and div["level"] == "Division"

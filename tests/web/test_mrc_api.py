@@ -130,7 +130,7 @@ def test_update_meeting_field(client):
 
 
 def test_update_removed_meeting_field_is_400(client):
-    """chair / company / division / department are no longer editable — they're
+    """chair / company / division / line_of_business are no longer editable — they're
     derived from the meeting's MRC binding on read."""
     _schedule(client)
     response = client.post(

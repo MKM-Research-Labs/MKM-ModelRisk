@@ -24,7 +24,7 @@
 const MRC = {
   _specs: null,
   _committees: [],
-  _ref: {},         // reference data (mrc / division / department) for the org tree
+  _ref: {},         // reference data (mrc / division / line_of_business) for the org tree
   _mrc: null,       // the selected committee's id (value), survives re-renders
 
   async specs() {

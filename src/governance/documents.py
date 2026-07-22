@@ -35,6 +35,13 @@ from src.files import save_upload
 DOCUMENTS = "documents"
 
 
+def model_scope(model_id: str) -> str:
+    """Where a model's uploaded files live under the upload directory. Named here,
+    beside the document commands, so the API and the client pack cannot disagree
+    about which directory a model's files are in."""
+    return f"model/{model_id}"
+
+
 def _fold(aggregate_type: str, aggregate_id: str, config) -> tuple[list, int]:
     state: dict = {}
     version = 0

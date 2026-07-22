@@ -49,19 +49,18 @@ const ModelDocs = {
 
   _subtabs() {
     return '<div class="dtabs">' + this._categories.map((c) => {
-      const n = this._docs.filter((d) => d.category === c).length;
+      const n = DocLinks.visible(this._docs, c).length;
       return '<button class="dtab' + (c === this._cat ? " active" : "") + '" data-doctab="' +
         esc(c) + '">' + esc(c) + " (" + n + ")</button>";
     }).join("") + "</div>";
   },
 
   _renderCategory() {
-    const items = this._docs.filter((d) => d.category === this._cat);
+    const items = DocLinks.visible(this._docs, this._cat);
     const rows = items.length ? items.map((d) =>
       "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +
       esc((d.uploaded_at || "").slice(0, 10)) + "</td><td>" + fmtSize(d.size) +
-      '</td><td class="rowact"><a href="' + this._base + this._id + "/documents/" + esc(d.item_id) +
-      '/download">Download</a>' +
+      '</td><td class="rowact">' + DocLinks.actions(this._base, this._id, d) +
       (this._retired ? "" : ' <button class="btn small danger" data-rmdoc="' + esc(d.item_id) + '">Delete</button>') +
       "</td></tr>").join("") : '<tr><td colspan="5" class="empty">No documents.</td></tr>';
     const upload = this._retired ? "" :

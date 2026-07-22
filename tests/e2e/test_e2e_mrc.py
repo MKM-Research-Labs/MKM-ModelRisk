@@ -296,35 +296,35 @@ def test_decision_linked_to_model_appears_on_model_detail(page: Page, base_url: 
     expect(page.locator("[data-dtab='decisions']")).to_contain_text("(1)")
 
 
-def test_meeting_models_tab_scoped_to_department_mrc(page: Page, base_url: str):
-    """Phase MRC-3: a Department-level MRC's meeting only lists models in that
-    department; the "Show all" toggle escapes.
+def test_meeting_models_tab_scoped_to_line_of_business_mrc(page: Page, base_url: str):
+    """Phase MRC-3: a Line of Business-level MRC's meeting only lists models in that
+    line_of_business; the "Show all" toggle escapes.
 
     Seeds everything via the API — the UI paths for reference lists and model
     registration are already covered elsewhere; this test is about the filter.
     """
     headers = {"X-Auth-Request-User": "e2e", "Content-Type": "application/json"}
     # Org tree — Phase MRC-5: the single institution is implicit; only the
-    # Division/Department tiers are stored as reference lists.
+    # Division/Line of Business tiers are stored as reference lists.
     page.request.post(base_url + "/api/reference/collections/division",
                       data={"fields": {"value": "Markets"}, "confirmed": True}, headers=headers)
     for name, division in (("Rates Trading", "Markets"), ("Equity Derivatives", "Markets")):
-        page.request.post(base_url + "/api/reference/collections/department",
+        page.request.post(base_url + "/api/reference/collections/line_of_business",
                           data={"fields": {"value": name, "division": division},
                                 "confirmed": True}, headers=headers)
-    # A Department-level MRC anchored to Rates Trading.
+    # A Line of Business-level MRC anchored to Rates Trading.
     page.request.post(base_url + "/api/reference/collections/mrc",
                       data={"fields": {"value": "MRC-DEPT-RATES", "name": "Rates MRC",
-                                       "level": "Department", "scope_value": "Rates Trading"},
+                                       "level": "Line of Business", "scope_value": "Rates Trading"},
                             "confirmed": True}, headers=headers)
     # Two models, one in Rates Trading, one in Equity Derivatives.
-    for model_id, dept in (("MRC-M-RATES", "Rates Trading"),
+    for model_id, lob in (("MRC-M-RATES", "Rates Trading"),
                            ("MRC-M-EQD", "Equity Derivatives")):
         page.request.post(base_url + "/api/models",
                           data={"model_id": model_id, "name": model_id,
-                                "fields": {"division": "Markets", "department": dept},
+                                "fields": {"division": "Markets", "line_of_business": lob},
                                 "confirmed": True}, headers=headers)
-    # Schedule a meeting bound to the Department MRC.
+    # Schedule a meeting bound to the Line of Business MRC.
     page.request.post(base_url + "/api/meetings",
                       data={"meeting_id": "MRC-M3", "title": "Rates review",
                             "date": "2026-08-01", "fields": {"mrc": "MRC-DEPT-RATES"},

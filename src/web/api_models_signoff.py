@@ -20,7 +20,7 @@
 """W4c — Risk rating sign-off request endpoint.
 
 The owner-side of the workflow: a request is routed to the model's responsible
-MRC (derived from its division/department) and queued on the model. If a meeting
+MRC (derived from its division / line of business) and queued on the model. If a meeting
 of that committee is already Scheduled it is attached at once; otherwise it waits
 as Pending and is drained onto the agenda when such a meeting is scheduled (see
 ``api_mrc.lifecycle``). The meeting-side (approve-signoff) lives in ``api_mrc``.
@@ -74,9 +74,9 @@ def pending_signoff(model_id: str) -> dict | None:
 def _target_mrc(model: dict):
     """The committee responsible for this model, or an error response."""
     data = model["data"] or {}
-    mrc, _level = matching_mrc(data.get("division"), data.get("department"), get_reference_lists())
+    mrc, _level = matching_mrc(data.get("division"), data.get("line_of_business"), get_reference_lists())
     if mrc is None:
-        return None, (jsonify({"error": "no MRC committee covers this model's division/department — "
+        return None, (jsonify({"error": "no MRC committee covers this model's division / line of business — "
                                         "configure one under Admin → MRC first"}), 400)
     return mrc, None
 

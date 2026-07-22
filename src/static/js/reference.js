@@ -21,12 +21,12 @@
 // Admin tab: sub-tabs for each reference section. There is a single company per
 // instance (no list / no "add another") — the Company tab edits the institution
 // name + logo, stored on the MRC settings. The simple lists (Division,
-// Department, Calc Agent, People) render through _renderList with working inline
+// Line of Business, Calc Agent, People) render through _renderList with working inline
 // edit/remove; MRC is a drill-in.
 const Reference = {
   _tab: "company",
   _TABS: [
-    ["company", "Company"], ["division", "Division"], ["department", "Department"],
+    ["company", "Company"], ["division", "Division"], ["line_of_business", "Line of Business"],
     ["mrc", "MRC"], ["calculating_agent", "Calc Agent"], ["people", "People"],
   ],
 

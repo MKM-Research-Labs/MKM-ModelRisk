@@ -75,14 +75,14 @@ const MrcNav = {
   },
 
   // The division a committee rolls up to: a Division-level MRC's scope is itself
-  // a division; a Department-level one inherits its department's division;
+  // a division; a Line of Business-level one inherits its line of business's division;
   // Company-level (or unresolved) MRCs share a "Company" bucket.
   divisionOf(c, ref) {
     if (!c) return "Company";
     if (c.level === "Division") return c.scope_value || "Company";
-    if (c.level === "Department") {
-      const dept = ((ref && ref.department) || []).find((d) => d.value === c.scope_value);
-      return (dept && dept.division) || "Other";
+    if (c.level === "Line of Business") {
+      const lob = ((ref && ref.line_of_business) || []).find((d) => d.value === c.scope_value);
+      return (lob && lob.division) || "Other";
     }
     return "Company";
   },
@@ -169,7 +169,7 @@ const MrcNav = {
       const c = committees.find((x) => x.value === state.mrc);
       if (!c || c.level === "Company") return true;
       if (c.level === "Division") return data.division === c.scope_value;
-      if (c.level === "Department") return data.department === c.scope_value;
+      if (c.level === "Line of Business") return data.line_of_business === c.scope_value;
       return true;
     }
     if (state.div === "Company" || state.div === "Other") return true;  // synthetic buckets
@@ -177,23 +177,23 @@ const MrcNav = {
   },
 
   // The org assignment implied by the current selection, for pre-filling the
-  // register modals: {division, department}. A Department-level committee pins
+  // register modals: {division, line_of_business}. A Line of Business-level committee pins
   // both; a Division-level one (or the whole-division view) pins only the
   // division. Synthetic buckets (Company/Other) pin nothing.
   currentScope(committees, ref) {
     const s = this.state || {};
     let division = (s.div && s.div !== "Company" && s.div !== "Other") ? s.div : "";
-    let department = "";
+    let line_of_business = "";
     if (s.mrc) {
       const c = (committees || []).find((x) => x.value === s.mrc);
-      if (c && c.level === "Department") {
-        department = c.scope_value || "";
+      if (c && c.level === "Line of Business") {
+        line_of_business = c.scope_value || "";
         division = this.divisionOf(c, ref) || division;
       } else if (c && c.level === "Division") {
         division = c.scope_value || division;
       }
     }
-    return { division, department };
+    return { division, line_of_business };
   },
 
   // The committee the MRC page should show for the current shared selection —

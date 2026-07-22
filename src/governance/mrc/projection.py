@@ -76,7 +76,7 @@ def _enrich(meeting: dict | None, refs: dict[str, list]) -> dict | None:
 
 
 def get_meeting_enriched(meeting_id: str, config=None) -> dict | None:
-    """Meeting with company/division/department/chair/frequency derived from MRC."""
+    """Meeting with company/division / line of business/chair/frequency derived from MRC."""
     from src.governance.reference import get_reference_lists  # avoid import cycle
     return _enrich(get_meeting(meeting_id, config=config), get_reference_lists(config))
 
@@ -91,9 +91,9 @@ def list_meetings_enriched(config=None) -> list[dict]:
 def derive_org_scope(mrc_value: str | None, refs: dict[str, list]) -> dict[str, Any]:
     """Look up a meeting's org scope + chair + frequency from its MRC.
 
-    The MRC reference row carries a level (Company/Division/Department) and a
-    scope_value pointing at one Division or Department. Department-level
-    committees also resolve their parent Division from the Department
+    The MRC reference row carries a level (Company/Division/Line of Business) and a
+    scope_value pointing at one Division or Line of Business. Line of Business-level
+    committees also resolve their parent Division from the Line of Business
     reference list. Company-level committees are institution-wide and only
     contribute chair + frequency. Returns only the fields we can resolve.
     """
@@ -113,14 +113,14 @@ def derive_org_scope(mrc_value: str | None, refs: dict[str, list]) -> dict[str, 
         if mrc.get(key):
             result[key] = mrc[key]
     level, scope = mrc.get("level"), mrc.get("scope_value")
-    if level == "Department" and scope:
-        dept = next(
-            (d for d in refs.get("department") or [] if d.get("value") == scope), None,
+    if level == "Line of Business" and scope:
+        lob = next(
+            (d for d in refs.get("line_of_business") or [] if d.get("value") == scope), None,
         )
-        if dept:
-            result["department"] = dept["value"]
-            if dept.get("division"):
-                result["division"] = dept["division"]
+        if lob:
+            result["line_of_business"] = lob["value"]
+            if lob.get("division"):
+                result["division"] = lob["division"]
     elif level == "Division" and scope:
         div = next(
             (v for v in refs.get("division") or [] if v.get("value") == scope), None,
@@ -131,26 +131,26 @@ def derive_org_scope(mrc_value: str | None, refs: dict[str, list]) -> dict[str, 
 
 
 def matching_mrc(
-    division: str | None, department: str | None, refs: dict[str, list],
+    division: str | None, line_of_business: str | None, refs: dict[str, list],
 ) -> tuple[dict[str, Any] | None, str | None]:
     """The most-specific active MRC committee covering an org location.
 
     The inverse of :func:`derive_org_scope`: given where a model sits, find the
-    committee responsible for it. A Department-level committee for the model's
-    department wins; failing that a Division-level committee for its division;
+    committee responsible for it. A Line of Business-level committee for the model's
+    line_of_business wins; failing that a Division-level committee for its division;
     failing that a Company-level (institution-wide) committee. Archived
     committees are never matched. Returns ``(committee, level)`` or
     ``(None, None)`` when nothing covers it.
     """
     active = [m for m in refs.get("mrc") or [] if m.get("archived") != "true"]
-    if department:
-        dept = next(
+    if line_of_business:
+        lob = next(
             (m for m in active
-             if m.get("level") == "Department" and m.get("scope_value") == department),
+             if m.get("level") == "Line of Business" and m.get("scope_value") == line_of_business),
             None,
         )
-        if dept:
-            return dept, "Department"
+        if lob:
+            return lob, "Line of Business"
     if division:
         div = next(
             (m for m in active

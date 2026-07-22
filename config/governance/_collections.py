@@ -25,6 +25,10 @@ VALID_IMPACT = ("Low", "Medium", "High")
 VALID_PRIORITY = ("Low", "Medium", "High")
 VALID_REMEDIATION_STATUS = ("Open", "In Progress", "Closed")
 VALID_ACTION_STATUS = ("Open", "Closed")
+# The one status that settles a remediation step. Named so that "how much is still
+# outstanding" is decided in one place: a tab badge and a committee report must not
+# disagree about whether a step still counts.
+CLOSED_REMEDIATION_STATUS = "Closed"
 VALID_VQ_STATUSES = (
     "Addressed", "Partially Addressed", "Not Addressed", "Not Applicable",
 )

@@ -36,12 +36,13 @@ function inputControl(id, spec) {
 
 const Inventory = {
   _specs: null,
-  _ref: {},                       // reference data (mrc / division / department)
+  _ref: {},                       // reference data (mrc / division / line_of_business)
   _committees: [],
 
   async specs() {
     // Always re-fetch so admin changes to the reference menus show up promptly.
     this._specs = await App.get("/api/models/fields");
+    DocLinks.configure(this._specs);
     return this._specs;
   },
 
@@ -86,7 +87,7 @@ const Inventory = {
     document.getElementById("reg-type").innerHTML = options;
   },
 
-  // Division/Department are fixed by the region selected in the nav — shown
+  // Division/Line of Business are fixed by the region selected in the nav — shown
   // read-only. The owner picker lists people eligible for that org scope
   // (people anchored to the same division); if none match we fall back to the
   // whole directory so registration is never blocked.
@@ -95,7 +96,7 @@ const Inventory = {
     const scope = MrcNav.currentScope(committees, ref);
     this._regScope = scope;
     document.getElementById("reg-division-val").textContent = scope.division || "—";
-    document.getElementById("reg-department-val").textContent = scope.department || "—";
+    document.getElementById("reg-line_of_business-val").textContent = scope.line_of_business || "—";
     const people = ref.people || [];
     const eligible = people.filter((p) => !scope.division || p.division === scope.division);
     const list = eligible.length ? eligible : people;
@@ -116,11 +117,11 @@ const Inventory = {
     const fields = { owner: owner };
     const type = val("reg-type");
     if (type) fields.type = type;
-    // Division/Department come from the region selected in the nav, not a form
+    // Division/Line of Business come from the region selected in the nav, not a form
     // field, so a model always lands in the right place in the org tree.
     const scope = this._regScope || {};
     if (scope.division) fields.division = scope.division;
-    if (scope.department) fields.department = scope.department;
+    if (scope.line_of_business) fields.line_of_business = scope.line_of_business;
     this.closeRegister();
     App.amend('Register model "' + id + '" (' + name + ").", "POST", "/api/models",
       { model_id: id, name: name, fields: fields }, () => this.render());

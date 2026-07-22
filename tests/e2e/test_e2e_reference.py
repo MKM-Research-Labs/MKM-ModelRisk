@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Admin > reference data e2e: division / department / calculating agent /
+"""Admin > reference data e2e: division / line_of_business / calculating agent /
 people — create, edit, delete each; plus the single institution's name and
 logo upload. Company is no longer a list (single institution per instance)."""
 from __future__ import annotations
@@ -71,38 +71,38 @@ def test_division_delete(page: Page, base_url: str):
     expect(page.locator(f"[data-ed='division|{item_id}']")).to_have_count(0)
 
 
-# ------------------------------------------------------------- Department ----
+# ------------------------------------------------------------- Line of Business ----
 
 def _seed_division(page: Page) -> None:
-    """Seed Markets division so a Department can choose it."""
+    """Seed Markets division so a Line of Business can choose it."""
     open_admin_subtab(page, "division")
     add_collection_item(page, "division", {"value": "Markets"})
 
 
-def test_department_create(page: Page, base_url: str):
+def test_line_of_business_create(page: Page, base_url: str):
     open_app(page, base_url)
     _seed_division(page)
-    open_admin_subtab(page, "department")
-    item_id = add_collection_item(page, "department", {"value": "Rates Trading", "division": "Markets"})
-    expect(page.locator(f"[data-ed='department|{item_id}']")).to_be_visible()
+    open_admin_subtab(page, "line_of_business")
+    item_id = add_collection_item(page, "line_of_business", {"value": "Rates Trading", "division": "Markets"})
+    expect(page.locator(f"[data-ed='line_of_business|{item_id}']")).to_be_visible()
 
 
-def test_department_edit(page: Page, base_url: str):
+def test_line_of_business_edit(page: Page, base_url: str):
     open_app(page, base_url)
     _seed_division(page)
-    open_admin_subtab(page, "department")
-    item_id = add_collection_item(page, "department", {"value": "Rates Trading", "division": "Markets"})
-    edit_collection_item(page, "department", item_id, {"value": "Rates & FX Trading"})
-    expect(page.locator(f"[data-ed='department|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Rates & FX Trading")
+    open_admin_subtab(page, "line_of_business")
+    item_id = add_collection_item(page, "line_of_business", {"value": "Rates Trading", "division": "Markets"})
+    edit_collection_item(page, "line_of_business", item_id, {"value": "Rates & FX Trading"})
+    expect(page.locator(f"[data-ed='line_of_business|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Rates & FX Trading")
 
 
-def test_department_delete(page: Page, base_url: str):
+def test_line_of_business_delete(page: Page, base_url: str):
     open_app(page, base_url)
     _seed_division(page)
-    open_admin_subtab(page, "department")
-    item_id = add_collection_item(page, "department", {"value": "Rates Trading", "division": "Markets"})
-    remove_collection_item(page, "department", item_id)
-    expect(page.locator(f"[data-ed='department|{item_id}']")).to_have_count(0)
+    open_admin_subtab(page, "line_of_business")
+    item_id = add_collection_item(page, "line_of_business", {"value": "Rates Trading", "division": "Markets"})
+    remove_collection_item(page, "line_of_business", item_id)
+    expect(page.locator(f"[data-ed='line_of_business|{item_id}']")).to_have_count(0)
 
 
 # Market Data Models are no longer a reference list — they live in the Model
@@ -144,11 +144,11 @@ def test_people_create(page: Page, base_url: str):
 
 def test_people_edit(page: Page, base_url: str):
     _on(page, base_url, "people")
-    # Division/Department are free text until the admin lists are populated.
+    # Division/Line of Business are free text until the admin lists are populated.
     item_id = add_collection_item(
         page, "people",
-        {"name": "D. Kelly", "department": "Rates Trading"})
-    edit_collection_item(page, "people", item_id, {"department": "Equity Derivatives"})
+        {"name": "D. Kelly", "line_of_business": "Rates Trading"})
+    edit_collection_item(page, "people", item_id, {"line_of_business": "Equity Derivatives"})
     expect(page.locator(f"[data-ed='people|{item_id}']").locator("xpath=ancestor::tr")).to_contain_text("Equity Derivatives")
 
 

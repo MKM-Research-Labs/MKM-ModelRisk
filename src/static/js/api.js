@@ -118,7 +118,7 @@ const App = {
   },
 
   // Shared post-mutation refresh. A change may move committees/divisions/
-  // departments, so drop the cached region nav and mark tabs stale; the current
+  // lines of business, so drop the cached region nav and mark tabs stale; the current
   // tab is refreshed immediately by onDone.
   _afterAmend(onDone) {
     if (typeof MrcNav !== "undefined") MrcNav.invalidate();

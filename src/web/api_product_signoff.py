@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """Product MRC sign-off: derive the responsible committee from the product's own
-Division/Department and raise a sign-off request. Mirrors ``api_models_signoff``;
+Division/Line of Business and raise a sign-off request. Mirrors ``api_models_signoff``;
 registered on the shared ``product_bp`` blueprint."""
 from __future__ import annotations
 
@@ -43,13 +43,13 @@ from src.web.api_product import product_bp
 
 
 def _product_mrc(product_data: dict):
-    """The committee responsible for a product, from its own Division/Department.
+    """The committee responsible for a product, from its own Division/Line of Business.
 
-    A product may be allocated at Division only (Department blank); ``matching_mrc``
-    resolves the covering committee (Department-level → Division-level → Company).
+    A product may be allocated at Division only (Line of Business blank); ``matching_mrc``
+    resolves the covering committee (Line of Business-level → Division-level → Company).
     """
     mrc, level = matching_mrc(product_data.get("division"),
-                              product_data.get("department"), get_reference_lists())
+                              product_data.get("line_of_business"), get_reference_lists())
     return mrc, level
 
 
@@ -72,7 +72,7 @@ def _product_pending_signoff(product_data: dict) -> dict | None:
 
 @product_bp.get("/<product_id>/mrc")
 def product_mrc(product_id: str):
-    """The MRC for this product (from its Division/Department) + any pending sign-off."""
+    """The MRC for this product (from its Division/Line of Business) + any pending sign-off."""
     product = get_product(product_id)
     if product is None:
         return jsonify({"error": "Product not found"}), 404
@@ -85,7 +85,7 @@ def product_mrc(product_id: str):
 @product_bp.post("/<product_id>/request-signoff")
 def product_request_signoff(product_id: str):
     """Owner raises an MRC sign-off for the product's current RAG rating. Routed
-    to the product's committee (from its Division/Department) and queued; attaches
+    to the product's committee (from its Division/Line of Business) and queued; attaches
     to a Scheduled meeting at once, else waits for one to be scheduled."""
     product = get_product(product_id)
     if product is None:
@@ -98,11 +98,11 @@ def product_request_signoff(product_id: str):
         return jsonify({"error": "set the product's RAG rating before requesting sign-off"}), 400
     mrc, _level = _product_mrc(data)
     if mrc is None:
-        org = " / ".join(v for v in (data.get("division"), data.get("department")) if v)
-        reason = ("no Division/Department is set" if not org
+        org = " / ".join(v for v in (data.get("division"), data.get("line_of_business")) if v)
+        reason = ("no Division/Line of Business is set" if not org
                   else f"no MRC committee covers this product's org ({org})")
         return jsonify({"error": f"cannot request sign-off — {reason}. "
-                                 "Set the product's Division/Department / configure an "
+                                 "Set the product's Division/Line of Business / configure an "
                                  "MRC under Admin → MRC first"}), 400
     ctx = context_from_request(json_body())
     raise_signoff(ctx, PRODUCT_SUBJECT, product_id,

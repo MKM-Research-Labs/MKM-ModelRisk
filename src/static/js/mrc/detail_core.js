@@ -125,19 +125,22 @@ const MeetingDetail = {
   },
 
   _info(d) {
-    // Phase MRC-2/5: mrc + org tier and chair are derived from the MRC binding;
-    // date/time/location are fixed at scheduling — all shown read-only. Only
-    // Status stays editable: it's the meeting's lifecycle control (Scheduled →
-    // Held/Completed), and nothing else in the UI moves it.
+    // mrc + org tier and chair are derived from the MRC binding, so they stay
+    // read-only — they change by re-binding the meeting, not by typing here.
+    // Date, time and location are the meeting's own logistics and do move: rooms
+    // change and meetings get postponed, and a governance record that cannot
+    // record that is a record people keep somewhere else. Status is the lifecycle
+    // control (Scheduled → Completed). Every one of these goes through the same
+    // confirm-to-amend path, so a rescheduling is on the audit trail.
     const readOnly = (label, key) => '<span class="datechip" id="minfo-' + key + '">' +
       '<span class="muted">' + label + ':</span> <b>' + fieldDisplay(d[key]) + "</b></span>";
     const editable = (label, key) => '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
       label + ':</span> <b>' + fieldDisplay(d[key]) + "</b> " +
       '<span class="edit-btn" data-minfo="' + key + '">edit</span></span>';
     return '<div class="dh-dates">' + readOnly("MRC", "mrc") + readOnly("Division", "division") +
-      readOnly("Department", "department") + readOnly("Chair", "chair") + "</div>" +
-      '<div class="dh-dates">' + readOnly("Date", "date") + readOnly("Time", "time") +
-      readOnly("Location", "location") + editable("Status", "status") + "</div>";
+      readOnly("Line of Business", "line_of_business") + readOnly("Chair", "chair") + "</div>" +
+      '<div class="dh-dates">' + editable("Date", "date") + editable("Time", "time") +
+      editable("Location", "location") + editable("Status", "status") + "</div>";
   },
 
   _tabbar(d) {

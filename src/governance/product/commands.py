@@ -75,12 +75,12 @@ def _is_duplicate(combination: tuple, *, exclude_product_id: str, config) -> boo
 
 
 def _default_org_from_analytics(fields: dict[str, Any], config) -> None:
-    """A product's org home (division/department) follows its analytics model
-    unless explicitly given, so it lands under the right division/department —
+    """A product's org home (division / line of business) follows its analytics model
+    unless explicitly given, so it lands under the right division / line of business —
     and thus the right MRC — rather than unscoped and hidden from the region view."""
     model = get_model(fields.get("analytics_model"), config=config) if fields.get("analytics_model") else None
     data = (model or {}).get("data") or {}
-    for key in ("division", "department"):
+    for key in ("division", "line_of_business"):
         if not fields.get(key) and data.get(key):
             fields[key] = data[key]
 
