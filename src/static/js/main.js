@@ -90,4 +90,6 @@ document.addEventListener("DOMContentLoaded", function () {
   showTab("inventory");
   // Populate the scope dropdowns, then re-filter (applies any saved selection).
   OrgScope.init().then(refreshInventory);
+  // The actor picker lists real People, so it loads with the reference data.
+  Actor.init();
 });

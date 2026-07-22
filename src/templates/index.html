@@ -17,8 +17,8 @@
     </div>
     <div class="actor">
       <label for="actor-input">Acting as</label>
-      <input id="actor-input" value="{{ actor_default | default('dev@localhost', true) }}" spellcheck="false" />
-      <span class="hint" title="In production this is set by the client's SSO. Here you can change it to see attribution in the audit trail.">simulated SSO identity</span>
+      <select id="actor-input" data-default="{{ actor_default | default('dev@localhost', true) }}"></select>
+      <span class="hint" title="In production this is set by the client's SSO. Here you can pick who you are acting as to see attribution in the audit trail.">simulated SSO identity</span>
     </div>
   </header>
 
@@ -122,6 +122,7 @@
   <script src="{{ url_for('static', filename='js/helpers.js') }}"></script>
   <script src="{{ url_for('static', filename='js/mrc_nav.js') }}"></script>
   <script src="{{ url_for('static', filename='js/org_scope.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/actor.js') }}"></script>
   <script src="{{ url_for('static', filename='js/inventory.js') }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/list.js') }}"></script>
   <script src="{{ url_for('static', filename='js/inventory_tabs.js') }}"></script>

@@ -22,14 +22,17 @@
 One preamble, one title page, one header/footer, so the Meeting Pack, the Model
 Risk Report and the interoperability handover all read as the same document family:
 the ``mkmblue`` brand colour, one-half spacing, a fancy header carrying the document
-title, and a ``Page x of y`` / ``CONFIDENTIAL`` footer. Governance PDFs are marked
-CONFIDENTIAL, but nothing here asserts proprietary rights — the code is MIT-licensed.
+title, and a ``Page x of y`` / classification footer. Every title page carries the
+legal notice from ``config.reporting``, which asserts rights over the *contents* of
+the generated document — the models, methodology and calculations it describes. That
+is separate from the software that produced it, which remains MIT-licensed.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from config.reporting import DEFAULT_AUTHOR, DEFAULT_CLASSIFICATION, DEFAULT_ORG
+from config.reporting import (DEFAULT_AUTHOR, DEFAULT_CLASSIFICATION,
+                              DEFAULT_LEGAL_NOTICE, DEFAULT_ORG)
 
 _LATEX_REPLACEMENTS = {
     "\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#",
@@ -77,6 +80,36 @@ def _wrappable(value: Any) -> str:
     module paths (``BRI_FLOOR_UPLIFT``, ``config/bri.py``) have no hyphenation points,
     so in a narrow column they otherwise run straight over the right margin."""
     return _esc(value).replace("\\_", "\\_\\allowbreak{}").replace("/", "/\\allowbreak{}")
+
+
+def _quoted(text: str) -> str:
+    """Straight double quotes as LaTeX opening/closing pairs, so a notice reads as
+    ``"as is"`` rather than with two closing quotes."""
+    out, opening = [], True
+    for char in text:
+        if char == '"':
+            out.append("``" if opening else "''")
+            opening = not opening
+        else:
+            out.append(char)
+    return "".join(out)
+
+
+def legal_notice(paragraphs=None) -> str:
+    """The legal notice block for a title page.
+
+    It covers the contents of the generated document -- the models, methodology and
+    calculations it describes -- and is deliberately silent about the software that
+    produced it, which is MIT-licensed. Every document family reaches this through
+    ``title_page``, so a new report cannot be published without it.
+    """
+    text = DEFAULT_LEGAL_NOTICE if paragraphs is None else paragraphs
+    if not text:
+        return ""
+    body = "\\par\\medskip\n".join(_quoted(_esc(p)) for p in text)
+    return ("\\vfill\n\\begin{minipage}{\\textwidth}\\footnotesize\\raggedright\n"
+            "\\textbf{Legal notice}\\par\\medskip\n" + body +
+            "\n\\end{minipage}\n")
 
 
 def _para_table(headers: list[str], rows: list[list[Any]], weights: list[float]) -> str:
@@ -147,7 +180,7 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
         "{\\large Version " + _esc(version) + " --- " + _esc(date) + "\\par}\\vspace{0.5cm}\n"
         + author_line +
         "\\vspace{2cm}\\textcolor{red}{\\textbf{" + _esc(DEFAULT_CLASSIFICATION) + "}}\n"
-        "\\end{center}\\end{titlepage}\n"
+        "\\end{center}\n" + legal_notice() + "\\end{titlepage}\n"
     )
 
 
