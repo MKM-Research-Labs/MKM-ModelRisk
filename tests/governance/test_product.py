@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import pytest
 
+from config.governance import PRODUCT_COMPONENTS
+
 from src.governance.errors import DomainError
 from src.governance.model_inventory import rebuild_inventory_view, register_model, retire_model
 from src.governance.product import (
@@ -38,7 +40,17 @@ from src.governance.product import (
     update_product_field,
 )
 
-_BINDINGS = {"analytics_model": "MKM-AN-001", "market_data_model": "MDM-001", "calculating_agent": "Murex"}
+_BINDINGS = {"calculating_agent": "Murex"}
+
+
+def _component(product_id="Product-0001", model_id="MKM-AN-001",
+               component_type="Analytical Model", role=""):
+    """Bind a model to a Product as a component, the way the detail view does."""
+    add_collection_item(product_id=product_id, collection=PRODUCT_COMPONENTS,
+                        fields={"component_type": component_type,
+                                "model_id": model_id, "role": role},
+                        actor="admin")
+    rebuild_product_view()
 
 
 def _live_model(model_id="MKM-AN-001"):
@@ -59,37 +71,45 @@ def test_register_and_derived_identifier():
     product = get_product("Product-0001")
     assert product["data"]["product"] == "Government Bond"
     assert product["data"]["status"] == "Proposed"
-    assert product["data"]["identifier"] == "MKM-AN-001.MDM-001.Murex"
+    # No components yet, so nothing to derive an identifier from.
+    assert product["data"]["identifier"] is None
+    _component()
+    assert get_product("Product-0001")["data"]["identifier"] == "MKM-AN-001.Murex"
 
 
-def test_register_inherits_org_from_analytics_model():
-    # A product's division / line of business follow its analytics model, so it lands
-    # under the right MRC region instead of unscoped (and hidden from the list).
+def test_first_component_gives_the_product_its_org_home():
+    # A product's division / line of business follow its first component, so it
+    # lands under the right MRC region instead of unscoped (and hidden from the
+    # list). Components arrive after registration, so the default lands with them.
     register_model(model_id="MKM-AN-001", name="Analytics engine", actor="admin",
                    fields={"division": "ANALYTICS", "line_of_business": "Asset Management"})
     rebuild_inventory_view()
     _register()
+    _component()
     data = get_product("Product-0001")["data"]
     assert data["division"] == "ANALYTICS"
     assert data["line_of_business"] == "Asset Management"
 
 
-def test_register_org_can_be_overridden_explicitly():
+def test_explicit_org_survives_the_first_component():
     register_model(model_id="MKM-AN-001", name="Analytics engine", actor="admin",
                    fields={"division": "ANALYTICS", "line_of_business": "Asset Management"})
     rebuild_inventory_view()
     _register(division="RATINGS")
+    _component()
     data = get_product("Product-0001")["data"]
     # An explicit division wins; line_of_business still falls back to the model's.
     assert data["division"] == "RATINGS"
     assert data["line_of_business"] == "Asset Management"
 
 
-def test_register_requires_each_binding():
+def test_register_requires_the_calculating_agent():
+    """The one binding that is not a model. Components are added afterwards, so
+    they are deliberately not required here."""
     _live_model()
     with pytest.raises(DomainError):
         register_product(product_id="Product-X", product="Bond", actor="admin",
-                     fields={"analytics_model": "MKM-AN-001", "market_data_model": "MDM-001"})
+                         fields={})
 
 
 def test_register_requires_product():
@@ -105,34 +125,35 @@ def test_register_rejects_unknown_field():
                      fields={**_BINDINGS, "bogus": "x"})
 
 
-def test_analytics_must_resolve_to_live_model():
-    with pytest.raises(DomainError):
-        register_product(product_id="Product-X", product="Bond", actor="admin",
-                     fields={**_BINDINGS, "analytics_model": "DOES-NOT-EXIST"})
-
-
-def test_analytics_retired_model_rejected():
+def test_same_name_is_allowed_until_the_components_match():
+    """Two Products may share a name while they are built out differently —
+    that is the variant case. They only collide once they bind the same models."""
     _live_model()
-    retire_model(model_id="MKM-AN-001", actor="admin")
-    rebuild_inventory_view()
-    with pytest.raises(DomainError):
-        register_product(product_id="Product-X", product="Bond", actor="admin", fields=dict(_BINDINGS))
+    _live_model("MKM-AN-002")
+    _register(product_id="Product-0001")
+    _component(product_id="Product-0001", model_id="MKM-AN-001")
+    _register(product_id="Product-0002")
+    _component(product_id="Product-0002", model_id="MKM-AN-002")
+    assert get_product("Product-0002")["data"]["identifier"] == "MKM-AN-002.Murex"
 
 
-def test_duplicate_combination_rejected():
+def test_duplicate_component_set_rejected():
     _live_model()
     _register(product_id="Product-0001")
+    _component(product_id="Product-0001", model_id="MKM-AN-001")
+    _register(product_id="Product-0002")
     with pytest.raises(DomainError):
-        register_product(product_id="Product-0002", product="Government Bond", actor="admin", fields=dict(_BINDINGS))
+        _component(product_id="Product-0002", model_id="MKM-AN-001")
 
 
-def test_retired_product_combination_can_be_reused():
+def test_retired_product_components_can_be_reused():
     _live_model()
     _register(product_id="Product-0001")
+    _component(product_id="Product-0001", model_id="MKM-AN-001")
     retire_product(product_id="Product-0001", actor="admin")
     rebuild_product_view()
-    register_product(product_id="Product-0002", product="Government Bond", actor="admin", fields=dict(_BINDINGS))
-    rebuild_product_view()
+    _register(product_id="Product-0002")
+    _component(product_id="Product-0002", model_id="MKM-AN-001")
     assert get_product("Product-0002") is not None
 
 
@@ -141,27 +162,32 @@ def test_register_duplicate_id_rejected():
     _register(product_id="Product-0001")
     with pytest.raises(DomainError):
         register_product(product_id="Product-0001", product="Other", actor="admin",
-                     fields={**_BINDINGS, "market_data_model": "MDM-002"})
+                     fields={**_BINDINGS})
 
 
 def test_rebind_changes_identifier():
     _live_model()
     _register()
+    _component()
     rebind_component(product_id="Product-0001", component="calculating_agent", value="Calypso", actor="admin")
     rebuild_product_view()
-    assert get_product("Product-0001")["data"]["identifier"] == "MKM-AN-001.MDM-001.Calypso"
+    assert get_product("Product-0001")["data"]["identifier"] == "MKM-AN-001.Calypso"
 
 
-def test_rebind_analytics_to_another_live_model():
+def test_components_can_be_swapped_and_the_identifier_follows():
     _live_model("MKM-AN-001")
     _live_model("MKM-AN-002")
     _register()
-    rebind_component(product_id="Product-0001", component="analytics_model", value="MKM-AN-002", actor="admin")
+    _component(model_id="MKM-AN-001")
+    item = get_product("Product-0001")["data"][PRODUCT_COMPONENTS][0]
+    update_collection_item(product_id="Product-0001", collection=PRODUCT_COMPONENTS,
+                           item_id=item["item_id"], fields={"model_id": "MKM-AN-002"},
+                           actor="admin")
     rebuild_product_view()
-    assert get_product("Product-0001")["data"]["analytics_model"] == "MKM-AN-002"
+    assert get_product("Product-0001")["data"]["identifier"] == "MKM-AN-002.Murex"
 
 
-def test_rebind_analytics_to_dead_model_rejected():
+def test_rebind_unknown_component_rejected():
     _live_model()
     _register()
     with pytest.raises(DomainError):
@@ -175,12 +201,17 @@ def test_rebind_unknown_component_rejected():
         rebind_component(product_id="Product-0001", component="owner", value="x", actor="admin")
 
 
-def test_rebind_duplicate_rejected():
-    _live_model()
-    _register(product_id="Product-0001", calculating_agent="Murex")
-    _register(product_id="Product-0002", calculating_agent="Calypso")
-    with pytest.raises(DomainError):
-        rebind_component(product_id="Product-0002", component="calculating_agent", value="Murex", actor="admin")
+def test_several_components_of_one_type_are_allowed():
+    """Structured products combine several models of the same kind — two curve
+    models is the ordinary case, not an error."""
+    _live_model("MKM-CV-001")
+    _live_model("MKM-CV-002")
+    _register()
+    _component(model_id="MKM-CV-001", component_type="Curve Model", role="Hazard")
+    _component(model_id="MKM-CV-002", component_type="Curve Model", role="Recovery")
+    data = get_product("Product-0001")["data"]
+    assert len(data[PRODUCT_COMPONENTS]) == 2
+    assert data["identifier"] == "MKM-CV-001.MKM-CV-002.Murex"
 
 
 def test_edit_field_and_monitoring():
@@ -243,15 +274,13 @@ def test_get_unknown_is_none_and_list():
 
 
 def test_derived_identifier_helper():
-    assert derived_identifier(
-        {"analytics_model": "A", "market_data_model": "M", "calculating_agent": "G"}) == "A.M.G"
-    assert derived_identifier({"analytics_model": "A"}) is None
-
-
-def test_register_without_analytics_rejected():
-    with pytest.raises(DomainError):
-        register_product(product_id="Product-X", product="Bond", actor="admin",
-                     fields={"market_data_model": "MDM-001", "calculating_agent": "Murex"})
+    built = {"calculating_agent": "G",
+             PRODUCT_COMPONENTS: [{"model_id": "M"}, {"model_id": "A"}]}
+    # Sorted, so the identifier says what the Product is rather than the order
+    # its components happened to be added in.
+    assert derived_identifier(built) == "A.M.G"
+    assert derived_identifier({"calculating_agent": "G"}) is None
+    assert derived_identifier({PRODUCT_COMPONENTS: [{"model_id": "A"}]}) is None
 
 
 def test_edit_or_rebind_unknown_product_rejected():

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance import PRODUCT_COMPONENTS
 from src.database import read_all, read_view, replace_view
 from src.governance.product._state import apply, initial_state
 from src.governance.product.commands import AGGREGATE_TYPE
@@ -31,9 +32,25 @@ _COLUMNS = ("product_id", "data", "retired", "version")
 
 
 def derived_identifier(data: dict[str, Any]) -> str | None:
-    """``<AnalyticsModelID>.<MarketDataModelID>.<CalculatingAgent>`` once bound."""
-    parts = [data.get(key) for key in ("analytics_model", "market_data_model", "calculating_agent")]
-    return ".".join(parts) if all(parts) else None
+    """``<ModelID>.<ModelID>....<CalculatingAgent>`` once the Product is built out.
+
+    Every bound model in sorted order, then the platform it is priced on. Sorted
+    rather than in entry order so the identifier depends on what the Product *is*
+    and not on the sequence someone happened to add its components in — the same
+    reason two Products count as duplicates on their component set rather than
+    their component list.
+
+    ``None`` until the Product has both a component and an agent: a half-built
+    Product has no identity to derive, and a partial string would read as a
+    complete one.
+    """
+    agent = data.get("calculating_agent")
+    models = sorted(
+        str(item.get("model_id"))
+        for item in (data.get(PRODUCT_COMPONENTS) or [])
+        if isinstance(item, dict) and item.get("model_id")
+    )
+    return ".".join([*models, agent]) if models and agent else None
 
 
 def _document(state) -> dict[str, Any]:

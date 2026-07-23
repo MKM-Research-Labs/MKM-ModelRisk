@@ -60,8 +60,16 @@ def _require_editable(state: ProductState) -> None:
 
 def decide_register(
     state: ProductState, *, product_id: str, product: str, fields: dict[str, Any],
-    analytics_live: bool, duplicate: bool,
 ) -> tuple[str, dict[str, Any]]:
+    """Register a Product.
+
+    Model components are not required here and duplicates are not checked here:
+    a Product's identity is its name plus the set of models it binds, and that set
+    is empty until components are added. Checking at registration would reject two
+    same-named Products before either had the components that distinguish them —
+    the variants this design exists to allow. The duplicate rule is enforced where
+    the set actually changes; see ``decide_add_item``.
+    """
     if state.exists:
         raise DomainError(f"Product {product_id} is already registered")
     if not product_id or not product:
@@ -69,10 +77,6 @@ def decide_register(
     for binding in PRODUCT_BINDINGS:
         if not fields.get(binding):
             raise DomainError(f"{binding} is required")
-    if not analytics_live:
-        raise DomainError("analytics_model must reference a live inventory model")
-    if duplicate:
-        raise DomainError("a Product already binds this Product + Analytics + Market Data + Agent")
     for field, value in fields.items():
         if field not in PRODUCT_FIELD_SPECS:
             raise DomainError(f"unknown field: {field}")
@@ -83,17 +87,14 @@ def decide_register(
 
 
 def decide_rebind(
-    state: ProductState, *, component: str, value: str, analytics_live: bool, duplicate: bool,
+    state: ProductState, *, component: str, value: str,
 ) -> tuple[str, dict[str, Any]]:
+    """Change the Calculating Agent — the one binding that is not a model."""
     _require_editable(state)
     if component not in PRODUCT_BINDINGS:
         raise DomainError(f"not a component binding: {component}")
     if not value:
         raise DomainError(f"{component} is required")
-    if component == "analytics_model" and not analytics_live:
-        raise DomainError("analytics_model must reference a live inventory model")
-    if duplicate:
-        raise DomainError("rebinding would duplicate an existing Product's component combination")
     return EVENT_REBOUND, {"component": component, "value": value}
 
 
@@ -116,9 +117,21 @@ def decide_retire(state: ProductState) -> tuple[str, dict[str, Any]]:
 
 
 def decide_add_item(
-    state: ProductState, *, collection: str, fields: dict[str, Any]
+    state: ProductState, *, collection: str, fields: dict[str, Any],
+    duplicate: bool = False,
 ) -> tuple[str, dict[str, Any]]:
+    """Add a collection item.
+
+    ``duplicate`` is only ever true for the components collection: adding this
+    component would leave the Product with the same name and the same set of
+    models as another live Product, which is what makes two Products the same
+    thing registered twice. The command computes it (it needs the other Products);
+    the rule only decides what to do about it.
+    """
     _require_editable(state)
+    if duplicate:
+        raise DomainError(
+            "another Product of this name already binds exactly these components")
     return coll.decide_add(
         state.collections, PRODUCT_COLLECTION_SPECS, collection=collection, fields=fields)
 

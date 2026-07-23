@@ -32,8 +32,7 @@ def _model(client, model_id="M1"):
 def _product(client, product_id="P1", **fields):
     client.post("/api/products",
                 json={"product_id": product_id, "product": "Bond",
-                      "fields": {"analytics_model": "M1", "market_data_model": "m",
-                                 "calculating_agent": "c"},
+                      "fields": {"calculating_agent": "c"},
                       "confirmed": True}, headers=HEADERS)
     for field, value in fields.items():
         client.post(f"/api/products/{product_id}/field",

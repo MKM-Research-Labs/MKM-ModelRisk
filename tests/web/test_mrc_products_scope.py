@@ -48,7 +48,7 @@ def _product(client, product_id="P1", name="Bond Fund"):
     return client.post(
         "/api/products",
         json={"product_id": product_id, "product": name, "confirmed": True,
-              "fields": {"analytics_model": "M1", "market_data_model": "m", "calculating_agent": "c"}},
+              "fields": {"calculating_agent": "c"}},
         headers=HEADERS,
     )
 

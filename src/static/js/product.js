@@ -28,6 +28,22 @@ function productStatusBadge(status, retired) {
 }
 
 // Products (Product Valuation Models): one Analytics Model can underpin many Products.
+// A Product's components at a glance: how many models it binds and of what kind.
+// The list used to show the single Analytics Model, which cannot describe a
+// structured product built from several.
+function componentSummary(d) {
+  const items = d.components || [];
+  if (!items.length) { return '<span class="muted">none</span>'; }
+  const kinds = {};
+  items.forEach(function (c) {
+    const k = c.component_type || "Unclassified";
+    kinds[k] = (kinds[k] || 0) + 1;
+  });
+  return esc(Object.keys(kinds).sort().map(function (k) {
+    return kinds[k] > 1 ? kinds[k] + " x " + k : k;
+  }).join(", "));
+}
+
 const Product = {
   _specs: null,
   _ref: {},                       // reference data (mrc / division / line_of_business)
@@ -80,8 +96,8 @@ const Product = {
 
   submitRegister() {
     const id = val("preg-product_id"), product = val("preg-product");
-    if (!id || !product || !val("preg-analytics_model")) {
-      App.toast("Product ID, Product and Analytics Model are required", "error"); return;
+    if (!id || !product) {
+      App.toast("Product ID and Product are required", "error"); return;
     }
     const fields = {};
     this._specs.bindings.forEach((k) => { const v = val("preg-" + k); if (v !== "") fields[k] = v; });
@@ -126,13 +142,13 @@ const Product = {
         '<td class="modelid">' + esc(p.product_id) + "</td>" +
         '<td><span class="code">' + fieldDisplay(d.identifier) + "</span></td>" +
         "<td>" + fieldDisplay(d.product) + "</td>" +
-        "<td>" + fieldDisplay(d.analytics_model) + "</td>" +
+        "<td>" + componentSummary(d) + "</td>" +
         "<td>" + mrcStatusBadge(d) + "</td>" +
         "<td>" + productStatusBadge(d.status, p.retired) + "</td></tr>";
     });
     box.innerHTML =
       "<table><thead><tr><th>ID</th><th>Identifier</th><th>Product</th>" +
-      "<th>Analytics Model</th><th>MRC Status</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>";
+      "<th>Components</th><th>MRC Status</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>";
     box.querySelectorAll("tr.clickable").forEach(function (tr) {
       tr.onclick = function () { ProductDetail.show(tr.getAttribute("data-id")); };
     });

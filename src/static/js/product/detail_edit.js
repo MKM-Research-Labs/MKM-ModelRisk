@@ -33,6 +33,24 @@ Object.assign(ProductDetail, {
       (this._product.retired ? "" : '<span class="edit-btn" data-rebind="' + key + '">rebind</span>') + "</div>";
   },
 
+  // The model components, above the Calculating Agent. Read-only for now: they
+  // are added and removed on the Components tab, which is the generic collection
+  // editor. Listing them here means the panel answers "what is this product built
+  // from?" without a reader having to go looking for the tab.
+  _componentRows(d) {
+    const items = d[this._specs.components] || [];
+    if (!items.length) {
+      return '<div class="inforow"><div class="k">Models</div><div class="v">' +
+        '<span class="muted">No components bound</span></div></div>';
+    }
+    return items.map(function (c) {
+      const role = c.role ? ' <span class="muted">— ' + esc(c.role) + "</span>" : "";
+      return '<div class="inforow"><div class="k">' + esc(c.component_type || "Component") +
+        '</div><div class="v"><span class="code">' + esc(c.model_id || "—") +
+        "</span>" + role + "</div></div>";
+    }).join("");
+  },
+
   _row(key, d) {
     const f = this.fieldSpec(key);
     let value = fieldDisplay(d[key]);

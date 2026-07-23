@@ -41,11 +41,10 @@ def _model(client, model_id="M1", **fields):
                              "confirmed": True}, headers=HEADERS)
 
 
-def _product(client, product_id="P1", analytics_model="M1", rag="Amber", **org):
+def _product(client, product_id="P1", rag="Amber", **org):
     client.post("/api/products",
                 json={"product_id": product_id, "product": "Bond",
-                      "fields": {"analytics_model": analytics_model,
-                                 "market_data_model": "m", "calculating_agent": "c"},
+                      "fields": {"calculating_agent": "c"},
                       "confirmed": True}, headers=HEADERS)
     # Org fields (division / line of business) are set via the detail field editor.
     for field, value in org.items():

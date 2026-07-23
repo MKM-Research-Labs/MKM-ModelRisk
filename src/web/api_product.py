@@ -24,8 +24,8 @@ from flask import Blueprint, jsonify, request
 
 from config.governance import (
     DOC_CATEGORIES,
-    MARKET_DATA_ROLE,
     PRODUCT_BINDINGS,
+    PRODUCT_COMPONENTS,
     PRODUCT_COLLECTION_SPECS,
     PRODUCT_FIELD_SPECS,
     PRODUCT_REGISTER_FIELDS,
@@ -34,7 +34,6 @@ from src.command import dispatch
 from src.files import UploadError, upload_path
 from src.governance.documents import add_document, find_document, remove_document
 from src.governance.model_inventory import list_models
-from src.governance.reference import model_type_roles
 from src.governance.product import (
     add_collection_item,
     get_product,
@@ -65,12 +64,8 @@ def _product_scope(product_id: str) -> str:
     return f"product/{product_id}"
 
 
-def _grouped_specs(options: dict[str, list], inventory_ids: dict[str, list[str]]):
-    """Field specs grouped for the detail view; bindings resolve to dropdowns.
-
-    ``inventory_ids`` maps each inventory-backed binding ("analytics_model",
-    "market_data_model") to the list of eligible model IDs.
-    """
+def _grouped_specs(options: dict[str, list]):
+    """Field specs grouped for the detail view; references resolve to dropdowns."""
     groups: list[dict] = []
     by_name: dict[str, dict] = {}
     for key, spec in PRODUCT_FIELD_SPECS.items():
@@ -80,12 +75,9 @@ def _grouped_specs(options: dict[str, list], inventory_ids: dict[str, list[str]]
             by_name[spec["group"]] = group
             groups.append(group)
         field_type, choices = spec["type"], list(spec.get("options", []))
-        if key in inventory_ids:
-            field_type, choices = "choice", inventory_ids[key]
-        else:
-            reference = spec.get("reference")
-            if reference and options.get(reference):
-                field_type, choices = "choice", options[reference]
+        reference = spec.get("reference")
+        if reference and options.get(reference):
+            field_type, choices = "choice", options[reference]
         group["fields"].append(
             {"key": key, "label": spec["label"], "type": field_type, "options": choices})
     return groups
@@ -102,28 +94,23 @@ def _collection_specs():
 
 @product_bp.get("/fields")
 def field_specs():
-    # Which live models each binding may choose from, decided by the *role* on the
-    # model's admin type entry rather than the type's name. Model types are
-    # admin-managed and meant to grow, so matching a literal name here would mean
-    # renaming a type — or adding one — silently emptied the market-data dropdown
-    # and swept every model into the analytics one.
-    #
-    # An unrecognised or unset type falls to the analytics side: that is where a
-    # model was before it was classified, so classifying the estate cannot quietly
-    # remove options a Product already relies on.
-    roles = model_type_roles()
+    """Field and collection specs, plus which live models may fill a component.
+
+    ``models_by_type`` maps each admin model type to the live models carrying it,
+    so the component editor can narrow its model dropdown once a type is chosen
+    rather than offering the whole inventory for every component.
+    """
     live = [m for m in list_models() if not m["retired"]]
-    market_data = [m["model_id"] for m in live
-                   if roles.get((m["data"] or {}).get("type")) == MARKET_DATA_ROLE]
-    inventory_ids = {
-        "analytics_model": [m["model_id"] for m in live
-                            if m["model_id"] not in set(market_data)],
-        "market_data_model": market_data,
-    }
+    models_by_type: dict[str, list[str]] = {}
+    for model in live:
+        models_by_type.setdefault(
+            str((model["data"] or {}).get("type") or ""), []).append(model["model_id"])
     return jsonify({
-        "groups": _grouped_specs(reference_options(), inventory_ids),
+        "groups": _grouped_specs(reference_options()),
         "register": list(PRODUCT_REGISTER_FIELDS),
         "bindings": list(PRODUCT_BINDINGS),
+        "components": PRODUCT_COMPONENTS,
+        "models_by_type": models_by_type,
         "collections": _collection_specs(),
         **document_specs(),
     })
@@ -136,8 +123,16 @@ def list_all():
 
 @product_bp.get("/used-by/<model_id>")
 def used_by(model_id: str):
-    """Products whose Analytics Model is ``model_id`` (lineage)."""
-    return jsonify([p for p in list_products() if p["data"].get("analytics_model") == model_id])
+    """Products that bind ``model_id`` as any component (lineage).
+
+    Every component counts, not just the pricing engine: a model feeding a
+    product as one of several curves is just as much a dependency, and the old
+    single-slot lookup under-reported exactly the structured cases.
+    """
+    def binds(product):
+        return any(isinstance(c, dict) and c.get("model_id") == model_id
+                   for c in (product["data"].get(PRODUCT_COMPONENTS) or []))
+    return jsonify([p for p in list_products() if binds(p)])
 
 
 @product_bp.get("/<product_id>")

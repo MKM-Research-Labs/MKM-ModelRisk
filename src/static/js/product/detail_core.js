@@ -150,7 +150,8 @@ const ProductDetail = {
 
   _overview(d) {
     const bindings = this._specs.bindings.map((k) => this._bindingRow(k, d)).join("");
-    const left = '<div class="section-header">Components</div>' + bindings +
+    const left = '<div class="section-header">Components</div>' +
+      this._componentRows(d) + bindings +
       this._section("Product", PRODUCT_OVERVIEW_PRODUCT, d) +
       this._section("Organisation", PRODUCT_OVERVIEW_ORG, d) +
       this._section("Classification", PRODUCT_OVERVIEW_CLASS, d) +

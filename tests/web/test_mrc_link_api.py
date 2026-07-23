@@ -41,12 +41,11 @@ def _register_model(client, model_id="M1", **fields):
     )
 
 
-def _register_product(client, product_id="P-1", analytics_model="M1", **org):
+def _register_product(client, product_id="P-1", **org):
     resp = client.post(
         "/api/products",
         json={"product_id": product_id, "product": "Bond",
-              "fields": {"analytics_model": analytics_model,
-                         "market_data_model": "m", "calculating_agent": "c"},
+              "fields": {"calculating_agent": "c"},
               "confirmed": True},
         headers=HEADERS,
     )
@@ -92,7 +91,7 @@ def test_product_mrc_from_own_division(client):
     _seed_mrc(client, "MRC-CO", "Company")
     _seed_mrc(client, "MRC-MKT", "Division", scope_value="Markets")
     _register_model(client, model_id="M1")
-    _register_product(client, analytics_model="M1", division="Markets")
+    _register_product(client, division="Markets")
     res = client.get("/api/products/P-1/mrc").get_json()
     assert res["mrc"]["value"] == "MRC-MKT"
     assert res["level"] == "Division"
@@ -100,6 +99,6 @@ def test_product_mrc_from_own_division(client):
 
 def test_product_mrc_none_when_org_unmatched(client):
     _register_model(client, model_id="M1")
-    _register_product(client, analytics_model="M1", division="Nowhere")
+    _register_product(client, division="Nowhere")
     res = client.get("/api/products/P-1/mrc").get_json()
     assert res["mrc"] is None and res["level"] is None

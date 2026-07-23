@@ -38,8 +38,7 @@ def _register_product(client, product_id="PRD-1"):
     _live_model(client)
     return client.post("/api/products", json={
         "product_id": product_id, "product": "Bond Book",
-        "fields": {"analytics_model": "MKM-AN-001", "market_data_model": "NSS bond curve",
-                   "calculating_agent": "Murex"}, "confirmed": True}, headers=HEADERS)
+        "fields": {"calculating_agent": "Murex"}, "confirmed": True}, headers=HEADERS)
 
 
 def _add_event(client, product_id="PRD-1", description="Market-data feed outage"):
@@ -163,8 +162,7 @@ def test_events_are_only_allocated_to_the_owning_committee(client):
     _live_model(client)
     client.post("/api/products", json={
         "product_id": "PRD-MKT", "product": "Markets Book",
-        "fields": {"analytics_model": "MKM-AN-001", "market_data_model": "NSS bond curve",
-                   "calculating_agent": "Murex", "division": "Markets"}, "confirmed": True},
+        "fields": {"calculating_agent": "Murex", "division": "Markets"}, "confirmed": True},
         headers=HEADERS)
     _add_event(client, product_id="PRD-MKT")
     _schedule(client, mrc="MRC-CO")  # company meeting

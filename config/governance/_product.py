@@ -25,15 +25,25 @@ from config.governance._inventory import VALID_COMPLEXITY, VALID_MATERIALITY, VA
 
 VALID_PRODUCT_STATUS = ("Proposed", "Active", "Suspended", "Retired")
 
-# The three component bindings: set at registration, changed only via a rebind.
-# The derived identifier reads them in this order (Analytics leads — it is the
-# engine that prices the product; then Market Data, then the Calculating Agent).
-PRODUCT_BINDINGS = ("analytics_model", "market_data_model", "calculating_agent")
+# The Calculating Agent is the one component that is not a model: it is the
+# platform the product is priced on (QuantLib, an internal library), drawn from
+# its own admin list. It stays a single binding, changed via rebind.
+#
+# The models a product pulls in are NOT fixed slots — see PRODUCT_COMPONENTS.
+# A structured product combines several (a hazard curve, a recovery curve, a
+# pricing engine) and how many is not knowable in advance, so three named
+# columns could not describe one without inventing a slot for every shape.
+PRODUCT_BINDINGS = ("calculating_agent",)
 
-# Ordered scalar field specs. ``analytics_model`` and ``market_data_model`` both
-# reference the Model Inventory (resolved specially, not via a reference list —
-# a Market Data Model is an inventory model of type "Market Data Model"); the
-# calculating agent and the owner reference admin lists.
+# The product's model components, held as a list. Each entry names what kind of
+# component it is (from the admin model_type list, so a type added in Admin is
+# immediately available as a component kind) and which inventory model fills it.
+# Several components may share a type: two Curve Models is the ordinary case for
+# structured credit, not an error.
+PRODUCT_COMPONENTS = "components"
+
+# Ordered scalar field specs. The calculating agent and the owner reference admin
+# lists; the model components live in the ``components`` collection below.
 PRODUCT_FIELD_SPECS = {
     "product": {"label": "Product", "type": "text", "group": "Product"},
     "product_id": {"label": "Product ID", "type": "text", "group": "Product"},
@@ -52,8 +62,6 @@ PRODUCT_FIELD_SPECS = {
                     "group": "Classification"},
     "complexity": {"label": "Complexity", "type": "choice", "options": VALID_COMPLEXITY,
                    "group": "Classification"},
-    "analytics_model": {"label": "Analytics Model", "type": "text", "group": "Bindings"},
-    "market_data_model": {"label": "Market Data Model", "type": "text", "group": "Bindings"},
     "calculating_agent": {"label": "Calculating Agent", "type": "text", "group": "Bindings",
                           "reference": "calculating_agent"},
     "rag_rating": {"label": "RAG rating", "type": "choice", "options": VALID_RAG_RATINGS,
@@ -84,12 +92,27 @@ PRODUCT_FIELD_CHOICES = {
     "materiality": VALID_MATERIALITY, "complexity": VALID_COMPLEXITY,
 }
 
-# The register form's minimum (besides the mandatory Product ID).
-PRODUCT_REGISTER_FIELDS = ("product", "analytics_model", "market_data_model", "calculating_agent")
+# The register form's minimum (besides the mandatory Product ID). Components are
+# added on the product's own view rather than at registration: a product is often
+# registered before it is known which models will fill it, and a form that demands
+# them up front would be answered with placeholders. A product carrying no
+# components is a completeness finding, which is where that gap belongs.
+PRODUCT_REGISTER_FIELDS = ("product", "calculating_agent")
 
 # Production-level registers — reuse the inventory's Limitations / Assumptions /
 # Remediation shapes; Supporting Documentation reuses the per-aggregate Docs store.
 PRODUCT_COLLECTION_SPECS = {
+    # The models this product is built from. ``component_type`` is admin-managed
+    # (the model_type list), so the vocabulary grows with the estate rather than
+    # with a release; ``model_id`` resolves against the inventory, filtered to
+    # models of that type.
+    PRODUCT_COMPONENTS: {"label": "Components", "id_prefix": "CMP", "fields": [
+        {"key": "component_type", "label": "Type", "type": "text",
+         "reference": "model_type", "required": True},
+        {"key": "model_id", "label": "Model", "type": "text",
+         "reference": "model_inventory", "required": True},
+        {"key": "role", "label": "Role in product", "type": "text"},
+    ]},
     "limitations": COLLECTION_SPECS["limitations"],
     "assumptions": COLLECTION_SPECS["assumptions"],
     "remediation_steps": COLLECTION_SPECS["remediation_steps"],

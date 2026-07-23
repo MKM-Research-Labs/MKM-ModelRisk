@@ -42,8 +42,7 @@ def _product(client, product_id="P1"):
     _model(client)
     return client.post("/api/products", json={
         "product_id": product_id, "product": "Bond",
-        "fields": {"analytics_model": "M1", "market_data_model": "m",
-                   "calculating_agent": "c"}, "confirmed": True}, headers=HEADERS)
+        "fields": {"calculating_agent": "c"}, "confirmed": True}, headers=HEADERS)
 
 
 def _field(client, path, field, value, confirmed=False):
@@ -64,8 +63,7 @@ def test_register_product_requires_confirmation(client):
     _model(client)
     r = client.post("/api/products", json={
         "product_id": "P1", "product": "Bond",
-        "fields": {"analytics_model": "M1", "market_data_model": "m",
-                   "calculating_agent": "c"}}, headers=HEADERS)
+        "fields": {"calculating_agent": "c"}}, headers=HEADERS)
     assert r.status_code == 409
 
 

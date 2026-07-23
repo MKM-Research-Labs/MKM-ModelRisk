@@ -25,13 +25,21 @@ import io
 from src.files import upload_path
 from tests.web.conftest import HEADERS
 
-_FIELDS = {"analytics_model": "MKM-AN-001", "market_data_model": "NSS bond curve",
-           "calculating_agent": "Murex"}
+_FIELDS = {"calculating_agent": "Murex"}
 
 
 def _live_model(client, model_id="MKM-AN-001"):
     client.post("/api/models", json={"model_id": model_id, "name": "Analytics", "confirmed": True},
                 headers=HEADERS)
+
+
+def _component(client, product_id="Product-0001", model_id="MKM-AN-001",
+               component_type="Analytical Model"):
+    """Bind a model to a Product as a component, as the detail view does."""
+    return client.post(f"/api/products/{product_id}/collections/components",
+                       json={"fields": {"component_type": component_type,
+                                        "model_id": model_id},
+                             "confirmed": True}, headers=HEADERS)
 
 
 def _register(client, product_id="Product-0001", **overrides):
@@ -48,9 +56,13 @@ def test_fields_endpoint(client):
                 json={"fields": {"value": "Markets"}, "confirmed": True}, headers=HEADERS)
     specs = client.get("/api/products/fields").get_json()
     assert "product" in specs["register"]
-    assert specs["bindings"] == ["analytics_model", "market_data_model", "calculating_agent"]
+    assert specs["bindings"] == ["calculating_agent"]
+    # Components are a collection now, and the endpoint says which live models can
+    # fill each type so the editor can narrow its dropdown.
+    assert specs["components"] == "components"
+    assert "MKM-AN-001" in [m for ids in specs["models_by_type"].values() for m in ids]
+    assert any(c["key"] == "components" for c in specs["collections"])
     fields = {f["key"]: f for g in specs["groups"] for f in g["fields"]}
-    assert fields["analytics_model"]["type"] == "choice" and "MKM-AN-001" in fields["analytics_model"]["options"]
     assert fields["owner"]["type"] == "choice" and "Jane" in fields["owner"]["options"]
     # Org fields resolve to reference-backed dropdowns once the list is populated,
     # exactly like a model's (line_of_business stays text here — none seeded yet).
@@ -64,7 +76,11 @@ def test_register_get_and_list(client):
     _live_model(client)
     assert _register(client).status_code == 201
     product = client.get("/api/products/Product-0001").get_json()
-    assert product["data"]["identifier"] == "MKM-AN-001.NSS bond curve.Murex"
+    # Nothing bound yet, so there is no identity to derive.
+    assert product["data"]["identifier"] is None
+    _component(client)
+    product = client.get("/api/products/Product-0001").get_json()
+    assert product["data"]["identifier"] == "MKM-AN-001.Murex"
     assert product["data"]["status"] == "Proposed"
     assert [p["product_id"] for p in client.get("/api/products").get_json()] == ["Product-0001"]
 
@@ -87,13 +103,14 @@ def test_get_unknown_is_404(client):
 def test_edit_field_rebind_and_retire(client):
     _live_model(client)
     _register(client)
+    _component(client)
     edited = client.post("/api/products/Product-0001/field",
                          json={"field": "status", "value": "Active", "confirmed": True}, headers=HEADERS)
     assert edited.get_json()["data"]["status"] == "Active"
     rebound = client.post("/api/products/Product-0001/rebind",
                           json={"component": "calculating_agent", "value": "Calypso", "confirmed": True},
                           headers=HEADERS)
-    assert rebound.get_json()["data"]["identifier"] == "MKM-AN-001.NSS bond curve.Calypso"
+    assert rebound.get_json()["data"]["identifier"] == "MKM-AN-001.Calypso"
     retired = client.post("/api/products/Product-0001/retire", json={"confirmed": True}, headers=HEADERS)
     assert retired.get_json()["retired"] is True
 
@@ -117,6 +134,7 @@ def test_collections(client):
 def test_used_by(client):
     _live_model(client)
     _register(client, product_id="Product-0001")
+    _component(client)
     used = client.get("/api/products/used-by/MKM-AN-001").get_json()
     assert [p["product_id"] for p in used] == ["Product-0001"]
     assert client.get("/api/products/used-by/OTHER").get_json() == []

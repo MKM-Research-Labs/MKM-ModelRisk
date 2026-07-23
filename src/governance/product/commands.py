@@ -22,8 +22,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance import PRODUCT_COMPONENTS
+from src.governance.errors import DomainError
 from src.database import Event, append_event, read_stream
-from src.governance.model_inventory import get_model
 from src.governance.product._rules import (
     decide_add_item,
     decide_edit_field,
@@ -37,7 +38,16 @@ from src.governance.product._state import ProductState, apply, initial_state
 
 AGGREGATE_TYPE = "Product"
 
-_COMBINATION_KEYS = ("product", "analytics_model", "market_data_model", "calculating_agent")
+def _component_set(data: dict[str, Any]) -> frozenset:
+    """A Product's components as an order-independent set of (type, model) pairs.
+
+    Order carries no meaning — a Product built from a hazard curve and a pricing
+    engine is the same Product whichever was added first — so identity compares
+    sets, not lists.
+    """
+    return frozenset(
+        (str(item.get("component_type") or ""), str(item.get("model_id") or ""))
+        for item in (data.get(PRODUCT_COMPONENTS) or []) if isinstance(item, dict))
 
 
 def _load(product_id: str, config) -> tuple[ProductState, int]:
@@ -55,34 +65,24 @@ def _record(product_id, decision, version, actor, reason, config) -> Event:
         payload=payload, actor=actor, reason=reason, expected_version=version, config=config)
 
 
-def _analytics_live(model_id: str | None, config) -> bool:
-    if not model_id:
-        return False
-    model = get_model(model_id, config=config)
-    return bool(model and not model["retired"])
+def _is_duplicate(name: str, components: frozenset, *, exclude_product_id: str,
+                  config) -> bool:
+    """True if another live Product has this name and exactly these components.
 
-
-def _is_duplicate(combination: tuple, *, exclude_product_id: str, config) -> bool:
-    """True if a non-retired Product (other than this one) already binds this combo."""
+    An empty component set never collides: a Product registered but not yet built
+    out is not a duplicate of every other unbuilt Product of the same name.
+    """
     from src.governance.product.projection import list_products
 
+    if not components:
+        return False
     for product in list_products(config=config):
         if product["product_id"] == exclude_product_id or product["retired"]:
             continue
-        if tuple(product["data"].get(key) for key in _COMBINATION_KEYS) == combination:
+        data = product["data"] or {}
+        if data.get("product") == name and _component_set(data) == components:
             return True
     return False
-
-
-def _default_org_from_analytics(fields: dict[str, Any], config) -> None:
-    """A product's org home (division / line of business) follows its analytics model
-    unless explicitly given, so it lands under the right division / line of business —
-    and thus the right MRC — rather than unscoped and hidden from the region view."""
-    model = get_model(fields.get("analytics_model"), config=config) if fields.get("analytics_model") else None
-    data = (model or {}).get("data") or {}
-    for key in ("division", "line_of_business"):
-        if not fields.get(key) and data.get(key):
-            fields[key] = data[key]
 
 
 def register_product(
@@ -91,14 +91,8 @@ def register_product(
 ) -> Event:
     """Register a Product binding a product to its three components."""
     state, version = _load(product_id, config)
-    fields = dict(fields or {})
-    _default_org_from_analytics(fields, config)
-    analytics_live = _analytics_live(fields.get("analytics_model"), config)
-    combination = (product,) + tuple(fields.get(k) for k in _COMBINATION_KEYS[1:])
-    duplicate = _is_duplicate(combination, exclude_product_id=product_id, config=config)
     decision = decide_register(
-        state, product_id=product_id, product=product, fields=fields,
-        analytics_live=analytics_live, duplicate=duplicate)
+        state, product_id=product_id, product=product, fields=dict(fields or {}))
     return _record(product_id, decision, version, actor, reason, config)
 
 
@@ -108,14 +102,7 @@ def rebind_component(
 ) -> Event:
     """Change one of a Product's component bindings (Analytics / MDM / Agent)."""
     state, version = _load(product_id, config)
-    analytics_live = _analytics_live(value, config) if component == "analytics_model" else True
-    rebound = dict(state.fields)
-    rebound[component] = value
-    combination = tuple(rebound.get(key) for key in _COMBINATION_KEYS)
-    duplicate = _is_duplicate(combination, exclude_product_id=product_id, config=config)
-    decision = decide_rebind(
-        state, component=component, value=value,
-        analytics_live=analytics_live, duplicate=duplicate)
+    decision = decide_rebind(state, component=component, value=value)
     return _record(product_id, decision, version, actor, reason, config)
 
 
@@ -140,10 +127,51 @@ def add_collection_item(
     *, product_id: str, collection: str, fields: dict[str, Any], actor: str,
     reason: str | None = None, config=None,
 ) -> Event:
-    """Add a limitation or assumption to a Product."""
+    """Add a component, limitation or assumption to a Product."""
     state, version = _load(product_id, config)
-    decision = decide_add_item(state, collection=collection, fields=fields)
-    return _record(product_id, decision, version, actor, reason, config)
+    duplicate = False
+    first_component = False
+    if collection == PRODUCT_COMPONENTS:
+        first_component = not state.collections.get(PRODUCT_COMPONENTS)
+        after = _component_set({PRODUCT_COMPONENTS:
+                                list(state.collections.get(PRODUCT_COMPONENTS, ())) + [fields]})
+        duplicate = _is_duplicate(state.fields.get("product"), after,
+                                  exclude_product_id=product_id, config=config)
+    decision = decide_add_item(state, collection=collection, fields=fields,
+                               duplicate=duplicate)
+    event = _record(product_id, decision, version, actor, reason, config)
+    if first_component:
+        _inherit_org_from(product_id, fields.get("model_id"), actor, config)
+    return event
+
+
+def _inherit_org_from(product_id: str, model_id, actor: str, config) -> None:
+    """Give a Product the org home of its first component, where it has none.
+
+    A Product's division and Line of Business decide which MRC owns it, so one
+    left unscoped is hidden from the committee that should be reviewing it. This
+    used to happen at registration, from the analytics model; components arrive
+    after registration now, so the first one carries the default instead.
+
+    Only fills what is blank — an explicitly-set division is never overwritten —
+    and never fails the component add: the component is the thing being recorded,
+    and a default that could not be applied is not a reason to lose it.
+    """
+    from src.governance.model_inventory import get_model
+
+    if not model_id:
+        return
+    source = ((get_model(model_id, config=config) or {}).get("data") or {})
+    for field in ("division", "line_of_business"):
+        state, version = _load(product_id, config)
+        if state.fields.get(field) or not source.get(field):
+            continue
+        try:
+            decision = decide_edit_field(state, field=field, value=source[field])
+            _record(product_id, decision, version, actor,
+                    "Org inherited from first component", config)
+        except DomainError:
+            return
 
 
 def update_collection_item(
