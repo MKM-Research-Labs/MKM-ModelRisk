@@ -88,6 +88,27 @@ def add_document(
     return payload
 
 
+def update_document(
+    *, aggregate_type: str, aggregate_id: str, item_id: str, fields: dict,
+    actor: str, reason: str = "Update document", config=None,
+) -> None:
+    """Amend a stored document's metadata — its category or description.
+
+    Recategorising is a metadata change, not a re-upload: the file on disk and the
+    item id stay put, so every reference to the document survives. Remove-and-add
+    would reissue ids and silently break them.
+    """
+    documents, version = _fold(aggregate_type, aggregate_id, config)
+    if not any(d["item_id"] == item_id for d in documents):
+        raise DomainError(f"unknown document: {item_id}")
+    append_event(
+        aggregate_type=aggregate_type, aggregate_id=aggregate_id,
+        event_type=coll.EVENT_ITEM_UPDATED,
+        payload={"collection": DOCUMENTS, "item_id": item_id, **fields},
+        actor=actor, reason=reason, expected_version=version, config=config,
+    )
+
+
 def remove_document(
     *, aggregate_type: str, aggregate_id: str, item_id: str, actor: str, config=None,
 ) -> None:
