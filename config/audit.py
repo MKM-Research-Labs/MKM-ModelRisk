@@ -44,12 +44,14 @@ COVERAGE_HTML_DIRNAME = "coverage"          # holds index.html + static assets
 E2E_JUNIT_XML_NAME = "e2e_junit.xml"
 INIT_AUDIT_JSON_NAME = "init_audit_results.json"
 TEST_REPORT_PDF_NAME = "test_report.pdf"
+COMPLETENESS_REPORT_PDF_NAME = "completeness_audit.pdf"
 JSON_FILES_REPORT_PDF_NAME = "json_files_report.pdf"
 
 # Human-readable titles for the generated report files (filename -> label).
 AUDIT_REPORT_LABELS = {
     "coding_rule_audit.pdf": "Coding-Rule Audit",
     "model_risk_report.pdf": "Model Risk Report",
+    COMPLETENESS_REPORT_PDF_NAME: "Governance Completeness Audit",
     "user_guide.pdf": "User Guide",
     TEST_REPORT_PDF_NAME: "Test Report",
     JSON_FILES_REPORT_PDF_NAME: "JSON-File Audit",

@@ -41,10 +41,12 @@ from audit.coverage import coverage_summary
 from audit.pdf import REPORT_LABELS, render_test_report_pdf
 from audit.testsuite import SUITE_ACTIVE_ENV, run_test_suite
 from config.audit import (AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS,
-                          COVERAGE_HTML_DIRNAME, COVERAGE_HTML_LABEL,
-                          COVERAGE_XML_NAME, TEST_REPORT_PDF_NAME, USER_GUIDE_MD)
+                          COMPLETENESS_REPORT_PDF_NAME, COVERAGE_HTML_DIRNAME,
+                          COVERAGE_HTML_LABEL, COVERAGE_XML_NAME,
+                          TEST_REPORT_PDF_NAME, USER_GUIDE_MD)
 from src.governance.latex import front_matter, history_page, logo_asset, preamble
 from src.governance.model_inventory import list_models
+from src.governance.completeness.report import render_completeness_pdf
 from src.governance.model_inventory.report import render_report_pdf
 from src.governance.mrc.pack import TectonicNotFound, compile_tex
 from src.governance.mrc_settings import get_settings
@@ -217,8 +219,14 @@ def generate():
         # and the consolidated overview — the same set the ``python -m audit
         # --pdf`` CLI emits — followed by the Model Risk report.
         write_audit_reports(report, as_of, OUTPUT_DIR)
+        settings = get_settings()
         (OUTPUT_DIR / "model_risk_report.pdf").write_bytes(
-            render_report_pdf(list_models(), get_settings(), as_of))
+            render_report_pdf(list_models(), settings, as_of))
+        # The completeness audit reads the registers and the document store
+        # itself, so it takes no model list: what it reports is partly what the
+        # store does *not* hold, which a list of records cannot express.
+        (OUTPUT_DIR / COMPLETENESS_REPORT_PDF_NAME).write_bytes(
+            render_completeness_pdf(settings, as_of))
     except TectonicNotFound as exc:
         # Optional system dependency missing: surface an actionable 503 rather
         # than a raw 500 stack trace.
