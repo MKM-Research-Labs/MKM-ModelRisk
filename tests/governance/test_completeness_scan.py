@@ -20,24 +20,41 @@
 """The completeness scan over the register, and the PDF it produces."""
 from __future__ import annotations
 
-from src.governance.completeness import report as creport
-from src.governance.completeness import scan as cscan
+import pytest
+
+from src.governance.completeness.report import (
+    build_completeness_tex, render_completeness_pdf)
+from src.governance.completeness.scan import (
+    MODEL_KIND, _retrievable, product_scope, scan)
+from src.governance.model_inventory import rebuild_inventory_view, register_model
+from src.governance.product import rebuild_product_view, register_product
 
 AS_OF = "2026-06-22"
 SETTINGS = {"fields": {"org_name": "MKM"}}
 
 
-def test_scan_covers_models_then_products(client_db_models_and_products):
+@pytest.fixture
+def register():
+    """One model and one product on the register, so the scan has both kinds to
+    audit and the report has rows to lay out."""
+    register_model(model_id="M1", name="Alpha", actor="a", fields={"tier": 2})
+    register_product(product_id="PRD-1", product="Swap", actor="a",
+                     fields={"calculating_agent": "Murex"})
+    rebuild_inventory_view()
+    rebuild_product_view()
+
+
+def test_scan_covers_models_then_products(register):
     """Products follow the models so a reader meets the model gaps before the
     product gaps that inherit from them."""
-    rows = cscan.scan(AS_OF)
+    rows = scan(AS_OF)
     kinds = [r["entity_kind"] for r in rows]
     assert kinds, "the scan found nothing to audit"
-    assert kinds == sorted(kinds, key=lambda k: 0 if k == cscan.MODEL_KIND else 1)
+    assert kinds == sorted(kinds, key=lambda k: 0 if k == MODEL_KIND else 1)
 
 
-def test_scan_orders_worst_completeness_first(client_db_models_and_products):
-    scores = [r["completeness"] for r in cscan.scan(AS_OF)]
+def test_scan_orders_worst_completeness_first(register):
+    scores = [r["completeness"] for r in scan(AS_OF)]
     assert scores == sorted(scores), "least complete record should be read first"
 
 
@@ -46,7 +63,7 @@ def test_a_recorded_document_with_no_file_is_not_counted_as_present(tmp_path, mo
     gap, not evidence: an audit that trusted the metadata would report a pack that
     cannot actually be produced."""
     monkeypatch.setattr("src.files.store.UPLOAD_DIR", tmp_path)
-    check = cscan._retrievable("model/M1")
+    check = _retrievable("model/M1")
     assert check({"filename": "absent.pdf"}) is False
     assert check({}) is False, "a record with no filename cannot be retrievable"
     (tmp_path / "model" / "M1").mkdir(parents=True)
@@ -55,11 +72,11 @@ def test_a_recorded_document_with_no_file_is_not_counted_as_present(tmp_path, mo
 
 
 def test_product_scope_mirrors_the_model_one():
-    assert cscan.product_scope("PRD-X") == "product/PRD-X"
+    assert product_scope("PRD-X") == "product/PRD-X"
 
 
-def test_report_renders_over_a_populated_register(client_db_models_and_products):
-    tex = creport.build_completeness_tex(cscan.scan(AS_OF), SETTINGS, AS_OF)
+def test_report_renders_over_a_populated_register(register):
+    tex = build_completeness_tex(scan(AS_OF), SETTINGS, AS_OF)
     assert "Summary of findings" in tex
     assert "Findings by severity" in tex
     assert "Records by tier" in tex
@@ -69,12 +86,15 @@ def test_report_renders_over_a_populated_register(client_db_models_and_products)
 def test_report_renders_over_an_empty_register():
     """An instance with nothing registered still produces a document that says so,
     rather than failing or emitting an empty page."""
-    tex = creport.build_completeness_tex([], SETTINGS, AS_OF)
+    tex = build_completeness_tex([], SETTINGS, AS_OF)
     assert "Summary of findings" in tex
     assert tex.strip().endswith("\\end{document}")
 
 
-def test_report_pdf_compiles(client_db_models_and_products, monkeypatch):
+def test_report_pdf_scans_the_register_itself(register, monkeypatch):
+    """Called without rows the report runs the scan; a caller that already has
+    them passes them in rather than paying for a second pass."""
     monkeypatch.setattr("src.governance.mrc.pack.compile_tex",
                         lambda tex, assets=None: b"%PDF-stub")
-    assert creport.render_completeness_pdf(cscan.scan(AS_OF), SETTINGS, AS_OF) == b"%PDF-stub"
+    assert render_completeness_pdf(SETTINGS, AS_OF) == b"%PDF-stub"
+    assert render_completeness_pdf(SETTINGS, AS_OF, rows=scan(AS_OF)) == b"%PDF-stub"

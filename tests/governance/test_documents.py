@@ -17,41 +17,39 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Tests for the generic document-attachment store."""
+"""Amending a stored document's metadata."""
 from __future__ import annotations
 
 import pytest
 
-from src.governance.documents import add_document, find_document, list_documents, remove_document
+from src.governance.documents import (add_document, list_documents, model_scope,
+                                      update_document)
 from src.governance.errors import DomainError
 
 AGG = "ModelInventoryEntry"
 
 
-def _add(item="report.pdf", category="Analysis"):
-    return add_document(
-        aggregate_type=AGG, aggregate_id="M1", scope="model/M1", category=category,
-        filename=item, data=b"data", description="A report", actor="user",
-    )
+def _add(category="Analysis", name="a.pdf"):
+    return add_document(aggregate_type=AGG, aggregate_id="M1", scope=model_scope("M1"),
+                        filename=name, data=b"%PDF-", description="d",
+                        actor="a", category=category)
 
 
-def test_add_and_list():
+def test_recategorising_keeps_the_file_and_the_item_id():
+    """Recategorising is a metadata change, not a re-upload: remove-and-add would
+    reissue ids and silently break every reference to the document."""
+    doc = _add()
+    update_document(aggregate_type=AGG, aggregate_id="M1", item_id=doc["item_id"],
+                    fields={"category": "Sensitivity"}, actor="a")
+    after = list_documents(AGG, "M1")
+    assert len(after) == 1, "amending must not add a second record"
+    assert after[0]["item_id"] == doc["item_id"]
+    assert after[0]["category"] == "Sensitivity"
+    assert after[0]["filename"] == doc["filename"], "the stored file is untouched"
+
+
+def test_amending_an_unknown_document_is_refused():
     _add()
-    docs = list_documents(AGG, "M1")
-    assert docs[0]["item_id"] == "DOC-001"
-    assert docs[0]["category"] == "Analysis"
-    assert docs[0]["original_name"] == "report.pdf"
-    assert docs[0]["size"] == 4
-
-
-def test_find_and_remove():
-    _add()
-    assert find_document(AGG, "M1", "DOC-001") is not None
-    remove_document(aggregate_type=AGG, aggregate_id="M1", item_id="DOC-001", actor="user")
-    assert list_documents(AGG, "M1") == []
-    assert find_document(AGG, "M1", "DOC-001") is None
-
-
-def test_remove_unknown_raises():
-    with pytest.raises(DomainError):
-        remove_document(aggregate_type=AGG, aggregate_id="M1", item_id="DOC-999", actor="user")
+    with pytest.raises(DomainError, match="unknown document"):
+        update_document(aggregate_type=AGG, aggregate_id="M1", item_id="DOC-999",
+                        fields={"category": "Sensitivity"}, actor="a")

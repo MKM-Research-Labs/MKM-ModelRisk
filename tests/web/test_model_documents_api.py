@@ -144,3 +144,22 @@ def test_issuing_a_model_risk_document_files_a_timestamped_copy(client, monkeypa
     assert len(history) == 2, "each issue is filed, not overwritten"
     assert all(d["original_name"].startswith("M1_model_risk_document_") for d in history)
     assert len({d["original_name"] for d in history}) == 2, "timestamps distinguish them"
+
+
+def test_reviewable_documents_offers_only_what_a_committee_reads(client):
+    """The MRC tables a paper the model already holds. Core Documentation is not
+    offered (it is not the analysis under review) and a .tex source is not either
+    — it is the same paper in a form no committee reads."""
+    _register(client)
+    _upload(client, name="sens.pdf", category="Sensitivity")
+    _upload(client, name="sens.tex", category="Sensitivity")
+    _upload(client, name="core.pdf", category="Core Documentation")
+    offered = client.get("/api/models/M1/reviewable-documents").get_json()
+    names = [d["original_name"] for d in offered]
+    assert "sens.pdf" in names
+    assert "sens.tex" not in names
+    assert "core.pdf" not in names
+
+
+def test_reviewable_documents_unknown_model_is_404(client):
+    assert client.get("/api/models/none/reviewable-documents").status_code == 404
