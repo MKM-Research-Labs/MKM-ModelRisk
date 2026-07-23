@@ -26,10 +26,42 @@ Each spec's ``display`` field is the value shown in dropdowns that reference it.
 # anchored to that tree, then the Product platform (Calculating Agent), then
 # the People directory. Company is no longer a reference list — it's implicit:
 # every instance IS a single institution, and its name lives in the singleton
-# MRC settings under org_name. Market Data Models live in the Model Inventory
-# tagged type="Market Data Model".
+# MRC settings under org_name. Model types and codebases are admin-managed too,
+# so an adopter classifies its own estate rather than inheriting ours.
+MODEL_TYPE_LIST = "model_type"
+CODEBASE_LIST = "codebase"
+
 REFERENCE_LISTS = (
-    "division", "line_of_business", "mrc", "calculating_agent", "people",
+    "division", "line_of_business", "mrc", "calculating_agent", MODEL_TYPE_LIST,
+    CODEBASE_LIST, "people",
+)
+
+# What a model type means to a Product's bindings. A Product binds one analytics
+# engine and one market-data source, and it picks each from the inventory filtered
+# by this role -- NOT by the type's name. The name is admin-editable and the list
+# is meant to grow (Curve Model, and whatever an adopter adds next); matching on a
+# literal string would mean renaming a type, or adding one, silently emptied the
+# market-data dropdown and swept every model into the analytics one.
+VALID_BINDING_ROLES = ("Analytics", "Market Data", "Neither")
+
+# The one role the Product bindings branch on, named here so the API never spells
+# it as a literal (which is the mistake this whole indirection exists to remove).
+MARKET_DATA_ROLE = "Market Data"
+
+# Seeded on first use so the list is never empty (an empty reference list falls
+# back to a free-text box, which is how the estate ended up with no types at all).
+# An adopter renames or extends these in Admin; the roles are what the bindings
+# read, so the names are safe to change.
+#
+# Analytical models price or quantify risk; Curve Models produce the hazard and
+# damage curves the analytical engines consume; Market Data Models produce
+# calibrated curves/surfaces. All are models -- they involve methodology and
+# judgement, not raw vendor feeds -- which is why they sit on one inventory.
+DEFAULT_MODEL_TYPES = (
+    {"value": "Analytical Model", "binding_role": "Analytics"},
+    {"value": "Curve Model", "binding_role": "Analytics"},
+    {"value": "Market Data Model", "binding_role": "Market Data"},
+    {"value": "Other", "binding_role": "Neither"},
 )
 
 # MRC committees are anchored to one of the three org tiers. A Line of Business-level
@@ -95,6 +127,23 @@ REFERENCE_SPECS = {
     "calculating_agent": {"label": "Calculating Agent", "id_prefix": "CA", "display": "value",
                           "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},
+    ]},
+    # --- Model classification ---
+    # ``binding_role`` is the machine-readable half of a type: the name is for
+    # people and may be renamed freely, the role is what Product bindings filter
+    # on. See VALID_BINDING_ROLES above.
+    MODEL_TYPE_LIST: {"label": "Model Type", "id_prefix": "MT", "display": "value", "fields": [
+        {"key": "value", "label": "Type", "type": "text", "required": True},
+        {"key": "binding_role", "label": "Binding role", "type": "choice",
+         "options": VALID_BINDING_ROLES, "required": True},
+    ]},
+    # A codebase carries the repository it lives in, so the two travel together.
+    # Held as one entry rather than two lists because they are one fact: a second,
+    # independently-edited repo list can disagree with this one, and then nothing
+    # says which is right.
+    CODEBASE_LIST: {"label": "Codebase", "id_prefix": "CB", "display": "value", "fields": [
+        {"key": "value", "label": "Codebase", "type": "text", "required": True},
+        {"key": "repo_location", "label": "Repository location", "type": "text"},
     ]},
     # People carry an org unit — Division + Line of Business, backed by the admin lists,
     # exactly like a model's org fields. This anchoring is what makes a person

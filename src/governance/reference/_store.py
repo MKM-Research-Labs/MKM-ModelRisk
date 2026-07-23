@@ -25,7 +25,7 @@ shared collection engine; no projection table is needed at this scale.
 """
 from __future__ import annotations
 
-from config.governance import REFERENCE_LISTS
+from config.governance import MODEL_TYPE_LIST, REFERENCE_LISTS
 from src.database import read_stream
 from src.governance import collections as coll
 
@@ -49,3 +49,16 @@ def get_reference_lists(config=None) -> dict[str, list]:
     """Return every menu list as ``{list_name: [items]}`` (items carry item_id)."""
     collections, _ = load(config)
     return {name: list(collections.get(name, ())) for name in REFERENCE_LISTS}
+
+
+def model_type_roles(config=None) -> dict[str, str]:
+    """``{type name: binding role}`` from the admin model-type list.
+
+    Callers that need to know what a model *is* to a Product ask this rather than
+    comparing the type's name, so renaming a type in Admin cannot change how the
+    estate binds.
+    """
+    collections, _ = load(config)
+    return {item["value"]: item.get("binding_role", "")
+            for item in collections.get(MODEL_TYPE_LIST, ())
+            if item.get("value")}

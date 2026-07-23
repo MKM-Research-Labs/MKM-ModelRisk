@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import pytest
 
+from src.governance.reference import ensure_default_model_types
 from src.web import create_app
 
 HEADERS = {"X-Auth-Request-User": "alice@corp"}
@@ -33,3 +34,13 @@ def client():
     app = create_app(run_db_migrations=False)
     app.testing = True
     return app.test_client()
+
+
+@pytest.fixture
+def seeded_model_types():
+    """Seed the model-type list, as a real app does when it starts.
+
+    Opt-in rather than part of ``client``: seeding writes events, and tests that
+    assert a pristine audit trail or empty reference lists are entitled to one.
+    """
+    ensure_default_model_types()

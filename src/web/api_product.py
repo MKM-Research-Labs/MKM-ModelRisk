@@ -24,6 +24,7 @@ from flask import Blueprint, jsonify, request
 
 from config.governance import (
     DOC_CATEGORIES,
+    MARKET_DATA_ROLE,
     PRODUCT_BINDINGS,
     PRODUCT_COLLECTION_SPECS,
     PRODUCT_FIELD_SPECS,
@@ -33,6 +34,7 @@ from src.command import dispatch
 from src.files import UploadError, upload_path
 from src.governance.documents import add_document, find_document, remove_document
 from src.governance.model_inventory import list_models
+from src.governance.reference import model_type_roles
 from src.governance.product import (
     add_collection_item,
     get_product,
@@ -100,14 +102,23 @@ def _collection_specs():
 
 @product_bp.get("/fields")
 def field_specs():
-    # A Product's analytics engine is any live model that isn't a Market Data
-    # Model; its market-data binding is a live model of type "Market Data Model".
+    # Which live models each binding may choose from, decided by the *role* on the
+    # model's admin type entry rather than the type's name. Model types are
+    # admin-managed and meant to grow, so matching a literal name here would mean
+    # renaming a type — or adding one — silently emptied the market-data dropdown
+    # and swept every model into the analytics one.
+    #
+    # An unrecognised or unset type falls to the analytics side: that is where a
+    # model was before it was classified, so classifying the estate cannot quietly
+    # remove options a Product already relies on.
+    roles = model_type_roles()
     live = [m for m in list_models() if not m["retired"]]
+    market_data = [m["model_id"] for m in live
+                   if roles.get((m["data"] or {}).get("type")) == MARKET_DATA_ROLE]
     inventory_ids = {
-        "analytics_model": [
-            m["model_id"] for m in live if (m["data"] or {}).get("type") != "Market Data Model"],
-        "market_data_model": [
-            m["model_id"] for m in live if (m["data"] or {}).get("type") == "Market Data Model"],
+        "analytics_model": [m["model_id"] for m in live
+                            if m["model_id"] not in set(market_data)],
+        "market_data_model": market_data,
     }
     return jsonify({
         "groups": _grouped_specs(reference_options(), inventory_ids),

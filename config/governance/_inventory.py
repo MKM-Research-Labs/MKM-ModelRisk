@@ -35,10 +35,6 @@ VALID_VALIDATION_STATUSES = (
 )
 VALID_MATERIALITY = ("Low", "Medium", "High")
 VALID_COMPLEXITY = ("Low", "Medium", "High")
-# What kind of model this is. Analytical models price/quantify risk; Market Data
-# Models produce calibrated curves/surfaces consumed by the analytical engines
-# (both are models — they involve methodology and judgement, not raw vendor feeds).
-VALID_MODEL_TYPES = ("Analytical Model", "Market Data Model", "Other")
 VALID_LIFECYCLE_STAGES = ("Development", "Validation", "Production", "Retired")
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 # Stages of the model's MRC review workflow, from kick-off to sign-off.
@@ -65,16 +61,26 @@ MODEL_FIELD_SPECS = {
     #     whose name is on the MRC settings under org_name). ---
     "division": {"label": "Division", "type": "text", "group": "Organisation", "reference": "division"},
     "line_of_business": {"label": "Line of Business", "type": "text", "group": "Organisation", "reference": "line_of_business"},
+    # The canonical repository for a codebase is carried on the admin ``codebase``
+    # entry; this field holds the value chosen there, so the two cannot drift.
     "repo_location": {"label": "Repository location", "type": "text", "group": "Organisation"},
-    "codebase": {"label": "Codebase", "type": "text", "group": "Organisation"},
+    "codebase": {"label": "Codebase", "type": "text", "group": "Organisation",
+                 "reference": "codebase"},
     # --- Classification ---
     "name": {"label": "Name", "type": "text", "group": "Classification"},
     "short_name": {"label": "Short name", "type": "text", "group": "Classification"},
     "description": {"label": "Description", "type": "text", "group": "Classification"},
-    "type": {
-        "label": "Type", "type": "choice",
-        "options": VALID_MODEL_TYPES, "group": "Classification",
-    },
+    # Admin-managed (reference "model_type") rather than a fixed vocabulary: an
+    # adopter classifies its own estate. Product bindings read the entry's
+    # binding_role, never this name.
+    #
+    # ``strict_reference`` keeps the closed vocabulary this field had when its
+    # options were hardcoded: the values are admin-managed now, but a model still
+    # cannot be typed as something nobody has defined. Reference fields without
+    # the flag (owner, division) stay open — they hold names that predate the
+    # lists, and rejecting those would block every edit to an existing record.
+    "type": {"label": "Type", "type": "text", "group": "Classification",
+             "reference": "model_type", "strict_reference": True},
     "category": {"label": "Category", "type": "text", "group": "Classification"},
     "tier": {"label": "Tier", "type": "tier", "group": "Classification"},
     "tier_rationale": {"label": "Tier rationale", "type": "text", "group": "Classification"},

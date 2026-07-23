@@ -25,6 +25,7 @@ from flask import Flask, jsonify, request
 from src.command import ConfirmationRequired
 from src.database import run_migrations
 from src.governance.errors import DomainError
+from src.governance.reference import ensure_default_model_types
 from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
 from src.web.api_audit_reports import audit_reports_bp
@@ -61,6 +62,9 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     """Build the Flask app. Applies DB migrations unless told not to."""
     if run_db_migrations:
         run_migrations()
+        # Model types are admin-managed, but an empty list degrades the field to
+        # free text — so a fresh database is given the defaults once.
+        ensure_default_model_types()
     # Front-end assets live under src/static and src/templates (coding rule R7).
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
     app.register_blueprint(views_bp)

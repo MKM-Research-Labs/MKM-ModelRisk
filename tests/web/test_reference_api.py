@@ -54,9 +54,11 @@ def _add_person(client, name):
 def test_get_reference_empty(client):
     res = client.get("/api/reference").get_json()
     assert res["data"] == {"division": [], "line_of_business": [],
-                           "calculating_agent": [], "mrc": [], "people": []}
+                           "calculating_agent": [], "mrc": [], "model_type": [],
+                           "codebase": [], "people": []}
     assert [c["key"] for c in res["collections"]] == [
-        "division", "line_of_business", "mrc", "calculating_agent", "people"]
+        "division", "line_of_business", "mrc", "calculating_agent", "model_type",
+        "codebase", "people"]
 
 
 def test_mrc_tor_fields_are_hidden_in_specs(client):

@@ -28,7 +28,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import DEFAULT_VQ_STATUS, DEPENDENCIES_COLLECTION, SR262_QUESTIONS
+from config.governance import (DEFAULT_VQ_STATUS, DEPENDENCIES_COLLECTION,
+                               MODEL_FIELD_SPECS, REFERENCE_SPECS, SR262_QUESTIONS)
 from src.database import Event, append_event, read_stream
 from src.governance import collections as coll
 from src.governance.errors import DomainError
@@ -94,6 +95,34 @@ def _record(
     )
 
 
+def _check_reference_fields(fields: dict[str, Any], config=None) -> None:
+    """Reject a value not on the admin list for any ``strict_reference`` field.
+
+    Lives here rather than in ``_rules`` because the allowed values are rows in
+    the reference store, and the rules stay pure. Only fields flagged strict are
+    checked — see MODEL_FIELD_SPECS for why the others are deliberately open.
+
+    An empty list is not enforced: on a fresh database, before the defaults are
+    seeded, there is nothing to validate against and rejecting everything would
+    make the field unusable rather than safe.
+    """
+    from src.governance.reference import get_reference_lists
+
+    strict = {key: spec["reference"] for key, spec in MODEL_FIELD_SPECS.items()
+              if spec.get("strict_reference") and key in fields
+              and str(fields[key] or "").strip()}
+    if not strict:
+        return
+    lists = get_reference_lists(config)
+    for key, list_name in strict.items():
+        spec = REFERENCE_SPECS[list_name]
+        allowed = [item.get(spec.get("display", "value"))
+                   for item in lists.get(list_name, ())]
+        if allowed and fields[key] not in allowed:
+            raise DomainError(
+                f"{key} must be one of: {', '.join(str(a) for a in allowed)}")
+
+
 def register_model(
     *, model_id: str, name: str, actor: str,
     fields: dict[str, Any] | None = None, reason: str | None = None,
@@ -101,6 +130,7 @@ def register_model(
 ) -> Event:
     """Register a new model, then seed its SR 26-2 validation questions."""
     state, version = _load(model_id, config)
+    _check_reference_fields(fields or {}, config)
     decision = decide_register(
         state, model_id=model_id, name=name, fields=fields or {},
     )
@@ -115,6 +145,7 @@ def update_model_field(
 ) -> Event:
     """Update a single scalar field of an existing model."""
     state, version = _load(model_id, config)
+    _check_reference_fields({field: value}, config)
     decision = decide_update_field(state, field=field, value=value)
     return _record(model_id, decision, version, actor, reason, config)
 

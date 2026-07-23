@@ -36,6 +36,7 @@ def test_update_option_edits_fields():
 
 def test_lists_empty_initially():
     assert get_reference_lists() == {
+        "model_type": [], "codebase": [],
         "people": [], "division": [], "line_of_business": [],
         "calculating_agent": [], "mrc": [],
     }

@@ -39,3 +39,9 @@ IDENTITY_NAME_HEADER = os.environ.get(
 # Actor used for local development when no SSO header is present. Only honoured
 # when the caller explicitly allows a fallback (never in a hardened deployment).
 IDENTITY_DEV_FALLBACK = os.environ.get("IDENTITY_DEV_FALLBACK", "david.kelly@mkmresearchlabs.com")
+
+# Actor recorded for changes the platform makes on its own initiative rather than
+# on behalf of a signed-in user — currently only the first-run seeding of the
+# admin reference lists. Distinct from any real identity so the audit trail never
+# attributes an automatic change to a person who did not make it.
+SYSTEM_ACTOR = os.environ.get("SYSTEM_ACTOR", "system")
