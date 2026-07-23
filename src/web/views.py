@@ -23,6 +23,7 @@ from __future__ import annotations
 from flask import Blueprint, render_template, request
 
 from src.identity import resolve_principal
+from src.web._assets import asset_version
 
 views_bp = Blueprint("views", __name__)
 
@@ -32,4 +33,11 @@ def index():
     # Pre-fill the "Acting as" field with the resolved principal: the SSO user in
     # a deployment, or the configured dev fallback (IDENTITY_DEV_FALLBACK)
     # locally — so a demo attributes changes to the operator, not david.kelly@mkmresearchlabs.com.
-    return render_template("index.html", actor_default=resolve_principal(request.headers).actor)
+    # asset_version busts any stale CSS/JS a browser cached under an earlier
+    # policy; without it a served-but-unseen console is indistinguishable from a
+    # missing feature.
+    return render_template(
+        "index.html",
+        actor_default=resolve_principal(request.headers).actor,
+        asset_version=asset_version(),
+    )
