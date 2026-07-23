@@ -26,7 +26,7 @@ Object.assign(MeetingDetail, {
   // Non-sign-off agenda items (sign-offs render in Models → Approvals).
   _agendaItems() {
     return ((this._meeting.data || {}).agenda || []).filter(
-      (it) => !(it.subject_model_id || it.subject_product_id));
+      (it) => !subjectOf(it));
   },
 
   // Standing items in a fixed order, then manual items, then AOB last.

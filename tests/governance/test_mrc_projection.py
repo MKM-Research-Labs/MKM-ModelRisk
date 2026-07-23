@@ -34,11 +34,12 @@ from src.governance.mrc import (
 
 def test_rebuild_reflects_meeting_and_collections():
     schedule_meeting(meeting_id="MTG1", title="Q2 MRC", date="2026-06-30", actor="a")
-    update_meeting_field(meeting_id="MTG1", field="status", value="Completed", actor="a")
     add_collection_item(meeting_id="MTG1", collection="agenda",
                         fields={"title": "Review", "presenter": "bob"}, actor="a")
     add_collection_item(meeting_id="MTG1", collection="participants",
                         fields={"name": "Carol", "status": "Attended"}, actor="a")
+    # Closed last: a sealed meeting accepts no further collection items.
+    update_meeting_field(meeting_id="MTG1", field="status", value="Completed", actor="a")
     assert rebuild_meeting_view() == 1
 
     meeting = get_meeting("MTG1")

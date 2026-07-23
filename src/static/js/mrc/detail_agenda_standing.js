@@ -97,7 +97,7 @@ Object.assign(MeetingDetail, {
       return '<div class="muted" style="margin-top:8px;font-size:12px">No sign-offs routed to this meeting.</div>';
     }
     return '<div style="margin-top:8px">' + items.map((it) => {
-      const subj = it.subject_model_id || it.subject_product_id;
+      const subj = subjectOf(it);
       return '<div class="prow"><div style="font-size:12px">' + this._subjectLabelHtml(subj) + " &rarr; " +
         ragBadge(it.proposed_rag) + "</div>" + statusBadge(it.status) + "</div>";
     }).join("") +

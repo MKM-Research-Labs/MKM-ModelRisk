@@ -25,6 +25,9 @@
 
 // Sensible default for a sign-off's next review date: one year out. The
 // committee can still change it before signing off.
+// Mirrors config CLOSED_MEETING_STATUS.
+const CLOSED_MEETING_STATUS = "Completed";
+
 function oneYearAhead() {
   const d = new Date();
   d.setFullYear(d.getFullYear() + 1);
@@ -134,7 +137,12 @@ const MeetingDetail = {
     // confirm-to-amend path, so a rescheduling is on the audit trail.
     const readOnly = (label, key) => '<span class="datechip" id="minfo-' + key + '">' +
       '<span class="muted">' + label + ':</span> <b>' + fieldDisplay(d[key]) + "</b></span>";
-    const editable = (label, key) => '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
+    // A closed meeting is a finished record: the domain refuses to amend it, so
+    // the console withdraws the edit affordance rather than offering an action
+    // that can only fail.
+    const closed = this._meeting.status === CLOSED_MEETING_STATUS;
+    const editable = (label, key) => closed ? readOnly(label, key) :
+      '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
       label + ':</span> <b>' + fieldDisplay(d[key]) + "</b> " +
       '<span class="edit-btn" data-minfo="' + key + '">edit</span></span>';
     return '<div class="dh-dates">' + readOnly("MRC", "mrc") + readOnly("Division", "division") +
@@ -148,11 +156,11 @@ const MeetingDetail = {
     // the Signoff tab, so they don't inflate the agenda count.
     const n = (k) => {
       const arr = d[k] || [];
-      if (k === "agenda") return arr.filter((a) => !(a.subject_model_id || a.subject_product_id)).length;
+      if (k === "agenda") return arr.filter((a) => !subjectOf(a)).length;
       if (k === "models_in_scope") {
         // Signoff tab: risk-rating sign-offs (Approvals) + in-scope analysis
         // items (models + products).
-        const signoffs = (d.agenda || []).filter((a) => a.subject_model_id || a.subject_product_id).length;
+        const signoffs = (d.agenda || []).filter(subjectOf).length;
         return signoffs + arr.length + (d.products_in_scope || []).length;
       }
       return arr.length;

@@ -31,6 +31,9 @@ from src.governance.mrc import (
     get_meeting_enriched as get_meeting,
     list_meetings_enriched as list_meetings,
     rebuild_meeting_view,
+    schedule_meeting,
+    seed_standing_agenda,
+    update_collection_item,
     update_meeting_field,
 )
 from src.governance.mrc.pack import render_pack_pdf
@@ -38,6 +41,8 @@ from src.governance.mrc_settings import get_settings
 from src.web._helpers import context_from_request, json_body
 from src.web.api_mrc._bp import mrc_bp
 from src.web.api_mrc._quorum import is_quorate
+from src.web.api_mrc._succession import (
+    next_date, next_meeting_id, successor_fields, successor_title)
 
 
 def _open_agenda(d: dict) -> list[str]:
@@ -76,7 +81,49 @@ def close_meeting(meeting_id: str):
         dispatch("update_meeting_field", update_meeting_field, context=ctx,
                  meeting_id=meeting_id, field=field, value=value)
     rebuild_meeting_view()
+    _schedule_successor(meeting_id, d, meta, ctx)
+    rebuild_meeting_view()
     return jsonify(get_meeting(meeting_id))
+
+
+def _previous_minutes_item(meeting_id: str):
+    """The successor's standing item for reviewing the previous minutes."""
+    fresh = get_meeting(meeting_id) or {}
+    for item in (fresh.get("data") or {}).get("agenda") or []:
+        if item.get("kind") == "minutes_signoff":
+            return item
+    return None
+
+
+def _schedule_successor(meeting_id: str, data: dict, minutes: dict, ctx) -> None:
+    """Schedule the next meeting in the cycle and table the minutes just filed.
+
+    Best-effort: the close is already recorded, so a committee with no date or no
+    frequency simply gets no successor rather than a failed close.
+    """
+    current_date = data.get("date")
+    if not current_date:
+        return
+    taken = {m.get("meeting_id") for m in list_meetings()}
+    new_id = next_meeting_id(meeting_id, taken)
+    if new_id in taken:
+        return
+    new_date = next_date(current_date, data.get("frequency"))
+    title = successor_title(data.get("title") or new_id, meeting_id, new_id, new_date)
+    dispatch("schedule_meeting", schedule_meeting, context=ctx, meeting_id=new_id,
+             title=title, date=new_date, fields=successor_fields(data))
+    dispatch("seed_standing_agenda", seed_standing_agenda, context=ctx, meeting_id=new_id)
+    rebuild_meeting_view()
+    # File the minutes against the item that exists to review them, so the next
+    # chair opens the meeting with the paper already tabled.
+    item = _previous_minutes_item(new_id)
+    if item is None:
+        return
+    dispatch("update_collection_item", update_collection_item, context=ctx, meeting_id=new_id,
+             collection="agenda", item_id=item["item_id"],
+             fields={"document_filename": minutes["filename"],
+                     "document_original_name": minutes["original_name"],
+                     "prev_minutes_meeting": meeting_id})
 
 
 @mrc_bp.get("/<meeting_id>/minutes.pdf")

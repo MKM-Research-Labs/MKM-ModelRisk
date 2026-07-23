@@ -21,12 +21,28 @@
 // MeetingDetail — sign-offs (the Models tab's Approvals section). Sign-off items
 // are agenda items carrying a subject + proposed RAG; they render here (not on
 // the agenda) with the committee's Sign off / Reject decision + next review.
+// What a sign-off item is about, and which Approvals tab it belongs on. Written
+// once: the subject was previously spelled out at every call site, so adding a
+// third kind meant finding all of them.
+const SUBJECT_LABEL = { model: "model", product: "product", handoff: "handoff" };
+
+function subjectOf(item) {
+  return item.subject_model_id || item.subject_product_id || item.subject_handoff_id || "";
+}
+
+function subjectKind(item) {
+  if (item.subject_product_id) return "product";
+  if (item.subject_handoff_id) return "handoff";
+  return "model";
+}
+
 Object.assign(MeetingDetail, {
-  // Sign-off items live in the Models tab (Approvals), so the agenda shows only
-  // the high-level running order.
-  _signoffItems() {
-    return ((this._meeting.data || {}).agenda || []).filter(
-      (a) => a.subject_model_id || a.subject_product_id);
+  // Every sign-off item lives in the Signoff tab (Approvals), so the agenda shows
+  // only the high-level running order. Handoff compatibility sign-offs are
+  // sign-offs like any other: an owner raises them and the committee ratifies them.
+  _signoffItems(kind) {
+    const items = ((this._meeting.data || {}).agenda || []).filter(subjectOf);
+    return kind ? items.filter((a) => subjectKind(a) === kind) : items;
   },
 
   // What the committee is being asked to ratify. Items raised before the queue
@@ -53,7 +69,7 @@ Object.assign(MeetingDetail, {
   // data-agreject attrs so the not-quorate lock still applies. Only a rating
   // decision offers a next-review date — it is meaningless for a hibernation.
   _signoffRow(item) {
-    const subjectId = item.subject_model_id || item.subject_product_id;
+    const subjectId = subjectOf(item);
     const pending = item.status === "Pending";
     const nextReview = (pending && this._signoffKind(item) === "rag")
       ? '<span class="muted" style="font-size:11px">Next review</span> ' +
@@ -75,20 +91,36 @@ Object.assign(MeetingDetail, {
       doc + '</div><div class="rowact">' + decision + "</div></div></div>";
   },
 
+  // Approvals are split by what is being signed off, so a committee working
+  // through model ratings is not reading past handoff items and vice versa. The
+  // count sits on each tab: an empty one still has to be visibly empty.
+  _approvalSubtabs() {
+    const current = this._approvalKind || "model";
+    const btn = (k, label) => {
+      const n = this._signoffItems(k).length;
+      return '<button class="dtab' + (k === current ? " active" : "") +
+        '" data-sgtab="' + k + '">' + label + " (" + n + ")</button>";
+    };
+    return '<div class="dtabs" style="margin-bottom:8px">' +
+      btn("model", "Models") + btn("product", "Products") + btn("handoff", "Handoffs") + "</div>";
+  },
+
   _approvalsSection() {
-    const items = this._signoffItems();
+    const kind = this._approvalKind || "model";
+    const items = this._signoffItems(kind);
     const rows = items.length
       ? items.map((it) => this._signoffRow(it)).join("")
-      : '<div class="empty">No sign-offs routed to this meeting.</div>';
+      : '<div class="empty">No ' + SUBJECT_LABEL[kind] + " sign-offs routed to this meeting.</div>";
     return '<div class="section-header">Approvals — MRC sign-offs</div>' +
       '<p class="muted" style="font-size:12px">Owner-raised requests routed to this committee — ' +
-      "risk-rating sign-offs, retirements and reactivations. Approving carries out the decision " +
-      "and records a minute.</p>" + rows;
+      "risk-rating sign-offs, retirements, reactivations and handoff compatibility. " +
+      "Approving carries out the decision and records a minute.</p>" +
+      this._approvalSubtabs() + rows;
   },
 
   // The decision, in words, for the confirm dialog + audit trail.
   _signoffSummary(item, approve) {
-    const subj = item.subject_model_id || item.subject_product_id;
+    const subj = subjectOf(item);
     const kind = this._signoffKind(item);
     if (kind === "retire") {
       return approve

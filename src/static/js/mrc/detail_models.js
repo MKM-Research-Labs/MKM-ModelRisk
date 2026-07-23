@@ -54,6 +54,11 @@ Object.assign(MeetingDetail, {
   },
 
   _modelsTab() {
+    if (this._analysisKind === "handoff") {
+      return this._approvalsSection() +
+        '<div class="section-header" style="margin-top:18px">Analysis</div>' +
+        this._analysisSubtabs("handoff") + this._handoffAnalysis();
+    }
     const cfg = this._scopeCfg(this._analysisKind === "product" ? "product" : "model");
     return this._approvalsSection() +
       '<div class="section-header" style="margin-top:18px">Analysis</div>' +
@@ -63,11 +68,34 @@ Object.assign(MeetingDetail, {
       this._scopeTable(cfg) + this._analysisReview(cfg);
   },
 
+  // Handoffs crossing the models in scope: the compatibility record the committee
+  // reviews alongside the models either side of it. Derived from the meeting's
+  // sign-off items rather than a scope collection — a handoff reaches a meeting by
+  // being raised for sign-off, not by being ticked into scope.
+  _handoffAnalysis() {
+    const items = this._signoffItems("handoff");
+    if (!items.length) {
+      return '<div class="muted" style="font-size:12px;margin-top:8px">No handoffs ' +
+        "tabled at this meeting. They arrive by being raised for compatibility sign-off.</div>";
+    }
+    const rows = items.map((it) => {
+      const pair = String(it.subject_handoff_id || "").split("~");
+      return '<div class="card" style="margin-bottom:8px">' +
+        '<div class="row" style="justify-content:space-between;align-items:center">' +
+        "<div>" + this._subjectLabelHtml(pair[0] || "") +
+        ' <span class="muted">&rarr;</span> ' + this._subjectLabelHtml(pair[1] || "") + "</div>" +
+        "<div>" + statusBadge(it.status) + "</div></div></div>";
+    }).join("");
+    return '<p class="muted" style="font-size:12px">The producer &rarr; consumer handoffs ' +
+      "tabled here, with the committee's compatibility decision.</p>" + rows;
+  },
+
   _analysisSubtabs(kind) {
     const btn = (k, label) => '<button class="dtab' + (k === kind ? " active" : "") +
       '" data-atab="' + k + '">' + label + "</button>";
     return '<div class="dtabs" style="margin-bottom:8px">' +
-      btn("model", "Models") + btn("product", "Products") + "</div>";
+      btn("model", "Models") + btn("product", "Products") +
+      btn("handoff", "Handoffs") + "</div>";
   },
 
   // One review block per in-scope item: the MRC's confirmation to proceed with a
@@ -172,6 +200,9 @@ Object.assign(MeetingDetail, {
     const cfg = this._scopeCfg(this._analysisKind === "product" ? "product" : "model");
     const reload = () => self.show(self._id, "models_in_scope");
     // Analysis sub-tab switch (Models | Products) — re-render from cached data.
+    document.querySelectorAll("[data-sgtab]").forEach(function (b) {
+      b.onclick = function () { self._approvalKind = b.getAttribute("data-sgtab"); self._render(); };
+    });
     document.querySelectorAll("[data-atab]").forEach(function (b) {
       b.onclick = function () { self._analysisKind = b.getAttribute("data-atab"); self._render(); };
     });

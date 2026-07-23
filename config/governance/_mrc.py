@@ -26,6 +26,18 @@ from config.governance._inventory import VALID_RAG_RATINGS
 # ToR document (uploaded separately) carries that detail. What remains is the
 # institution name, the chair and the meeting cadence.
 VALID_FREQUENCY = ("Monthly", "Quarterly", "Semi-annual", "Annual")
+
+# The status a closed meeting carries. Named once: the write domain refuses to
+# amend a meeting in this state, and the console hides its edit controls.
+CLOSED_MEETING_STATUS = "Completed"
+
+# How far ahead the successor meeting is scheduled, per committee frequency.
+# Closing a meeting schedules the next one, so a committee that meets on a cycle
+# always has its next date on the record rather than in somebody's diary.
+MEETING_INTERVAL_MONTHS = {
+    "Monthly": 1, "Quarterly": 3, "Semi-annual": 6, "Annual": 12,
+}
+DEFAULT_INTERVAL_MONTHS = 3
 MRC_SETTINGS_SPECS = (
     {"key": "org_name", "label": "Organisation name", "type": "text"},
     {"key": "chair", "label": "Chair", "type": "text"},

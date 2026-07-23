@@ -43,7 +43,9 @@ def test_schedule_appends_first_event():
 
 def test_full_meeting_lifecycle_stream():
     schedule_meeting(meeting_id="MTG1", title="Q2 MRC", date="2026-06-30", actor="a")
-    update_meeting_field(meeting_id="MTG1", field="status", value="Completed", actor="a")
+    # Not "Completed": closing a meeting seals it, so the work below would be
+    # refused. Closing is exercised in test_meeting_is_sealed_once_closed.
+    update_meeting_field(meeting_id="MTG1", field="location", value="Room A", actor="a")
     add_collection_item(meeting_id="MTG1", collection="agenda", fields={"title": "Review"}, actor="a")
     add_collection_item(meeting_id="MTG1", collection="actions",
                         fields={"description": "Follow up", "owner": "bob"}, actor="a")
@@ -67,3 +69,23 @@ def test_add_item_on_unknown_meeting_raises():
     with pytest.raises(DomainError):
         add_collection_item(meeting_id="ghost", collection="agenda",
                             fields={"title": "x"}, actor="a")
+
+
+def test_meeting_is_sealed_once_closed():
+    """A closed meeting is a finished record: its minutes are filed and what the
+    committee decided cannot be quietly restated. Corrections go to the next
+    meeting, which is how a committee works and keeps the trail intact."""
+    schedule_meeting(meeting_id="MTG2", title="Q3 MRC", date="2026-09-30", actor="a")
+    update_meeting_field(meeting_id="MTG2", field="status", value="Completed", actor="a")
+    for call in (
+        lambda: update_meeting_field(meeting_id="MTG2", field="location",
+                                     value="Elsewhere", actor="a"),
+        lambda: add_collection_item(meeting_id="MTG2", collection="agenda",
+                                    fields={"title": "Late item"}, actor="a"),
+        lambda: update_collection_item(meeting_id="MTG2", collection="agenda",
+                                       item_id="AG-001", fields={"title": "X"}, actor="a"),
+        lambda: remove_collection_item(meeting_id="MTG2", collection="agenda",
+                                       item_id="AG-001", actor="a"),
+    ):
+        with pytest.raises(DomainError, match="closed"):
+            call()

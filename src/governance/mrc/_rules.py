@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (
+    CLOSED_MEETING_STATUS,
     DEFAULT_MEETING_STATUS,
     MEETING_FIELDS,
     MRC_COLLECTION_SPECS,
@@ -36,6 +37,20 @@ from src.governance.mrc._state import EVENT_FIELD_UPDATED, EVENT_SCHEDULED, Meet
 def _require_exists(state: MeetingState) -> None:
     if not state.exists:
         raise DomainError("meeting does not exist")
+
+
+def _require_open(state: MeetingState) -> None:
+    """A closed meeting is a finished record, not a working document.
+
+    Once the chair closes a meeting its minutes are generated and filed, so
+    editing it afterwards would change what the committee is recorded as having
+    decided. A correction is raised and minuted at the next meeting instead —
+    which is how a committee actually works, and leaves the trail intact. Enforced
+    here rather than in the console so it holds for the API too."""
+    if state.fields.get("status") == CLOSED_MEETING_STATUS:
+        raise DomainError(
+            "meeting is closed and cannot be amended; raise the correction at the "
+            "next meeting")
 
 
 def _validate_field(field: str, value: Any) -> None:
@@ -67,6 +82,7 @@ def decide_update_field(
     state: MeetingState, *, field: str, value: Any
 ) -> tuple[str, dict[str, Any]]:
     _require_exists(state)
+    _require_open(state)
     if field not in MEETING_FIELDS:
         raise DomainError(f"field not editable: {field}")
     _validate_field(field, value)
@@ -77,6 +93,7 @@ def decide_add_item(
     state: MeetingState, *, collection: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     _require_exists(state)
+    _require_open(state)
     return coll.decide_add(
         state.collections, MRC_COLLECTION_SPECS, collection=collection, fields=fields
     )
@@ -86,6 +103,7 @@ def decide_update_item(
     state: MeetingState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     _require_exists(state)
+    _require_open(state)
     return coll.decide_update(
         state.collections, MRC_COLLECTION_SPECS,
         collection=collection, item_id=item_id, fields=fields,
@@ -96,6 +114,7 @@ def decide_remove_item(
     state: MeetingState, *, collection: str, item_id: str
 ) -> tuple[str, dict[str, Any]]:
     _require_exists(state)
+    _require_open(state)
     return coll.decide_remove(
         state.collections, MRC_COLLECTION_SPECS, collection=collection, item_id=item_id
     )
