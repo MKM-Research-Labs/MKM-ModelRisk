@@ -25,7 +25,22 @@
 # them; these tuples only decide which panel offers and lists each one.
 
 # The Docs tab: the model's own documentation and the analysis supporting it.
-DOC_TAB_CATEGORIES = ("Core Documentation", "Analysis", "Monitoring")
+# Sensitivity sits beside Core Documentation rather than inside Analysis: it is an
+# adjunct to the model's own write-up — how the model responds as its inputs move —
+# where Analysis is the wider work done about the model.
+DOC_TAB_CATEGORIES = ("Core Documentation", "Sensitivity", "Analysis", "Monitoring",
+                      "History")
+
+# Generated Model Risk Documents, filed under History. The document is rendered
+# from the inventory as it stood at the moment it was issued, so a filed copy is
+# the record of what the model looked like then — the second time axis alongside
+# the audit trail's "when we were told". Written by the platform, not uploaded.
+HISTORY_DOC_CATEGORY = "History"
+
+# The categories the MRC can table for review against a model in scope. The paper
+# lives on the model and is referenced from the meeting, so a committee always
+# reviews the document the model actually holds rather than a copy of it.
+MRC_REVIEWABLE_CATEGORIES = ("Sensitivity", "Analysis", "Test Results")
 
 # The Testing tab. "Test Results" is the overall evidence pack; the other three back
 # the in-context upload panel beside each unit / integration / benchmark test field.

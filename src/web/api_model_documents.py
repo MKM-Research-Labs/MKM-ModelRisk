@@ -26,15 +26,21 @@ URL space in one place while leaving the inventory API itself uncluttered.
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 from flask import Response, jsonify
 
-from src.governance.model_inventory import get_model, list_models
+from config.files import HIDDEN_DOC_EXTENSIONS
+from config.governance import HISTORY_DOC_CATEGORY, MRC_REVIEWABLE_CATEGORIES
+from src.files import extension
+from src.governance.documents import add_document, model_scope
+from src.governance.model_inventory import get_model, list_models, rebuild_inventory_view
+from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory.client_pack import PACK_NAME, build_model_pack
 from src.governance.model_inventory.document import render_model_document_pdf
 from src.governance.model_inventory.report import render_report_pdf
 from src.governance.mrc_settings import get_settings
+from src.web._helpers import request_actor
 from src.web.api_models import models_bp
 
 
@@ -51,13 +57,36 @@ def risk_report():
     })
 
 
+def _file_history_copy(model_id: str, pdf: bytes, stamp: str) -> None:
+    """File the issued document against the model under History.
+
+    Each issue is kept, timestamped, because the document renders the inventory as
+    it stood at that moment: the filed copy is what the model looked like when the
+    document went out. That is the second time axis — the audit trail records when
+    we were told something, these record what we said, and when.
+    """
+    name = f"{model_id}_model_risk_document_{stamp}.pdf"
+    add_document(aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
+                 scope=model_scope(model_id), category=HISTORY_DOC_CATEGORY,
+                 filename=name, data=pdf,
+                 description="Model Risk Document issued " + stamp[:19].replace("T", " ") + " UTC",
+                 actor=request_actor())
+    rebuild_inventory_view()
+
+
 @models_bp.get("/<model_id>/risk-document.pdf")
 def model_risk_document(model_id: str):
-    """One model's client-facing Model Risk Document, generated on request."""
+    """One model's client-facing Model Risk Document, generated on request and
+    filed under History so every issued version is kept."""
     model = get_model(model_id)
     if model is None:
         return jsonify({"error": "model not found"}), 404
     pdf = render_model_document_pdf(model, get_settings(), date.today().isoformat())
+    # Milliseconds, not seconds: two issues a moment apart (a double-click) would
+    # otherwise share a filename, and the second would overwrite the first while
+    # both History entries still claimed to be distinct versions.
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%S.%f")[:-3] + "Z"
+    _file_history_copy(model_id, pdf, stamp)
     return Response(pdf, mimetype="application/pdf", headers={
         "Content-Disposition": 'inline; filename="' + model_id + '_model_risk_document.pdf"',
     })
@@ -73,3 +102,26 @@ def model_client_pack(model_id: str):
     return Response(data, mimetype="application/zip", headers={
         "Content-Disposition": _attachment(PACK_NAME.format(model_id=model_id)),
     })
+
+
+@models_bp.get("/<model_id>/reviewable-documents")
+def reviewable_documents(model_id: str):
+    """The model's documents an MRC can table for review.
+
+    The paper lives on the model; a meeting references it rather than holding its
+    own copy, so a committee always reviews what the model actually holds and the
+    two cannot drift apart.
+    """
+    model = get_model(model_id)
+    if model is None:
+        return jsonify({"error": "model not found"}), 404
+    docs = (model["data"] or {}).get("documents") or []
+    return jsonify([
+        {"item_id": d.get("item_id"), "category": d.get("category"),
+         "original_name": d.get("original_name")}
+        for d in docs
+        if isinstance(d, dict) and d.get("category") in MRC_REVIEWABLE_CATEGORIES
+        # The LaTeX source filed beside a PDF is the same paper in a form no
+        # committee reads, so it is not offered for tabling either.
+        and extension(d.get("original_name", "")) not in HIDDEN_DOC_EXTENSIONS
+    ])

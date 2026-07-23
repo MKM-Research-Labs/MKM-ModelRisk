@@ -167,8 +167,13 @@ MRC_COLLECTION_SPECS = {
         {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
          "options": VALID_ANALYSIS_STATUS},
         {"key": "analysis_note", "label": "Analysis note", "type": "text"},
-        # Per-model analysis document uploaded for this meeting. Hidden metadata;
-        # the Models tab renders an upload/download control per in-scope model.
+        # The paper tabled for this item: a reference to a document the model
+        # already holds, not a copy taken into the meeting. A committee reviews
+        # what the model actually has on file, and one document cannot drift from
+        # the other. Uploading is done on the model's Docs tab.
+        {"key": "analysis_item_id", "label": "Tabled paper", "type": "text", "hidden": True},
+        # Retained so meetings that filed their own copy before the change still
+        # render and still appear in their pack.
         {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
         {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
     ]},
@@ -180,6 +185,7 @@ MRC_COLLECTION_SPECS = {
         {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
          "options": VALID_ANALYSIS_STATUS},
         {"key": "analysis_note", "label": "Analysis note", "type": "text"},
+        {"key": "analysis_item_id", "label": "Tabled paper", "type": "text", "hidden": True},
         {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
         {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
     ]},

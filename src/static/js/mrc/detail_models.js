@@ -60,6 +60,13 @@ Object.assign(MeetingDetail, {
         this._analysisSubtabs("handoff") + this._handoffAnalysis();
     }
     const cfg = this._scopeCfg(this._analysisKind === "product" ? "product" : "model");
+    // First pass has no document list yet; fetch it, then re-render once. The
+    // picker shows a placeholder in the meantime rather than an empty dropdown.
+    if (this._reviewableDocs === undefined || this._reviewableDocsKind !== cfg.kind) {
+      this._reviewableDocsKind = cfg.kind;
+      this._reviewableDocs = {};
+      this._loadReviewableDocs(cfg).then(() => this._render());
+    }
     return this._approvalsSection() +
       '<div class="section-header" style="margin-top:18px">Analysis</div>' +
       this._analysisSubtabs(cfg.kind) +
@@ -118,11 +125,18 @@ Object.assign(MeetingDetail, {
             ' <span class="muted" style="font-size:10px">' +
             (a.due_date ? "due " + esc(a.due_date) + " · " : "") + esc(a.status || "Open") + "</span></div></div>").join("")
         : '<div class="muted" style="font-size:11px">No remediation yet.</div>';
-      return '<div class="card" style="margin-bottom:8px">' +
-        '<div class="row" style="justify-content:space-between;align-items:center">' +
-        '<b class="modelid">' + esc(id) + "</b>" + (m.name ? ' <span class="muted">' + esc(m.name) + "</span>" : "") +
+      // One line per item, expanding to its review block. A committee works
+      // through these one at a time, so seven open blocks is six too many.
+      const open = this._reviewOpen === id;
+      const head = '<div class="row" data-review-toggle="' + esc(id) +
+        '" style="justify-content:space-between;align-items:center;cursor:pointer">' +
+        "<div><span class=\"muted\">" + (open ? "&minus;" : "+") + "</span> " +
+        '<b class="modelid">' + esc(id) + "</b>" +
+        (m.name ? ' <span class="muted">' + esc(m.name) + "</span>" : "") + "</div>" +
         '<div><span class="muted" style="font-size:11px">Outcome</span> ' +
-        '<select data-analysis-status="' + esc(id) + '">' + opts(m.analysis_status) + "</select></div></div>" +
+        '<select data-analysis-status="' + esc(id) + '">' + opts(m.analysis_status) + "</select></div></div>";
+      if (!open) return '<div class="card" style="margin-bottom:6px">' + head + "</div>";
+      return '<div class="card" style="margin-bottom:8px">' + head +
         '<div class="field" style="margin-top:6px"><label>Discussion note</label>' +
         '<div class="row" style="align-items:flex-end;gap:6px">' +
         '<input data-analysis-note="' + esc(id) + '" value="' + esc(m.analysis_note || "") + '" style="flex:1">' +
@@ -136,62 +150,17 @@ Object.assign(MeetingDetail, {
     }).join("");
   },
 
-  _scopeTable(cfg) {
-    const inScope = new Set(cfg.inScope.map((m) => m[cfg.idKey]));
-    const filter = this._scopeFilter();
-    const candidates = this._candidates(cfg);
-    const mrc = (this._meeting.data || {}).mrc;
-    const mrcNote = mrc ? " for MRC <b>" + esc(mrc) + "</b>" : "";
-    const lc = cfg.label.toLowerCase();
-    const banner = filter
-      ? '<div class="muted" style="margin-bottom:6px">Showing ' + lc + "s the MRC oversees" +
-        mrcNote + " — " + esc(filter.key) + " <b>" + esc(filter.value) + "</b>. " +
-        '<label style="margin-left:8px"><input type="checkbox" data-show-all="' + cfg.kind + '"' +
-        (this[cfg.showAllKey] ? " checked" : "") + "> Show all</label></div>"
-      : '<div class="muted" style="margin-bottom:6px">Company-wide MRC' + mrcNote +
-        " — every " + lc + " is a candidate.</div>";
-    const docBy = {}, presBy = {};
-    cfg.inScope.forEach((r) => {
-      if (r.analysis_original_name) docBy[r[cfg.idKey]] = r.analysis_original_name;
-      if (r.presenter) presBy[r[cfg.idKey]] = r.presenter;
-    });
-    const rows = candidates.length ? candidates.map((m) => {
-      const d = m.data || {};
-      const id = m[cfg.idKey];
-      const inS = inScope.has(id);
-      return '<tr><td><input type="checkbox" data-scope="' + esc(id) + '"' + (inS ? " checked" : "") +
-        '></td><td class="modelid">' + esc(id) + "</td><td>" + fieldDisplay(d[cfg.nameKey]) +
-        "</td><td>" + tierBadge(d.tier) + "</td><td>" + ragBadge(d.rag_rating) +
-        "</td><td>" + this._presenterCell(id, inS, presBy) +
-        "</td><td>" + this._analysisCell(cfg, id, inS, docBy) + "</td></tr>";
-    }).join("") : '<tr><td colspan="7" class="empty">No ' + lc + "s match this scope.</td></tr>";
-    return banner +
-      "<table><thead><tr><th></th><th>" + cfg.label + " ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
-      "<th>Presenter</th><th>Analysis</th></tr></thead><tbody>" + rows + "</tbody></table>" +
-      '<div class="row" style="margin-top:10px">' +
-      '<button class="btn small primary" data-save-scope="' + cfg.kind + '">Save selection&hellip;</button>' +
-      '<span class="muted" style="margin-left:8px">' + inScope.size + " in scope.</span></div>";
-  },
-
-  // Presenter per in-scope item: a dropdown of people from the register.
-  _presenterCell(id, inScope, byId) {
-    if (!inScope) return '<span class="muted">—</span>';
-    const cur = byId[id] || "";
-    const opts = ['<option value=""></option>'].concat((this._people || []).map((p) =>
-      "<option" + (p.name === cur ? " selected" : "") + ">" + esc(p.name) + "</option>")).join("");
-    return '<select data-presenter="' + esc(id) + '">' + opts + "</select>";
-  },
-
-  // Analysis document per in-scope item: a download link (if uploaded) + upload.
-  _analysisCell(cfg, id, inScope, byId) {
-    if (!inScope) return '<span class="muted" style="font-size:11px">add to scope first</span>';
-    const name = byId[id];
-    const link = name
-      ? '<a href="/api/meetings/' + esc(this._id) + "/" + cfg.base + "/" + esc(id) +
-        '/analysis" target="_blank">' + esc(name) + "</a> "
-      : "";
-    return link + '<input type="file" id="an-file-' + esc(id) + '" style="display:none">' +
-      '<button class="btn small" data-an-upload="' + esc(id) + '">' + (name ? "Replace" : "Upload") + "&hellip;</button>";
+  // The reviewable documents held by each in-scope model, fetched once per render
+  // so the picker can offer them without a request per row.
+  async _loadReviewableDocs(cfg) {
+    const ids = cfg.inScope.map((m) => m[cfg.idKey]);
+    if (!ids.length) { this._reviewableDocs = {}; return; }
+    const out = {};
+    await Promise.all(ids.map(async (id) => {
+      try { out[id] = await App.get("/api/" + cfg.base + "/" + id + "/reviewable-documents"); }
+      catch (e) { out[id] = []; }
+    }));
+    this._reviewableDocs = out;
   },
 
   _bindModels() {
@@ -200,6 +169,44 @@ Object.assign(MeetingDetail, {
     const cfg = this._scopeCfg(this._analysisKind === "product" ? "product" : "model");
     const reload = () => self.show(self._id, "models_in_scope");
     // Analysis sub-tab switch (Models | Products) — re-render from cached data.
+    // Scope picker disclosure, its search filter, and the review accordion.
+    // The tabled paper is a reference to a document the model holds.
+    document.querySelectorAll("[data-analysis-ref]").forEach(function (sel) {
+      const id = sel.getAttribute("data-analysis-ref");
+      sel.onchange = function () {
+        const row = (cfg.inScope || []).find((m) => m[cfg.idKey] === id);
+        if (!row) return;
+        App.amend("Table " + (sel.value ? "a paper" : "no paper") + " for " + id + ".",
+          "POST", "/api/meetings/" + self._id + "/collections/" + cfg.collection + "/" + row.item_id,
+          { fields: { analysis_item_id: sel.value } },
+          () => self.show(self._id, self._tab));
+      };
+    });
+    document.querySelectorAll("[data-scope-toggle]").forEach(function (b) {
+      const k = b.getAttribute("data-scope-toggle");
+      b.onclick = function () { self["_scopeOpen_" + k] = !self._scopeOpen(k); self._render(); };
+    });
+    document.querySelectorAll("[data-review-toggle]").forEach(function (b) {
+      const id = b.getAttribute("data-review-toggle");
+      b.onclick = function (e) {
+        // The outcome dropdown lives in the header; clicking it must not collapse.
+        if (e.target.closest("select")) return;
+        self._reviewOpen = self._reviewOpen === id ? null : id;
+        self._render();
+      };
+    });
+    const search = document.getElementById("scope-search-" + cfg.kind);
+    if (search) {
+      // Filter in place rather than re-rendering: a re-render would lose focus
+      // and the caret after every keystroke.
+      search.oninput = function () {
+        const q = search.value.trim().toLowerCase();
+        search.closest(".card, div").parentNode
+          .querySelectorAll(".scope-scroll tbody tr").forEach(function (tr) {
+            tr.style.display = !q || tr.textContent.toLowerCase().indexOf(q) >= 0 ? "" : "none";
+          });
+      };
+    }
     document.querySelectorAll("[data-sgtab]").forEach(function (b) {
       b.onclick = function () { self._approvalKind = b.getAttribute("data-sgtab"); self._render(); };
     });

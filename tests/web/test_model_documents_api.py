@@ -47,7 +47,8 @@ def test_fields_endpoint_surfaces_each_category_in_one_place(client):
     """Every category belongs to exactly one panel, so the console never lists the
     same document twice. Testing evidence belongs to the Testing tab, not Docs."""
     specs = client.get("/api/models/fields").get_json()
-    assert specs["doc_tab_categories"] == ["Core Documentation", "Analysis", "Monitoring"]
+    assert specs["doc_tab_categories"] == [
+        "Core Documentation", "Sensitivity", "Analysis", "Monitoring", "History"]
     assert "Test Results" in specs["testing_doc_categories"]
     for testing_cat in specs["testing_doc_categories"]:
         assert testing_cat not in specs["doc_tab_categories"]
@@ -129,3 +130,17 @@ def test_download_missing_file_is_404(client):
 def test_delete_unknown_document_is_400(client):
     _register(client)
     assert client.post("/api/models/M1/documents/DOC-999/delete", headers=HEADERS).status_code == 400
+
+
+def test_issuing_a_model_risk_document_files_a_timestamped_copy(client, monkeypatch):
+    """Bi-temporal: the document renders the inventory as it stood when it was
+    issued, so each issue is kept under History rather than regenerated and lost."""
+    monkeypatch.setattr("src.governance.mrc.pack.compile_tex", lambda tex, assets=None: b"%PDF-stub")
+    _register(client)
+    assert client.get("/api/models/M1/risk-document.pdf").status_code == 200
+    client.get("/api/models/M1/risk-document.pdf")
+    docs = client.get("/api/models/M1").get_json()["data"]["documents"]
+    history = [d for d in docs if d.get("category") == "History"]
+    assert len(history) == 2, "each issue is filed, not overwritten"
+    assert all(d["original_name"].startswith("M1_model_risk_document_") for d in history)
+    assert len({d["original_name"] for d in history}) == 2, "timestamps distinguish them"
