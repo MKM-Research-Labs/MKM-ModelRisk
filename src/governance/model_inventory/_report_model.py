@@ -35,7 +35,8 @@ from __future__ import annotations
 from typing import Any
 
 from config.files import HIDDEN_DOC_EXTENSIONS
-from config.governance import COLLECTION_SPECS, MODEL_FIELD_SPECS
+from config.governance import (COLLECTION_SPECS, MODEL_FIELD_SPECS,
+                               TESTING_DOC_CATEGORIES)
 from src.files import extension
 from src.governance.latex import _esc, _para_table, _section, _subsection, _wrappable
 
@@ -50,6 +51,12 @@ SKIP_FIELDS = {"description"}
 # has got (Not Started -> ... -> Documentation Complete), whereas this says whether
 # the next review date has passed. Two different questions, both worth answering.
 REVIEW_DATES_GROUP = "Review dates"
+
+# The field group that reports testing. Its three fields are Yes/No flags, which
+# read as "no testing exists" when they are unset — even where a test-results pack
+# is attached to the model. The evidence is listed beneath them so the section
+# answers the question a reviewer is actually asking.
+TESTING_GROUP = "Testing"
 REVIEW_DUE_LABEL = "Review due (at report date)"
 
 # How each collection is laid out. A tuple gives each column's share of the text
@@ -160,6 +167,21 @@ def _collection(data: dict, name: str, label: str | None, heading,
     return heading(title, _para_table([f["label"] for f in fields], rows, list(layout)))
 
 
+def _testing_evidence(data: dict) -> str:
+    """The testing documents attached to the model, listed under the Testing
+    section. Without this the section shows three unset flags and nothing else, and
+    a reviewer concludes no testing was done when the pack is attached."""
+    docs = [d for d in items(data, "documents")
+            if d.get("category") in TESTING_DOC_CATEGORIES
+            and extension(d.get("original_name", "")) not in HIDDEN_DOC_EXTENSIONS]
+    if not docs:
+        return "\\textit{No testing evidence is attached to this model.}\n\n"
+    rows = [[d.get("category", ""), d.get("original_name", ""), d.get("description", "")]
+            for d in docs]
+    return ("\\textbf{Testing evidence attached}\\par\\medskip\n" +
+            _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45]))
+
+
 def _documents(data: dict, heading) -> str:
     """The evidence pack attached to the model. Filenames are listed so a reviewer
     can tie each dossier back to the document it was drawn from. Sources filed beside
@@ -195,6 +217,8 @@ def model_section(model: dict, review_status: str, *, standalone: bool = False) 
     for group, keys in _groups().items():
         extra = [[REVIEW_DUE_LABEL, review_status]] if group == REVIEW_DATES_GROUP else []
         parts.append(_field_group(data, group, keys, extra, heading))
+        if group == TESTING_GROUP:
+            parts.append(_testing_evidence(data))
     for name, label in COLLECTIONS:
         entries = history(data) if name == "version_history" else None
         parts.append(_collection(data, name, label, heading, entries))
