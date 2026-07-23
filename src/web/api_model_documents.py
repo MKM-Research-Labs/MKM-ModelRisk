@@ -57,7 +57,7 @@ def risk_report():
     })
 
 
-def _file_history_copy(model_id: str, pdf: bytes, stamp: str) -> None:
+def _file_history_copy(model_id: str, pdf: bytes, stamp: str, issued_at: str) -> None:
     """File the issued document against the model under History.
 
     Each issue is kept, timestamped, because the document renders the inventory as
@@ -69,7 +69,7 @@ def _file_history_copy(model_id: str, pdf: bytes, stamp: str) -> None:
     add_document(aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
                  scope=model_scope(model_id), category=HISTORY_DOC_CATEGORY,
                  filename=name, data=pdf,
-                 description="Model Risk Document issued " + stamp[:19].replace("T", " ") + " UTC",
+                 description="Model Risk Document issued " + issued_at,
                  actor=request_actor())
     rebuild_inventory_view()
 
@@ -81,12 +81,17 @@ def model_risk_document(model_id: str):
     model = get_model(model_id)
     if model is None:
         return jsonify({"error": "model not found"}), 404
-    pdf = render_model_document_pdf(model, get_settings(), date.today().isoformat())
-    # Milliseconds, not seconds: two issues a moment apart (a double-click) would
-    # otherwise share a filename, and the second would overwrite the first while
-    # both History entries still claimed to be distinct versions.
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%S.%f")[:-3] + "Z"
-    _file_history_copy(model_id, pdf, stamp)
+    now = datetime.now(timezone.utc)
+    # Two stamps from one instant: a filename-safe one for the filed copy and a
+    # readable one printed on the paper, so the History row and the document it
+    # points at agree. Milliseconds, not seconds — two issues a moment apart (a
+    # double-click) would otherwise share a filename and the second would
+    # overwrite the first while both rows claimed to be distinct versions.
+    stamp = now.strftime("%Y-%m-%dT%H%M%S.%f")[:-3] + "Z"
+    issued_at = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+    pdf = render_model_document_pdf(model, get_settings(), date.today().isoformat(),
+                                    issued_at=issued_at)
+    _file_history_copy(model_id, pdf, stamp, issued_at)
     return Response(pdf, mimetype="application/pdf", headers={
         "Content-Disposition": 'inline; filename="' + model_id + '_model_risk_document.pdf"',
     })

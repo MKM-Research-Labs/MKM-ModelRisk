@@ -157,11 +157,20 @@ const Detail = {
         "to send on.</span>" +
         '<span><a class="btn small" href="/api/models/' + esc(this._id) +
         '/pack.zip">Client pack (ZIP)</a> ' +
-        '<a class="btn small primary" target="_blank" rel="noopener" href="/api/models/' +
+        '<a class="btn small primary" target="_blank" rel="noopener" id="mrd-issue" href="/api/models/' +
         esc(this._id) + '/risk-document.pdf">Model Risk Document (PDF)</a></span></div>' +
         '<div id="docs-host"></div>';
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_tab_categories || [],
         this._model.retired, "/api/models/", () => this.show(this._id, "docs"), "docs-host");
+      // Issuing a document files a copy under History. The PDF opens in a new
+      // tab, so this one has to reload itself or History silently lags behind
+      // what was just issued.
+      const issue = document.getElementById("mrd-issue");
+      if (issue) {
+        issue.addEventListener("click", () => {
+          setTimeout(() => this.show(this._id, "docs"), 1500);
+        });
+      }
       return;
     }
     // Validation & Assumptions overlap — one tab: the SR 26-2 questions plus

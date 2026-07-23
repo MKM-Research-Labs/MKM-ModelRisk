@@ -41,25 +41,34 @@ DOC_TITLE = "Model Risk Document"
 
 
 def build_model_document_tex(model: dict, settings: dict, as_of: str,
-                             *, logo: bool = False) -> str:
-    """LaTeX source for one model's Model Risk Document."""
+                             *, logo: bool = False, issued_at: str = "") -> str:
+    """LaTeX source for one model's Model Risk Document.
+
+    ``as_of`` is the date the record is read at (it decides whether a review is
+    overdue). ``issued_at`` is when this copy was produced, shown in full on the
+    title page: two documents issued the same day describe different states of the
+    inventory, so the date alone does not identify which one you are holding.
+    """
     data = model.get("data", {})
     org = settings.get("fields", {}).get("org_name", "")
     title = str(model["model_id"]) + " --- " + str(data.get("name") or "")
     review = compute_review_status(data.get("next_review_date"), as_of)
     return (
         preamble(DOC_TITLE, org_name=org) + "\\begin{document}\n"
-        + front_matter(title, DOC_TITLE, org_name=org, date=as_of, logo=logo, toc=True)
+        + front_matter(title, DOC_TITLE, org_name=org, date=issued_at or as_of,
+                       logo=logo, toc=True)
         + model_section(model, review, standalone=True)
         + "\\clearpage\n"
-        + history_page(as_of, DOC_TITLE + " generated from the model inventory",
-                       org_name=org)
+        + history_page(issued_at or as_of,
+                       DOC_TITLE + " generated from the model inventory", org_name=org)
         + "\\end{document}\n"
     )
 
 
-def render_model_document_pdf(model: dict, settings: dict, as_of: str) -> bytes:
+def render_model_document_pdf(model: dict, settings: dict, as_of: str,
+                              issued_at: str = "") -> bytes:
     """Build and compile one model's Model Risk Document to PDF bytes."""
     assets = logo_asset(settings)
-    tex = build_model_document_tex(model, settings, as_of, logo=bool(assets))
+    tex = build_model_document_tex(model, settings, as_of, logo=bool(assets),
+                                   issued_at=issued_at)
     return pack.compile_tex(tex, assets)
