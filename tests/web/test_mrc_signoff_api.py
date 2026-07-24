@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from tests.web._signoff_flows import (
     _add,
+    decide,
     _register_subject_model,
     _request_signoff,
     _schedule,
@@ -337,3 +338,53 @@ def test_escalate_signoff_rejects_self(client):
     )
     assert response.status_code == 400
     assert "itself" in response.get_json()["error"]
+
+
+def test_second_rating_proposal_supersedes_the_first(client):
+    """Pressing Save twice must not put two live proposals in front of the
+    committee. A second proposal corrects the first rather than adding a
+    decision, so only one request stays open."""
+    _seed_mrc(client)
+    _register_subject_model(client)
+    _request_signoff(client, proposed_rag="Green")
+    response = _request_signoff(client, proposed_rag="Amber")
+
+    reqs = response.get_json()["data"]["signoff_requests"]
+    live = [r for r in reqs if r["status"] in ("Pending", "Attached")]
+    assert len(live) == 1
+    assert live[0]["proposed_rag"] == "Amber"
+    # The superseded one is kept, marked Withdrawn — the trail shows the change
+    # of mind rather than hiding it.
+    withdrawn = [r for r in reqs if r["status"] == "Withdrawn"]
+    assert len(withdrawn) == 1
+    assert withdrawn[0]["proposed_rag"] == "Green"
+
+
+def test_superseded_proposal_comes_off_the_agenda(client):
+    """A decision the committee never took should not sit among the ones it did."""
+    _seed_mrc(client)
+    _register_subject_model(client)
+    _schedule_meeting(client)
+    _request_signoff(client, proposed_rag="Green")
+    _request_signoff(client, proposed_rag="Amber")
+
+    agenda = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"]
+    items = _signoff_agenda_items(agenda)
+    assert len(items) == 1
+    assert items[0]["proposed_rag"] == "Amber"
+
+
+def test_a_decided_request_is_never_superseded(client):
+    """Only undecided requests are corrected. Anything the committee has already
+    ruled on is history and must survive a later proposal untouched."""
+    _seed_mrc(client)
+    _register_subject_model(client)
+    _schedule_meeting(client)
+    _request_signoff(client, proposed_rag="Green")
+    assert decide(client, _signoff_item(client)["item_id"]).status_code == 200
+
+    response = _request_signoff(client, proposed_rag="Red")
+    reqs = response.get_json()["data"]["signoff_requests"]
+    assert [r["status"] for r in reqs if r["proposed_rag"] == "Green"] == ["Completed"]
+    live = [r for r in reqs if r["status"] in ("Pending", "Attached")]
+    assert len(live) == 1 and live[0]["proposed_rag"] == "Red"

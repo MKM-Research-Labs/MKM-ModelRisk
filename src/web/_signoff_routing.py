@@ -53,6 +53,7 @@ from src.governance.mrc import (
     get_meeting,
     list_meetings,
     rebuild_meeting_view,
+    remove_collection_item as _mrc_remove,
 )
 
 
@@ -83,6 +84,56 @@ def earliest_scheduled_for_mrc(target_mrc: str, config=None) -> dict | None:
     return scheduled[0] if scheduled else None
 
 
+# A request the committee has not decided yet. Raising a replacement supersedes
+# exactly these; anything already Completed, Rejected or Withdrawn is history and
+# is left alone.
+OPEN_REQUEST_STATUS = ("Pending", "Attached")
+
+
+def withdraw_agenda_item(ctx: CommandContext, meeting_id: str, agenda_item_id: str,
+                         config=None) -> None:
+    """Take a superseded proposal off a meeting's agenda.
+
+    Removed rather than marked: an agenda item has no withdrawn status, and a
+    decision the committee never took should not sit among the ones it did. The
+    supersession itself stays on the subject as a Withdrawn request, and the
+    event log keeps the item that was removed, so nothing is lost from the
+    audit trail.
+    """
+    dispatch(
+        "remove_collection_item", _mrc_remove, context=ctx,
+        meeting_id=meeting_id, collection="agenda", item_id=agenda_item_id,
+    )
+    rebuild_meeting_view(config)
+
+
+def _supersede_open_requests(ctx: CommandContext, subject: Subject, subject_id: str,
+                             kind: str, config=None) -> int:
+    """Withdraw any undecided request of the same kind, and drop it from its agenda.
+
+    Without this, changing a proposed rating twice puts two live proposals in
+    front of the committee with nothing saying which is current — and an owner
+    who clicks Save more than once queues one item per click. A second proposal
+    is a correction of the first, not an additional decision to take.
+    """
+    fresh = subject.get(subject_id) or {"data": {}}
+    open_requests = [
+        r for r in (fresh["data"].get(REQUESTS) or [])
+        if (r.get("kind") or "rag") == kind
+        and r.get("status") in OPEN_REQUEST_STATUS
+    ]
+    for request in open_requests:
+        agenda_item_id = request.get("agenda_item_id")
+        meeting_id = request.get("meeting_id")
+        if agenda_item_id and meeting_id:
+            withdraw_agenda_item(ctx, meeting_id, agenda_item_id, config=config)
+        subject.update_item(ctx, subject_id, REQUESTS, request["item_id"],
+                            {"status": "Withdrawn"})
+    if open_requests:
+        subject.rebuild()
+    return len(open_requests)
+
+
 def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
                   target_mrc: str, kind: str = "rag", proposed_rag: str | None = None,
                   note: str | None = None) -> dict | None:
@@ -90,7 +141,11 @@ def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
 
     ``kind`` is what the committee is being asked to ratify (see
     VALID_SIGNOFF_KINDS); ``proposed_rag`` only applies to a rating request.
+
+    Any undecided request of the same kind is superseded first, so the committee
+    sees one live proposal per subject rather than one per time Save was pressed.
     """
+    _supersede_open_requests(ctx, subject, subject_id, kind)
     fields = {"kind": kind, "target_mrc": target_mrc, "status": "Pending"}
     if proposed_rag:
         fields["proposed_rag"] = proposed_rag

@@ -147,6 +147,21 @@ Object.assign(Detail, {
       value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key]) +
         '<span class="muted" style="font-size:11px;margin-left:12px">Table</span> ' +
         (tableRag ? ragBadge(tableRag) : '<span class="muted">&mdash;</span>');
+      // A proposed rating waits for the committee, so the stored rating does not
+      // move when it is raised. Saying so here is the difference between "my
+      // change was ignored" and "my change is with the MRC" — without it the
+      // screen looks identical after a save and invites the owner to try again.
+      const pending = (d.signoff_requests || []).filter(
+        (r) => (r.kind || "rag") === "rag" &&
+               (r.status === "Pending" || r.status === "Attached"));
+      if (pending.length) {
+        const p = pending[pending.length - 1];
+        value += '<div class="muted" style="font-size:11px;margin-top:4px">Proposed ' +
+          ragBadge(p.proposed_rag) + " &mdash; awaiting " +
+          esc(p.target_mrc || "MRC") +
+          (p.meeting_id ? " at " + esc(p.meeting_id) : " (not yet on an agenda)") +
+          "</div>";
+      }
     } else if (key === "tier" && (d[key] || d[key] === 0)) {
       value = tierBadge(d[key]) + ' <span class="muted">' + esc(tierFullLabel(d[key])) + "</span>";
     } else if (key === "source_module" && d[key]) {
