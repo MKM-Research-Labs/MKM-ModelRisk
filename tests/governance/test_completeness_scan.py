@@ -20,6 +20,8 @@
 """The completeness scan over the register, and the PDF it produces."""
 from __future__ import annotations
 
+import importlib
+
 import pytest
 
 from src.governance.completeness.report import (
@@ -98,3 +100,36 @@ def test_report_pdf_scans_the_register_itself(register, monkeypatch):
                         lambda tex, assets=None: b"%PDF-stub")
     assert render_completeness_pdf(SETTINGS, AS_OF) == b"%PDF-stub"
     assert render_completeness_pdf(SETTINGS, AS_OF, rows=scan(AS_OF)) == b"%PDF-stub"
+
+
+def test_document_with_no_filename_is_not_retrievable(tmp_path, monkeypatch):
+    """A record carrying no filename cannot produce a file, so it must not be
+    treated as evidence held."""
+    module = importlib.import_module("src.governance.completeness.scan")
+    check = module._retrievable("model/M1")
+    assert check({}) is False
+    assert check({"filename": ""}) is False
+
+
+def test_path_layer_failure_is_absent_evidence_not_a_crash(monkeypatch):
+    """One unresolvable path must not abort the whole audit: the finding is that
+    the evidence cannot be produced, which is what the register should say."""
+    # The package re-exports scan() as a function, which shadows the module of
+    # the same name; even "import a.b.scan as m" resolves to the function via
+    # attribute lookup, so the module has to be fetched by name.
+    module = importlib.import_module("src.governance.completeness.scan")
+
+    def _boom(scope, filename):
+        raise OSError("name too long")
+
+    monkeypatch.setattr(module, "upload_path", _boom)
+    assert module._retrievable("model/M1")({"filename": "x.pdf"}) is False
+
+
+def test_record_with_no_findings_renders_a_clean_dossier():
+    from src.governance.completeness.report import _dossier
+    row = {"entity_id": "M1", "entity_name": "Alpha", "entity_kind": "Model",
+           "gaps": [], "completeness": 1.0, "tier": 1, "rag": "Green",
+           "events_in_window": 0, "escalation": 1.0, "tier_weight": 1.0,
+           "rag_multiplier": 1.0, "event_pressure": 1.0, "staleness": 1.0}
+    assert "No completeness findings" in _dossier(row)

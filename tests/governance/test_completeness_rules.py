@@ -250,3 +250,32 @@ def test_completeness_weights_the_expensive_fields_more_heavily():
     expensive = _audit({"tier": 1}, specs=specs, docs=())["completeness"]
     cheap = _audit({"division": "Markets"}, specs=specs, docs=())["completeness"]
     assert expensive > cheap
+
+
+def test_exempt_collection_raises_no_finding():
+    """An empty remediation list means nothing is outstanding. Scoring it would
+    penalise exactly the records with the cleanest history."""
+    result = audit_entity(
+        entity_kind="Model", entity_id="M1", entity_name="Alpha", data={},
+        field_specs={}, collection_specs={"remediation_steps": {"label": "Remediation"}},
+        doc_categories=(), risk=NO_RISK, as_of=AS_OF)
+    assert result["gaps"] == []
+
+
+def test_staleness_falls_through_when_the_ladder_has_no_matching_step(monkeypatch):
+    """The shipped ladder bottoms at 0 days, so every overdue review matches a
+    step. An adopter who removes that bottom rung must still get a defined
+    answer rather than None — this guards that fall-through."""
+    from src.governance.completeness import _rules
+    monkeypatch.setattr(_rules, "STALENESS_STEPS", ((365, 1.20),))
+    assert _rules.staleness("2026-07-20", AS_OF) == _rules.STALENESS_NONE
+
+
+def test_fully_populated_collection_raises_no_finding():
+    result = audit_entity(
+        entity_kind="Model", entity_id="M1", entity_name="Alpha",
+        data={"assumptions": [{"description": "x"}]},
+        field_specs={}, collection_specs={"assumptions": {"label": "Assumptions"}},
+        doc_categories=(), risk=NO_RISK, as_of=AS_OF)
+    assert result["gaps"] == []
+    assert result["completeness"] == 1.0

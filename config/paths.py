@@ -47,3 +47,9 @@ PRODUCER_ROOT = Path(os.environ.get("PRODUCER_ROOT", str(_REPO_ROOT.parent / "Ph
 PRODUCER_INVENTORY = (
     PRODUCER_ROOT / "docs" / "models" / "governance_data" / "model_inventory.json"
 )
+
+# Where the producing repo's portfolio generator ("port") leaves its output. The
+# files are named "input" because a generated portfolio is the *input* to every
+# downstream model; it is nonetheless port's output, and it is what ongoing
+# monitoring observes. One sub-directory per catchment.
+PRODUCER_PORTFOLIO_DIR = PRODUCER_ROOT / "data" / "input"

@@ -51,3 +51,36 @@ TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", "Benc
 EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
 
 DOC_CATEGORIES = DOC_TAB_CATEGORIES + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
+
+# --- Ongoing monitoring -----------------------------------------------------
+# The portfolio files a completed port run leaves in each catchment directory,
+# and the label each carries in the monitoring document's activity table. Only
+# these are counted: a catchment holds many derived variants (…bri, …baw, …hc)
+# that restate the same population through one model's lens, and counting those
+# would report the same portfolio several times over.
+PORTFOLIO_FILES = (
+    ("property.json", "Properties"),
+    ("commercial.json", "Commercial properties"),
+    ("commercial_loan.json", "Commercial loans"),
+    ("mortgage.json", "Mortgages"),
+    ("gauge.json", "Gauges"),
+    ("counterparty.json", "Counterparties"),
+)
+
+# What a monitoring document says where a catchment directory exists but holds no
+# portfolio, and where the platform has no production activity at all. Ongoing
+# monitoring is a real obligation, so the document states the position plainly
+# rather than going quiet: an absent document and one that records "nothing yet"
+# are very different things to an auditor.
+NO_PORTFOLIO_STATEMENT = (
+    "No portfolio has been generated for this catchment, so no monitoring "
+    "observations arise from it."
+)
+NO_PRODUCTION_STATEMENT = (
+    "The portfolios below are generated test portfolios, not client business. "
+    "Monitoring therefore records that the model has been exercised and against "
+    "which population, rather than reporting exceptions from production use. "
+    "Ongoing monitoring becomes substantive once real portfolios are onboarded, "
+    "at which point the triggers recorded against each weakness and limitation "
+    "below are the conditions this document will report against."
+)
