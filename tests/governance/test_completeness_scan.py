@@ -133,3 +133,32 @@ def test_record_with_no_findings_renders_a_clean_dossier():
            "events_in_window": 0, "escalation": 1.0, "tier_weight": 1.0,
            "rag_multiplier": 1.0, "event_pressure": 1.0, "staleness": 1.0}
     assert "No completeness findings" in _dossier(row)
+
+
+def _plain(tex: str) -> str:
+    """Strip the LaTeX the table helpers add, so a test can look for the value
+    the config actually holds rather than its typeset form."""
+    return tex.replace("\\allowbreak{}", "").replace("\\_", "_")
+
+
+def test_appendix_lists_every_exclusion_the_scoring_applies():
+    """The document tells a reader what it does not report. If an exclusion is
+    added to the config and not to the appendix, the report understates its own
+    scope — which is the one omission a completeness audit cannot make."""
+    from config.governance import (CONDITIONAL_DOC_CATEGORIES, DOC_CATEGORY_SATISFIED_BY,
+                                   EXEMPT_COLLECTIONS, EXEMPT_DOC_CATEGORIES,
+                                   EXEMPT_FIELDS)
+    from src.governance.completeness._method import appendix
+    printed = _plain(appendix())
+    for name in (list(EXEMPT_COLLECTIONS) + list(EXEMPT_FIELDS)
+                 + list(EXEMPT_DOC_CATEGORIES) + list(CONDITIONAL_DOC_CATEGORIES)
+                 + list(DOC_CATEGORY_SATISFIED_BY)):
+        assert name in printed, name
+
+
+def test_appendix_lists_the_placeholder_values():
+    from config.governance import PLACEHOLDER_VALUES
+    from src.governance.completeness._method import appendix
+    printed = _plain(appendix())
+    for value in PLACEHOLDER_VALUES:
+        assert value in printed, value

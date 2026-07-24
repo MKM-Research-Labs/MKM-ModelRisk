@@ -29,6 +29,9 @@ from __future__ import annotations
 
 from config.governance import (
     AUDIT_BASIS,
+    DOC_CATEGORY_SATISFIED_BY,
+    EXEMPT_DOC_CATEGORIES,
+    PLACEHOLDER_VALUES,
     BROKEN_DOC_ESCALATION,
     COLLECTION_CRITICALITY,
     COMPLETENESS_ACCEPTABLE_AT,
@@ -78,12 +81,22 @@ METHOD = (
     "critical \\emph{and} rated Red \\emph{and} carrying recent operational "
     "failures is not four separate small problems. Every input is tabulated in "
     "the appendix, so any severity in this report can be reproduced by hand.\n\n"
-    "Two classes of absence are deliberately \\emph{not} reported as findings. "
-    "Collections whose empty state is legitimate are excluded -- an empty "
-    "remediation list means nothing is outstanding and an empty events list "
-    "means nothing has gone wrong, so scoring them would penalise the "
+    "Several classes of absence are deliberately \\emph{not} reported as "
+    "findings. Collections whose empty state is legitimate are excluded -- an "
+    "empty remediation list means nothing is outstanding and an empty events "
+    "list means nothing has gone wrong, so scoring them would penalise the "
     "best-kept records. Evidence categories are only expected where there is "
-    "something to evidence. Both exclusions are listed in the appendix.\n\n"
+    "something to evidence. Documentation the platform files on its own "
+    "initiative is never an owner's obligation. And a documentation category "
+    "covered by a broader evidence pack is closed by that pack rather than "
+    "demanded again in its own right. Every exclusion is listed in the "
+    "appendix, with the reason for it.\n\n"
+    "One class of \\emph{apparent} presence is treated as absence. A field "
+    "holding a placeholder -- \"TBD\", \"N/A\", a dash -- reads to the "
+    "register as filled and to a person as empty. Scoring it as recorded would "
+    "let a record certify itself complete on words that commit to nothing, "
+    "which is the failure this audit exists to detect rather than to repeat. "
+    "The full list of values treated this way is in the appendix.\n\n"
     "A documentation category whose records all point at files that are absent "
     "from the document store is reported separately from one never populated, "
     "and scored " + f"{BROKEN_DOC_ESCALATION:g}" + " times higher. Both leave "
@@ -98,6 +111,20 @@ METHOD = (
     "materially incomplete below "
     + f"{COMPLETENESS_ACCEPTABLE_AT:.0%}".replace("%", "\\%") + ".\n\n"
 )
+
+
+def _literal(value: str) -> str:
+    """A config value shown so it cannot be misread.
+
+    Runs of hyphens are set as en- and em-dashes by LaTeX's ligatures, so the
+    appendix would print a different string from the one the scoring compares
+    against -- and this table exists precisely so a reader can reproduce a score
+    by hand. Naming the character count removes the ambiguity without reaching
+    into the shared table helpers, which escape their input by design.
+    """
+    if set(value) == {"-"}:
+        return f"{value} ({len(value)} hyphen{'s' if len(value) > 1 else ''})"
+    return value
 
 
 def _criticality_rows(weights: dict, default: float, universe) -> list[list]:
@@ -165,7 +192,16 @@ def appendix() -> str:
                for name in sorted(EXEMPT_FIELDS)]
             + [[name, "Only expected where there is something to evidence "
                       f"(here: {trigger})"]
-               for name, trigger in sorted(CONDITIONAL_DOC_CATEGORIES.items())],
+               for name, trigger in sorted(CONDITIONAL_DOC_CATEGORIES.items())]
+            + [[name, "Filed by the platform itself, never uploaded by an owner"]
+               for name in sorted(EXEMPT_DOC_CATEGORIES)]
+            + [[name, f"Reported within the {covering} pack; a second upload "
+                      "restating it would close no gap"]
+               for name, covering in sorted(DOC_CATEGORY_SATISFIED_BY.items())],
             [0.35, 0.65])),
+        _subsection("Values treated as unrecorded", _para_table(
+            ["Value", "Effect"],
+            [[_literal(value), "Scored as absent, not as an answer"]
+             for value in sorted(PLACEHOLDER_VALUES)], [0.35, 0.65])),
     ]
     return _section("Appendix: scoring basis", "".join(body))
