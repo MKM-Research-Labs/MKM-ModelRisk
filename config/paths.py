@@ -48,8 +48,12 @@ PRODUCER_INVENTORY = (
     PRODUCER_ROOT / "docs" / "models" / "governance_data" / "model_inventory.json"
 )
 
-# Where the producing repo's portfolio generator ("port") leaves its output. The
-# files are named "input" because a generated portfolio is the *input* to every
-# downstream model; it is nonetheless port's output, and it is what ongoing
-# monitoring observes. One sub-directory per catchment.
+# Where the producing repo's portfolio generator ("port") leaves its output, read
+# by ongoing monitoring to record what each model has been exercised against. One
+# sub-directory per population group (here, a catchment).
+#
+# The trailing "input" is not a mistake: a generated portfolio is the *input* to
+# every downstream model, so port writes its output there. An adopter whose
+# generator writes elsewhere re-points this; if it resolves to nothing, the
+# monitoring report says so rather than reporting an empty estate.
 PRODUCER_PORTFOLIO_DIR = PRODUCER_ROOT / "data" / "input"

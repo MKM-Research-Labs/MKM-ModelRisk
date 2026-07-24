@@ -54,6 +54,7 @@ from config.governance import (
     UNRATED_MULTIPLIER,
     UNTIERED_WEIGHT,
 )
+from config.governance import DOC_CATEGORY_SATISFIED_BY, EXEMPT_DOC_CATEGORIES
 from src.governance.completeness._gaps import (
     _collection_gaps,
     _collection_shortfall,
@@ -210,7 +211,16 @@ def _carried(data: dict, field_specs: dict, collection_specs: dict,
         answered, expected = _collection_shortfall(data, name)
         total += (COLLECTION_CRITICALITY.get(name, DEFAULT_COLLECTION_CRITICALITY)
                   * min(answered / expected, 1.0) if expected else 0)
+    # Documentation counts toward completeness on exactly the terms it is asked
+    # for: a category never demanded (History) is not credited either, and one
+    # closed by a broader pack is credited through that pack. Crediting a
+    # category the register does not require would let a record climb above the
+    # threshold on evidence nobody asked it to produce.
     retrievable, _ = _held_categories(data, available)
-    total += sum(DOC_CRITICALITY.get(c, DEFAULT_DOC_CRITICALITY)
-                 for c in doc_categories if c in retrievable)
+    for category in doc_categories:
+        if category in EXEMPT_DOC_CATEGORIES:
+            continue
+        covering = DOC_CATEGORY_SATISFIED_BY.get(category)
+        if category in retrievable or (covering and covering in retrievable):
+            total += DOC_CRITICALITY.get(category, DEFAULT_DOC_CRITICALITY)
     return total

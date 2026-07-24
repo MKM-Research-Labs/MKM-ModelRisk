@@ -279,3 +279,39 @@ def test_fully_populated_collection_raises_no_finding():
         doc_categories=(), risk=NO_RISK, as_of=AS_OF)
     assert result["gaps"] == []
     assert result["completeness"] == 1.0
+
+
+def test_placeholder_values_do_not_count_as_recorded():
+    """A field holding "TBD" reads as filled to the register and as empty to a
+    person. Scoring it as recorded lets a record certify itself complete on words
+    that commit to nothing — the failure this audit exists to catch."""
+    specs = {k: MODEL_FIELD_SPECS[k] for k in ("peer_reviewer",)}
+    for value in ("TBD", "tbd", " N/A ", "--", "pending"):
+        result = _audit({"peer_reviewer": value}, specs=specs, docs=())
+        assert [g["key"] for g in result["gaps"]] == ["peer_reviewer"], value
+
+
+def test_a_real_answer_is_still_recorded():
+    specs = {k: MODEL_FIELD_SPECS[k] for k in ("peer_reviewer",)}
+    assert _audit({"peer_reviewer": "A. Reviewer"}, specs=specs, docs=())["gaps"] == []
+
+
+def test_history_category_is_never_an_owner_obligation():
+    """History holds copies the platform files automatically when a Model Risk
+    Document is issued; demanding it reports platform usage, not governance."""
+    assert "History" not in {g["key"] for g in _audit({})["gaps"]}
+
+
+def test_test_results_pack_closes_the_sub_test_categories():
+    """The pack reports every unit and integration test with its assertions;
+    three further uploads restating the same run close no real gap."""
+    data = {"documents": [{"category": "Test Results", "filename": "t.pdf"}]}
+    keys = {g["key"] for g in _audit(data, available=lambda d: True)["gaps"]}
+    assert not ({"Unit Test", "Integration Test", "Benchmark Test"} & keys)
+
+
+def test_sub_test_categories_are_raised_when_no_pack_exists():
+    """A model with no testing evidence at all is still reported — the pack
+    closes them, its absence does not."""
+    keys = {g["key"] for g in _audit({})["gaps"]}
+    assert {"Unit Test", "Integration Test", "Benchmark Test"} <= keys

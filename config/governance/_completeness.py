@@ -26,21 +26,13 @@ model with no benchmark tests and a Tier 1 Red model with no validation date are
 not the same finding, and a flat list of absences invites a reviewer to work the
 easy end of it.
 
-The score is a product of one criticality weight and four escalation factors:
+This module holds what each missing thing is *worth* before any escalation --
+the criticality weights, and the rules deciding which documentation categories
+are asked for at all. The escalation factors and severity bands that turn a
+weight into a finding live in ``_completeness_scoring``.
 
-    severity = criticality x tier x rag x events x staleness
-
-Multiplicative rather than additive so the factors compound the way the risk
-itself does -- an unvalidated model that is also mission critical, also rated
-Red, also carrying recent operational failures and also overdue for review is
-not four separate small problems. Each factor is centred on 1.0 (no escalation)
-so a weight that is not applicable leaves the score untouched, and every input is
-published in the report's appendix so an audit professional can reproduce any
-severity by hand from the four numbers.
-
-The thresholds below are deliberately in the same idiom as ``RISK_WEIGHTS`` and
-``RISK_ACCEPTABLE_AT``: an adopting institution changes its risk appetite here,
-in one place, rather than in the scoring code.
+Every value here is a judgement an adopting institution is expected to re-set to
+its own framework, which is why they are data rather than thresholds in code.
 """
 from __future__ import annotations
 
@@ -175,6 +167,34 @@ DOC_CRITICALITY = {
     "Remediation Evidence": 0.70,
 }
 
+# Documentation categories that are never an owner's obligation, so their absence
+# is not a finding. "History" holds the copies the platform files automatically
+# each time a Model Risk Document is issued: demanding it would raise a finding
+# against every model that has never had one issued, which is a statement about
+# platform usage rather than about the governance record.
+EXEMPT_DOC_CATEGORIES = ("History",)
+
+# Categories satisfied by a broader evidence pack rather than in their own right.
+# The Test Results document reports every unit, integration and benchmark test
+# with its assertions; requiring three further uploads restating the same run
+# raises three findings per model that no additional evidence would close.
+# Where the pack is absent the sub-categories are raised as normal, so a model
+# with no testing evidence at all is still reported.
+DOC_CATEGORY_SATISFIED_BY = {
+    "Unit Test": "Test Results",
+    "Integration Test": "Test Results",
+    "Benchmark Test": "Test Results",
+}
+
+# Values that look like an answer but are not one. A field holding "TBD" is
+# indistinguishable from an empty one to a reader of the register, and scoring it
+# as recorded lets a record certify itself complete on placeholders -- which is
+# the failure this audit exists to catch, not to commit.
+PLACEHOLDER_VALUES = (
+    "tbd", "tba", "n/a", "na", "none", "nil", "todo", "to do", "pending",
+    "unknown", "-", "--", "---", "?", "??", "???", "x", "xxx",
+)
+
 # Categories that are only a gap when there is something for them to evidence.
 # Each maps to the collection whose open items make the category expected: no
 # recorded events means no missing event evidence. This is what stops the audit
@@ -183,100 +203,3 @@ CONDITIONAL_DOC_CATEGORIES = {
     "Event Evidence": "operational_failure_events",
     "Remediation Evidence": "remediation_steps",
 }
-
-# ---------------------------------------------------------------------------
-# Escalation factors. Each is centred on 1.0 -- a factor that does not apply
-# leaves the severity where the criticality put it.
-# ---------------------------------------------------------------------------
-
-# Tier is the institution's own statement of how much the model matters, so it is
-# the primary escalation. Tier 3 is damped rather than zeroed: "not important"
-# is not "unaudited".
-TIER_WEIGHTS = {1: 1.00, 2: 0.80, 3: 0.60}
-UNTIERED_WEIGHT = 0.90          # an untiered model is treated as nearly Tier 1:
-                                # the absent tier is itself the reason to look.
-
-RAG_MULTIPLIERS = {"Red": 1.25, "Amber": 1.10, "Green": 1.00}
-# An unrated model escalates above Green. A missing rating is not evidence of a
-# healthy one, and treating it as Green would let the least-governed models sink
-# to the bottom of the remediation list.
-UNRATED_MULTIPLIER = 1.15
-
-# Operational failure events in the rolling window (EVENTS_WINDOW_DAYS). A model
-# that has actually failed in production carries more weight than one that has
-# not, and the effect is capped so a single bad year cannot dominate the ranking.
-EVENT_PRESSURE_PER_EVENT = 0.05
-EVENT_PRESSURE_CAP = 1.25
-
-# Review staleness, applied against next_review_date. A record that was complete
-# at its last review and has since gone unreviewed is a weaker assurance than the
-# same record reviewed last month.
-STALENESS_STEPS = (
-    # (days overdue at or beyond, multiplier)
-    (365, 1.20),
-    (180, 1.12),
-    (90, 1.07),
-    (0, 1.03),
-)
-STALENESS_NONE = 1.00
-
-# ---------------------------------------------------------------------------
-# Bands and remediation.
-# ---------------------------------------------------------------------------
-# (label, score at or above). Ordered worst first; the first match wins.
-#
-# Calibrated against the escalation range rather than the raw criticality scale,
-# which spans 0.30-1.00 while escalation spans 0.60 (Tier 3, Green, clean, in
-# date) to 1.875 (Tier 1, Red, five-plus events, a year overdue). The boundaries
-# are set so that:
-#   - a high-criticality gap on a routine Tier 2 Green record reads High, not
-#     Critical -- otherwise "Critical" describes the ordinary case and stops
-#     carrying information;
-#   - the same gap on a Tier 1 Red record with live events reads Critical;
-#   - a low-criticality gap on a Tier 3 record reads Low.
-# Set too low, every finding on a badly-kept record bands Critical together and
-# the register no longer says what to do first, which is the one thing an audit
-# reader needs from it.
-SEVERITY_BANDS = (
-    ("Critical", 1.00),
-    ("High", 0.60),
-    ("Medium", 0.35),
-    ("Low", 0.00),
-)
-
-# Target working days to close, by band. Printed against every finding so the
-# register doubles as a remediation plan rather than needing one written after.
-REMEDIATION_SLA_DAYS = {
-    "Critical": 30,
-    "High": 60,
-    "Medium": 90,
-    "Low": 180,
-}
-
-# The recommended action, by gap kind. Phrased as an instruction to the named
-# owner, because a finding an auditor cannot hand to somebody is an observation.
-REMEDIATION_ACTIONS = {
-    "field": "Record {item} on the {entity} record.",
-    "collection": "Document at least one {item} entry.",
-    "collection_partial": "Complete the outstanding {item} ({detail}).",
-    "document": "Upload a document under {item} against the {entity}.",
-    "document_broken": "Re-upload under {item}: the record cites a file that is "
-                       "not in the document store and cannot be produced.",
-}
-
-# A document recorded on the register whose file is absent scores above one never
-# uploaded at all. Both leave the same hole in the evidence, but the broken
-# reference also asserts to a reader that the evidence exists -- an inventory
-# that overstates its own coverage is the more serious audit finding, and it will
-# not be caught by anyone reading the register alone.
-BROKEN_DOC_ESCALATION = 1.15
-
-# Entity-level roll-up. A record is reported as materially incomplete once its
-# weighted completeness falls below this, mirroring RISK_ACCEPTABLE_AT's role of
-# turning a continuous score into a statement the committee can act on.
-COMPLETENESS_ACCEPTABLE_AT = 0.85
-COMPLETENESS_CONDITIONAL_AT = 0.60
-
-# The standard the report cites for its scope. Named here so an adopter
-# re-pointing the audit at their own framework changes the citation with it.
-AUDIT_BASIS = "SR 26-2 (superseding SR 11-7) and PRA SS1/23"

@@ -182,3 +182,25 @@ def test_render_compiles_the_document_to_pdf(monkeypatch):
     pdf = module.render_monitoring_pdf(_model(), SETTINGS, AS_OF, found=[])
     assert pdf == b"%PDF stub"
     assert "Ongoing Monitoring Report" in captured["tex"]
+
+
+def test_unconfigured_source_is_reported_as_such_not_as_an_empty_estate():
+    """"We never looked" and "we looked and found nothing" are different findings.
+    An adopter who has not pointed the platform at a generator must be told so,
+    not handed a document reporting nought catchments as though that were news."""
+    tex = build_monitoring_tex(_model(), SETTINGS, AS_OF, found=[], configured=False)
+    assert "No portfolio source is configured" in tex
+    assert "catchments" not in tex.split("Monitoring position")[0].split(
+        "Portfolio activity")[1]
+
+
+def test_configured_but_empty_source_still_reports_the_estate():
+    tex = build_monitoring_tex(_model(), SETTINGS, AS_OF, found=[], configured=True)
+    assert "No portfolio source is configured" not in tex
+    assert "\\textbf{0} of \\textbf{0} catchments" in tex
+
+
+def test_source_presence_follows_the_configured_location(tmp_path):
+    from src.governance.monitoring.portfolio import source_present
+    assert source_present(tmp_path) is True
+    assert source_present(tmp_path / "absent") is False

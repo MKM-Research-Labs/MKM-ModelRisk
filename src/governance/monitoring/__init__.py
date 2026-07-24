@@ -20,10 +20,11 @@
 """Ongoing monitoring: what the models have been exercised against, and the
 standing position on every recorded weakness and limitation of use.
 """
-from src.governance.monitoring.portfolio import catchments, summary
+from src.governance.monitoring.portfolio import catchments, source_present, summary
 from src.governance.monitoring.report import (
     build_monitoring_tex,
     render_monitoring_pdf,
 )
 
-__all__ = ["build_monitoring_tex", "catchments", "render_monitoring_pdf", "summary"]
+__all__ = ["build_monitoring_tex", "catchments", "render_monitoring_pdf",
+           "source_present", "summary"]

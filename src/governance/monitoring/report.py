@@ -35,11 +35,12 @@ from __future__ import annotations
 from config.governance import (
     NO_PORTFOLIO_STATEMENT,
     NO_PRODUCTION_STATEMENT,
+    NO_SOURCE_STATEMENT,
 )
 from src.governance.latex import (_para_table, _section, _subsection, front_matter,
                                   history_page, logo_asset, preamble)
 from src.governance.model_inventory._report_model import items
-from src.governance.monitoring.portfolio import catchments, summary
+from src.governance.monitoring.portfolio import catchments, source_present, summary
 from src.governance.mrc import pack
 
 TITLE = "Ongoing Monitoring Report"
@@ -65,8 +66,15 @@ def _basis(model: dict) -> str:
     return _section("Basis of monitoring", body)
 
 
-def _activity(found: list[dict]) -> str:
-    """The portfolio estate: what has been built, and what has not."""
+def _activity(found: list[dict], configured: bool = True) -> str:
+    """The portfolio estate: what has been built, and what has not.
+
+    An unconfigured source is reported as such rather than as an empty estate —
+    "we looked and found nothing" and "we never looked" are different statements
+    to make in a governance document.
+    """
+    if not configured:
+        return _section("Portfolio activity", NO_SOURCE_STATEMENT + "\n\n")
     totals = summary(found)
     lead = (
         f"Portfolios generated to date: \\textbf{{{totals['populated']}}} of "
@@ -116,17 +124,19 @@ def _limitations(data: dict) -> str:
 
 
 def build_monitoring_tex(model: dict, settings: dict, as_of: str, *,
-                         logo: bool = False, found=None) -> str:
+                         logo: bool = False, found=None,
+                         configured: bool | None = None) -> str:
     """LaTeX source for one model's Ongoing Monitoring Report."""
     data = model.get("data", {})
     org = settings.get("fields", {}).get("org_name", "")
     found = catchments() if found is None else found
+    configured = source_present() if configured is None else configured
     title = f"{model['model_id']} --- {data.get('name') or ''}"
     return (
         preamble(TITLE, org_name=org) + "\\begin{document}\n"
         + front_matter(title, TITLE, org_name=org, date=as_of, logo=logo, toc=True)
         + _basis(model)
-        + _activity(found)
+        + _activity(found, configured)
         + _section("Monitoring position",
                    _weaknesses(data) + _limitations(data))
         + "\\clearpage\n"
@@ -136,9 +146,11 @@ def build_monitoring_tex(model: dict, settings: dict, as_of: str, *,
     )
 
 
-def render_monitoring_pdf(model: dict, settings: dict, as_of: str, found=None) -> bytes:
+def render_monitoring_pdf(model: dict, settings: dict, as_of: str, found=None,
+                          configured: bool | None = None) -> bytes:
     """Build and compile one model's Ongoing Monitoring Report to PDF bytes."""
     assets = logo_asset(settings)
     return pack.compile_tex(
-        build_monitoring_tex(model, settings, as_of, logo=bool(assets), found=found),
+        build_monitoring_tex(model, settings, as_of, logo=bool(assets), found=found,
+                             configured=configured),
         assets)

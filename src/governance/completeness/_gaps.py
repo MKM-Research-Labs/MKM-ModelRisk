@@ -33,24 +33,34 @@ from config.governance import (
     COLLECTION_ANSWERED,
     COLLECTION_CRITICALITY,
     CONDITIONAL_DOC_CATEGORIES,
+    DOC_CATEGORY_SATISFIED_BY,
     DEFAULT_COLLECTION_CRITICALITY,
     DEFAULT_DOC_CRITICALITY,
     DEFAULT_FIELD_CRITICALITY,
     DOC_CRITICALITY,
     EXEMPT_COLLECTIONS,
+    EXEMPT_DOC_CATEGORIES,
     EXEMPT_FIELDS,
     FIELD_CRITICALITY,
+    PLACEHOLDER_VALUES,
 )
 
 
 def _recorded(value: Any) -> bool:
     """Whether a scalar field holds an answer.
 
-    A recorded "No" is an answer, so only ``None`` and the empty string count as
-    absent. Treating a negative as a gap would push owners to leave fields blank
-    rather than record an inconvenient truth.
+    A recorded "No" is an answer, so a negative does not count as absent:
+    treating it as a gap would push owners to leave a field blank rather than
+    record an inconvenient truth.
+
+    A placeholder is not an answer. "TBD" reads to a register as filled and to a
+    reader as empty, and scoring it as recorded lets a record certify itself
+    complete on words that commit to nothing.
     """
-    return value is not None and str(value).strip() != ""
+    if value is None:
+        return False
+    text = str(value).strip()
+    return bool(text) and text.casefold() not in PLACEHOLDER_VALUES
 
 
 def _entries(data: dict, name: str) -> list[dict]:
@@ -140,7 +150,13 @@ def _document_gaps(data: dict, categories: tuple, available=None) -> list[dict]:
     retrievable, cited_only = _held_categories(data, available)
     gaps = []
     for category in categories:
-        if category in retrievable:
+        if category in retrievable or category in EXEMPT_DOC_CATEGORIES:
+            continue
+        # A category covered by a broader pack is closed by that pack: the Test
+        # Results document already reports every unit and integration test it
+        # would restate.
+        covering = DOC_CATEGORY_SATISFIED_BY.get(category)
+        if covering and covering in retrievable:
             continue
         trigger = CONDITIONAL_DOC_CATEGORIES.get(category)
         # Evidence categories are only expected once there is something to

@@ -53,11 +53,15 @@ EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
 DOC_CATEGORIES = DOC_TAB_CATEGORIES + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
 
 # --- Ongoing monitoring -----------------------------------------------------
-# The portfolio files a completed port run leaves in each catchment directory,
-# and the label each carries in the monitoring document's activity table. Only
-# these are counted: a catchment holds many derived variants (…bri, …baw, …hc)
-# that restate the same population through one model's lens, and counting those
-# would report the same portfolio several times over.
+# The artefacts an adopting institution's portfolio generator leaves behind, and
+# the label each carries in the monitoring document's activity table. These
+# names are ours; an adopter replaces them with its own, exactly as it replaces
+# the classification banner and legal notice in config/reporting.py. Nothing
+# below is a platform constant — it is the vocabulary of one estate.
+#
+# Only the canonical files are listed: a catchment holds many derived variants
+# (…bri, …baw, …hc) that restate the same population through one model's lens,
+# and counting those would report the same portfolio several times over.
 PORTFOLIO_FILES = (
     ("property.json", "Properties"),
     ("commercial.json", "Commercial properties"),
@@ -75,6 +79,17 @@ PORTFOLIO_FILES = (
 NO_PORTFOLIO_STATEMENT = (
     "No portfolio has been generated for this catchment, so no monitoring "
     "observations arise from it."
+)
+# Said when the configured portfolio location does not resolve at all. Kept
+# distinct from "the estate is empty": an adopter who has not yet pointed
+# PRODUCER_PORTFOLIO_DIR at their generator would otherwise get a document
+# reporting nought catchments as though that were the finding, rather than being
+# told the platform never looked anywhere useful.
+NO_SOURCE_STATEMENT = (
+    "No portfolio source is configured for this installation, so no exercise "
+    "record can be drawn. The monitoring position recorded below against each "
+    "weakness and limitation therefore rests on the inventory alone. Point the "
+    "platform at the portfolio generator's output to populate this section."
 )
 NO_PRODUCTION_STATEMENT = (
     "The portfolios below are generated test portfolios, not client business. "

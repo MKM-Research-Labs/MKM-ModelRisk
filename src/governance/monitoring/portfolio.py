@@ -106,6 +106,16 @@ def catchments(root: Path | None = None) -> list[dict[str, Any]]:
     return found
 
 
+def source_present(root: Path | None = None) -> bool:
+    """Whether the configured portfolio location resolves at all.
+
+    Distinct from "it resolved and held nothing": an installation that has never
+    been pointed at a generator, and one whose generator has not run, are
+    different findings and the document says which it is.
+    """
+    return Path(root or PRODUCER_PORTFOLIO_DIR).is_dir()
+
+
 def summary(found: list[dict]) -> dict[str, Any]:
     """Estate-level totals: what the monitoring population actually is."""
     populated = [c for c in found if c["populations"]]
