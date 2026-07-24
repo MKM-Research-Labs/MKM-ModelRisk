@@ -160,19 +160,16 @@ def test_risk_heatmap_reflects_materiality_and_complexity(page: Page, base_url: 
     expect(page.locator("#dt-content")).to_contain_text("Events (past 365 days)")
 
 
-def test_risk_composite_breakdown_renders(page: Page, base_url: str):
-    """The 5-component composite breakdown surfaces on the Risk Rating tab."""
+def test_risk_tab_shows_the_heatmap_not_a_second_score(page: Page, base_url: str):
+    """The heatmap is the rating. A parallel composite used to sit beneath it and
+    invited the question of which of the two numbers was the real one."""
     open_app(page, base_url)
-    register_model(page, "MKM-X1-RC-01", "Composite Model")
+    register_model(page, "MKM-X1-RC-01", "Heatmap Model")
     open_model(page, "MKM-X1-RC-01")
     page.click("[data-dtab='risk']")
     body = page.locator("#dt-content")
-    expect(body).to_contain_text("Composite Score")
-    expect(body).to_contain_text("Validation Coverage")
-    expect(body).to_contain_text("Remediation Health")
-    expect(body).to_contain_text("Review Currency")
-    expect(body).to_contain_text("Assumption Risk")
-    expect(body).to_contain_text("Limitation Risk")
+    expect(body).to_contain_text("HEATMAP RATING")
+    expect(body).not_to_contain_text("Composite Score")
 
 
 def test_events_counter_reflects_recent_event(page: Page, base_url: str):

@@ -39,12 +39,11 @@ def _product(client, product_id="P1", **fields):
                     json={"field": field, "value": value, "confirmed": True}, headers=HEADERS)
 
 
-def test_risk_rating_endpoint_returns_composite_and_heatmap(client):
+def test_risk_rating_endpoint_returns_the_heatmap(client):
     _model(client)
     _product(client, tier="1", materiality="High", complexity="High")
     r = client.get("/api/products/P1/risk-rating").get_json()
-    assert r["rating"] in ("Acceptable", "Conditional", "Unacceptable")
-    assert "components" in r and r["components"]
+    assert "rating" not in r and "components" not in r
     # Heatmap RAG comes from tier band × materiality × complexity, like a model.
     assert r["heatmap"]["tier"] == "1"
     assert r["heatmap"]["rag"] is not None

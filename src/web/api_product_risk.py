@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Product risk assessment + MRC linkage reads: the composite risk rating (heatmap
+"""Product risk assessment + MRC linkage reads: the risk rating (heatmap
 + weighted breakdown, identical to a model's) and the meeting decisions/actions
 linked to a product. Mirrors the model-side endpoints in ``api_models``;
 registered on the shared ``product_bp`` blueprint."""

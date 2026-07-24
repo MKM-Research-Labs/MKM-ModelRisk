@@ -106,7 +106,7 @@ const DetailTabs = {
   },
 
   // W4c — chronological table of approved sign-offs on this model. Rendered
-  // as a supporting section under the composite breakdown on the Risk Rating
+  // as a supporting section on the Risk Rating
   // tab. Empty when no sign-offs have been recorded yet.
   signoffHistory(history) {
     const items = history || [];
@@ -128,8 +128,6 @@ const DetailTabs = {
   },
 
   risk(rating, showEvents = true) {
-    const color = RISK_COLORS[rating.rating] || "#9e9e9e";
-    const pct = Math.round(rating.score * 100);
     const hm = rating.heatmap || {};
     const hmRag = hm.rag;
     const hmColor = RAG_COLORS[hmRag] || "#9e9e9e";
@@ -149,20 +147,11 @@ const DetailTabs = {
     const events = showEvents ? '<div class="row" style="gap:16px;margin:12px 0"><div class="scard" ' +
       'style="border-left-color:#1976d2"><div class="lbl">Events (past ' + rating.events_window_days +
       ' days)</div><div class="val">' + rating.events_in_window + "</div></div></div>" : "";
-    const comps = rating.components.map(function (c) {
-      const s = Math.round(c.score * 100);
-      return '<div style="margin-bottom:10px"><div><b>' + esc(c.label) + '</b> <span class="muted">(' +
-        Math.round(c.weight * 100) + '% weight)</span><span style="float:right;color:' + barColor(s) + '">' +
-        s + '%</span></div><div class="progress"><div class="bar" style="width:' + s + "%;background:" +
-        barColor(s) + '"></div></div></div>';
-    }).join("");
     const signoff = this._signoffPanel(rating);
-    return '<p class="muted">Risk rating is set by the owner via Materiality and Complexity (the heatmap). ' +
-      "The composite breakdown below tracks operational health signals — validation coverage, " +
-      "remediation health, review currency, assumptions and limitations.</p>" +
+    return '<p class="muted">Risk rating is set by the owner via Materiality and Complexity ' +
+      "(the heatmap), and takes effect once the MRC signs that cell off.</p>" +
       headline + signoff + this.heatmap(hm) + events +
-      '<div class="section-header">Composite Score: ' + pct + "% (" + esc(rating.rating) + ")</div>" +
-      comps + this.signoffHistory(rating.signoff_history);
+      this.signoffHistory(rating.signoff_history);
   },
 
   // W4c: sign-off state. A rating needs MRC sign-off until the committee has

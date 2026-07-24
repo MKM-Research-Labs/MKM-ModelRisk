@@ -84,10 +84,13 @@ def test_register_seeds_sr262_validation_questions(client):
 
 
 def test_risk_rating_endpoint(client):
+    """The endpoint returns the heatmap placement and sign-off state — the
+    rating the committee governs, with no second derived score beside it."""
     _register(client)
     rating = client.get("/api/models/M1/risk-rating").get_json()
-    assert rating["rating"] in ("Acceptable", "Conditional", "Unacceptable")
-    assert len(rating["components"]) == 5
+    assert "heatmap" in rating and "signed_off" in rating
+    assert rating["events_in_window"] == 0
+    assert "rating" not in rating and "components" not in rating
 
 
 def test_risk_rating_unknown_model_is_404(client):

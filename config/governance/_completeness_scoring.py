@@ -116,8 +116,8 @@ REMEDIATION_ACTIONS = {
 BROKEN_DOC_ESCALATION = 1.15
 
 # Entity-level roll-up. A record is reported as materially incomplete once its
-# weighted completeness falls below this, mirroring RISK_ACCEPTABLE_AT's role of
-# turning a continuous score into a statement the committee can act on.
+# weighted completeness falls below this: a continuous score turned into a
+# statement the committee can act on.
 COMPLETENESS_ACCEPTABLE_AT = 0.85
 COMPLETENESS_CONDITIONAL_AT = 0.60
 

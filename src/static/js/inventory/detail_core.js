@@ -94,7 +94,7 @@ const Detail = {
     return '<div class="detail-header"><div>' +
       '<div class="name">' + esc(d.name || this._id) + "</div>" +
       '<div class="sub">' + sub + "</div>" +
-      // The composite rating is not shown here: the RAG rating is the governed
+      // The RAG rating is the governed
       // one, and a second, differently-derived verdict in the header invited the
       // question "where does that come from?" without answering it.
       '<div style="margin-top:8px">' + tierBadge(d.tier) + ' <span class="muted">' +

@@ -63,11 +63,6 @@ function tierFullLabel(tier) {
   return d ? "Tier " + tier + " - " + d : "";
 }
 
-// Composite-rating colours, used by the Risk Rating tab. There is deliberately no
-// badge helper: the composite is shown only on that tab, beside the components it
-// is derived from, never as a bare verdict elsewhere.
-const RISK_COLORS = { Acceptable: "#388e3c", Conditional: "#f57c00", Unacceptable: "#d32f2f" };
-
 const VQ_COLORS = {
   "Addressed": "#388e3c", "Partially Addressed": "#f57c00",
   "Not Addressed": "#d32f2f", "Not Applicable": "#9e9e9e",

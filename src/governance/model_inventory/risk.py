@@ -17,11 +17,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Composite model risk rating (pure).
+"""A model's risk rating: the tier heatmap, plus what the committee has done (pure).
 
-Synthesises a model's read-model document into a weighted score and an overall
-rating, mirroring the PhysicalRisk breakdown: validation coverage, remediation
-health, review currency, assumption risk and limitation risk.
+The rating is the cell the model occupies on its tier's Materiality x Complexity
+heatmap, together with the rating the owner has recorded, whether the MRC has
+signed that cell off, and how many operational failures fall in the rolling
+window.
+
+There is deliberately no second, derived score here. One rating the committee
+sets and reviews is the model's risk statement; a parallel composite invited a
+reader to ask which of the two numbers was the real one.
 """
 from __future__ import annotations
 
@@ -30,47 +35,9 @@ from typing import Any
 
 from config.governance import (
     EVENTS_WINDOW_DAYS,
-    RISK_ACCEPTABLE_AT,
-    RISK_CONDITIONAL_AT,
     RISK_HEATMAP_BY_TIER,
     RISK_TIER_LABELS,
-    RISK_WEIGHTS,
 )
-
-
-def _validation_coverage(data: dict[str, Any]) -> float:
-    questions = data.get("validation_questions", [])
-    if not questions:
-        return 0.0
-    scored = 0.0
-    for question in questions:
-        if question.get("status") == "Addressed":
-            scored += 1.0
-        elif question.get("status") == "Partially Addressed":
-            scored += 0.5
-    return scored / len(questions)
-
-
-def _remediation_health(data: dict[str, Any]) -> float:
-    items = data.get("remediation_steps", [])
-    if not items:
-        return 1.0
-    closed = sum(1 for item in items if item.get("status") == "Closed")
-    return closed / len(items)
-
-
-def _review_currency(data: dict[str, Any], as_of: str) -> float:
-    next_review = data.get("next_review_date")
-    if not next_review:
-        return 0.0
-    return 1.0 if next_review >= as_of else 0.0
-
-
-def _impact_health(items: list) -> float:
-    if not items:
-        return 1.0
-    high = sum(1 for item in items if item.get("impact") == "High")
-    return 1.0 - high / len(items)
 
 
 def _tier_band(tier: Any) -> int:
@@ -117,31 +84,8 @@ def _events_in_window(data: dict[str, Any], as_of: str) -> int:
 
 
 def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
-    """Return the risk rating envelope: heatmap headline, composite breakdown
-    and past-year events count.
-
-    ``rating`` and ``score`` remain the composite view for callers (the Model
-    Risk Report PDF, Product headers, list badges) — the heatmap is additional
-    context surfaced primarily on the Risk Rating tab.
-    """
-    scores = {
-        "validation_coverage": _validation_coverage(data),
-        "remediation_health": _remediation_health(data),
-        "review_currency": _review_currency(data, as_of),
-        "assumption_risk": _impact_health(data.get("assumptions", [])),
-        "limitation_risk": _impact_health(data.get("limitations", [])),
-    }
-    composite = sum(scores[key] * weight for key, _label, weight in RISK_WEIGHTS)
-    if composite >= RISK_ACCEPTABLE_AT:
-        rating = "Acceptable"
-    elif composite >= RISK_CONDITIONAL_AT:
-        rating = "Conditional"
-    else:
-        rating = "Unacceptable"
-    components = [
-        {"key": key, "label": label, "weight": weight, "score": scores[key]}
-        for key, label, weight in RISK_WEIGHTS
-    ]
+    """Return the risk rating envelope: the heatmap cell, the owner's recorded
+    rating, whether the MRC has signed that cell off, and the events count."""
     materiality = data.get("materiality")
     complexity = data.get("complexity")
     tier = data.get("tier")
@@ -174,9 +118,6 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
         and latest_signoff.get("to_rating") == heatmap["rag"]
     )
     return {
-        "rating": rating,
-        "score": round(composite, 4),
-        "components": components,
         "heatmap": heatmap,
         "approved_rag": data.get("rag_rating"),
         "signed_off": signed_off,

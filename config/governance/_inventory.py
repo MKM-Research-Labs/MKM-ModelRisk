@@ -178,17 +178,6 @@ SR262_QUESTIONS = (
 )
 DEFAULT_VQ_STATUS = "Not Addressed"
 
-# Overall risk-rating composite: (component key, label, weight). Weights sum to 1.
-RISK_WEIGHTS = (
-    ("validation_coverage", "Validation Coverage", 0.30),
-    ("remediation_health", "Remediation Health", 0.25),
-    ("review_currency", "Review Currency", 0.20),
-    ("assumption_risk", "Assumption Risk", 0.15),
-    ("limitation_risk", "Limitation Risk", 0.10),
-)
-RISK_ACCEPTABLE_AT = 0.75
-RISK_CONDITIONAL_AT = 0.50
-
 # W4a — Materiality × Complexity → RAG heatmaps, one per tier. The owner sets
 # the two axes on the model; the cell for the model's tier is the primary risk
 # rating, supplemented by the composite breakdown above. Rows are materiality

@@ -88,14 +88,6 @@ def test_profile_orders_ordinal_categories_worst_first():
     assert "Not recorded" in profile
 
 
-def test_report_carries_no_composite_risk_verdict():
-    """The composite rating is a Risk Rating tab aid; on paper, detached from the
-    components it is derived from, it reads as a committee assessment it is not."""
-    tex = build_report_tex(MODELS, SETTINGS, "2026-06-22")
-    for verdict in ("Acceptable", "Conditional", "Unacceptable"):
-        assert verdict not in tex
-
-
 def test_dossier_covers_every_tab():
     section = model_section(MODELS[0], "On Track")
     assert "\\section{M1 --- Alpha}" in section
