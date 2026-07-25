@@ -133,15 +133,21 @@ def _update_validation_questions(model_id: str, model: dict, config) -> None:
                                    item_id=f"VQ-{number:03d}", fields=fields, actor=ACTOR, config=config)
 
 
-def _category(filename: str) -> str:
-    """Bucket a document by filename, so a folder lands across the right tabs
-    rather than everything being filed as Core Documentation."""
+def _classify(filename: str, model_id: str) -> tuple[str, str]:
+    """Bucket a document by filename into its ModelRisk category, and give it the
+    name it carries in the store — ``(category, stored_filename)``.
+
+    The per-model ``test_results.pdf`` is the model's unit-test evidence, so it
+    lands in the Unit Test tab renamed ``unit_tests_<model_id>.pdf`` — one such
+    file per model. Everything else keeps its source name and falls to the tab its
+    filename implies, defaulting to Core Documentation."""
     low = filename.lower()
-    for hint, category in (("analysis", "Analysis"), ("test", "Test Results"),
-                           ("monitor", "Monitoring")):
+    if "test" in low:
+        return "Unit Test", f"unit_tests_{model_id}.pdf"
+    for hint, category in (("analysis", "Analysis"), ("monitor", "Monitoring")):
         if hint in low:
-            return category
-    return "Core Documentation"
+            return category, filename
+    return "Core Documentation", filename
 
 
 def _doc_dirs(inventory: dict) -> tuple[dict, list, list]:
@@ -177,11 +183,12 @@ def attach_documents(inventory: dict, config=None) -> dict:
         have = {(d.get("original_name") or d.get("filename"))
                 for d in (model["data"].get("documents") or [])}
         for pdf in sorted(folder.glob("*.pdf")):
-            if pdf.name in have:
+            category, stored_name = _classify(pdf.name, model_id)
+            if stored_name in have:
                 continue
             add_document(aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
-                         scope=f"model/{model_id}", category=_category(pdf.name),
-                         filename=pdf.name, data=pdf.read_bytes(),
+                         scope=f"model/{model_id}", category=category,
+                         filename=stored_name, data=pdf.read_bytes(),
                          description="", actor=ACTOR, config=config)
             attached += 1
     return {"attached": attached, "ambiguous": ambiguous, "unresolved": unresolved}

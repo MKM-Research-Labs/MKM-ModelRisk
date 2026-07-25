@@ -105,10 +105,12 @@ def test_attach_documents_walks_the_folder_and_categorises_by_filename(tmp_path,
     result = migrate_phys.attach_documents(inventory)
     rebuild_inventory_view()
     # Only the unambiguous model gets documents — all three PDFs in its folder.
+    # test_results.pdf is the unit-test evidence: it is renamed to
+    # unit_tests_<model_id>.pdf and filed under Unit Test, not Test Results.
     assert result["attached"] == 3
     docs = {d["filename"]: d["category"] for d in get_model("MKM-AA-001")["data"]["documents"]}
     assert docs == {"alpha.pdf": "Core Documentation", "analysis.pdf": "Analysis",
-                    "test_results.pdf": "Test Results"}
+                    "unit_tests_MKM-AA-001.pdf": "Unit Test"}
     # A stale path leaves the model unresolved; a shared folder makes both ambiguous.
     assert result["unresolved"] == ["MKM-BB-001"]
     assert result["ambiguous"] == ["MKM-CC-001", "MKM-DD-001"]
@@ -132,6 +134,20 @@ def test_confirmed_folder_wins_over_a_wrong_inventory_path(tmp_path, monkeypatch
     assert folder_for(other, tmp_path, tmp_path).name == "property_valuation"
     # And one with neither resolves to nothing.
     assert folder_for({"model_id": "MKM-ZZ-998"}, tmp_path, tmp_path) is None
+
+
+def test_unit_test_pdf_is_one_per_model_named_by_id(tmp_path, monkeypatch):
+    """The unit-test evidence is exactly one file per model, named
+    unit_tests_<model_id>.pdf and filed under Unit Test."""
+    inventory = _inventory_with_docs(tmp_path, monkeypatch)
+    register_model(model_id="MKM-AA-001", name="A", actor="a")
+    rebuild_inventory_view()
+
+    migrate_phys.attach_documents(inventory)
+    rebuild_inventory_view()
+    unit = [d for d in get_model("MKM-AA-001")["data"]["documents"]
+            if d["category"] == "Unit Test"]
+    assert [d["filename"] for d in unit] == ["unit_tests_MKM-AA-001.pdf"]
 
 
 def test_attach_documents_is_idempotent(tmp_path, monkeypatch):
