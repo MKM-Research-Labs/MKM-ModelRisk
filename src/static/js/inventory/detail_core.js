@@ -109,7 +109,9 @@ const Detail = {
     const n = (k) => (d[k] || []).length;
     const vq = d.validation_questions || [];
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
-    const tst = TESTING_FIELDS.filter((k) => d[k] === "Yes").length + "/" + TESTING_FIELDS.length;
+    // The Testing tab is document-driven now that the Yes/No flags are gone, so its
+    // badge counts the test evidence attached rather than a stuck "0/3".
+    const tst = DocLinks.countIn(d.documents, this._specs.testing_doc_categories);
     const tabs = [
       ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
@@ -194,14 +196,16 @@ const Detail = {
     if (this._tab === "testing") {
       const docOpts = (cat) => ({ category: cat, docs: d.documents || [], base: "/api/models/",
         id: this._id, retired: this._model.retired, refresh: () => this.show(this._id, "testing") });
+      // Each test type is a sub-header over its own upload panel. The old Yes/No
+      // flag is gone — the attached documents are the evidence, so a separate
+      // "tests exist?" tick added nothing.
       box.innerHTML = '<div class="section-header">Test results</div>' +
         DocPanel.html(docOpts(TEST_RESULTS_CATEGORY)) +
         '<div class="section-header" style="margin-top:14px">Testing</div>' +
         TESTING_FIELDS.map((k) =>
-          '<div class="inforow" id="row-' + k + '"><div class="k">' + esc(this.specByKey(k).label) +
-          '</div><div class="v">' + yesNo(d[k]) + "</div>" + this._editLink(k) + "</div>" +
+          '<div class="section-header" style="margin-top:12px;font-size:13px">' +
+          esc(this.specByKey(k).label) + "</div>" +
           DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
-      this._bindEdits();
       DocPanel.bind(docOpts(TEST_RESULTS_CATEGORY));
       TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k]))); return;
     }

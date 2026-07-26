@@ -197,10 +197,3 @@ function fmtSize(bytes) {
   const kb = bytes / 1024;
   return kb < 1024 ? kb.toFixed(1) + " KB" : (kb / 1024).toFixed(1) + " MB";
 }
-
-// Yes/No test flag as a tick or cross.
-function yesNo(value) {
-  if (value === "Yes") return '<span style="color:#388e3c">&#10004; Yes</span>';
-  if (value === "No") return '<span style="color:#d32f2f">&#10008; No</span>';
-  return '<span class="muted">—</span>';
-}
