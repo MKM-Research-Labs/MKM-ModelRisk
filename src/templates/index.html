@@ -27,6 +27,7 @@
     <button class="tab active" data-tab="inventory">Models</button>
     <button class="tab" data-tab="chain">Model Chain</button>
     <button class="tab" data-tab="product">Products</button>
+    <button class="tab" data-tab="clients">Clients</button>
     <button class="tab" data-tab="audit">Audit Trail</button>
     <button class="tab" data-tab="documents">Documents</button>
     <button class="tab" data-tab="reports">Audit Reports</button>
@@ -40,6 +41,7 @@
     <section id="tab-inventory" class="panel active"></section>
     <section id="tab-chain" class="panel"></section>
     <section id="tab-product" class="panel"></section>
+    <section id="tab-clients" class="panel"></section>
     <section id="tab-mrc" class="panel"></section>
     <section id="tab-documents" class="panel"></section>
     <section id="tab-audit" class="panel"></section>
@@ -153,6 +155,9 @@
   <script src="{{ url_for('static', filename='js/mrc/committee_list.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/committee_detail.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/reference.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/clients.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/clients_detail.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/clients_pack.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/main.js', v=asset_version) }}"></script>
 </body>
 </html>

@@ -18,6 +18,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """File storage for uploads (logos, documents)."""
-from src.files.store import UploadError, extension, save_upload, upload_path
+from src.files.store import (
+    UploadError, extension, save_upload, store_generated, upload_path,
+)
 
-__all__ = ["UploadError", "extension", "save_upload", "upload_path"]
+__all__ = ["UploadError", "extension", "save_upload", "store_generated", "upload_path"]

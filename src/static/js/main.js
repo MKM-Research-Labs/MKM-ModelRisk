@@ -19,8 +19,8 @@
 // SOFTWARE.
 
 const TABS = {
-  inventory: Inventory, chain: Chain, product: Product, mrc: MRC, documents: GovDocs,
-  audit: Audit, reports: AuditReports, reference: Reference,
+  inventory: Inventory, chain: Chain, product: Product, clients: Clients, mrc: MRC,
+  documents: GovDocs, audit: Audit, reports: AuditReports, reference: Reference,
 };
 
 // Tabs that share the persistent MRC-region bar, and how each re-filters when the

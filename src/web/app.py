@@ -29,6 +29,7 @@ from src.governance.reference import ensure_default_model_types
 from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
 from src.web.api_audit_reports import audit_reports_bp
+from src.web.api_client import client_bp
 from src.web.api_documents import documents_bp
 from src.web.api_handoffs import handoffs_bp
 from src.web.api_models import models_bp
@@ -71,6 +72,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(models_bp)
     app.register_blueprint(handoffs_bp)
     app.register_blueprint(product_bp)
+    app.register_blueprint(client_bp)
     app.register_blueprint(mrc_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(reference_bp)

@@ -36,9 +36,11 @@ from __future__ import annotations
 CONFIRM_REQUIRED_COMMANDS = frozenset({
     "register_model",
     "register_product",
+    "register_client",
     "reactivate_model",
     "retire_model",
     "retire_product",
+    "retire_client",
 })
 
 # Scalar-field edits that require confirmation, keyed by the field-update command.
