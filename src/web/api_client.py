@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from flask import Blueprint, Response, jsonify
+from flask import Blueprint, Response, jsonify, request
 
 from config.governance import (
     CLIENT_COLLECTION_SPECS,
@@ -31,13 +31,13 @@ from config.governance import (
     CLIENT_REGISTER_FIELDS,
 )
 from src.command import dispatch
-from src.files import store_generated, upload_path
+from src.files import UploadError, store_generated, upload_path
 from src.governance.client import (
-    PACK_NAME,
     add_collection_item,
     build_client_pack,
     get_client,
     list_clients,
+    pack_manifest,
     rebuild_client_view,
     record_client_pack,
     register_client,
@@ -46,6 +46,8 @@ from src.governance.client import (
     update_client_field,
     update_collection_item,
 )
+from src.governance.client.commands import AGGREGATE_TYPE as CLIENT_AGGREGATE
+from src.governance.documents import add_document, client_scope, find_document, remove_document
 from src.governance.model_inventory import list_models
 from src.governance.mrc.pack import TectonicNotFound
 from src.governance.mrc_settings import get_settings
@@ -56,9 +58,11 @@ from src.web._helpers import (
     reference_options,
     request_actor,
     resolve_field,
+    send_document,
 )
 
 _PACK_SCOPE = "client_pack/{client_id}"
+_SUPPLEMENTARY_CATEGORY = "Supplementary"
 
 client_bp = Blueprint("client", __name__, url_prefix="/api/clients")
 
@@ -189,19 +193,16 @@ def _zip_response(data: bytes, filename: str) -> Response:
     })
 
 
-@client_bp.get("/<client_id>/pack.zip")
-def pack_zip(client_id: str):
-    """Build and stream a client's pack on demand (not retained)."""
+@client_bp.get("/<client_id>/pack/preview")
+def pack_preview(client_id: str):
+    """A manifest of what a pack would contain — the preview step before committing.
+
+    Computed without compiling any PDF, so it returns instantly; it mirrors the
+    generate step's source selection and surfaces the same warnings up front."""
     client = get_client(client_id)
     if client is None:
         return jsonify({"error": "Client not found"}), 404
-    now = datetime.now()
-    try:
-        data = build_client_pack(client, get_settings(), date.today().isoformat(),
-                                 now.isoformat(timespec="seconds"))
-    except TectonicNotFound as exc:
-        return jsonify({"error": str(exc)}), 503
-    return _zip_response(data, PACK_NAME.format(client_id=client_id))
+    return jsonify(pack_manifest(client, get_settings()))
 
 
 @client_bp.post("/<client_id>/pack")
@@ -248,3 +249,44 @@ def download_pack(client_id: str, item_id: str):
     if not path.exists():
         return jsonify({"error": "pack file missing"}), 404
     return _zip_response(path.read_bytes(), row.get("original_name") or row["filename"])
+
+
+@client_bp.post("/<client_id>/documents")
+def upload_document(client_id: str):
+    """Attach a supplementary document to the client; it is bundled into the pack."""
+    if get_client(client_id) is None:
+        return jsonify({"error": "Client not found"}), 404
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        add_document(
+            aggregate_type=CLIENT_AGGREGATE, aggregate_id=client_id,
+            scope=client_scope(client_id), category=_SUPPLEMENTARY_CATEGORY,
+            filename=file.filename, data=file.read(),
+            description=request.form.get("description", ""), actor=request_actor())
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    rebuild_client_view()
+    return jsonify(get_client(client_id)), 201
+
+
+@client_bp.get("/<client_id>/documents/<item_id>/download")
+def download_document(client_id: str, item_id: str):
+    doc = find_document(CLIENT_AGGREGATE, client_id, item_id)
+    if doc is None:
+        return jsonify({"error": "document not found"}), 404
+    path = upload_path(client_scope(client_id), doc["filename"])
+    if not path.exists():
+        return jsonify({"error": "file missing"}), 404
+    return send_document(path, doc, inline=request.args.get("inline") == "1")
+
+
+@client_bp.post("/<client_id>/documents/<item_id>/delete")
+def delete_document(client_id: str, item_id: str):
+    if find_document(CLIENT_AGGREGATE, client_id, item_id) is None:
+        return jsonify({"error": "document not found"}), 404
+    remove_document(aggregate_type=CLIENT_AGGREGATE, aggregate_id=client_id,
+                    item_id=item_id, actor=request_actor())
+    rebuild_client_view()
+    return jsonify(get_client(client_id))

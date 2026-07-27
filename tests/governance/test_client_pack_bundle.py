@@ -25,7 +25,7 @@ import zipfile
 
 import pytest
 
-from src.governance.client.pack import build_client_pack
+from src.governance.client.pack import build_client_pack, pack_manifest
 from src.governance.client._pack_events import event_rows
 
 SETTINGS = {"fields": {"org_name": "MKM"}, "tor": {"filename": "tor.docx",
@@ -187,6 +187,77 @@ def test_pack_notes_a_recorded_tor_whose_file_is_missing(stub, monkeypatch):
         _client([]), settings, "2026-07-27", "2026-07-27T09:30:00")).read(
         "CONTENTS.txt").decode()
     assert "governance/ToR.docx (recorded but file missing)" in contents
+
+
+def _client_with_supplementary(links, docs):
+    c = _client(links)
+    c["data"]["documents"] = docs
+    return c
+
+
+def test_pack_carries_supplementary_documents(stub, monkeypatch):
+    _model(monkeypatch)
+    _no_meetings_or_products(monkeypatch)
+    (stub / "client" / "CL-001").mkdir(parents=True)
+    (stub / "client" / "CL-001" / "cover.pdf").write_bytes(b"%PDF-cover")
+    client = _client_with_supplementary(
+        [], [{"item_id": "DOC-001", "category": "Supplementary",
+              "filename": "cover.pdf", "original_name": "cover.pdf"},
+             {"item_id": "DOC-002", "category": "Supplementary",
+              "filename": "gone.pdf", "original_name": "gone.pdf"}])
+    archive = _open(build_client_pack(client, SETTINGS, "2026-07-27", "2026-07-27T09:30:00"))
+    assert "supplementary/cover.pdf" in archive.namelist()
+    contents = archive.read("CONTENTS.txt").decode()
+    assert "supplementary/gone.pdf (recorded but file missing)" in contents
+
+
+def test_manifest_previews_contents_without_compiling(stub, monkeypatch):
+    _model(monkeypatch, docs=[{"category": "Test Results", "filename": "tests.pdf",
+                               "original_name": "tests.pdf"}])
+    monkeypatch.setattr("src.governance.client.pack.list_products", lambda config=None: [])
+    monkeypatch.setattr("src.governance.client.pack.list_meetings",
+                        lambda config=None: [{"meeting_id": "MRC-1", "data": {
+                            "status": "Completed", "date": "2026-06-01",
+                            "minutes_filename": "minutes_MRC-1.pdf"}}])  # present in the stub tree
+    m = pack_manifest(_client([{"link_type": "Model", "subject_id": "MKM-EF-001"}]), SETTINGS)
+    assert m["models"][0] == {"model_id": "MKM-EF-001", "name": "Event Frequency",
+                              "present": True, "attachments": ["tests.pdf"]}
+    assert m["minutes"][0]["present"] is True
+    assert m["tor"]["present"] is True and m["includes_gaps_audit"] is True
+    assert m["warnings"] == []
+
+
+def test_manifest_warns_about_unknown_model_and_missing_tor(stub, monkeypatch):
+    _model(monkeypatch)
+    _no_meetings_or_products(monkeypatch)
+    m = pack_manifest(_client([{"link_type": "Model", "subject_id": "MKM-NONE"}]),
+                      {"fields": {}})
+    assert m["models"][0]["present"] is False
+    assert any("not in the inventory" in w for w in m["warnings"])
+    assert any("No MRC Terms of Reference" in w for w in m["warnings"])
+
+
+def test_manifest_flags_every_missing_file(stub, monkeypatch):
+    # Model present but one attachment absent; a supplementary doc absent; a
+    # meeting whose minutes file is absent; a ToR recorded but absent.
+    _model(monkeypatch)  # default docs: tests.pdf (present) + gone.pdf (absent)
+    monkeypatch.setattr("src.governance.client.pack.list_products", lambda config=None: [])
+    monkeypatch.setattr("src.governance.client.pack.list_meetings",
+                        lambda config=None: [{"meeting_id": "MRC-9", "data": {
+                            "status": "Completed", "date": "2026-06-01",
+                            "minutes_filename": "nomin.pdf"}}])
+    client = _client_with_supplementary(
+        [{"link_type": "Model", "subject_id": "MKM-EF-001"}],
+        [{"item_id": "DOC-001", "filename": "absent.pdf", "original_name": "absent.pdf"}])
+    m = pack_manifest(client, {"fields": {}, "tor": {"filename": "no.docx",
+                                                     "original_name": "ToR.docx"}})
+    assert m["models"][0]["present"] is True and "gone.pdf" in m["models"][0]["attachments"]
+    assert m["supplementary"][0]["present"] is False
+    assert m["minutes"][0]["present"] is False
+    assert m["tor"]["present"] is False
+    joined = " ".join(m["warnings"])
+    assert "gone.pdf" in joined and "absent.pdf" in joined
+    assert "MRC-9" in joined and "Terms of Reference is recorded" in joined
 
 
 def test_event_rows_sorted_newest_first_across_products():

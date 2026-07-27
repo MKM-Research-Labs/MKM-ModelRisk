@@ -18,8 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// The client-pack section of a client's detail: a Generate button plus the
-// bi-temporal history of retained packs (as-of + generated-at), each downloadable.
+// The client-pack workflow: a Generate button opens a preview popup listing what
+// the pack will contain (built cheaply, no PDF compilation), where the user can
+// supplement it with extra documents, and a commit step that builds, retains and
+// records the timestamped ZIP. Below the button sits the bi-temporal pack history.
 // Augments the Clients object; loaded after clients_detail.js.
 Object.assign(Clients, {
   _packSize(bytes) {
@@ -28,8 +30,7 @@ Object.assign(Clients, {
   },
 
   _packSection(client) {
-    // Newest first: the history is appended, so reverse a copy for display.
-    const packs = ((client.data || {}).packs || []).slice().reverse();
+    const packs = ((client.data || {}).packs || []).slice().reverse();   // newest first
     const rows = packs.length
       ? packs.map((p) =>
           "<tr><td>" + esc(p.generated_at) + "</td><td>" + esc(p.as_of) + "</td><td>" +
@@ -38,23 +39,122 @@ Object.assign(Clients, {
           .join("")
       : '<tr><td colspan="4" class="empty">No packs generated yet.</td></tr>';
     return '<div class="section-header">Client pack</div>' +
-      '<p class="muted">The full evidence pack: the linked models\' documentation and ' +
-      "test/analysis, recent MRC minutes, operational-event write-ups, the MRC Terms of " +
-      "Reference and the Governance Completeness (gaps) audit. Each generation is timestamped " +
-      "and retained below.</p>" +
-      '<div class="row" style="margin-bottom:8px;align-items:center">' +
-      '<button class="btn" id="cpack-gen">Generate client pack</button>' +
-      '<a class="btn ghost" href="/api/clients/' + esc(client.client_id) +
-      '/pack.zip">Download a fresh build now</a></div>' +
+      '<p class="muted">Preview the full evidence pack, add any extra documents, then ' +
+      "generate it. Each generation is timestamped and retained below.</p>" +
+      '<div class="row" style="margin-bottom:8px">' +
+      '<button class="btn" id="cpack-preview">Generate client pack&hellip;</button></div>' +
       "<table><thead><tr><th>Generated at</th><th>As of</th><th>Size</th><th></th></tr></thead>" +
       "<tbody>" + rows + "</tbody></table>";
   },
 
   _wirePack(clientId) {
-    const btn = document.getElementById("cpack-gen");
-    if (btn) {
-      btn.onclick = () => App.amend("Generate a client pack.", "POST",
-        "/api/clients/" + clientId + "/pack", {}, () => this._showDetail(clientId));
+    const btn = document.getElementById("cpack-preview");
+    if (btn) btn.onclick = () => this._openPreview(clientId);
+  },
+
+  _openPreview(clientId) {
+    let ov = document.getElementById("client-pack-overlay");
+    if (!ov) {
+      ov = document.createElement("div");
+      ov.id = "client-pack-overlay";
+      ov.className = "overlay";
+      document.body.appendChild(ov);
+    }
+    ov.classList.remove("hidden");
+    this._renderPreview(clientId);
+  },
+
+  _closePreview() {
+    const ov = document.getElementById("client-pack-overlay");
+    if (ov) ov.classList.add("hidden");
+  },
+
+  _list(items) {
+    return items.length
+      ? '<ul style="margin:4px 0 0 18px">' + items.join("") + "</ul>"
+      : '<p class="muted" style="margin:4px 0">None.</p>';
+  },
+
+  _previewBody(m) {
+    const models = m.models.map((x) =>
+      "<li>" + esc(x.name || x.model_id) + " (" + esc(x.model_id) + ")" +
+      (x.present ? "" : ' <span class="badge" style="background:var(--muted)">not in inventory</span>') +
+      (x.attachments && x.attachments.length
+        ? ' <span class="muted">— ' + x.attachments.map(esc).join(", ") + "</span>" : "") +
+      "</li>");
+    const supp = m.supplementary.map((d) =>
+      "<li>" + esc(d.name) + ' <button class="btn small ghost" data-suppdel="' +
+      esc(d.item_id) + '">Remove</button></li>');
+    const warn = (m.warnings || []).length
+      ? '<div class="section-header">Warnings</div>' +
+        '<ul style="margin:4px 0 0 18px;color:#b8860b">' +
+        m.warnings.map((w) => "<li>" + esc(w) + "</li>").join("") + "</ul>"
+      : "";
+    return '<div class="section-header">Model documentation &amp; evidence</div>' + this._list(models) +
+      '<div class="section-header">Supplementary documents</div>' + this._list(supp) +
+      '<div class="row" style="margin:6px 0 2px;align-items:center">' +
+      '<input type="file" id="cpack-supp-file">' +
+      '<button class="btn small" id="cpack-supp-add">Add document</button></div>' +
+      '<div class="section-header">Also included</div>' +
+      '<ul style="margin:4px 0 0 18px">' +
+      "<li>Recent MRC minutes: " + m.minutes.length + "</li>" +
+      "<li>Operational-event write-ups: " + m.event_count + " event(s)</li>" +
+      "<li>MRC Terms of Reference: " + (m.tor.present ? esc(m.tor.name) : "none uploaded") + "</li>" +
+      "<li>Governance Completeness (gaps) audit</li></ul>" + warn;
+  },
+
+  async _renderPreview(clientId) {
+    const ov = document.getElementById("client-pack-overlay");
+    ov.innerHTML = '<div class="modal"><h2>Client pack — preview</h2>' +
+      '<p class="muted">Building preview&hellip;</p></div>';
+    let m;
+    try {
+      m = await App.get("/api/clients/" + clientId + "/pack/preview");
+    } catch (e) { App.toast(e.message, "error"); this._closePreview(); return; }
+    ov.innerHTML = '<div class="modal" style="max-width:640px;text-align:left">' +
+      "<h2>Client pack — preview</h2>" + this._previewBody(m) +
+      '<div class="modal-actions"><button id="cpack-cancel" class="btn ghost">Cancel</button>' +
+      '<button id="cpack-commit" class="btn primary">Generate &amp; retain</button></div></div>';
+    document.getElementById("cpack-cancel").onclick = () => this._closePreview();
+    document.getElementById("cpack-commit").onclick = () => this._commitPack(clientId);
+    document.getElementById("cpack-supp-add").onclick = () => this._uploadSupp(clientId);
+    ov.querySelectorAll("[data-suppdel]").forEach((btn) => {
+      btn.onclick = () => this._removeSupp(clientId, btn.getAttribute("data-suppdel"));
+    });
+  },
+
+  async _uploadSupp(clientId) {
+    const input = document.getElementById("cpack-supp-file");
+    if (!input.files || !input.files.length) { App.toast("Choose a file first.", "error"); return; }
+    const fd = new FormData();
+    fd.append("file", input.files[0]);
+    try {
+      const res = await fetch("/api/clients/" + clientId + "/documents",
+        { method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: fd });
+      if (!res.ok) throw await App._error(res);
+      App.toast("Document added", "ok");
+      this._renderPreview(clientId);   // refresh so it shows in the pack contents
+    } catch (e) { App.toast(e.message, "error"); }
+  },
+
+  _removeSupp(clientId, itemId) {
+    App.amend("Remove a supplementary document.", "POST",
+      "/api/clients/" + clientId + "/documents/" + itemId + "/delete", {},
+      () => this._renderPreview(clientId));
+  },
+
+  async _commitPack(clientId) {
+    const btn = document.getElementById("cpack-commit");
+    btn.disabled = true; btn.textContent = "Generating…";
+    try {
+      await App.send("POST", "/api/clients/" + clientId + "/pack", { confirmed: true });
+      this._closePreview();
+      App.toast("Client pack generated and retained", "ok");
+      Nav.markAllDirty();
+      this._showDetail(clientId);
+    } catch (e) {
+      App.toast(e.message, "error");
+      btn.disabled = false; btn.textContent = "Generate & retain";
     }
   },
 });

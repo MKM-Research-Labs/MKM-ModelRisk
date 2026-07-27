@@ -42,6 +42,12 @@ def model_scope(model_id: str) -> str:
     return f"model/{model_id}"
 
 
+def client_scope(client_id: str) -> str:
+    """Where a client's supplementary uploaded files live under the upload
+    directory — named beside ``model_scope`` so the API and the client pack agree."""
+    return f"client/{client_id}"
+
+
 def _fold(aggregate_type: str, aggregate_id: str, config) -> tuple[list, int]:
     state: dict = {}
     version = 0

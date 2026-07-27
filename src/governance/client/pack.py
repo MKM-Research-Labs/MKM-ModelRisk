@@ -40,7 +40,7 @@ from config.governance import (
 from src.files import extension, upload_path
 from src.governance.client._pack_events import render_event_writeups_pdf
 from src.governance.completeness.report import render_completeness_pdf
-from src.governance.documents import model_scope
+from src.governance.documents import client_scope, model_scope
 from src.governance.model_inventory import get_model
 from src.governance.model_inventory.document import render_model_document_pdf
 from src.governance.mrc import list_meetings
@@ -123,6 +123,26 @@ def _add_minutes(archive, config, packed, missing) -> None:
             missing.append(name)
 
 
+def _supplementary_docs(client: dict) -> list[dict]:
+    """User-supplied extra documents attached to the client, PDFs and evidence
+    alike (LaTeX sources excluded, as for a model's attachments)."""
+    docs = [d for d in (client.get("data") or {}).get("documents") or []
+            if extension(d.get("original_name", "")) not in HIDDEN_DOC_EXTENSIONS]
+    return sorted(docs, key=lambda d: str(d.get("original_name") or ""))
+
+
+def _add_supplementary(archive, client, packed, missing) -> None:
+    client_id = client["client_id"]
+    for doc in _supplementary_docs(client):
+        path = upload_path(client_scope(client_id), doc["filename"])
+        name = "supplementary/" + str(doc.get("original_name") or doc["filename"])
+        if path.exists():
+            archive.writestr(name, path.read_bytes())
+            packed.append(name)
+        else:
+            missing.append(name + " (recorded but file missing)")
+
+
 def _add_tor(archive, settings, packed, missing) -> None:
     tor = settings.get("tor")
     if not tor or not tor.get("filename"):
@@ -163,6 +183,7 @@ def build_client_pack(client: dict, settings: dict, as_of: str,
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         _add_models(archive, client, settings, as_of, config, packed, missing)
+        _add_supplementary(archive, client, packed, missing)
         _add_minutes(archive, config, packed, missing)
         events_name = "events/event_writeups.pdf"
         archive.writestr(events_name,
@@ -174,3 +195,62 @@ def build_client_pack(client: dict, settings: dict, as_of: str,
         packed.append(gaps_name)
         archive.writestr(CONTENTS_NAME, _contents(client, as_of, generated_at, packed, missing))
     return buffer.getvalue()
+
+
+def _manifest_models(client: dict, config, warnings: list[str]) -> list[dict]:
+    """Preview rows for each model the pack would cover (no PDF compilation)."""
+    rows: list[dict] = []
+    for model_id in _linked_model_ids(client, config):
+        model = get_model(model_id, config=config)
+        if model is None:
+            warnings.append(f"Linked model {model_id} is not in the inventory — it will be skipped.")
+            rows.append({"model_id": model_id, "name": None, "present": False, "attachments": []})
+            continue
+        data = model.get("data") or {}
+        docs = _packable(data)
+        for doc in docs:
+            if not upload_path(model_scope(model_id), doc["filename"]).exists():
+                warnings.append(
+                    f"{model_id}: attachment '{doc.get('original_name') or doc['filename']}' "
+                    "is recorded but its file is missing.")
+        rows.append({"model_id": model_id, "name": data.get("name"), "present": True,
+                     "attachments": [str(d.get("original_name") or d["filename"]) for d in docs]})
+    return rows
+
+
+def pack_manifest(client: dict, settings: dict, config=None) -> dict:
+    """A cheap preview of what a pack would contain, computed without compiling any
+    PDF. Mirrors ``build_client_pack``'s source selection, so the preview matches
+    the file a subsequent generate produces, and surfaces the same warnings up front."""
+    warnings: list[str] = []
+    models = _manifest_models(client, config, warnings)
+    supplementary = []
+    for doc in _supplementary_docs(client):
+        present = upload_path(client_scope(client["client_id"]), doc["filename"]).exists()
+        supplementary.append({"name": str(doc.get("original_name") or doc["filename"]),
+                              "item_id": doc.get("item_id"), "present": present})
+        if not present:
+            warnings.append(f"Supplementary document '{doc.get('original_name')}' is recorded "
+                            "but its file is missing.")
+    minutes = []
+    for meeting in _recent_minutes(config):
+        data = meeting.get("data") or {}
+        present = upload_path(_MINUTES_SCOPE, data["minutes_filename"]).exists()
+        minutes.append({"meeting_id": meeting["meeting_id"], "date": data.get("date"),
+                        "present": present})
+        if not present:
+            warnings.append(f"Minutes for {meeting['meeting_id']} are recorded but the file is missing.")
+    event_count = sum(len((p.get("data") or {}).get("operational_failure_events") or [])
+                      for p in list_products(config=config))
+    tor = settings.get("tor")
+    if tor and tor.get("filename"):
+        tor_info = {"present": upload_path(_TOR_SCOPE, tor["filename"]).exists(),
+                    "name": tor.get("original_name") or tor["filename"]}
+        if not tor_info["present"]:
+            warnings.append("The MRC Terms of Reference is recorded but its file is missing.")
+    else:
+        tor_info = {"present": False, "name": None}
+        warnings.append("No MRC Terms of Reference has been uploaded.")
+    return {"models": models, "supplementary": supplementary, "minutes": minutes,
+            "event_count": event_count, "tor": tor_info, "includes_gaps_audit": True,
+            "warnings": warnings}

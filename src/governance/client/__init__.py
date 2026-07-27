@@ -28,7 +28,7 @@ from src.governance.client.commands import (
     update_client_field,
     update_collection_item,
 )
-from src.governance.client.pack import PACK_NAME, build_client_pack
+from src.governance.client.pack import PACK_NAME, build_client_pack, pack_manifest
 from src.governance.client.projection import (
     get_client,
     list_clients,
@@ -48,5 +48,6 @@ __all__ = [
     "list_clients",
     "rebuild_client_view",
     "build_client_pack",
+    "pack_manifest",
     "PACK_NAME",
 ]

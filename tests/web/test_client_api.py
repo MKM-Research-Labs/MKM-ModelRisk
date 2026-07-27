@@ -152,19 +152,85 @@ def test_generate_pack_retains_a_bitemporal_history_row(client, stub_latex):
     assert "governance/completeness_audit.pdf" in names
 
 
-def test_pack_zip_on_demand_is_not_retained(client, stub_latex):
+def test_pack_preview_lists_planned_contents_without_building(client):
+    # No stub_latex fixture: the preview must not compile any PDF.
     _register(client)
-    res = client.get("/api/clients/CL-001/pack.zip")
-    assert res.status_code == 200 and res.mimetype == "application/zip"
+    _link_model(client)
+    prev = client.get("/api/clients/CL-001/pack/preview")
+    assert prev.status_code == 200
+    body = prev.get_json()
+    assert body["models"][0]["model_id"] == "MKM-EF-001"
+    assert body["includes_gaps_audit"] is True
+    # No ToR uploaded in a fresh instance -> surfaced as a warning up front.
+    assert any("Terms of Reference" in w for w in body["warnings"])
+    # Nothing was retained by previewing.
     assert client.get("/api/clients/CL-001").get_json()["data"].get("packs", []) == []
 
 
 def test_pack_endpoints_404_for_unknown_client_or_pack(client, stub_latex):
     assert client.post("/api/clients/CL-404/pack", json={}, headers=HEADERS).status_code == 404
-    assert client.get("/api/clients/CL-404/pack.zip").status_code == 404
+    assert client.get("/api/clients/CL-404/pack/preview").status_code == 404
     assert client.get("/api/clients/CL-404/packs/CLP-001.zip").status_code == 404
     _register(client)
     assert client.get("/api/clients/CL-001/packs/CLP-999.zip").status_code == 404
+
+
+def test_supplementary_documents_lifecycle_and_pack_inclusion(client, stub_latex):
+    import io as _io
+
+    _register(client)
+    up = client.post("/api/clients/CL-001/documents", headers=HEADERS,
+                     data={"file": (_io.BytesIO(b"%PDF-extra"), "cover_note.pdf"),
+                           "description": "Cover note"},
+                     content_type="multipart/form-data")
+    assert up.status_code == 201
+    doc = up.get_json()["data"]["documents"][0]
+    # It shows in the preview and, once generated, in the retained pack.
+    prev = client.get("/api/clients/CL-001/pack/preview").get_json()
+    assert prev["supplementary"][0]["name"] == "cover_note.pdf"
+    row = client.post("/api/clients/CL-001/pack", json={}, headers=HEADERS).get_json()["data"]["packs"][0]
+    dl = client.get("/api/clients/CL-001/packs/" + row["item_id"] + ".zip")
+    names = zipfile.ZipFile(io.BytesIO(dl.data)).namelist()
+    assert "supplementary/cover_note.pdf" in names
+    # Download and delete the supplementary doc.
+    got = client.get("/api/clients/CL-001/documents/" + doc["item_id"] + "/download")
+    assert got.status_code == 200 and got.data == b"%PDF-extra"
+    client.post("/api/clients/CL-001/documents/" + doc["item_id"] + "/delete", headers=HEADERS)
+    assert client.get("/api/clients/CL-001").get_json()["data"].get("documents", []) == []
+
+
+def test_document_endpoints_404_and_reject_empty(client):
+    assert client.post("/api/clients/CL-404/documents", headers=HEADERS,
+                       content_type="multipart/form-data").status_code == 404
+    _register(client)
+    assert client.post("/api/clients/CL-001/documents", headers=HEADERS,
+                       content_type="multipart/form-data").status_code == 400
+    assert client.get("/api/clients/CL-001/documents/DOC-999/download").status_code == 404
+    assert client.post("/api/clients/CL-001/documents/DOC-999/delete",
+                       headers=HEADERS).status_code == 404
+
+
+def test_download_document_404_when_file_gone(client):
+    import io as _io
+    from src.files import upload_path
+    from src.governance.documents import client_scope
+
+    _register(client)
+    doc = client.post("/api/clients/CL-001/documents", headers=HEADERS,
+                      data={"file": (_io.BytesIO(b"%PDF-x"), "note.pdf")},
+                      content_type="multipart/form-data").get_json()["data"]["documents"][0]
+    upload_path(client_scope("CL-001"), doc["filename"]).unlink()
+    assert client.get("/api/clients/CL-001/documents/" + doc["item_id"] + "/download").status_code == 404
+
+
+def test_upload_rejects_disallowed_extension(client):
+    import io as _io
+
+    _register(client)
+    bad = client.post("/api/clients/CL-001/documents", headers=HEADERS,
+                      data={"file": (_io.BytesIO(b"x"), "malware.exe")},
+                      content_type="multipart/form-data")
+    assert bad.status_code == 400
 
 
 def test_download_pack_404_when_the_retained_file_is_gone(client, stub_latex):
@@ -181,5 +247,7 @@ def test_pack_returns_503_when_tectonic_missing(client, monkeypatch):
         raise TectonicNotFound("no tectonic")
     monkeypatch.setattr("src.governance.mrc.pack.compile_tex", _boom)
     _register(client)
+    # The commit step compiles PDFs, so a missing engine is a clean 503. The
+    # preview step does not compile, so it stays available even without tectonic.
     assert client.post("/api/clients/CL-001/pack", json={}, headers=HEADERS).status_code == 503
-    assert client.get("/api/clients/CL-001/pack.zip").status_code == 503
+    assert client.get("/api/clients/CL-001/pack/preview").status_code == 200
