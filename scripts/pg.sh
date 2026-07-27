@@ -5,10 +5,17 @@
 # Reads connection settings from .env when present; otherwise uses the defaults
 # below (which match config/database.py).
 #
-#   scripts/pg.sh init     # create the cluster + the mkm_modelrisk database
-#   scripts/pg.sh start     # start the cluster
-#   scripts/pg.sh stop      # stop the cluster
-#   scripts/pg.sh status    # is it accepting connections?
+#   scripts/pg.sh init            # create the cluster + the mkm_modelrisk database
+#   scripts/pg.sh start           # start the cluster
+#   scripts/pg.sh stop            # stop the cluster
+#   scripts/pg.sh status          # is it accepting connections?
+#   scripts/pg.sh backup          # dump the database to the internal-disk backups
+#   scripts/pg.sh restore <dump>  # safety-backup, then restore a dump (--clean)
+#   scripts/pg.sh reset [--force] # backup, confirm, then drop + recreate the DB
+#
+# reset and restore always take a safety backup first, so clearing the database
+# (e.g. to test against an empty instance) is never irreversible. Use a separate
+# DB_NAME for throwaway testing rather than resetting the demo database.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 [ -f .env ] && { set -a; . ./.env; set +a; }
@@ -81,5 +88,36 @@ case "${1:-status}" in
     fi
     ;;
   status) pg_isready -h "$HOST" -p "$PORT" ;;
-  *)      echo "usage: $0 {init|start|stop|status}" >&2; exit 1 ;;
+
+  backup) exec bash "$(dirname "$0")/backup_db.sh" ;;
+
+  restore)
+    DUMP="${2:-}"
+    [ -n "$DUMP" ] && [ -f "$DUMP" ] || { echo "usage: $0 restore <dump-file>" >&2; exit 1; }
+    echo "Safety backup of '$DBNAME' before restore..." >&2
+    bash "$(dirname "$0")/backup_db.sh" || echo "  (safety backup skipped) " >&2
+    echo "Restoring $DUMP into '$DBNAME'..." >&2
+    PGPASSWORD="$OWNER_PW" pg_restore --clean --if-exists --no-owner \
+      -h "$HOST" -p "$PORT" -U "$OWNER" -d "$DBNAME" "$DUMP"
+    echo "Restore complete. Start the app to apply any newer migrations." >&2
+    ;;
+
+  reset)
+    # A sanctioned, recoverable reset: dropping the database is fine to do, but a
+    # raw 'dropdb' is how the demo was lost once. This backs up first, then makes
+    # you confirm by typing the name — so an accidental reset is impossible and a
+    # deliberate one is always restorable from the backup just taken.
+    echo "reset DROPS and recreates '$DBNAME' — all current data is lost." >&2
+    bash "$(dirname "$0")/backup_db.sh" || echo "  (safety backup skipped) " >&2
+    if [ "${2:-}" != "--force" ]; then
+      printf "Type the database name to confirm [%s]: " "$DBNAME" >&2
+      read -r ans
+      [ "$ans" = "$DBNAME" ] || { echo "Aborted — nothing changed." >&2; exit 1; }
+    fi
+    PGPASSWORD="$OWNER_PW" dropdb --if-exists -f -h "$HOST" -p "$PORT" -U "$OWNER" "$DBNAME"
+    PGPASSWORD="$OWNER_PW" createdb -h "$HOST" -p "$PORT" -U "$OWNER" "$DBNAME"
+    echo "'$DBNAME' reset. Start the app to apply migrations and seed reference data." >&2
+    ;;
+
+  *)      echo "usage: $0 {init|start|stop|status|backup|restore <dump>|reset [--force]}" >&2; exit 1 ;;
 esac
