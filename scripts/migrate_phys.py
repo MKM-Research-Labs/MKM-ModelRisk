@@ -49,37 +49,11 @@ from src.governance.model_inventory import (
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from scripts._phys_folders import folder_for
 from scripts._phys_lineage import apply_field_renames
+from scripts._phys_mapping import COLLECTION_MAP, SCALAR_FIELDS
 
 MODELS_ROOT = PHYS_ROOT / "docs" / "models"
 ACTOR = "migrate_phys"
 
-# Source scalar fields that map to a ModelRisk model field of the same key.
-SCALAR_FIELDS = (
-    "short_name", "description", "category", "tier", "materiality", "complexity",
-    "tier_rationale", "methodology", "methodology_rationale", "source_module", "owner",
-    "model_owner_role", "peer_reviewer", "status", "lifecycle_stage", "version",
-    "validation_status", "rag_rating", "review_frequency", "last_review_date",
-    "next_review_date", "mrc_signoff_date", "recertification_date", "validation_date",
-)
-# Source collection -> (ModelRisk collection, {source_key: modelrisk_key}).
-COLLECTION_MAP = {
-    "assumptions": ("assumptions",
-                    {"description": "description", "impact": "impact",
-                     "monitoring": "monitoring", "mitigation": "mitigation"}),
-    "limitations": ("limitations",
-                    {"description": "description", "impact": "impact",
-                     "monitoring_trigger": "monitoring_trigger",
-                     "compensating_control": "compensating_control"}),
-    "remediation_steps": ("remediation_steps",
-                          {"description": "description", "owner": "owner",
-                           "priority": "priority", "due_date": "due_date", "status": "status"}),
-    "version_history": ("version_history",
-                        {"version": "version", "date": "date", "description": "description",
-                         "author": "author", "document": "ref_document"}),
-    "change_history": ("change_history",
-                       {"version": "version", "date": "date", "author": "author",
-                        "change_type": "change_type", "description": "description"}),
-}
 
 
 def _valid(field_key: str, value) -> bool:
