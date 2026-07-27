@@ -74,17 +74,6 @@ function vqBadge(status) {
   return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
 }
 
-const REVIEW_COLORS = {
-  "Overdue": "#d32f2f", "Due Soon": "#f57c00", "Upcoming": "#1976d2",
-  "On Track": "#388e3c", "Not Scheduled": "#9e9e9e",
-};
-
-// Model review-status badge (Overdue / Due Soon / Upcoming / On Track).
-function reviewBadge(status) {
-  const color = REVIEW_COLORS[status] || "#9e9e9e";
-  return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
-}
-
 // A model is "Due Soon" when its next review falls within this many days.
 const DUE_SOON_DAYS = 30;
 
@@ -103,9 +92,8 @@ function reviewStatus(nextDate) {
   return "On Track";
 }
 
-// Sort orders for badge columns (lower sorts first): highest-risk first.
+// Sort order for the RAG column (lower sorts first): highest-risk first.
 const RAG_ORDER = { Red: 0, Amber: 1, Green: 2 };
-const REVIEW_ORDER = { "Overdue": 0, "Due Soon": 1, "On Track": 2, "Upcoming": 2, "Not Scheduled": 3 };
 
 // The latest MRC sign-off outcome as a sortable string ("" when none).
 function mrcOutcome(data) {

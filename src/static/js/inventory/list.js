@@ -48,8 +48,9 @@ const InventoryList = {
       cell: (m) => fieldDisplay(m.d.owner) },
     { key: "next", label: "Next Review", sortVal: (m) => m.d.next_review_date || "9999",
       cell: (m) => fieldDisplay(m.d.next_review_date) },
-    { key: "review", label: "Review", sortVal: (m) => REVIEW_ORDER[reviewStatus(m.d.next_review_date)] ?? 9,
-      cell: (m) => reviewBadge(reviewStatus(m.d.next_review_date)) },
+    // The derived review status (On Track / Overdue) is no longer a column — it
+    // only re-stated the Next Review date beside it. The Overdue / Due Soon tiles
+    // and the review filter still surface it as a portfolio-health signal.
     { key: "mrc", label: "MRC Status", sortVal: (m) => mrcOutcome(m.d),
       cell: (m) => mrcStatusBadge(m.d) },
     { key: "lifecycle", label: "Lifecycle", sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || m.d.status || "").toLowerCase(),
