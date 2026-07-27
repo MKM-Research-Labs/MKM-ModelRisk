@@ -129,6 +129,14 @@ function lifecycleBadge(lifecycle) {
 // rejected), or a dash when the MRC has not yet ruled. The detail view also
 // surfaces pending requests; the list keeps to the decided outcome.
 function mrcStatusBadge(data) {
+  // An active request (queued to a committee, awaiting its decision) is the
+  // model's current MRC state — it is waiting on approval — so Pending takes
+  // precedence over any earlier decided outcome. "Pending" / "Attached" mirrors
+  // the server's definition of an active request (api_models_signoff.pending_signoff).
+  const reqs = (data && data.signoff_requests) || [];
+  if (reqs.some((r) => r.status === "Pending" || r.status === "Attached")) {
+    return '<span style="color:#f57c00;font-weight:600">Pending</span>';
+  }
   const hist = (data && data.signoff_history) || [];
   const latest = hist.length ? hist[hist.length - 1] : null;
   if (!latest) return '<span class="muted">—</span>';
