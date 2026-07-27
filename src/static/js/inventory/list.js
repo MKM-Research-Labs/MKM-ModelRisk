@@ -61,7 +61,10 @@ const InventoryList = {
     this._models = models.map((m) => ({ model_id: m.model_id, retired: m.retired, d: m.data || {} }));
     this._onRow = onRow;
     this._filters = { q: "", tier: "", rag: "", owner: "", review: "", lifecycle: "" };
-    this._sort = { key: "model_id", dir: 1 };
+    // Default to the soonest next-review first, so the models needing attention
+    // are at the top on load; unscheduled ("9999" sort key) fall to the bottom.
+    // Any header click still re-sorts and toggles.
+    this._sort = { key: "next", dir: 1 };
     document.getElementById("m-summary").innerHTML = this._tiles();
     this._wireTiles();
     document.getElementById("m-list").innerHTML =
