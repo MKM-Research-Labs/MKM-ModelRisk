@@ -74,7 +74,7 @@ CONFIG_DIR = "config"
 
 # Every first-party sub-tree. Coding rule R5 ("every first-party .py and .js
 # file") is licence-bearing scope, so it is repo-wide like R2's: root-level files
-# (app.py) plus these trees — tests, docs, the published packages/ clients and the
+# (model.py) plus these trees — tests, docs, the published packages/ clients and the
 # contracts/ schemas included. Scoping it to SOURCE_DIRS would let the entry point,
 # the test suite and a shipped package carry a stale licence while R5 passed.
 FIRST_PARTY_DIRS = ("config", "src", "scripts", "audit", "tests", "docs",
@@ -112,7 +112,7 @@ LOCAL_ONLY_SUFFIX = ".local.md"
 INIT_INVENTORY_DIRS = ("config", "src", "scripts", "app", "audit", "packages")
 
 # Coding rule R2 — the "split rule". The modularisation scan is repo-wide: it
-# covers all non-test first-party code (root-level files like app.py plus these
+# covers all non-test first-party code (root-level files like model.py plus these
 # sub-trees), not just SOURCE_DIRS, so the docs/ generators and web assets are
 # held to the same size limit. Tests are excluded — they carry their own,
 # higher limit and their own scan (large_test_files).

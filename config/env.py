@@ -19,7 +19,7 @@
 # SOFTWARE.
 """Load ``.env`` into the process environment (coding rule R1).
 
-The app is launched several ways - ``python app.py``, a WSGI server, the start
+The app is launched several ways - ``python model.py``, a WSGI server, the start
 scripts, pytest - and every one of them should see the same settings. Reading
 ``.env`` here, at config-import time, means one file defines a machine's
 configuration whatever the entry point, rather than each launcher having to

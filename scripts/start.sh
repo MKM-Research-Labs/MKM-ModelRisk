@@ -85,12 +85,12 @@ fi
 # --- 5. Run ----------------------------------------------------------------
 if [ "$RUN_APP" = "1" ]; then
   step "Starting MKM-ModelRisk on http://${WEB_HOST:-127.0.0.1}:${WEB_PORT:-5015}"
-  exec python app.py
+  exec python model.py
 fi
 step "Setup complete"
 cat <<EOF
 To start the app:
   source .venv/bin/activate
-  python app.py
+  python model.py
 Then open http://${WEB_HOST:-127.0.0.1}:${WEB_PORT:-5015}
 EOF

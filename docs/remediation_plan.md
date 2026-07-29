@@ -40,7 +40,7 @@ next migration commit brings the mess in."
 | Tracked generated artifacts | **none** — no `test_history.json`, `test_results.*`, `test_report.*`, LaTeX intermediates, or tracked `.pdf` |
 | `data/` in git | never committed (0 commits touch it) |
 | `.git` size | 5.7 MB / 200 commits |
-| Entrypoint | `app.py` is a 34-line Flask launcher — no CLI test-orchestrator, so PhysicalRisk's exit-code and test-command bugs are structurally absent |
+| Entrypoint | `model.py` is a 34-line Flask launcher — no CLI test-orchestrator, so PhysicalRisk's exit-code and test-command bugs are structurally absent |
 | Audit-PDF generators | not replicated — so PhysicalRisk's evidence-integrity issues (stale-e2e cover figure, lineage PASS/ISSUES contradiction) don't apply |
 
 Do not "fix" any of these. They're the baseline to protect.
@@ -97,7 +97,7 @@ one test, not the run.
 `src/database/` seam exists but there is no `postgres_reachable`-style preflight.
 If integration/e2e tests need Postgres and it's down, they skip and coverage
 silently drops below the gate — read as a test gap, not a missing service (cost
-PhysicalRisk a 17-minute misdiagnosis). Lower severity here because `app.py` is
+PhysicalRisk a 17-minute misdiagnosis). Lower severity here because `model.py` is
 not the test orchestrator, so the blast radius is smaller — but the same
 skip-then-miss dynamic applies to whatever runs the DB-backed tests.
 
@@ -162,7 +162,7 @@ does **not** carry these PhysicalRisk defects — several were only fixed on
       `test_report.*`, `.aux/.log/.out/.toc`, or run logs added to git.
 - [ ] **Entrypoint exit codes** — if any CLI orchestrator is ported, confirm it
       returns non-zero on failure and the caller propagates it (PhysicalRisk's
-      `app.py` discarded the return code, so `test` exited 0 on failures).
+      `model.py` discarded the return code, so `test` exited 0 on failures).
 - [ ] **Coverage tracer** — `core = "ctrace"` preserved (already correct here).
 - [ ] **Audit reports** — if PhysicalRisk's report generators are ported, verify
       cover-page metrics read the *same* source as the detail sections and

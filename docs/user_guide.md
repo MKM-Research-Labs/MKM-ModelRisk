@@ -74,7 +74,7 @@ you are `david.kelly@mkmresearchlabs.com` by default.
 
 **What to do:**
 
-1. Open the console (locally: `python app.py`, then the host/port from
+1. Open the console (locally: `python model.py`, then the host/port from
    `config/web.py`, default `http://127.0.0.1:5015`).
 2. Set the **Acting as** field in the header to your name or email — this is the
    actor stamped on every change you make.

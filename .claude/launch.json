@@ -4,7 +4,7 @@
     {
       "name": "modelrisk",
       "runtimeExecutable": ".venv/bin/python",
-      "runtimeArgs": ["app.py"],
+      "runtimeArgs": ["model.py"],
       "port": 5015
     }
   ]

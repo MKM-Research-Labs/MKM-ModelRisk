@@ -49,7 +49,7 @@ def py_files(*dirs: str):
 def code_files(dirs, extensions):
     """Yield first-party code files with the given extensions, repo-wide.
 
-    Covers root-level files (e.g. ``app.py``) plus every file under each named
+    Covers root-level files (e.g. ``model.py``) plus every file under each named
     top-level directory in ``dirs``, restricted to ``extensions`` and outside
     the excluded dirs. This is the repo-wide counterpart to ``py_files`` — the
     scope the modularisation ("split") rule measures. Pass ``extensions=None``
@@ -67,7 +67,7 @@ def code_files(dirs, extensions):
             return True
         return False
 
-    # Root-level files (e.g. app.py) — not covered by any sub-tree walk.
+    # Root-level files (e.g. model.py) — not covered by any sub-tree walk.
     for path in sorted(REPO_ROOT.glob("*")):
         if _emit(path):
             yield path

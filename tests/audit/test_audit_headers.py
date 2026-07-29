@@ -40,7 +40,7 @@ def test_canonical_block_matches_the_license_file():
 def test_scope_covers_the_entry_point_and_the_tests():
     """R5 reads 'every first-party file' — not just the source dirs."""
     scanned = {rel(path) for path, _ in _scan()}
-    assert "app.py" in scanned
+    assert "model.py" in scanned
     assert "tests/audit/test_audit_headers.py" in scanned
 
 

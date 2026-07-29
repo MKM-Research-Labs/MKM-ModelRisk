@@ -185,12 +185,12 @@ if (-not $NoRun) {
     # without an exit-code check - neither is an error.
     $prev = $ErrorActionPreference
     $ErrorActionPreference = 'Continue'
-    try { & $VenvPy app.py } finally { $ErrorActionPreference = $prev }
+    try { & $VenvPy model.py } finally { $ErrorActionPreference = $prev }
 } else {
     Step "Setup complete"
     Write-Host @"
 To start the app:
-  .venv\Scripts\python.exe app.py
+  .venv\Scripts\python.exe model.py
 Then open http://${WebHost}:${WebPort}
 "@
 }

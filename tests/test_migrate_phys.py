@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""The PhysicalRisk -> ModelRisk demo seed (``app.py phys``).
+"""The PhysicalRisk -> ModelRisk demo seed (``model.py phys``).
 
 Maps a source model's scalar fields and collections onto a freshly registered
 ModelRisk model, carries the SR 26-2 validation-question statuses across, and

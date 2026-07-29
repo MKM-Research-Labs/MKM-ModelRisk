@@ -26,7 +26,7 @@ migrated chain artifact and each model's declared upstream/downstream, and creat
 the PRS product. Idempotent, so it is safe to re-run; gaps the source cannot resolve
 are reported rather than guessed.
 
-Run as:  python -m scripts.migrate_phys   (or  python app.py phys)
+Run as:  python -m scripts.migrate_phys   (or  python model.py phys)
 """
 from __future__ import annotations
 

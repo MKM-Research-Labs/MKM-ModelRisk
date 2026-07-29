@@ -19,10 +19,10 @@
 # SOFTWARE.
 """Application entry point.
 
-Run the governance console with ``python app.py`` (applies DB migrations on
+Run the governance console with ``python model.py`` (applies DB migrations on
 startup). ``app`` is exposed at module level so a WSGI server can serve it too,
-e.g. ``gunicorn app:app``. ``python app.py phys`` populates the instance from the
-PhysicalRisk model inventory (demo seed) instead of starting the server.
+e.g. ``gunicorn model:app``. ``python model.py phys`` populates the instance from
+the PhysicalRisk model inventory (demo seed) instead of starting the server.
 """
 from __future__ import annotations
 

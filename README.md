@@ -258,7 +258,7 @@ On Linux/macOS confirm with `bash scripts/pg.sh status` → `... accepting conne
 **Step 4 — Launch the app.**
 
 ```bash
-python app.py                      # creates + migrates mkm_modelrisk on first run
+python model.py                      # creates + migrates mkm_modelrisk on first run
 ```
 
 ✓ You should see `Running on http://127.0.0.1:5015`.
@@ -281,7 +281,7 @@ To do it by hand in a fresh terminal (the database persists between runs):
 cd MKM-ModelRisk
 source .venv/bin/activate
 bash scripts/pg.sh start
-python app.py
+python model.py
 ```
 
 *Windows (PowerShell)*
@@ -290,7 +290,7 @@ python app.py
 cd MKM-ModelRisk
 .venv\Scripts\Activate.ps1
 powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -NoRun   # starts the cluster
-python app.py
+python model.py
 ```
 
 Stop the app with **Ctrl-C**. Stop the database with `bash scripts/pg.sh stop`
@@ -299,7 +299,7 @@ Stop the app with **Ctrl-C**. Stop the database with `bash scripts/pg.sh stop`
 no-op, not an error.
 
 > **Stop the database before shutting down or unmounting its volume.** The
-> cluster does not auto-start, so after a reboot `python app.py` fails with
+> cluster does not auto-start, so after a reboot `python model.py` fails with
 > `connection to server at "127.0.0.1", port 5433 failed: Connection refused` —
 > that just means the database is not running, so `bash scripts/pg.sh start`
 > fixes it. Pulling the volume out from under a *running* cluster is the harmful
@@ -335,7 +335,7 @@ no-op, not an error.
 | `psql: could not connect` / `connection refused` | The cluster isn't running. `bash scripts/pg.sh start` (Linux/macOS) or `scripts\start.ps1 -NoRun` (Windows). |
 | `Address already in use` on port 5015 | An app instance is still up: `lsof -tiTCP:5015 \| xargs kill` (or `fuser -k 5015/tcp` on Linux), then retry. |
 | PDF exports return **503** | Install the optional engines — `sudo apt install tectonic pandoc` / `brew install tectonic pandoc`. |
-| Want a clean slate | Drop and recreate the database: `dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk && python app.py` (start the cluster first). On Windows use `"C:\Program Files\PostgreSQL\16\bin\dropdb.exe"` with the same arguments. To wipe everything, delete the `.pgdata` folder and re-run the start script. |
+| Want a clean slate | Drop and recreate the database: `dropdb -h localhost -p 5433 -U mkm_owner --if-exists mkm_modelrisk && python model.py` (start the cluster first). On Windows use `"C:\Program Files\PostgreSQL\16\bin\dropdb.exe"` with the same arguments. To wipe everything, delete the `.pgdata` folder and re-run the start script. |
 
 ### Verify the checkout (optional but recommended)
 
@@ -386,7 +386,7 @@ parameters, and over-long files.
 ## Configuration
 
 Defaults match `scripts/pg.sh`. Copy `.env.example` to `.env` and override there —
-`config/env.py` loads it at import, so every entry point (`python app.py`, a WSGI
+`config/env.py` loads it at import, so every entry point (`python model.py`, a WSGI
 server, the start scripts, pytest) sees the same settings. A real environment
 variable always wins over the file.
 
@@ -404,7 +404,7 @@ variable always wins over the file.
 | `UPLOAD_DIR` | `./uploads` | Where uploaded files (and audit PDFs) are stored |
 | `PRODUCER_ROOT` | `../PhysicalRisk` | Root of the producing repo a migration reads from |
 
-A WSGI server can serve the app object directly, e.g. `gunicorn app:app`.
+A WSGI server can serve the app object directly, e.g. `gunicorn model:app`.
 
 ---
 

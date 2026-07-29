@@ -27,7 +27,7 @@ the database.
 3. Change the destination to somewhere simple, such as `C:\ModelRisk`, and click
    **Extract**.
 
-You should end up with a folder containing files like `README.md`, `app.py` and
+You should end up with a folder containing files like `README.md`, `model.py` and
 **`START-HERE.bat`**.
 
 ## Step 3 — Run the starter
