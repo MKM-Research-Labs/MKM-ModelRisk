@@ -24,6 +24,7 @@ run. Drive them with ``pytest tests/e2e -m e2e``.
 """
 from __future__ import annotations
 
+import os
 import socket
 import subprocess
 import sys
@@ -42,7 +43,10 @@ try:
 except ImportError:
     collect_ignore_glob = ["test_e2e_*.py"]
 
-E2E_DB = "mkm_modelrisk_e2e"
+# The isolated database these browser tests run against, always separate from the
+# dev/demo ``mkm_modelrisk`` estate. Overridable so a suite can claim its own DB —
+# the onboarding journey runs with ``E2E_DB_NAME=mkm_modelrisk_journey``.
+E2E_DB = os.environ.get("E2E_DB_NAME", "mkm_modelrisk_e2e")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
