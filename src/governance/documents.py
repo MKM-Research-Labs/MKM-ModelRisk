@@ -34,6 +34,14 @@ from src.files import save_upload
 
 DOCUMENTS = "documents"
 
+# The top-level Documents area (api_documents) is external-only: governance-wide
+# reference material, always uncategorised. Model/product documents carry a
+# category and belong on their own aggregate. Enforced in add_document — not left
+# to convention — so no caller (UI, seed, or an out-of-repo importer) can dump
+# categorised model docs into the external bucket, which is how 93 model documents
+# once ended up there.
+GOVERNANCE_DOCUMENTS_AGGREGATE = "GovernanceDocuments"
+
 
 def model_scope(model_id: str) -> str:
     """Where a model's uploaded files live under the upload directory. Named here,
@@ -78,6 +86,11 @@ def add_document(
     description: str, actor: str, category: str = "", config=None,
 ) -> dict:
     """Store the file on disk and record its metadata against the aggregate."""
+    if aggregate_type == GOVERNANCE_DOCUMENTS_AGGREGATE and (category or "").strip():
+        raise DomainError(
+            "the top-level Documents area is external-only; a categorised document "
+            f"({category!r}) belongs on its model or product, not here"
+        )
     meta = save_upload(scope, filename, data)
     documents, version = _fold(aggregate_type, aggregate_id, config)
     payload = {
