@@ -23,12 +23,19 @@
 // per-field editing augment Detail from detail_overview.js, loaded after.
 // Description is promoted to a full-width summary band above the two columns.
 // Tier + its rating rationale sit at the foot of Model Details, below Complexity.
-const OVERVIEW_LEFT = ["division", "line_of_business", "methodology", "source_module",
-  "materiality", "complexity", "tier", "rating_rationale"];
-// Governance: MRC (derived) sits at the top; the MRC sets sign-off + next review
-// at sign-off, so recertification / review frequency / last review are dropped.
-// Review status (a derived badge) replaces the raw review-date clutter.
-const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "lifecycle_stage", "review_status", "peer_reviewer"];
+// repo_location / codebase (Organisation), type / short_name / tier_rationale
+// (Classification), methodology_rationale (Methodology) and model_owner_role /
+// validation_date (Governance) are governed, audit-scored fields; each renders from
+// the config specs via _row. They had been dropped from these lists, which left them
+// uneditable while the audit still expected them.
+const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebase", "type", "short_name",
+  "methodology", "methodology_rationale", "source_module", "materiality", "complexity",
+  "tier", "tier_rationale", "rating_rationale"];
+// Governance column. Note: recertification / review_frequency / last_review_date remain
+// intentionally off the overview (the MRC sets sign-off + next review at sign-off); that
+// they are still audit-scored is a separate, open decision, not this regression.
+const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "model_owner_role", "lifecycle_stage",
+  "review_status", "peer_reviewer", "validation_date"];
 const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
 // The document category that backs each Testing field's in-context upload panel.
 const TESTING_DOC_CATEGORY = {
@@ -116,6 +123,7 @@ const Detail = {
       ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
       ["dependencies", "Dependencies", n("dependencies")],
+      ["raci_roles", "RACI", n("raci_roles")],
       ["validation_questions", "Validation & Assumptions", cov],
       ["testing", "Testing", tst],
       ["risk", "Risk Rating", null],
