@@ -43,6 +43,7 @@ from src.web import api_product_risk  # noqa: F401 — attaches endpoints to pro
 from src.web.api_ingest import ingest_bp
 from src.web.api_reference import reference_bp
 from src.web.views import views_bp
+from src.web._startup import reconcile_read_models
 
 
 def _register_error_handlers(app: Flask) -> None:
@@ -66,6 +67,13 @@ def create_app(run_db_migrations: bool = True) -> Flask:
         # Model types are admin-managed, but an empty list degrades the field to
         # free text — so a fresh database is given the defaults once.
         ensure_default_model_types()
+        # Read-models are derived caches maintained incrementally on writes; if one
+        # drifts out of sync with the event log (e.g. after a restore or a data-dir
+        # migration, where no command runs to refresh it) intact records render
+        # blank. Recompute them from the log on startup so a stale cache self-heals
+        # instead of masquerading as data loss. Rewrites only cache tables, never
+        # the log; set REBUILD_VIEWS_ON_STARTUP=0 to skip. See src/web/_startup.py.
+        reconcile_read_models()
     # Front-end assets live under src/static and src/templates (coding rule R7).
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
     app.register_blueprint(views_bp)
