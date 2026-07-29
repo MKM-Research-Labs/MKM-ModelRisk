@@ -26,9 +26,10 @@ include = ["config*", "src*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q -m 'not e2e'"
+addopts = "-q -m 'not e2e and not journey'"
 markers = [
     "e2e: end-to-end browser tests against a live server (run with: pytest tests/e2e -m e2e)",
+    "journey: end-to-end onboarding journey on a dedicated DB (run with: TEST_DB_BASE=mkm_modelrisk_journey pytest tests/journey -m journey)",
 ]
 
 [tool.coverage.run]
