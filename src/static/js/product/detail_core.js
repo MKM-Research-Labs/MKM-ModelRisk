@@ -94,7 +94,12 @@ const ProductDetail = {
   _tabbar(d) {
     const n = (k) => (d[k] || []).length;
     const tabs = [
-      ["overview", "Overview", null], ["limitations", "Limitations", n("limitations")],
+      ["overview", "Overview", null],
+      // Components is the Product definition — its typed component models. The
+      // collection + backend existed and were shown read-only on the overview, but
+      // there was no editor tab, so a Product could not be defined from the UI.
+      ["components", "Components", n("components")],
+      ["limitations", "Limitations", n("limitations")],
       ["assumptions", "Assumptions", n("assumptions")],
       ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
       ["validation_questions", "Validation", n("validation_questions")],

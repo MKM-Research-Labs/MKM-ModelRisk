@@ -28,6 +28,10 @@ const Reference = {
   _TABS: [
     ["company", "Company"], ["division", "Division"], ["line_of_business", "Line of Business"],
     ["mrc", "MRC"], ["calculating_agent", "Calc Agent"], ["people", "People"],
+    // model_type (and codebase) are admin-managed and already exposed by
+    // /api/reference; they were just missing from the tab bar, so the type field's
+    // reference list could not be maintained from the UI.
+    ["model_type", "Model Type"],
   ],
 
   async render() {
