@@ -58,6 +58,15 @@ DOCS = [
     ("Sensitivity", "sensitivity_analysis.pdf",
      "docs/storm_freq/ef001_lambda_sensitivity_analysis.pdf",
      "Sensitivity Analysis - Event Frequency Model"),
+    ("Analysis", "analysis.pdf",
+     "docs/storm_freq/ef001_analysis.pdf",
+     "Analysis - Event Frequency Model"),
+    ("Test Results", "test_results.pdf",
+     "docs/storm_freq/ef001_test_results.pdf",
+     "Test Results - Event Frequency Model"),
+    ("Unit Test", "unit_tests_MKM-EF-001.pdf",
+     "docs/storm_freq/ef001_test_results.pdf",
+     "Unit test evidence - Event Frequency Model"),
 ]
 
 
