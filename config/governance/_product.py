@@ -116,10 +116,9 @@ PRODUCT_COLLECTION_SPECS = {
     "limitations": COLLECTION_SPECS["limitations"],
     "assumptions": COLLECTION_SPECS["assumptions"],
     "remediation_steps": COLLECTION_SPECS["remediation_steps"],
-    # Composite risk-rating inputs, shared shape with the model inventory: the
-    # validation-question tracker (coverage) and the operational-event log
-    # (impact). Give the product the same risk assessment as a model.
-    "validation_questions": COLLECTION_SPECS["validation_questions"],
+    # SR 26-2 validation questions are a model-level concept and are not carried on
+    # a Product: a Product validates through its component models, not a separate
+    # product-level questionnaire. The operational-event log (impact) stays.
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     # The RACI operating model — who is R/A/C/I for this product's use of models
     # in production. Defined at the product level (RACI folds into Product).

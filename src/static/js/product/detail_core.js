@@ -102,7 +102,8 @@ const ProductDetail = {
       ["limitations", "Limitations", n("limitations")],
       ["assumptions", "Assumptions", n("assumptions")],
       ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
-      ["validation_questions", "Validation", n("validation_questions")],
+      // SR 26-2 validation questions are a model-level concept; a Product validates
+      // through its component models, not a separate product questionnaire.
       ["operational_failure_events", "Events", n("operational_failure_events")],
       ["raci_roles", "RACI", n("raci_roles")],
       ["risk", "Risk Rating", null], ["linkage", "MRC", null],
