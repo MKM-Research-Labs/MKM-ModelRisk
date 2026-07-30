@@ -288,9 +288,10 @@ def test_per_model_audit_tab_shows_recorded_events(page: Page, base_url: str):
     expect(page.locator("#row-methodology")).to_contain_text("Regression")
     page.click("[data-dtab='audit']")
     body = page.locator("#dt-content")
-    # Register + field-update events should both appear as event-type rows.
-    expect(body).to_contain_text("ModelRegistered")
-    expect(body).to_contain_text("ModelFieldUpdated")
+    # Audit trail renders field · old → new · actor (not raw event types). The
+    # registration and the methodology change both appear, with the new value.
+    expect(body).to_contain_text("Registered")
+    expect(body).to_contain_text("Regression")   # the new value of the methodology field
     # Actor stamped on each row (david.kelly@mkmresearchlabs.com is the fallback SSO identity).
     expect(body).to_contain_text("david.kelly@mkmresearchlabs.com")
 

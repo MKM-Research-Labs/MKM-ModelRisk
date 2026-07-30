@@ -215,13 +215,48 @@ const DetailTabs = {
 
   audit(events) {
     if (!events.length) return '<div class="empty">No recorded changes for this model yet.</div>';
-    const rows = events.map(function (e) {
+    // A readable field label where we can resolve one, else the raw key.
+    const label = (k) => { try { const s = Inventory.specByKey(k); return (s && s.label) || k; } catch (_) { return k; } };
+    // Normalise each event into one or more {field, old, new} change rows. The
+    // payloads already carry the diff: field updates hold from/value, collection
+    // updates hold _changes {field:{from,to}}, document uploads are additions to
+    // the documents collection. Reason is dropped as redundant.
+    const changesFor = (e) => {
+      const p = e.payload || {};
+      switch (e.event_type) {
+        case "ModelFieldUpdated":
+        case "ProductFieldEdited":
+        case "HandoffFieldUpdated":
+          return [{ field: label(p.field), old: p.from, new: p.value }];
+        case "ModelRegistered":
+        case "ProductRegistered":
+          return [{ field: "Registered", old: null, new: p.name || p.product || e.aggregate_id }];
+        case "CollectionItemUpdated":
+          if (p._changes) return Object.keys(p._changes).map((k) => (
+            { field: (p.collection ? p.collection + " · " : "") + label(k), old: p._changes[k].from, new: p._changes[k].to }));
+          return [{ field: (p.collection || "item") + " updated", old: null, new: p.item_id }];
+        case "CollectionItemAdded":
+          if (p.collection === "documents")
+            return [{ field: "Document uploaded", old: null, new: p.original_name || p.filename }];
+          return [{ field: (p.collection || "item") + " added", old: null,
+                    new: p.description || p.title || p.value || p.question || p.item_id }];
+        case "CollectionItemRemoved":
+          return [{ field: (p.collection || "item") + " removed", old: p.item_id, new: null }];
+        default:
+          return [{ field: e.event_type, old: null, new: null }];
+      }
+    };
+    const cell = (v) => (v === null || v === undefined || v === "" ? "—" : esc(String(v)));
+    const rows = [];
+    events.forEach((e) => {
       const when = e.recorded_at.replace("T", " ").slice(0, 19);
-      return "<tr><td>" + esc(when) + "</td><td>" + esc(e.event_type) + "</td><td>" + esc(e.actor) +
-        "</td><td>" + esc(e.reason || "—") + "</td></tr>";
-    }).join("");
-    return "<table><thead><tr><th>When (UTC)</th><th>Event</th><th>Actor</th><th>Reason</th></tr></thead><tbody>" +
-      rows + "</tbody></table>";
+      changesFor(e).forEach((c) => {
+        rows.push("<tr><td>" + esc(when) + "</td><td>" + esc(c.field) + "</td><td>" + cell(c.old) +
+          "</td><td>" + cell(c.new) + "</td><td>" + esc(e.actor) + "</td></tr>");
+      });
+    });
+    return "<table><thead><tr><th>When (UTC)</th><th>Field</th><th>Old</th><th>New</th><th>Actor</th>" +
+      "</tr></thead><tbody>" + rows.join("") + "</tbody></table>";
   },
 
   // Read-only renderer for items projected from MRC meetings (decisions /
