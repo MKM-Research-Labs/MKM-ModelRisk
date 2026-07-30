@@ -21,11 +21,9 @@
 // Inventory list view: summary stat tiles, per-column filters, and a sortable
 // table. Given the full in-scope model set it renders everything client-side;
 // filtering and sorting never re-fetch. The tiles summarise the whole set;
-// clicking a Tier / Overdue / Due Soon tile toggles the matching filter.
+// clicking a Tier / RAG tile toggles the matching filter.
 
 const LIFECYCLE_STAGES = ["Development", "Validation", "Production", "Retired"];
-// A model counts as "assessed" once the MRC validation has reached a decision.
-const ASSESSED_STATUSES = ["Validated", "Conditionally Approved", "Rejected"];
 
 const InventoryList = {
   _models: [],
@@ -76,8 +74,12 @@ const InventoryList = {
   // --- tiles ---
   _tiles() {
     const byTier = (t) => this._models.filter((m) => m.d.tier === t).length;
-    const byReview = (s) => this._models.filter((m) => reviewStatus(m.d.next_review_date) === s).length;
-    const assessed = this._models.filter((m) => ASSESSED_STATUSES.indexOf(m.d.validation_status) >= 0).length;
+    const byRag = (r) => this._models.filter((m) => m.d.rag_rating === r).length;
+    // Approved = models whose latest MRC sign-off outcome is an approval.
+    const approved = this._models.filter((m) => mrcOutcome(m.d) === "Approved").length;
+    // R/A/G breakdown, each count coloured to its rating.
+    const ragCount = (r) => '<span style="color:' + RAG_COLORS[r] + '">' + byRag(r) + "</span>";
+    const ragVal = ragCount("Red") + " / " + ragCount("Amber") + " / " + ragCount("Green");
     const tile = (lbl, val, color, filter) =>
       '<div class="scard" style="border-left-color:' + color + '"' +
       (filter ? ' data-tile="' + filter + '"' : "") + '><div class="lbl">' + lbl +
@@ -87,9 +89,8 @@ const InventoryList = {
       tile("Tier 1", byTier(1), "#d32f2f", "tier=1") +
       tile("Tier 2", byTier(2), "#f57c00", "tier=2") +
       tile("Tier 3", byTier(3), "#1976d2", "tier=3") +
-      tile("Overdue", byReview("Overdue"), "#d32f2f", "review=Overdue") +
-      tile("Due Soon", byReview("Due Soon"), "#f57c00", "review=Due Soon") +
-      tile("Assessed", assessed + " / " + this._models.length, "#388e3c", "") +
+      tile("R / A / G", ragVal, "#388e3c", "") +
+      tile("Approved", approved + " / " + this._models.length, "#388e3c", "") +
       "</div>";
   },
 
