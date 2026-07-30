@@ -59,7 +59,7 @@ const ModelDocs = {
     const items = DocLinks.visible(this._docs, this._cat);
     const rows = items.length ? items.map((d) =>
       "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +
-      esc((d.uploaded_at || "").slice(0, 10)) + "</td><td>" + fmtSize(d.size) +
+      esc(fmtTimestamp(d.uploaded_at)) + "</td><td>" + fmtSize(d.size) +
       '</td><td class="rowact">' + DocLinks.actions(this._base, this._id, d) +
       (this._retired ? "" : ' <button class="btn small danger" data-rmdoc="' + esc(d.item_id) + '">Delete</button>') +
       "</td></tr>").join("") : '<tr><td colspan="5" class="empty">No documents.</td></tr>';
@@ -68,7 +68,7 @@ const ModelDocs = {
       '<input id="doc-desc" placeholder="Description (optional)" style="flex:1">' +
       '<button class="btn small primary" id="doc-upload">Upload</button></div>';
     document.getElementById("docs-cat").innerHTML = upload +
-      "<table><thead><tr><th>Name</th><th>Description</th><th>Date</th><th>Size</th><th>Actions</th></tr></thead><tbody>" +
+      "<table><thead><tr><th>Name</th><th>Description</th><th>Uploaded</th><th>Size</th><th>Actions</th></tr></thead><tbody>" +
       rows + "</tbody></table>";
     this._bind();
   },

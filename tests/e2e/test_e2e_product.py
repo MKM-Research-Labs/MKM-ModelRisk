@@ -27,6 +27,8 @@ has both a component and an agent.
 """
 from __future__ import annotations
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -165,6 +167,27 @@ def test_product_upload_supporting_document(page: Page, base_url: str, tmp_path)
     page.fill("#doc-desc", "Product specification")
     page.click("#doc-upload")
     expect(page.locator("#pt-content")).to_contain_text("product_spec.pdf")
+
+
+def test_product_monitoring_docs_subtab_upload(page: Page, base_url: str, tmp_path):
+    """Monitoring results are timestamped document uploads on the Docs tab's
+    Monitoring sub-tab (the old scalar monitoring_results field is gone). The
+    uploaded file lists back with an upload timestamp (date + time to the minute),
+    so several results landing on one day are still told apart."""
+    open_app(page, base_url)
+    _register_product(page, "Product-E2E-009", "Autocall")
+    _open_product(page, "Product-E2E-009")
+    page.click("[data-ptab='docs']")
+    page.click("[data-doctab='Monitoring']")
+    pdf = tmp_path / "monitoring_q3.pdf"
+    pdf.write_bytes(b"%PDF-1.4\n% e2e monitoring fixture\n")
+    page.set_input_files("#doc-file", str(pdf))
+    page.fill("#doc-desc", "Q3 back-testing results")
+    page.click("#doc-upload")
+    expect(page.locator("#pt-content")).to_contain_text("monitoring_q3.pdf")
+    # The upload carries a timestamp: YYYY-MM-DD HH:MM.
+    expect(page.locator("#pt-content")).to_contain_text(
+        re.compile(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}"))
 
 
 def test_product_retire(page: Page, base_url: str):

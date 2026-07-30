@@ -74,8 +74,12 @@ PRODUCT_FIELD_SPECS = {
     "mrc_signoff_meeting": {"label": "MRC sign-off meeting", "type": "text", "group": "Review dates"},
     "next_review_date": {"label": "Next review", "type": "date", "group": "Review dates"},
     "last_review_date": {"label": "Last review", "type": "date", "group": "Review dates"},
+    # Monitoring results are no longer a single overwritten text field: they are
+    # uploaded as timestamped documents under the "Monitoring" category (the Docs
+    # tab's Monitoring sub-tab), so each observation is retained as its own dated
+    # entry. ``monitoring_approach`` stays as the standing description of how the
+    # product is monitored; the results themselves are the document trail.
     "monitoring_approach": {"label": "Monitoring approach", "type": "text", "group": "Monitoring"},
-    "monitoring_results": {"label": "Monitoring results", "type": "text", "group": "Monitoring"},
 }
 
 # Fields editable through the generic field-edit command (the bindings are not —
@@ -85,7 +89,7 @@ PRODUCT_EDITABLE_FIELDS = (
     "tier", "materiality", "complexity",
     "rag_rating", "status", "owner", "notes",
     "mrc_signoff_date", "mrc_signoff_meeting", "next_review_date", "last_review_date",
-    "monitoring_approach", "monitoring_results",
+    "monitoring_approach",
 )
 PRODUCT_FIELD_CHOICES = {
     "status": VALID_PRODUCT_STATUS, "rag_rating": VALID_RAG_RATINGS,

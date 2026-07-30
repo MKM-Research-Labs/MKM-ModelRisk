@@ -106,7 +106,9 @@ FIELD_CRITICALITY = {
     "market_data_model": 0.60,
     "calculating_agent": 0.60,
     "monitoring_approach": 0.70,
-    "monitoring_results": 0.60,
+    # ``monitoring_results`` was a product-only scalar; monitoring results now live
+    # as timestamped uploads under the "Monitoring" document category, whose audit
+    # weight is carried by DOC_CRITICALITY["Monitoring"] rather than a field here.
     "notes": 0.30,
 }
 

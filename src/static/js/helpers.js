@@ -193,3 +193,13 @@ function fmtSize(bytes) {
   const kb = bytes / 1024;
   return kb < 1024 ? kb.toFixed(1) + " KB" : (kb / 1024).toFixed(1) + " MB";
 }
+
+// An uploaded_at stamp shown to the minute (UTC, as stored by add_document):
+// "2026-07-30T11:13:28+00:00" → "2026-07-30 11:13". Documents are retained per
+// upload, so the time — not just the date — is what distinguishes one dated
+// monitoring result from the next when several land on the same day.
+function fmtTimestamp(iso) {
+  const s = String(iso || "");
+  if (!s) return "—";
+  return s.slice(0, 16).replace("T", " ");
+}

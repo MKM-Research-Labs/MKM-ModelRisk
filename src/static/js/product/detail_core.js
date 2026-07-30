@@ -25,7 +25,10 @@
 const PRODUCT_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
 const PRODUCT_OVERVIEW_ORG = ["division", "line_of_business"];
 const PRODUCT_OVERVIEW_CLASS = ["tier", "materiality", "complexity"];
-const PRODUCT_OVERVIEW_MONITORING = ["monitoring_approach", "monitoring_results"];
+// The standing description of how the product is monitored. The results
+// themselves are no longer a scalar field — they are timestamped uploads under
+// the "Monitoring" category, on the Docs tab's Monitoring sub-tab.
+const PRODUCT_OVERVIEW_MONITORING = ["monitoring_approach"];
 const PRODUCT_OVERVIEW_GOV = ["status", "owner", "mrc_signoff_date", "next_review_date",
   "last_review_date", "notes"];
 
