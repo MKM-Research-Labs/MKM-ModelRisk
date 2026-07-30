@@ -100,6 +100,25 @@
     </div>
   </div>
 
+  <!-- Identity gate: on entry you confirm who you are, from the People directory.
+       The choice is fixed for the rest of the session — the header picker locks and
+       cannot be changed afterwards — mirroring how a production SSO signs you in as
+       one person. Every recorded change is thereby attributed to a deliberately
+       confirmed individual, not to whatever the picker last happened to show. There
+       is no Cancel: you must confirm to enter. -->
+  <div id="actor-overlay" class="overlay hidden">
+    <div class="modal">
+      <h2>Confirm your identity</h2>
+      <p class="muted">Choose who you are for this session. In production your SSO sets
+        this. Once confirmed it is fixed for the rest of your visit, and every change
+        you make is attributed to this person in the audit trail.</p>
+      <div class="field"><label for="actor-gate-select">You are</label><select id="actor-gate-select"></select></div>
+      <div class="modal-actions">
+        <button id="actor-gate-confirm" class="btn primary">Confirm &amp; continue</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Confirm-to-amend modal: every mutation passes through here. -->
   <div id="confirm-overlay" class="overlay hidden">
     <div class="modal">

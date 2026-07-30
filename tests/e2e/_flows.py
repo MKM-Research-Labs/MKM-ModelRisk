@@ -26,8 +26,18 @@ from config.commands import CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS
 
 
 def open_app(page: Page, base_url: str) -> Page:
-    """Load the console and wait for the inventory tab to be ready."""
+    """Load the console, confirm the identity gate, and wait for the inventory tab.
+
+    On entry the app blocks on an identity gate (``#actor-overlay``); accept the
+    pre-selected identity so the session is signed in before any test acts. The
+    Confirm button enables once the People list has loaded, and Playwright's click
+    waits for that, so no explicit wait is needed here.
+    """
     page.goto(base_url)
+    gate = page.locator("#actor-overlay")
+    expect(gate).to_be_visible()
+    page.click("#actor-gate-confirm")
+    expect(gate).to_be_hidden()
     expect(page.locator(".tab[data-tab='inventory']")).to_be_visible()
     return page
 
