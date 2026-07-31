@@ -136,11 +136,19 @@ const AuditReports = {
     fetch("/api/audit-reports/generate", {
       method: "POST", headers: { "X-Auth-Request-User": App.actor() },
     }).then(async (res) => {
+      const body = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e.error || "generation failed");
+        throw new Error(body.error || "generation failed");
       }
-      App.toast("Reports generated", "ok");
+      const failures = body.failures || [];
+      if (failures.length) {
+        // Some reports were refreshed, others failed and kept their old file
+        // (and old date) — name them so a stale card is never a silent surprise.
+        App.toast("Some reports failed to regenerate: " +
+          failures.map((f) => f.file).join(", "), "error");
+      } else {
+        App.toast("Reports generated", "ok");
+      }
       this._covActive = true;          // generate() kicked off a coverage refresh
       this.render();
       this._pollCoverage();
