@@ -45,7 +45,9 @@ def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
 
     generated = client.post("/api/audit-reports/generate", headers=HEADERS)
     assert generated.status_code == 200
-    names = {r["filename"] for r in generated.get_json()}
+    payload = generated.get_json()
+    assert payload["failures"] == []          # every report rendered
+    names = {r["filename"] for r in payload["reports"]}
     assert {"coding_rule_audit.pdf", "model_risk_report.pdf", "user_guide.pdf"} <= names
     # One standalone PDF per audit rule R1–R8 is generated in the same click.
     assert {"audit_r1_hardcoded_parameters.pdf", "audit_r3_test_coverage.pdf",
@@ -60,6 +62,39 @@ def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
 
     served = client.get("/api/audit-reports/coding_rule_audit.pdf")
     assert served.status_code == 200 and served.data.startswith(b"%PDF")
+
+
+def test_generate_survives_one_failing_report(client, tmp_path, monkeypatch):
+    # A single report blowing up (e.g. a one-off tectonic compile error) must not
+    # abort the run: every other report still refreshes and the failure is named
+    # under ``failures`` — instead of every report after it silently keeping its
+    # previous file and previous date (the "reports are two days old" symptom).
+    monkeypatch.setattr(mod, "OUTPUT_DIR", tmp_path / "audit")
+    monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})
+    monkeypatch.setattr(mod, "_render_user_guide", lambda dest: dest.write_bytes(b"%PDF ug"))
+    monkeypatch.setattr(mod, "_start_coverage_refresh", lambda output_dir: True)
+
+    def _one_bad(report, spec, as_of):
+        if spec["filename"] == "audit_r6_data_access.pdf":
+            raise RuntimeError("tectonic hiccup")
+        return b"%PDF-1.4 stub"
+
+    monkeypatch.setattr(audit_main, "render_report_pdf", _one_bad)
+    monkeypatch.setattr(audit_main, "render_audit_pdf", lambda report, as_of: b"%PDF-1.4 stub")
+    monkeypatch.setattr(mod, "render_report_pdf", lambda *a: b"%PDF-1.4 stub")
+    monkeypatch.setattr(mod, "render_completeness_pdf", lambda *a: b"%PDF-1.4 stub")
+
+    res = client.post("/api/audit-reports/generate", headers=HEADERS)
+    assert res.status_code == 200
+    payload = res.get_json()
+    assert [f["file"] for f in payload["failures"]] == ["audit_r6_data_access.pdf"]
+
+    names = {r["filename"] for r in payload["reports"]}
+    # Reports after the failing one still refreshed in the same click.
+    assert {"audit_r6_path_definitions.pdf", "audit_r8_duplicate_code.pdf",
+            "coding_rule_audit.pdf", "model_risk_report.pdf"} <= names
+    # The failing report left no partial/stale file with today's date.
+    assert not (tmp_path / "audit" / "audit_r6_data_access.pdf").exists()
 
 
 def test_generate_returns_503_without_tectonic(client, tmp_path, monkeypatch):

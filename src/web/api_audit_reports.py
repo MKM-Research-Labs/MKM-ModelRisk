@@ -70,6 +70,13 @@ _TYPE_LABELS = {".pdf": "PDF", ".xml": "XML", ".json": "JSON",
 _cov_lock = threading.Lock()
 _cov_state = {"running": False, "error": None}
 
+# Serialises every writer of the output dir — the synchronous generate() pass and
+# the background coverage rebuild both render the same PDFs with tectonic, and two
+# such passes overlapping (a second click, or a click landing on the tail of the
+# previous refresh) can make a compile fail intermittently. Held only around the
+# write, never around the ~1-min suite run.
+_write_lock = threading.Lock()
+
 
 def _run_coverage_and_rebuild(output_dir) -> None:
     """Run the suites into ``output_dir``, then rebuild the coverage-aware output.
@@ -83,9 +90,12 @@ def _run_coverage_and_rebuild(output_dir) -> None:
         results = run_test_suite(output_dir)
         as_of = date.today().isoformat()
         cov = coverage_summary(output_dir / COVERAGE_XML_NAME)
-        (output_dir / TEST_REPORT_PDF_NAME).write_bytes(
-            render_test_report_pdf(results, cov, as_of))
-        write_audit_reports(build_report(), as_of, output_dir)
+        # Serialise the rebuild against any synchronous generate() write so the
+        # two tectonic passes never run on the same dir at once.
+        with _write_lock:
+            (output_dir / TEST_REPORT_PDF_NAME).write_bytes(
+                render_test_report_pdf(results, cov, as_of))
+            write_audit_reports(build_report(), as_of, output_dir)
         error = None
     except Exception as exc:                    # missing pytest, timeout, tectonic…
         error = str(exc)
@@ -208,25 +218,48 @@ def _render_user_guide(dest):
         return
 
 
+def _write_one(dest, render, errors: list) -> None:
+    """Render one report to ``dest``, recording a non-fatal failure in ``errors``.
+
+    ``TectonicNotFound`` still propagates (no engine → nothing can be produced);
+    any other failure is recorded by filename and the caller moves on to the next
+    report, so one bad report never leaves the rest stale.
+    """
+    try:
+        dest.write_bytes(render())
+    except TectonicNotFound:
+        raise
+    except Exception as exc:                     # noqa: BLE001 — recorded, not swallowed
+        errors.append((dest.name, str(exc)))
+
+
 @audit_reports_bp.post("/generate")
 def generate():
-    """(Re)generate the audit report PDFs into the output directory."""
+    """(Re)generate the audit report PDFs into the output directory.
+
+    A single report failing (e.g. a one-off tectonic compile error) no longer
+    aborts the run: the remaining reports are still refreshed and the failed ones
+    are returned under ``failures`` so the UI can name what is now stale, rather
+    than every report after the failure silently keeping its previous date.
+    """
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     as_of = date.today().isoformat()
     report = build_report()
+    errors: list = []
     try:
-        # One standalone PDF per audit function (R1–R8) plus the JSON-file audit
-        # and the consolidated overview — the same set the ``python -m audit
-        # --pdf`` CLI emits — followed by the Model Risk report.
-        write_audit_reports(report, as_of, OUTPUT_DIR)
-        settings = get_settings()
-        (OUTPUT_DIR / "model_risk_report.pdf").write_bytes(
-            render_report_pdf(list_models(), settings, as_of))
-        # The completeness audit reads the registers and the document store
-        # itself, so it takes no model list: what it reports is partly what the
-        # store does *not* hold, which a list of records cannot express.
-        (OUTPUT_DIR / COMPLETENESS_REPORT_PDF_NAME).write_bytes(
-            render_completeness_pdf(settings, as_of))
+        with _write_lock:                        # serialise vs. the bg rebuild
+            # One standalone PDF per audit function (R1–R8) plus the JSON-file
+            # audit and the consolidated overview — the same set the ``python -m
+            # audit --pdf`` CLI emits — followed by the Model Risk report.
+            write_audit_reports(report, as_of, OUTPUT_DIR, errors=errors)
+            settings = get_settings()
+            _write_one(OUTPUT_DIR / "model_risk_report.pdf",
+                       lambda: render_report_pdf(list_models(), settings, as_of), errors)
+            # The completeness audit reads the registers and the document store
+            # itself, so it takes no model list: what it reports is partly what
+            # the store does *not* hold, which a list of records cannot express.
+            _write_one(OUTPUT_DIR / COMPLETENESS_REPORT_PDF_NAME,
+                       lambda: render_completeness_pdf(settings, as_of), errors)
     except TectonicNotFound as exc:
         # Optional system dependency missing: surface an actionable 503 rather
         # than a raw 500 stack trace.
@@ -236,7 +269,10 @@ def generate():
     _render_user_guide(OUTPUT_DIR / "user_guide.pdf")
     # Run the suites in the background; coverage/JUnit/Test Report land when done.
     _start_coverage_refresh(OUTPUT_DIR)
-    return jsonify(_catalogue())
+    return jsonify({
+        "reports": _catalogue(),
+        "failures": [{"file": name, "error": msg} for name, msg in errors],
+    })
 
 
 @audit_reports_bp.get("/coverage-status")
