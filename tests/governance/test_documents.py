@@ -53,3 +53,31 @@ def test_amending_an_unknown_document_is_refused():
     with pytest.raises(DomainError, match="unknown document"):
         update_document(aggregate_type=AGG, aggregate_id="M1", item_id="DOC-999",
                         fields={"category": "Sensitivity"}, actor="a")
+
+
+def test_clean_model_types_trims_dedupes_and_keeps_order():
+    from src.governance.documents import clean_model_types
+    assert clean_model_types(None) == []
+    assert clean_model_types([]) == []
+    assert clean_model_types([" Hazard ", "Pricing", "Hazard", ""]) == ["Hazard", "Pricing"]
+
+
+def test_external_document_carries_model_types_but_no_category():
+    from src.governance.documents import GOVERNANCE_DOCUMENTS_AGGREGATE as GDA
+    doc = add_document(
+        aggregate_type=GDA, aggregate_id="global", scope="governance",
+        filename="ref.pdf", data=b"%PDF-", description="", actor="a",
+        model_types=["Hazard", "Regulatory", "Hazard"])
+    assert doc["model_types"] == ["Hazard", "Regulatory"]
+    assert doc["category"] == ""
+
+
+def test_model_types_default_to_empty_list():
+    doc = _add(name="notypes.pdf")
+    assert doc["model_types"] == []
+
+
+def test_scope_helpers_name_the_upload_directories():
+    from src.governance.documents import client_scope, model_scope
+    assert model_scope("MKM-DD-001") == "model/MKM-DD-001"
+    assert client_scope("CL-01") == "client/CL-01"

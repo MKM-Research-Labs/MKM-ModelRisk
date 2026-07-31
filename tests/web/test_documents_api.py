@@ -69,3 +69,30 @@ def test_download_missing_file_is_404(client):
 
 def test_delete_unknown_is_400(client):
     assert client.post("/api/documents/DOC-999/delete", headers=HEADERS).status_code == 400
+
+
+def test_upload_with_model_types_then_edit(client):
+    up = client.post(
+        "/api/documents",
+        data={"file": (io.BytesIO(b"PDFDATA"), "cyclones.pdf"),
+              "model_types": ["Hazard", "Regulatory"]},
+        content_type="multipart/form-data", headers=HEADERS,
+    )
+    assert up.status_code == 201
+    doc = up.get_json()[0]
+    assert doc["model_types"] == ["Hazard", "Regulatory"]
+
+    # Edit the tags via the metadata-only endpoint (file and id survive).
+    edited = client.post(
+        "/api/documents/" + doc["item_id"] + "/model-types",
+        json={"model_types": ["Pricing", "Pricing", " "]}, headers=HEADERS)
+    assert edited.status_code == 200
+    after = edited.get_json()[0]
+    assert after["item_id"] == doc["item_id"]
+    assert after["model_types"] == ["Pricing"]
+
+
+def test_set_model_types_on_unknown_is_404(client):
+    resp = client.post("/api/documents/DOC-999/model-types",
+                       json={"model_types": ["Hazard"]}, headers=HEADERS)
+    assert resp.status_code == 404

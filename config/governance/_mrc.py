@@ -42,10 +42,20 @@ MRC_SETTINGS_SPECS = (
     {"key": "org_name", "label": "Organisation name", "type": "text"},
     {"key": "chair", "label": "Chair", "type": "text"},
     {"key": "frequency", "label": "Frequency", "type": "choice", "options": VALID_FREQUENCY},
+    # Comma-separated taxonomy of model types used to tag external reference
+    # documents (the top-level Documents tab). Admin-editable here; the Documents
+    # tab reads it to offer tags and to filter.
+    {"key": "document_model_types", "label": "Document model types (comma-separated)",
+     "type": "text"},
 )
 MRC_SETTINGS_KEYS = tuple(spec["key"] for spec in MRC_SETTINGS_SPECS)
 MRC_SETTINGS_DEFAULTS = {
     "frequency": "Quarterly",
+    # Starter taxonomy for tagging external reference documents; Admin-editable.
+    "document_model_types": (
+        "Hazard, Pricing, Valuation, Resilience-Credit, Analytics, "
+        "Regulatory, Market & Product, Academic & Method"
+    ),
 }
 
 # --- Model Risk Committee (MRC) meetings ---

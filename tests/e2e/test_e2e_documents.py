@@ -55,11 +55,12 @@ def test_upload_and_delete_document(page: Page, base_url: str, tmp_path):
     open_tab(page, "documents")
 
     page.set_input_files("#gd-file", _make_pdf(tmp_path))
-    page.fill("#gd-desc", "Model risk policy")
+    # Tag the upload with a model type (replaces the old free-text description).
+    page.click('#gd-uptypes [data-pick="up"][data-type="Hazard"]')
     page.click("#gd-upload")
 
     row = page.locator("#tab-documents tbody tr", has_text="policy.pdf")
-    expect(row).to_contain_text("Model risk policy")
+    expect(row).to_contain_text("Hazard")
 
     row.locator("[data-rmgd]").click()
     confirm(page)
@@ -100,7 +101,6 @@ def test_governance_doc_download_link_works(page: Page, base_url: str, tmp_path)
     open_tab(page, "documents")
     pdf_path = _make_pdf(tmp_path, "downloadable.pdf")
     page.set_input_files("#gd-file", pdf_path)
-    page.fill("#gd-desc", "Downloadable")
     page.click("#gd-upload")
     link = page.locator("#tab-documents tbody tr", has_text="downloadable.pdf").locator("a", has_text="Download")
     href = link.get_attribute("href")

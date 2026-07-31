@@ -43,6 +43,25 @@ DOCUMENTS = "documents"
 GOVERNANCE_DOCUMENTS_AGGREGATE = "GovernanceDocuments"
 
 
+def clean_model_types(model_types) -> list:
+    """Normalise a model-types tag list: strings, trimmed, de-duplicated, order-kept.
+
+    Accepts ``None`` (no tags) or any iterable of labels; anything falsy after
+    trimming is dropped. The Admin taxonomy is the source of valid labels — this
+    only sanitises shape, it does not enforce membership, so renaming a type in
+    Admin never rejects an existing document.
+    """
+    if not model_types:
+        return []
+    seen, out = set(), []
+    for item in model_types:
+        label = str(item).strip()
+        if label and label not in seen:
+            seen.add(label)
+            out.append(label)
+    return out
+
+
 def model_scope(model_id: str) -> str:
     """Where a model's uploaded files live under the upload directory. Named here,
     beside the document commands, so the API and the client pack cannot disagree
@@ -83,9 +102,15 @@ def find_document(aggregate_type: str, aggregate_id: str, item_id: str, config=N
 
 def add_document(
     *, aggregate_type: str, aggregate_id: str, scope: str, filename: str, data: bytes,
-    description: str, actor: str, category: str = "", config=None,
+    description: str, actor: str, category: str = "", model_types=None, config=None,
 ) -> dict:
-    """Store the file on disk and record its metadata against the aggregate."""
+    """Store the file on disk and record its metadata against the aggregate.
+
+    ``model_types`` tags an external reference document with the Admin-defined
+    model types it relates to (a list of labels). It is orthogonal to ``category``
+    — the per-model tab a document lives under — which remains forbidden on the
+    external Documents area.
+    """
     if aggregate_type == GOVERNANCE_DOCUMENTS_AGGREGATE and (category or "").strip():
         raise DomainError(
             "the top-level Documents area is external-only; a categorised document "
@@ -97,6 +122,7 @@ def add_document(
         "collection": DOCUMENTS, "item_id": f"DOC-{len(documents) + 1:03d}",
         "category": category, "filename": meta["filename"],
         "original_name": meta["original_name"], "description": description or "",
+        "model_types": clean_model_types(model_types),
         "size": len(data), "uploaded_at": datetime.now(timezone.utc).isoformat(),
     }
     append_event(

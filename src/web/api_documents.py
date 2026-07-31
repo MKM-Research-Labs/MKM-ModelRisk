@@ -25,9 +25,11 @@ from flask import Blueprint, jsonify, request, send_file
 from src.files import UploadError, upload_path
 from src.governance.documents import (
     add_document,
+    clean_model_types,
     find_document,
     list_documents,
     remove_document,
+    update_document,
 )
 from src.web._helpers import request_actor
 
@@ -51,11 +53,26 @@ def upload():
     try:
         add_document(
             aggregate_type=_AGG, aggregate_id=_ID, scope=_SCOPE, filename=file.filename,
-            data=file.read(), description=request.form.get("description", ""), actor=request_actor(),
+            data=file.read(), description=request.form.get("description", ""),
+            model_types=request.form.getlist("model_types"), actor=request_actor(),
         )
     except UploadError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify(list_documents(_AGG, _ID)), 201
+
+
+@documents_bp.post("/<item_id>/model-types")
+def set_model_types(item_id: str):
+    """Amend an external document's model-type tags (a metadata-only change)."""
+    if find_document(_AGG, _ID, item_id) is None:
+        return jsonify({"error": "document not found"}), 404
+    body = request.get_json(silent=True) or {}
+    update_document(
+        aggregate_type=_AGG, aggregate_id=_ID, item_id=item_id,
+        fields={"model_types": clean_model_types(body.get("model_types"))},
+        actor=request_actor(), reason="Set document model types",
+    )
+    return jsonify(list_documents(_AGG, _ID))
 
 
 @documents_bp.get("/<item_id>/download")
