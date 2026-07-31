@@ -35,8 +35,10 @@ rating. VQ-006/007 (assumptions, limitations) are already Addressed on the live
 records and are listed only so a freshly-registered model is also completed; the
 idempotency guard leaves the live rows untouched.
 
-Tranche 1 (this file): the flood-hazard chain — DD, FPO, FC, SP, SG. Later
-tranches extend ``MODELS`` and re-run (idempotent).
+Tranche 1: the flood-hazard chain — DD, FPO, FC, SP, SG.
+Tranche 2: BRI, DE, FIRE, GHD, IP, MP. Later tranches extend ``MODELS`` and
+re-run (idempotent). A model whose recertification_date is also blank carries one
+in its spec; otherwise only the validation_date and questions are filled.
 
 Run as:  python -m scripts.complete_governance_phase2
 """
@@ -159,6 +161,92 @@ MODELS = {
             "A closed-form distance attenuation; negligible computational "
             "resource use."),
     },
+    # --- Tranche 2 ----------------------------------------------------------
+    "MKM-BRI-001": {
+        "name": "Building Resilience Index (BRI) Model",
+        "validation_date": "2026-05-15",
+        "vq": _vq(
+            "Produces a property's Building Resilience Index — a letter rating "
+            "(AA..NR) via weakest-link aggregation across hazard dimensions, plus "
+            "the co-located numeric scores that feed the flood, wind and other "
+            "resilience credits — its documented purpose.",
+            "The aggregation is deterministic and the unit suite passes; the "
+            "rating bands and weights are expert-judgement calibrations, not "
+            "validated against realised resilience outcomes, so this is partial.",
+            "A bounded per-property scoring aggregation; negligible computational "
+            "resource use."),
+    },
+    "MKM-DE-001": {
+        "name": "Delta Engine",
+        "validation_date": "2026-02-26",
+        "vq": _vq(
+            "Revalues PRS trades and computes FS01 flood sensitivity, "
+            "mark-to-market, risky annuity and the portfolio risk grid by "
+            "numerical bump-and-revalue — its documented purpose.",
+            "The bump-and-revalue is numerically consistent with the underlying "
+            "pricer and the unit suite passes; the step-size choice and the "
+            "absence of an analytic cross-check mean numerical accuracy is "
+            "demonstrated but not independently validated — partial.",
+            "Bump-and-revalue repeats the pricer per risk factor, so cost scales "
+            "with the grid; it runs as a bounded batch with no excessive resource "
+            "use in a normal run."),
+    },
+    "MKM-FIRE-001": {
+        "name": "Building Fire-Resilience Credit Model",
+        "validation_date": "2026-06-16",
+        "recertification_date": "2027-06-16",
+        "vq": _vq(
+            "Prices a commercial asset's fire-resilience into the shared "
+            "resilience-credit currency via a Poisson ignition model and a "
+            "Bayesian fifteen-minute fire-progression chain, aggregating "
+            "pari-passu with the storm and typhoon hazards — its documented "
+            "purpose.",
+            "The progression mechanism is implemented and the unit suite passes, "
+            "but the ignition and transition parameters are defensible seed / "
+            "placeholder values, not calibrated to fire-loss data; accuracy is "
+            "therefore unvalidated — partial, and the weakest of this tranche.",
+            "A bounded per-asset Markov progression; negligible computational "
+            "resource use."),
+    },
+    "MKM-GHD-001": {
+        "name": "Gauge Historical Daily",
+        "validation_date": "2026-03-18",
+        "vq": _vq(
+            "Generates synthetic daily gauge water levels with tidal influence, "
+            "AR(1) autocorrelation, seasonal cycles and Poisson flood injection — "
+            "its documented purpose.",
+            "The generator is seeded and reproducible with a passing unit suite; "
+            "the statistical parameters are assumed rather than fitted to observed "
+            "records, so the realism of the series is unvalidated — partial.",
+            "Vectorised daily time-series generation; negligible computational "
+            "resource use."),
+    },
+    "MKM-IP-001": {
+        "name": "Insurance Premium Model",
+        "validation_date": "2025-12-01",
+        "vq": _vq(
+            "Computes a factor-based flood insurance premium from property type, "
+            "flood zone, claims history and building-resilience measures — its "
+            "documented purpose.",
+            "The factor model is deterministic with a passing unit suite; the "
+            "factors are illustrative loadings, not calibrated to an insurer's "
+            "loss experience, so premium accuracy is unvalidated — partial.",
+            "A bounded multiplicative factor calculation; negligible computational "
+            "resource use."),
+    },
+    "MKM-MP-001": {
+        "name": "Mortgage Pricing Model",
+        "validation_date": "2025-12-15",
+        "vq": _vq(
+            "Builds an amortisation schedule with a credit-spread adjustment, an "
+            "LGD calculation and the expected-loss present value for flood-exposed "
+            "mortgages — its documented purpose.",
+            "The cash-flow and expected-loss mathematics are standard and the unit "
+            "suite passes; the credit-spread and LGD inputs are assumed and the "
+            "loss link to flood risk is unvalidated on real defaults — partial.",
+            "Closed-form amortisation and present-value arithmetic; negligible "
+            "computational resource use."),
+    },
 }
 
 
@@ -171,11 +259,15 @@ def apply_one(model_id: str, config=None) -> dict:
     data = model["data"]
     summary = {"model": model_id, "fields": [], "questions": 0}
 
-    if data.get("validation_date") in (None, "", "None"):
-        update_model_field(model_id=model_id, field="validation_date",
-                           value=spec["validation_date"], actor=ACTOR, config=config,
-                           reason="Complete audited governance record (Phase 2)")
-        summary["fields"].append("validation_date")
+    scalars = {"validation_date": spec["validation_date"]}
+    if "recertification_date" in spec:
+        scalars["recertification_date"] = spec["recertification_date"]
+    for field, value in scalars.items():
+        if data.get(field) in (None, "", "None"):
+            update_model_field(model_id=model_id, field=field, value=value,
+                               actor=ACTOR, config=config,
+                               reason="Complete audited governance record (Phase 2)")
+            summary["fields"].append(field)
 
     by_id = {q["item_id"]: q for q in data.get("validation_questions", [])}
     for item_id, (status, rationale) in spec["vq"].items():
