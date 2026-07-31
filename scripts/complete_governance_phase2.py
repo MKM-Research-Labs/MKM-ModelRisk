@@ -36,9 +36,10 @@ records and are listed only so a freshly-registered model is also completed; the
 idempotency guard leaves the live rows untouched.
 
 Tranche 1: the flood-hazard chain — DD, FPO, FC, SP, SG.
-Tranche 2: BRI, DE, FIRE, GHD, IP, MP. Later tranches extend ``MODELS`` and
-re-run (idempotent). A model whose recertification_date is also blank carries one
-in its spec; otherwise only the validation_date and questions are filled.
+Tranche 2: BRI, DE, FIRE, GHD, IP, MP.
+Tranche 3: PR, PV, RA, SEIS, SI, SS — completes the 17-model backlog.
+A model whose recertification_date is also blank carries one in its spec;
+otherwise only the validation_date and questions are filled. Idempotent.
 
 Run as:  python -m scripts.complete_governance_phase2
 """
@@ -246,6 +247,90 @@ MODELS = {
             "loss link to flood risk is unvalidated on real defaults — partial.",
             "Closed-form amortisation and present-value arithmetic; negligible "
             "computational resource use."),
+    },
+    # --- Tranche 3 (completes the backlog) ----------------------------------
+    "MKM-PR-001": {
+        "name": "PRS Analytical Pricing Model",
+        "validation_date": "2026-01-10",
+        "vq": _vq(
+            "Computes fair Physical Risk Swap spreads for flood protection at "
+            "gauge and property level from hazard-curve exceedance probabilities — "
+            "its documented purpose.",
+            "The analytical spread is a closed-form transform of the exceedance "
+            "probabilities and the unit suite passes; its accuracy inherits the "
+            "unvalidated hazard curves it consumes (and, via MKM-EF-001, the "
+            "unvalidated arrival rate), so this is partial.",
+            "A closed-form spread calculation per instrument; negligible "
+            "computational resource use."),
+    },
+    "MKM-PV-001": {
+        "name": "Property Valuation Model",
+        "validation_date": "2025-11-30",
+        "vq": _vq(
+            "A factor-based property valuation from area, price per square metre, "
+            "age, condition, flood risk, EPC rating and proximity adjustments — "
+            "its documented purpose.",
+            "The factor model is deterministic with a passing unit suite; the "
+            "adjustment factors are illustrative rather than calibrated to a "
+            "transaction dataset, so valuation accuracy is unvalidated — partial.",
+            "A bounded multiplicative factor calculation; negligible computational "
+            "resource use."),
+    },
+    "MKM-RA-001": {
+        "name": "Risk Analytics Model",
+        "validation_date": "2025-12-20",
+        "vq": _vq(
+            "A Monte Carlo engine computing portfolio-level flood-risk analytics — "
+            "Value-at-Risk, Expected Shortfall, HHI concentration and risk "
+            "clustering — its documented purpose.",
+            "The estimators are standard, seeded and reproducible with a passing "
+            "unit suite; convergence depends on the simulation count and the tail "
+            "metrics inherit the unvalidated loss inputs, so this is partial.",
+            "Monte Carlo cost scales with path count but runs as a bounded batch; "
+            "no excessive resource use in a normal run."),
+    },
+    "MKM-SEIS-001": {
+        "name": "Building Seismic-Resilience Credit Model",
+        "validation_date": "2026-06-08",
+        "recertification_date": "2027-06-08",
+        "vq": _vq(
+            "Prices a commercial asset's seismic resilience into the shared "
+            "resilience-credit currency so seismic loss aggregates pari-passu with "
+            "the storm and fire hazards — its documented purpose.",
+            "The mechanism is implemented and the unit suite passes, but the "
+            "seismic hazard and fragility parameters are defensible seed / "
+            "placeholder values, not calibrated to seismic-loss data; accuracy is "
+            "unvalidated — partial.",
+            "A bounded per-asset resilience-credit calculation; negligible "
+            "computational resource use."),
+    },
+    "MKM-SI-001": {
+        "name": "Storm Intensity Distribution",
+        "validation_date": "2025-12-01",
+        "vq": _vq(
+            "A hybrid Normal-Pareto distribution for storm rainfall intensity — a "
+            "Gaussian core with a Generalised Pareto tail above a fitted "
+            "threshold — its documented purpose.",
+            "The GPD tail and Gaussian core are standard, fitted, and the unit "
+            "suite passes; the fit is to synthetic intensities rather than "
+            "observed rainfall, so the tail's realism is unvalidated — partial.",
+            "Closed-form sampling and density evaluation; negligible computational "
+            "resource use."),
+    },
+    "MKM-SS-001": {
+        "name": "Storm Sequence Generator",
+        "validation_date": "2026-03-11",
+        "vq": _vq(
+            "Generates multi-storm sequences under the insurance hours clause "
+            "(168-hour event window), producing catalogues of one-to-five related "
+            "precipitation events — its documented purpose.",
+            "The sequence logic is deterministic and seeded with a passing unit "
+            "suite; the clustering parameters are assumed rather than fitted to an "
+            "observed storm record, and the catalogue over-samples severe events "
+            "(a documented coverage caveat consumed by MKM-EF-001), so this is "
+            "partial.",
+            "Catalogue generation is a bounded batch; negligible computational "
+            "resource use in a normal run."),
     },
 }
 
