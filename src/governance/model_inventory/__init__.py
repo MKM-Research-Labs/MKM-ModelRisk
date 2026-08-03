@@ -20,6 +20,7 @@
 """Model-inventory aggregate: register/update/retire models and query them."""
 from src.governance.model_inventory._rules import DomainError
 from src.governance.model_inventory.chain import derive_chain
+from src.governance.model_inventory.neighbourhood import derive_neighbourhood
 from src.governance.model_inventory.commands import (
     AGGREGATE_TYPE,
     add_collection_item,
@@ -47,6 +48,7 @@ __all__ = [
     "update_collection_item",
     "remove_collection_item",
     "derive_chain",
+    "derive_neighbourhood",
     "get_model",
     "list_models",
     "rebuild_inventory_view",

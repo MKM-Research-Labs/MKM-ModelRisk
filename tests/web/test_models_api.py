@@ -65,6 +65,24 @@ def test_chain_derives_the_string_of_pearls_from_declared_dependencies(client):
     assert chain["links"] == [{"from": "A", "to": "B"}]
 
 
+def test_neighbourhood_reports_feeds_and_terminal_flag(client):
+    _register(client, model_id="A", name="Storm")
+    _register(client, model_id="B", name="Pricer")
+    _declare_dep(client, "A", "downstream", "B")  # A feeds B
+
+    b = client.get("/api/models/B/neighbourhood").get_json()
+    assert [m["model_id"] for m in b["feeds"]["upstream"]] == ["A"]
+    assert b["feeds"]["downstream"] == []
+    assert b["focus"]["terminal"] is True  # nothing consumes B — end of the chain
+
+    a = client.get("/api/models/A/neighbourhood").get_json()
+    assert a["focus"]["terminal"] is False and a["focus"]["is_source"] is True
+
+
+def test_neighbourhood_unknown_model_is_404(client):
+    assert client.get("/api/models/none/neighbourhood").status_code == 404
+
+
 def test_chain_refuses_a_dependency_that_would_form_a_cycle(client):
     _register(client, model_id="A", name="Storm")
     _register(client, model_id="B", name="Pricer")

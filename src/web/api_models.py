@@ -35,6 +35,7 @@ from src.command import dispatch
 from src.governance.model_inventory import (
     add_collection_item,
     derive_chain,
+    derive_neighbourhood,
     get_model,
     list_models,
     rebuild_inventory_view,
@@ -158,6 +159,15 @@ def delete_document(model_id: str, item_id: str):
 @models_bp.get("")
 def list_all():
     return jsonify(list_models())
+
+
+@models_bp.get("/<model_id>/neighbourhood")
+def model_neighbourhood(model_id: str):
+    """One model's neighbourhood — feeds, shared-source siblings, terminal flag."""
+    result = derive_neighbourhood(model_id)
+    if result is None:
+        return jsonify({"error": "model not found"}), 404
+    return jsonify(result)
 
 
 @models_bp.get("/chain")
