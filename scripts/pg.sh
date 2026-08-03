@@ -74,20 +74,23 @@ case "${1:-status}" in
     # Idempotent: starting an already-running cluster is a no-op, not an error.
     # pg_ctl would otherwise fail with "could not start server", which reads as a
     # fault when nothing is wrong.
-    if pg_isready -h "$HOST" -p "$PORT" >/dev/null 2>&1; then
+    if env -u PGPASSWORD pg_isready -h "$HOST" -p "$PORT" >/dev/null 2>&1; then
       echo "Cluster already accepting connections on port $PORT."
     else
       pg_ctl -D "$DATA" -o "-p $PORT" -l "$DATA/server.log" start
     fi
     ;;
   stop)
-    if pg_isready -h "$HOST" -p "$PORT" >/dev/null 2>&1; then
+    if env -u PGPASSWORD pg_isready -h "$HOST" -p "$PORT" >/dev/null 2>&1; then
       pg_ctl -D "$DATA" stop
     else
       echo "No cluster is running on port $PORT."
     fi
     ;;
-  status) pg_isready -h "$HOST" -p "$PORT" ;;
+  # Drop PGPASSWORD for the probe: with a password in the caller's environment
+  # pg_isready would authenticate (as the OS user) and fail noisily in the server
+  # log. This is a pure "is the port up" check, so no credentials are needed.
+  status) env -u PGPASSWORD pg_isready -h "$HOST" -p "$PORT" ;;
 
   backup) exec bash "$(dirname "$0")/backup_db.sh" ;;
 

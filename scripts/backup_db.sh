@@ -47,7 +47,11 @@ log() { echo "$(date '+%F %T')  $*" | tee -a "$LOG" >&2; }
 
 # --- skip cleanly when the cluster is not reachable -----------------------------
 export PGPASSWORD="${DB_OWNER_PASSWORD:-}"
-if ! "$PGBIN/pg_isready" -h "$HOST" -p "$PORT" >/dev/null 2>&1; then
+# Reachability probe only — the real auth happens in pg_dump below. PGPASSWORD is
+# exported above, and with a password in the environment pg_isready authenticates
+# (as the OS user, libpq's default, since no role is named) and fails noisily in
+# the server log. Drop PGPASSWORD for the probe so it just checks the port is up.
+if ! env -u PGPASSWORD "$PGBIN/pg_isready" -h "$HOST" -p "$PORT" >/dev/null 2>&1; then
   log "database not reachable (SSD unmounted or Postgres stopped) — skipped"
   exit 0
 fi
