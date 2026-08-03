@@ -28,8 +28,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import (DEFAULT_VQ_STATUS, DEPENDENCIES_COLLECTION,
-                               MODEL_FIELD_SPECS, REFERENCE_SPECS, SR262_QUESTIONS)
+from config.governance import (COLLECTION_SPECS, DEFAULT_VQ_STATUS,
+                               DEPENDENCIES_COLLECTION, MODEL_FIELD_SPECS,
+                               REFERENCE_SPECS, SR262_QUESTIONS)
 from src.database import Event, append_event, read_stream
 from src.governance import collections as coll
 from src.governance.errors import DomainError
@@ -95,12 +96,15 @@ def _record(
     )
 
 
-def _check_reference_fields(fields: dict[str, Any], config=None) -> None:
+def _reject_unknown_references(
+    specs: dict[str, dict[str, Any]], fields: dict[str, Any], config=None,
+) -> None:
     """Reject a value not on the admin list for any ``strict_reference`` field.
 
     Lives here rather than in ``_rules`` because the allowed values are rows in
-    the reference store, and the rules stay pure. Only fields flagged strict are
-    checked — see MODEL_FIELD_SPECS for why the others are deliberately open.
+    the reference store, and the rules stay pure. ``specs`` maps a field key to
+    its spec; only fields flagged strict are checked — see MODEL_FIELD_SPECS for
+    why the others are deliberately open.
 
     An empty list is not enforced: on a fresh database, before the defaults are
     seeded, there is nothing to validate against and rejecting everything would
@@ -108,7 +112,7 @@ def _check_reference_fields(fields: dict[str, Any], config=None) -> None:
     """
     from src.governance.reference import get_reference_lists
 
-    strict = {key: spec["reference"] for key, spec in MODEL_FIELD_SPECS.items()
+    strict = {key: spec["reference"] for key, spec in specs.items()
               if spec.get("strict_reference") and key in fields
               and str(fields[key] or "").strip()}
     if not strict:
@@ -121,6 +125,23 @@ def _check_reference_fields(fields: dict[str, Any], config=None) -> None:
         if allowed and fields[key] not in allowed:
             raise DomainError(
                 f"{key} must be one of: {', '.join(str(a) for a in allowed)}")
+
+
+def _check_reference_fields(fields: dict[str, Any], config=None) -> None:
+    """Strict-reference guard for a model's scalar fields (e.g. type, vendor)."""
+    _reject_unknown_references(MODEL_FIELD_SPECS, fields, config)
+
+
+def _check_collection_reference_fields(
+    collection: str, fields: dict[str, Any], config=None,
+) -> None:
+    """Strict-reference guard for a collection item's fields (e.g. a
+    ``data_sources`` item's data_source picked from the admin list)."""
+    spec = COLLECTION_SPECS.get(collection)
+    if not spec:
+        return
+    by_key = {field["key"]: field for field in spec["fields"]}
+    _reject_unknown_references(by_key, fields, config)
 
 
 def register_model(
@@ -216,6 +237,7 @@ def add_collection_item(
 ) -> Event:
     """Add an item to a structured collection (assumptions, limitations, …)."""
     state, version = _load(model_id, config)
+    _check_collection_reference_fields(collection, fields, config)
     decision = decide_add_item(state, collection=collection, fields=fields)
     _guard_if_dependency(model_id, state, decision, collection, config)
     return _record(model_id, decision, version, actor, reason, config)
@@ -227,6 +249,7 @@ def update_collection_item(
 ) -> Event:
     """Update fields of an existing collection item."""
     state, version = _load(model_id, config)
+    _check_collection_reference_fields(collection, fields, config)
     decision = decide_update_item(
         state, collection=collection, item_id=item_id, fields=fields
     )

@@ -26,11 +26,13 @@ from src.database import read_stream
 from src.governance.model_inventory import (
     AGGREGATE_TYPE,
     DomainError,
+    add_collection_item,
     reactivate_model,
     register_model,
     retire_model,
     update_model_field,
 )
+from src.governance.reference import add_option
 
 
 def test_register_appends_first_event():
@@ -111,3 +113,25 @@ def test_invalid_value_is_rejected_before_append():
     # Nothing extra was appended.
     after = len(read_stream(aggregate_type=AGGREGATE_TYPE, aggregate_id="M1"))
     assert after == before
+
+
+def test_vendor_must_be_a_defined_reference_value():
+    # Strict reference: once the Vendor list exists, a model cannot name a value
+    # that is not on it (same guard as ``type``).
+    add_option(list_name="vendor", fields={"value": "MKM Research Labs"}, actor="admin")
+    register_model(model_id="M1", name="Alpha", actor="alice",
+                   fields={"vendor": "MKM Research Labs"})
+    with pytest.raises(DomainError):
+        update_model_field(model_id="M1", field="vendor", value="Acme Corp", actor="alice")
+
+
+def test_data_source_collection_item_is_strict_referenced():
+    # A data_sources item's data_source must be a defined admin value — this is
+    # what makes "two models share a source" a match on an id, not on spelling.
+    add_option(list_name="data_source", fields={"value": "Bloomberg"}, actor="admin")
+    register_model(model_id="M1", name="Alpha", actor="alice")
+    add_collection_item(model_id="M1", collection="data_sources",
+                        fields={"data_source": "Bloomberg"}, actor="alice")
+    with pytest.raises(DomainError):
+        add_collection_item(model_id="M1", collection="data_sources",
+                            fields={"data_source": "Made Up Feed"}, actor="alice")

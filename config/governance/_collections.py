@@ -37,6 +37,12 @@ VALID_DEPENDENCY_DIRECTIONS = ("upstream", "downstream")
 # the derivation (which reads it to build the 'string of pearls') and the
 # declaration-time acyclicity guard agree on the key.
 DEPENDENCIES_COLLECTION = "dependencies"
+# The per-model list of data sources (feeds) the model pulls its inputs from. A
+# model may draw on several; two models that list the same source are joined by
+# the 'shares a source' edge on the neighbourhood view. Field-level detail (which
+# fields come from which source) can be layered on later without breaking this —
+# for now it is the recognition that the model pulls data from these sources.
+DATA_SOURCES_COLLECTION = "data_sources"
 # A version's place in the development lifecycle. "New" = a fresh version just
 # cut; "Being Enhanced" = active development against it; "No New Development" =
 # stable, still in use but frozen; "Marked for Removal" = scheduled to retire.
@@ -134,6 +140,14 @@ COLLECTION_SPECS = {
          "options": VALID_DEPENDENCY_DIRECTIONS, "required": True},
         {"key": "model_id", "label": "Related model", "type": "text",
          "reference": "model_inventory", "required": True},
+        {"key": "note", "label": "Note", "type": "text"},
+    ]},
+    # Data sources (feeds) the model pulls its inputs from. ``data_source`` is a
+    # strict reference to the admin Data Source list, so "these two models share a
+    # source" matches on a defined id, never on free-text spelling.
+    DATA_SOURCES_COLLECTION: {"label": "Data sources", "id_prefix": "SRC", "fields": [
+        {"key": "data_source", "label": "Data source", "type": "text",
+         "reference": "data_source", "strict_reference": True, "required": True},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
     # The field lineage of a model-to-model handoff: one item per field that

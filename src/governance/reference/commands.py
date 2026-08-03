@@ -22,7 +22,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import DEFAULT_MODEL_TYPES, MODEL_TYPE_LIST, REFERENCE_SPECS
+from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
+                               DEFAULT_MODEL_TYPES, DEFAULT_VENDORS,
+                               MODEL_TYPE_LIST, REFERENCE_SPECS, VENDOR_LIST)
 from config.identity import SYSTEM_ACTOR
 from src.database import Event, append_event
 from src.governance import collections as coll
@@ -93,3 +95,31 @@ def ensure_default_model_types(*, actor: str = SYSTEM_ACTOR, config=None) -> int
         add_option(list_name=MODEL_TYPE_LIST, fields=dict(entry), actor=actor,
                    reason="Seed default model types on first run", config=config)
     return len(DEFAULT_MODEL_TYPES)
+
+
+# Single-value lists whose defaults seed on a fresh install, keyed by list name.
+_DEFAULT_SIMPLE_LISTS = {
+    DATA_SOURCE_LIST: DEFAULT_DATA_SOURCES,
+    VENDOR_LIST: DEFAULT_VENDORS,
+}
+
+
+def ensure_default_reference_lists(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the simple admin lists (data source, vendor); return how many added.
+
+    Same rule as ``ensure_default_model_types``: each list is seeded only while
+    empty, so an adopter who has curated (renamed, pruned, or extended) a list
+    never finds the defaults back at the next restart. A model's ``vendor`` field
+    and ``data_sources`` collection are strict references, so an unseeded list
+    would leave those fields with nothing to pick.
+    """
+    added = 0
+    for list_name, values in _DEFAULT_SIMPLE_LISTS.items():
+        collections, _ = load(config)
+        if collections.get(list_name):
+            continue
+        for value in values:
+            add_option(list_name=list_name, fields={"value": value}, actor=actor,
+                       reason=f"Seed default {list_name} on first run", config=config)
+        added += len(values)
+    return added

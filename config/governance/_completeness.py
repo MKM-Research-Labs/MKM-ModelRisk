@@ -90,6 +90,9 @@ FIELD_CRITICALITY = {
     "name": 0.60,
     "short_name": 0.50,
     "type": 0.50,
+    # Provenance of the model itself: who supplied it. A gap here leaves the
+    # record unable to say whether the model is in-house or bought in.
+    "vendor": 0.55,
     "category": 0.50,
     "status": 0.65,
     "lifecycle_stage": 0.65,
@@ -139,6 +142,10 @@ COLLECTION_CRITICALITY = {
     "limitations": 0.90,
     "model_weaknesses": 0.70,
     "dependencies": 0.65,
+    # The feeds a model pulls inputs from — data provenance the SR 26-2 data-
+    # quality question turns on. Empty is a genuine gap: every live model
+    # consumes data from somewhere.
+    "data_sources": 0.65,
     "raci_roles": 0.60,
     "version_history": 0.50,
     "signoff_history": 0.70,

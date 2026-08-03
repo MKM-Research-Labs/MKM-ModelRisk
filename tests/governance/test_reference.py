@@ -23,7 +23,8 @@ from __future__ import annotations
 import pytest
 
 from src.governance.errors import DomainError
-from src.governance.reference import add_option, get_reference_lists, remove_option, update_option
+from src.governance.reference import (add_option, ensure_default_reference_lists,
+                                      get_reference_lists, remove_option, update_option)
 
 
 def test_update_option_edits_fields():
@@ -39,6 +40,7 @@ def test_lists_empty_initially():
         "model_type": [], "codebase": [],
         "people": [], "division": [], "line_of_business": [],
         "calculating_agent": [], "mrc": [],
+        "data_source": [], "vendor": [],
     }
 
 
@@ -74,6 +76,18 @@ def test_add_calculating_agent():
     add_option(list_name="calculating_agent", fields={"value": "Murex"}, actor="admin")
     agent = get_reference_lists()["calculating_agent"][0]
     assert agent["item_id"] == "CA-001" and agent["value"] == "Murex"
+
+
+def test_ensure_default_reference_lists_seeds_and_is_idempotent():
+    added = ensure_default_reference_lists()
+    lists = get_reference_lists()
+    assert [o["value"] for o in lists["data_source"]] == [
+        "ICE", "Reuters", "Bloomberg", "Manual", "Other"]
+    assert [o["value"] for o in lists["vendor"]] == ["MKM Research Labs", "Other"]
+    assert added == 7
+    # Seeds a vacuum only — a second run adds nothing and never repopulates a
+    # list an adopter has since curated.
+    assert ensure_default_reference_lists() == 0
 
 
 def test_remove_option():

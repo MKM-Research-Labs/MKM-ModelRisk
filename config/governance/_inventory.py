@@ -51,7 +51,8 @@ TIER_MAX = 3
 # model is defined by its ID within the selected Company. Division and Line of Business
 # are captured on the form.
 REGISTER_FIELDS = (
-    "division", "line_of_business", "repo_location", "codebase", "type", "category", "tier", "owner",
+    "division", "line_of_business", "repo_location", "codebase", "type", "vendor",
+    "category", "tier", "owner",
 )
 
 # Ordered scalar field specifications. type is one of: text | choice | date | tier.
@@ -81,6 +82,11 @@ MODEL_FIELD_SPECS = {
     # lists, and rejecting those would block every edit to an existing record.
     "type": {"label": "Type", "type": "text", "group": "Classification",
              "reference": "model_type", "strict_reference": True},
+    # Who supplies the model itself (the MKM estate is "MKM Research Labs"; a
+    # Moody's install would say "Moody's"). Strict like ``type`` — a model cannot
+    # name a vendor nobody has defined in Admin.
+    "vendor": {"label": "Vendor", "type": "text", "group": "Classification",
+               "reference": "vendor", "strict_reference": True},
     "category": {"label": "Category", "type": "text", "group": "Classification"},
     "tier": {"label": "Tier", "type": "tier", "group": "Classification"},
     "tier_rationale": {"label": "Tier rationale", "type": "text", "group": "Classification"},

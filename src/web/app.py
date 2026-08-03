@@ -25,7 +25,8 @@ from flask import Flask, jsonify, request
 from src.command import ConfirmationRequired
 from src.database import run_migrations
 from src.governance.errors import DomainError
-from src.governance.reference import ensure_default_model_types
+from src.governance.reference import (ensure_default_model_types,
+                                      ensure_default_reference_lists)
 from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
 from src.web.api_audit_reports import audit_reports_bp
@@ -67,6 +68,9 @@ def create_app(run_db_migrations: bool = True) -> Flask:
         # Model types are admin-managed, but an empty list degrades the field to
         # free text — so a fresh database is given the defaults once.
         ensure_default_model_types()
+        # Data source + vendor lists back the model's data_sources / vendor
+        # fields; seed their defaults on a fresh database for the same reason.
+        ensure_default_reference_lists()
         # Read-models are derived caches maintained incrementally on writes; if one
         # drifts out of sync with the event log (e.g. after a restore or a data-dir
         # migration, where no command runs to refresh it) intact records render

@@ -30,10 +30,15 @@ Each spec's ``display`` field is the value shown in dropdowns that reference it.
 # so an adopter classifies its own estate rather than inheriting ours.
 MODEL_TYPE_LIST = "model_type"
 CODEBASE_LIST = "codebase"
+# The vendors/feeds a model pulls its inputs from (a model's ``data_sources``
+# collection picks from this) and who supplies the model itself (a model's
+# ``vendor`` field). Both sit next to the Calculating Agent platform list.
+DATA_SOURCE_LIST = "data_source"
+VENDOR_LIST = "vendor"
 
 REFERENCE_LISTS = (
-    "division", "line_of_business", "mrc", "calculating_agent", MODEL_TYPE_LIST,
-    CODEBASE_LIST, "people",
+    "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,
+    MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people",
 )
 
 # What a model type means to a Product's bindings. A Product binds one analytics
@@ -63,6 +68,14 @@ DEFAULT_MODEL_TYPES = (
     {"value": "Market Data Model", "binding_role": "Market Data"},
     {"value": "Other", "binding_role": "Neither"},
 )
+
+# Simple single-value lists seeded on first use (same "seed a vacuum, never
+# reconcile a curated list" rule as the model types above). Data sources are the
+# feeds a model pulls its inputs from; Vendor names who supplies the model
+# itself. Both are strict lists an adopter re-seeds to its own estate — a Moody's
+# install would seed "Moody's" as its vendor.
+DEFAULT_DATA_SOURCES = ("ICE", "Reuters", "Bloomberg", "Manual", "Other")
+DEFAULT_VENDORS = ("MKM Research Labs", "Other")
 
 # MRC committees are anchored to one of the three org tiers. A Line of Business-level
 # MRC only sees models in that line of business; Division sees everything across its
@@ -128,6 +141,12 @@ REFERENCE_SPECS = {
                           "fields": [
         {"key": "value", "label": "Value", "type": "text", "required": True},
     ]},
+    # The feeds a model draws its inputs from. A model's ``data_sources``
+    # collection picks from this list, so "these two models share a source" is a
+    # match on a defined id rather than on free-text spelling.
+    DATA_SOURCE_LIST: {"label": "Data Source", "id_prefix": "DS", "display": "value", "fields": [
+        {"key": "value", "label": "Data source", "type": "text", "required": True},
+    ]},
     # --- Model classification ---
     # ``binding_role`` is the machine-readable half of a type: the name is for
     # people and may be renamed freely, the role is what Product bindings filter
@@ -136,6 +155,11 @@ REFERENCE_SPECS = {
         {"key": "value", "label": "Type", "type": "text", "required": True},
         {"key": "binding_role", "label": "Binding role", "type": "choice",
          "options": VALID_BINDING_ROLES, "required": True},
+    ]},
+    # Who supplies the model itself (as opposed to the data it consumes). Strict,
+    # like Model Type: a model cannot name a vendor nobody has defined.
+    VENDOR_LIST: {"label": "Vendor", "id_prefix": "VN", "display": "value", "fields": [
+        {"key": "value", "label": "Vendor", "type": "text", "required": True},
     ]},
     # A codebase carries the repository it lives in, so the two travel together.
     # Held as one entry rather than two lists because they are one fact: a second,
