@@ -29,6 +29,7 @@ from __future__ import annotations
 import os
 import sys
 
+from config.paths import BACKUP_SCRIPT
 from config.web import WEB_HOST, WEB_PORT
 from src.web import create_app
 
@@ -44,19 +45,17 @@ def _start_backup_scheduler():  # pragma: no cover
     daemon (dies with the process) and each run is best-effort — a failed or
     skipped backup (DB down, SSD unmounted) never disturbs the request loop.
     """
-    import pathlib
     import subprocess
     import threading
     import time
 
-    script = pathlib.Path(__file__).resolve().parent / "scripts" / "backup_db.sh"
     interval = int(os.environ.get("BACKUP_INTERVAL_SECONDS", "3600"))
 
     def loop():
         time.sleep(20)  # let migrations settle before the first snapshot
         while True:
             try:
-                subprocess.run(["bash", str(script)], timeout=300, check=False)
+                subprocess.run(["bash", str(BACKUP_SCRIPT)], timeout=300, check=False)
             except Exception:
                 pass
             time.sleep(interval)

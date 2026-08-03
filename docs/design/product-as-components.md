@@ -44,3 +44,7 @@ So the data model is already the candy-store shape. What was missing is the UI t
    Left in place for now so nothing breaks mid-review.
 3. The model **type name** (Statistical, Curve, Fitter, …) is what a component
    carries; that vocabulary is admin-managed under Admin → Model Type.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-STATIC_DIR = Path(__file__).resolve().parents[1] / "static"
+from config.paths import STATIC_DIR
 
 # The extensions the console loads through ``url_for('static', ...)``. Images are
 # excluded: the logo is served from an API route, not from here.

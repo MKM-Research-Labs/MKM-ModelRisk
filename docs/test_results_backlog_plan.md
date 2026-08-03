@@ -111,3 +111,7 @@ rationales — so run it in tranches of ~5 models per session.
 * **Commits:** explicit paths only (the copyright self-heal mutates files during
   test runs — never `git add -A`).
 * **Pushes:** the user pushes; commit to `main` and wait for the go-ahead.
+
+---
+
+© 2022–2026 MKM Research Labs. Licensed under the MIT License.

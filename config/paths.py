@@ -37,6 +37,12 @@ MIGRATIONS_DIR = _REPO_ROOT / "src" / "database" / "migrations"
 # Frozen v1 ingest contract schemas, loaded by the ingest validator.
 CONTRACTS_V1_DIR = _REPO_ROOT / "contracts" / "ingest" / "v1"
 
+# The console's served static assets (JS/CSS), fingerprinted for cache-busting.
+STATIC_DIR = _REPO_ROOT / "src" / "static"
+
+# The internal-disk backup script the app runs on a timer (see model.py).
+BACKUP_SCRIPT = _REPO_ROOT / "scripts" / "backup_db.sh"
+
 # Root of the producing repository a migration reads from. Machine-specific, so
 # it comes from the environment; the default assumes it sits beside this clone,
 # which is the usual layout. Never a hardcoded absolute path (rule R1).
