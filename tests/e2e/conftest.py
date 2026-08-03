@@ -37,6 +37,7 @@ import psycopg
 import pytest
 
 from config import DatabaseConfig
+from config.database import assert_disposable
 
 try:
     import playwright  # noqa: F401
@@ -47,6 +48,7 @@ except ImportError:
 # dev/demo ``mkm_modelrisk`` estate. Overridable so a suite can claim its own DB —
 # the onboarding journey runs with ``E2E_DB_NAME=mkm_modelrisk_journey``.
 E2E_DB = os.environ.get("E2E_DB_NAME", "mkm_modelrisk_e2e")
+assert_disposable(E2E_DB)  # never point the e2e harness at a protected database
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -126,6 +128,7 @@ def base_url(live_server: str) -> str:
 def _reset_e2e(live_server):
     """Truncate the event log and projections before each test (owner role)."""
     cfg = DatabaseConfig.from_env()
+    assert_disposable(E2E_DB)  # never truncate a real log
     with _admin_conn(cfg, E2E_DB) as conn, conn.cursor() as cur:
         cur.execute("TRUNCATE events RESTART IDENTITY")
         cur.execute("UPDATE projection_checkpoints SET last_global_seq = 0")

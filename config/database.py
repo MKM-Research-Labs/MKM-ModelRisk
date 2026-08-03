@@ -83,3 +83,27 @@ class DatabaseConfig:
     def owner_conninfo(self) -> dict:
         """Connection kwargs for the schema-owner role (migrations, tests)."""
         return self._conninfo(self.owner_user, self.owner_password)
+
+
+# Databases that hold real, non-disposable data. The test suite's teardown
+# fixtures TRUNCATE the event log between tests; pointed at one of these they
+# would wipe the live estate — which is exactly how the demo log was lost once
+# (a `pytest` run with a dev `.env` present resolved DB_NAME to the live
+# database). ``assert_disposable`` is the single guard every destructive fixture
+# calls, so neither a stray test run nor a future fixture can reset a real DB.
+PROTECTED_DB_NAMES = frozenset({"mkm_modelrisk", "mkm_modelrisk_demo"})
+
+
+def assert_disposable(name: str) -> None:
+    """Raise unless ``name`` is a throwaway test database.
+
+    Guards every ``TRUNCATE``/``DROP`` in the test fixtures. The message tells
+    the caller how to get onto a scratch database rather than merely failing.
+    """
+    if name in PROTECTED_DB_NAMES:
+        raise RuntimeError(
+            f"Refusing to run destructive test fixtures against {name!r}: it is a "
+            "protected database holding real data. Tests must use a scratch "
+            "database — unset DB_NAME (the suite then derives 'mkm_modelrisk_test'), "
+            "or set TEST_DB_BASE to a dedicated *_test name. See tests/conftest.py."
+        )

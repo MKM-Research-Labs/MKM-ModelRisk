@@ -22,6 +22,10 @@ from __future__ import annotations
 
 import os
 
+# Importing the config package loads ``.env`` (config/env.py), so DB_NAME below
+# reflects a developer's local settings before we derive the test database.
+from config.database import PROTECTED_DB_NAMES, assert_disposable
+
 # Run tests against a dedicated database so they never touch dev/demo data, and
 # give *every pytest process its own* database. The autouse ``_clean_event_log``
 # fixture TRUNCATEs the shared ``events`` table before each test; if two pytest
@@ -36,12 +40,18 @@ _TEST_DB_BASE = (
     or os.environ.get("DB_NAME")
     or "mkm_modelrisk_test"
 )
-if _TEST_DB_BASE != "mkm_modelrisk":  # never shadow the dev database
-    # Worker id is stable per xdist worker; PID isolates independent invocations.
-    _suffix = os.environ.get("PYTEST_XDIST_WORKER") or f"p{os.getpid()}"
-    # Keep a stable base so xdist workers don't double-suffix the mutated name.
-    os.environ["TEST_DB_BASE"] = _TEST_DB_BASE
-    os.environ["DB_NAME"] = f"{_TEST_DB_BASE}_{_suffix}"
+# A dev ``.env`` sets DB_NAME=mkm_modelrisk (the live database). The old code
+# treated that as "run against the dev DB" and skipped isolation — so the autouse
+# truncation wiped the real event log (this is how the demo log was lost once).
+# Never derive the test database from a protected name: fall back to the
+# dedicated test base instead.
+if _TEST_DB_BASE in PROTECTED_DB_NAMES:
+    _TEST_DB_BASE = "mkm_modelrisk_test"
+# Worker id is stable per xdist worker; PID isolates independent invocations.
+_suffix = os.environ.get("PYTEST_XDIST_WORKER") or f"p{os.getpid()}"
+# Keep a stable base so xdist workers don't double-suffix the mutated name.
+os.environ["TEST_DB_BASE"] = _TEST_DB_BASE
+os.environ["DB_NAME"] = f"{_TEST_DB_BASE}_{_suffix}"
 
 import time  # noqa: E402
 
@@ -62,8 +72,7 @@ def _admin_cursor(cfg: DatabaseConfig):
 
 def _ensure_test_database() -> None:
     cfg = DatabaseConfig.from_env()
-    if cfg.name == "mkm_modelrisk":  # never auto-create the dev database
-        return
+    assert_disposable(cfg.name)  # never create/reset a protected database
     # Drop first so a database leaked by an earlier SIGKILLed run with the same
     # name starts clean. Names are unique per *live* process, so FORCE only ever
     # evicts a dead process's stragglers — never a concurrent run's connections.
@@ -78,8 +87,7 @@ def _ensure_test_database() -> None:
 
 def _drop_test_database() -> None:
     cfg = DatabaseConfig.from_env()
-    if cfg.name == "mkm_modelrisk":  # never drop the dev database
-        return
+    assert_disposable(cfg.name)  # never drop a protected database
     admin = _admin_cursor(cfg)
     try:
         with admin.cursor() as cur:
@@ -119,6 +127,7 @@ def _isolate_uploads(tmp_path, monkeypatch):
 @pytest.fixture(autouse=True)
 def _clean_event_log():
     # Reset as the owner role; the app role is forbidden from truncating.
+    assert_disposable(DatabaseConfig.from_env().name)  # never truncate a real log
     with owner_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("TRUNCATE events RESTART IDENTITY")
