@@ -74,7 +74,7 @@ DEFAULT_MODEL_TYPES = (
 # feeds a model pulls its inputs from; Vendor names who supplies the model
 # itself. Both are strict lists an adopter re-seeds to its own estate — a Moody's
 # install would seed "Moody's" as its vendor.
-DEFAULT_DATA_SOURCES = ("ICE", "Reuters", "Bloomberg", "Manual", "Other")
+DEFAULT_DATA_SOURCES = ("ICE", "Reuters", "Bloomberg", "Manual", "Simulated", "Other")
 DEFAULT_VENDORS = ("MKM Research Labs", "Other")
 
 # MRC committees are anchored to one of the three org tiers. A Line of Business-level

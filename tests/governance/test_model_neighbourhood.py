@@ -71,13 +71,25 @@ def test_focus_reports_feeds_and_chain_position():
     assert n["focus"]["data_sources"] == ["Bloomberg"]
 
 
-def test_shared_source_excludes_feed_neighbours():
+def test_sources_are_nodes_scoped_to_focus_and_upstream():
     _build_estate()
     n = derive_neighbourhood("M-FOCUS")
-    # C also draws Bloomberg but is already a feed edge, so it is not repeated as a
-    # shared-source sibling; only the otherwise-unconnected SIB is.
-    assert [m["model_id"] for m in n["shared_sources"]] == ["M-SIB"]
-    assert n["shared_sources"][0]["shared"] == ["Bloomberg"]
+    # Bloomberg is drawn as a source node linking to the focus and any upstream model
+    # that uses it. FOCUS uses Bloomberg; its upstream A/B do not; C (downstream) is
+    # out of scope. So the source points at the focus only.
+    by_name = {s["name"]: s for s in n["sources"]}
+    assert set(by_name) == {"Bloomberg"}
+    assert by_name["Bloomberg"]["models"] == ["M-FOCUS"]
+
+
+def test_source_links_to_upstream_that_uses_it():
+    _build_estate()
+    # Give an upstream model (A) the same source, so it should appear on the edge too.
+    _source("M-A", "Bloomberg")
+    rebuild_inventory_view()
+    n = derive_neighbourhood("M-FOCUS")
+    by_name = {s["name"]: s for s in n["sources"]}
+    assert by_name["Bloomberg"]["models"] == ["M-A", "M-FOCUS"]
 
 
 def test_terminal_model_has_no_downstream():

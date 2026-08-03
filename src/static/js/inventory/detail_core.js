@@ -28,8 +28,8 @@
 // validation_date (Governance) are governed, audit-scored fields; each renders from
 // the config specs via _row. They had been dropped from these lists, which left them
 // uneditable while the audit still expected them.
-const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebase", "type", "short_name",
-  "methodology", "methodology_rationale", "source_module", "materiality", "complexity",
+const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebase", "type", "vendor",
+  "short_name", "methodology", "methodology_rationale", "source_module", "materiality", "complexity",
   "tier", "tier_rationale", "rating_rationale"];
 // Governance column. Note: recertification / review_frequency / last_review_date remain
 // intentionally off the overview (the MRC sets sign-off + next review at sign-off); that
@@ -123,6 +123,7 @@ const Detail = {
       ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
       ["dependencies", "Dependencies", n("dependencies")],
+      ["connections", "Connections", null],
       ["raci_roles", "RACI", n("raci_roles")],
       ["validation_questions", "Validation & Assumptions", cov],
       ["testing", "Testing", tst],
@@ -146,6 +147,19 @@ const Detail = {
     const d = this._model.data || {};
     const box = document.getElementById("dt-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
+    if (this._tab === "connections") {
+      box.innerHTML =
+        '<p class="muted" style="font-size:12px;margin-bottom:10px">This model\'s neighbourhood: ' +
+        "what feeds it, what it feeds, and the models it shares a data source with. Declare feeds on " +
+        "the Dependencies tab; declare data sources below. Click any model to re-centre.</p>" +
+        '<div id="nbhd-host"></div>' +
+        '<p class="muted" style="font-size:12px;margin-top:16px">The feeds this model pulls its inputs ' +
+        "from. Any model that draws on the same source is linked to it above.</p>" +
+        this._collSection("data_sources", d);
+      Neighbourhood.render(this._id, "nbhd-host");
+      this._bindCollections(["data_sources"]);
+      return;
+    }
     if (this._tab === "risk") {
       box.innerHTML = DetailTabs.risk(this._risk, false);  // events are product-only
       this._bindSignoffRequest(); return;

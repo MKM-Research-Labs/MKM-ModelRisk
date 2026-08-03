@@ -102,6 +102,7 @@ const ProductDetail = {
       // collection + backend existed and were shown read-only on the overview, but
       // there was no editor tab, so a Product could not be defined from the UI.
       ["components", "Components", n("components")],
+      ["model_map", "Model Map", null],
       ["limitations", "Limitations", n("limitations")],
       ["assumptions", "Assumptions", n("assumptions")],
       ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
@@ -127,6 +128,15 @@ const ProductDetail = {
     if (this._tab === "overview") {
       box.innerHTML = this._overview(d); this._bindEdits(); this._bindSignoffRequest();
       this._bindLinkageLink(); return;
+    }
+    if (this._tab === "model_map") {
+      box.innerHTML =
+        '<p class="muted" style="font-size:12px;margin-bottom:10px">The models this product is built ' +
+        "from (its components) and the feed-chain they sit in. Data sources sit on top and supply the models " +
+        "beneath them (amber arrows); grey arrows run producer &rarr; consumer. Click any model to open it.</p>" +
+        '<div id="pmap-host"></div>';
+      ProductMap.render(this._id, "pmap-host");
+      return;
     }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); this._bindDanger(); return; }
     if (this._tab === "risk") { box.innerHTML = DetailTabs.risk(this._risk); return; }

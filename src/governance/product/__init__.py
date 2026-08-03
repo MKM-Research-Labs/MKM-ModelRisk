@@ -28,6 +28,7 @@ from src.governance.product.commands import (
     update_collection_item,
     update_product_field,
 )
+from src.governance.product.model_map import derive_product_map
 from src.governance.product.projection import (
     derived_identifier,
     get_product,
@@ -37,6 +38,7 @@ from src.governance.product.projection import (
 
 __all__ = [
     "AGGREGATE_TYPE",
+    "derive_product_map",
     "register_product",
     "rebind_component",
     "update_product_field",

@@ -36,6 +36,7 @@ from src.governance.documents import add_document, find_document, remove_documen
 from src.governance.model_inventory import list_models
 from src.governance.product import (
     add_collection_item,
+    derive_product_map,
     get_product,
     list_products,
     rebind_component,
@@ -141,6 +142,15 @@ def get_one(product_id: str):
     if product is None:
         return jsonify({"error": "Product not found"}), 404
     return jsonify(product)
+
+
+@product_bp.get("/<product_id>/model-map")
+def model_map(product_id: str):
+    """The product's component models and the feed-chain they sit in."""
+    result = derive_product_map(product_id)
+    if result is None:
+        return jsonify({"error": "Product not found"}), 404
+    return jsonify(result)
 
 
 @product_bp.post("")

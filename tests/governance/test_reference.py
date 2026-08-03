@@ -82,9 +82,9 @@ def test_ensure_default_reference_lists_seeds_and_is_idempotent():
     added = ensure_default_reference_lists()
     lists = get_reference_lists()
     assert [o["value"] for o in lists["data_source"]] == [
-        "ICE", "Reuters", "Bloomberg", "Manual", "Other"]
+        "ICE", "Reuters", "Bloomberg", "Manual", "Simulated", "Other"]
     assert [o["value"] for o in lists["vendor"]] == ["MKM Research Labs", "Other"]
-    assert added == 7
+    assert added == 8
     # Seeds a vacuum only — a second run adds nothing and never repopulates a
     # list an adopter has since curated.
     assert ensure_default_reference_lists() == 0

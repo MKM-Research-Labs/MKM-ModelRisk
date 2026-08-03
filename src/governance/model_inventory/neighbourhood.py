@@ -17,13 +17,14 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""One model's neighbourhood: what feeds it, what it feeds, what it shares data with.
+"""One model's neighbourhood: its data sources, what feeds it, and what it feeds.
 
 The chain screen (see ``chain.py``) shows the whole estate. This is the per-model
-cut rendered on a model's Connections tab: the focus model, the models one hop away
-on the declared dependency graph (feeds), and the models it is joined to only by a
-shared data source. Terminal-ness — "is this the end of a chain?" — is a property
-of the focus here, so a coverage gap (a model nothing consumes) reads at a glance.
+cut rendered on a model's Connections tab: the data sources at the top (each drawn
+as a node feeding the models that draw on it), then the models one hop away on the
+declared dependency graph — the ones that feed the focus above it, the ones it feeds
+below. Terminal-ness — "is this the end of a chain?" — is a property of the focus
+here, so a coverage gap (a model nothing consumes) reads at a glance.
 
 Derived and stateless: the ``dependencies`` and ``data_sources`` collections on the
 models are the truth; this only re-shapes them around one model.
@@ -73,18 +74,18 @@ def derive_neighbourhood(model_id: str, config=None) -> dict[str, Any] | None:
     edges = all_edges(config=config)
     upstream_ids = sorted({a for a, b in edges if b == model_id})
     downstream_ids = sorted({b for a, b in edges if a == model_id})
-    feed_ids = set(upstream_ids) | set(downstream_ids)
 
     focus_sources = _sources(focus)
-    shared = []
-    for other in models:
-        oid = other["model_id"]
-        if oid == model_id or oid in feed_ids:
-            continue
-        common = focus_sources & _sources(other)
-        if common:
-            shared.append({**_node(other), "shared": sorted(common)})
-    shared.sort(key=lambda n: n["model_id"])
+    # Data sources are drawn as nodes upstream of the models that draw on them: each
+    # source links down to the focus and to any of its upstream models that use it.
+    # Scoping to the focus + its dependencies keeps a ubiquitous source (e.g. every
+    # model on "Simulated") from webbing the whole estate together.
+    scope_ids = [model_id] + upstream_ids
+    src_map: dict[str, set[str]] = {}
+    for mid in scope_ids:
+        for name in _sources(by_id[mid]):
+            src_map.setdefault(name, set()).add(mid)
+    sources = [{"name": name, "models": sorted(ids)} for name, ids in sorted(src_map.items())]
 
     return {
         "focus": {
@@ -98,5 +99,5 @@ def derive_neighbourhood(model_id: str, config=None) -> dict[str, Any] | None:
             "upstream": [_node(by_id[i]) for i in upstream_ids if i in by_id],
             "downstream": [_node(by_id[i]) for i in downstream_ids if i in by_id],
         },
-        "shared_sources": shared,
+        "sources": sources,
     }
