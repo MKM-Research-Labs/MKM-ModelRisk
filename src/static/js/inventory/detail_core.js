@@ -54,7 +54,9 @@ const Detail = {
   _id: null, _model: null, _specs: null, _risk: null, _audit: [], _mrc: null,
   _decisions: [], _tab: "overview",
 
-  async show(modelId, tab) {
+  // ``opts.scroll === false`` refreshes in place without jumping to the top — used
+  // by the register tabs so an auto-saved edit does not scroll the page every time.
+  async show(modelId, tab, opts) {
     this._id = modelId;
     this._specs = await Inventory.specs();
     // Fetch the independent reads in parallel so a re-render settles quickly.
@@ -72,7 +74,9 @@ const Detail = {
     this._decisions = decisions;
     if (tab) this._tab = tab;
     this._render();
-    document.getElementById("m-detail").scrollIntoView({ block: "start" });
+    if (!opts || opts.scroll !== false) {
+      document.getElementById("m-detail").scrollIntoView({ block: "start" });
+    }
   },
 
   specByKey(key) { return Inventory.specByKey(key); },
@@ -241,7 +245,8 @@ const Detail = {
     let html = Collections.render(d, { collections: [spec] }, this._model.retired);
     const docCat = COLLECTION_DOC_CATEGORY[this._tab];
     const docOpts = { category: docCat, docs: d.documents || [], base: "/api/models/", id: this._id,
-      retired: this._model.retired, refresh: () => this.show(this._id, this._tab) };
+      retired: this._model.retired,
+      refresh: () => this.show(this._id, this._tab, { scroll: false }) };
     if (docCat) html += '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
       DocPanel.html(docOpts);
     box.innerHTML = html;
@@ -270,9 +275,11 @@ const Detail = {
   },
 
   _bindCollections(keys) {
+    // Refresh in place (no scroll) so a register edit does not jump the page.
     Collections.bind("/api/models/" + this._id + "/collections/",
       { collections: keys.map((k) => this.collSpec(k)) },
-      this._model.retired, () => this.show(this._id, this._tab), this._model.data);
+      this._model.retired, () => this.show(this._id, this._tab, { scroll: false }),
+      this._model.data);
   },
 
   _bindCollection(key) { this._bindCollections([key]); },
