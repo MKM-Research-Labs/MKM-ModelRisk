@@ -144,17 +144,15 @@ Object.assign(MeetingDetail, {
           esc(m.analysis_original_name || m.analysis_filename) + "</a>"
         : '<span class="muted" style="font-size:12px">None uploaded.</span>';
       return '<div class="card" style="margin-bottom:8px">' + head +
+        // Note and basis auto-save on change (blur / Enter) — no Save button.
         '<div class="field" style="margin-top:6px"><label>Discussion note</label>' +
-        '<div class="row" style="align-items:flex-end;gap:6px">' +
-        '<input data-analysis-note="' + esc(id) + '" value="' + esc(m.analysis_note || "") + '" style="flex:1">' +
-        '<button class="btn small" data-analysis-note-save="' + esc(id) + '">Save note</button></div></div>' +
+        '<input data-analysis-note="' + esc(id) + '" value="' + esc(m.analysis_note || "") +
+        '" style="width:100%"></div>' +
         // What the MRC is allowing the presenter to proceed on the basis of.
         '<div class="field" style="margin-top:6px">' +
         "<label>Basis the MRC is allowing the presenter to proceed on</label>" +
-        '<div class="row" style="align-items:flex-end;gap:6px">' +
-        '<textarea data-analysis-basis="' + esc(id) + '" rows="2" style="flex:1;resize:vertical">' +
-        esc(m.proceed_basis || "") + "</textarea>" +
-        '<button class="btn small" data-analysis-basis-save="' + esc(id) + '">Save basis</button></div></div>' +
+        '<textarea data-analysis-basis="' + esc(id) + '" rows="2" style="width:100%;resize:vertical">' +
+        esc(m.proceed_basis || "") + "</textarea></div>" +
         // The presenter uploads their supporting analysis here.
         '<div class="field" style="margin-top:6px"><label>Supporting analysis</label>' +
         '<div class="row" style="align-items:center;gap:8px">' + fileLink +
@@ -247,26 +245,18 @@ Object.assign(MeetingDetail, {
       sel.onchange = () => App.amend("Set analysis outcome for " + id + " → " + sel.value + ".", "POST",
         scopePath(id), { fields: { analysis_status: sel.value } }, reload);
     });
-    // The discussion note saves via an explicit button, not on blur: a
-    // blur-triggered amend would collide with a subsequent click (e.g. Add
-    // remediation), and the single pending-amend slot would silently drop one of
-    // the two changes.
-    document.querySelectorAll("[data-analysis-note-save]").forEach(function (btn) {
-      const id = btn.getAttribute("data-analysis-note-save");
-      btn.onclick = function () {
-        const inp = document.querySelector('[data-analysis-note="' + id + '"]');
-        App.amend("Set analysis note for " + id + ".", "POST",
-          scopePath(id), { fields: { analysis_note: inp.value } }, reload);
-      };
+    // The discussion note and the basis-to-proceed auto-save on change (blur /
+    // Enter). Both are non-critical edits that apply without a confirmation dialog,
+    // so there is no pending-confirm slot for a following click to collide with.
+    document.querySelectorAll("[data-analysis-note]").forEach(function (inp) {
+      const id = inp.getAttribute("data-analysis-note");
+      inp.onchange = () => App.amend("Set analysis note for " + id + ".", "POST",
+        scopePath(id), { fields: { analysis_note: inp.value } }, reload);
     });
-    // The basis-to-proceed saves via its own button, like the discussion note.
-    document.querySelectorAll("[data-analysis-basis-save]").forEach(function (btn) {
-      const id = btn.getAttribute("data-analysis-basis-save");
-      btn.onclick = function () {
-        const inp = document.querySelector('[data-analysis-basis="' + id + '"]');
-        App.amend("Set basis to proceed for " + id + ".", "POST",
-          scopePath(id), { fields: { proceed_basis: inp.value } }, reload);
-      };
+    document.querySelectorAll("[data-analysis-basis]").forEach(function (inp) {
+      const id = inp.getAttribute("data-analysis-basis");
+      inp.onchange = () => App.amend("Set basis to proceed for " + id + ".", "POST",
+        scopePath(id), { fields: { proceed_basis: inp.value } }, reload);
     });
     document.querySelectorAll("[data-presenter]").forEach(function (sel) {
       const id = sel.getAttribute("data-presenter");
