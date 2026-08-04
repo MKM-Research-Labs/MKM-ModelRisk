@@ -48,7 +48,20 @@ from src.governance.product import get_product, list_products
 
 PACK_NAME = "{client_id}_client_pack.zip"
 CONTENTS_NAME = "CONTENTS.txt"
+# The human-facing cover page. Named to sort first in the archive listing so it is
+# the first thing a reader opens; the machine-readable CONTENTS.txt sits alongside.
+COVER_NAME = "00_Cover.pdf"
 UNCATEGORISED = "Other"
+
+# Friendly section names for the top-level folder each packed file lives under, used
+# on the cover page's "Pack contents" table.
+_FOLDER_LABELS = {
+    "models": "Model Risk Documents",
+    "events": "Operational event write-ups",
+    "governance": "Governance",
+    "mrc": "MRC minutes and Terms of Reference",
+    "supplementary": "Supplementary evidence",
+}
 _MINUTES_SCOPE = "meeting_minutes"
 _TOR_SCOPE = "mrc"
 
@@ -175,6 +188,47 @@ def _contents(client: dict, as_of: str, generated_at: str,
     return "\n".join(lines) + "\n"
 
 
+def _cover_rows(paths: list[str]) -> list[list[str]]:
+    """One row per packed file: its friendly section and its path within the pack,
+    grouped by section so the reader can find each document."""
+    return [[_FOLDER_LABELS.get(p.split("/", 1)[0], p.split("/", 1)[0]), p]
+            for p in sorted(paths, key=lambda x: (x.split("/", 1)[0], x))]
+
+
+def _cover_pdf(client: dict, as_of: str, generated_at: str,
+               packed: list[str], missing: list[str], settings: dict) -> bytes:
+    """A cover-page PDF in the shared house style: title page with the client and the
+    bi-temporal stamps, then a numbered "Pack contents" table (and, when relevant, a
+    table of items recorded but unavailable). The same information as CONTENTS.txt,
+    presented for a human rather than a machine."""
+    from src.governance.latex import (_esc, _para_table, _section, front_matter,
+                                       logo_asset, preamble)
+    from src.governance.mrc.pack import compile_tex
+    data = client.get("data") or {}
+    org = (settings.get("fields") or {}).get("org_name", "")
+    name = data.get("name") or ""
+    title = str(client["client_id"]) + (" --- " + name if name else "")
+    assets = logo_asset(settings)
+    intro = ("Generated on \\textbf{" + _esc(generated_at) + "} for the model risk "
+             "position as of \\textbf{" + _esc(as_of) + "}. This pack bundles the "
+             "documents listed below; every generated PDF was built at the moment of "
+             "packing, so nothing here is a stale copy.\n\n")
+    body = _section("Pack contents", intro + _para_table(
+        ["Section", "File in pack"], _cover_rows(packed), [0.34, 0.66],
+        caption="Pack contents"))
+    if missing:
+        body += _section("Recorded but not available", (
+            "The following items are recorded against the client but their files were "
+            "not available when the pack was built.\n\n") + _para_table(
+            ["Section", "File in pack"], _cover_rows(missing), [0.34, 0.66],
+            caption="Recorded but not available at packing"))
+    tex = (preamble("Client Pack", org_name=org) + "\\begin{document}\n"
+           + front_matter(title, "Client Pack", org_name=org, date=as_of,
+                          logo=bool(assets))
+           + body + "\\end{document}\n")
+    return compile_tex(tex, assets)
+
+
 def build_client_pack(client: dict, settings: dict, as_of: str,
                       generated_at: str, config=None) -> bytes:
     """Assemble a client's full evidence pack as ZIP bytes (see module docstring)."""
@@ -193,7 +247,12 @@ def build_client_pack(client: dict, settings: dict, as_of: str,
         gaps_name = "governance/completeness_audit.pdf"
         archive.writestr(gaps_name, render_completeness_pdf(settings, as_of))
         packed.append(gaps_name)
+        # The text manifest (machine-readable) and the cover page (human-facing) both
+        # describe the finished pack, so they are written last, once packed/missing
+        # are complete. Neither lists itself.
         archive.writestr(CONTENTS_NAME, _contents(client, as_of, generated_at, packed, missing))
+        archive.writestr(COVER_NAME,
+                         _cover_pdf(client, as_of, generated_at, packed, missing, settings))
     return buffer.getvalue()
 
 
