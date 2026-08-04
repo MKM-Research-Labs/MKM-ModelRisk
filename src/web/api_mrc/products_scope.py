@@ -89,6 +89,10 @@ def products_in_scope(meeting_id: str):
             "rag_rating": data.get("rag_rating"),
             "review_status": compute_review_status(data.get("next_review_date"), today),
             "presenter": item.get("presenter"),
+            "analysis_status": item.get("analysis_status"),
+            "analysis_note": item.get("analysis_note"),
+            "proceed_basis": item.get("proceed_basis"),
+            "analysis_filename": item.get("analysis_filename"),
             "analysis_original_name": item.get("analysis_original_name"),
         })
     return jsonify(rows)
@@ -130,3 +134,20 @@ def download_product_analysis(meeting_id: str, product_id: str):
         return jsonify({"error": "analysis file missing"}), 404
     return send_file(str(path), as_attachment=True,
                      download_name=item.get("analysis_original_name") or "analysis")
+
+
+@mrc_bp.post("/<meeting_id>/products/<product_id>/analysis/remove")
+def remove_product_analysis(meeting_id: str, product_id: str):
+    """Detach the uploaded analysis from an in-scope product at this meeting."""
+    meeting = get_meeting_raw(meeting_id)
+    if meeting is None:
+        return jsonify({"error": "meeting not found"}), 404
+    item = _in_scope_product(meeting, product_id)
+    if item is None:
+        return jsonify({"error": "product is not in scope for this meeting"}), 400
+    update_collection_item(
+        meeting_id=meeting_id, collection="products_in_scope", item_id=item["item_id"],
+        fields={"analysis_filename": "", "analysis_original_name": ""}, actor=request_actor(),
+    )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id)), 200

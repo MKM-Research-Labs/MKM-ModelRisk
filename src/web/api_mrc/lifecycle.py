@@ -167,6 +167,10 @@ def models_in_scope(meeting_id: str):
             # "Pending" and a blank note, so saved values never appear to stick.
             "analysis_status": item.get("analysis_status"),
             "analysis_note": item.get("analysis_note"),
+            "proceed_basis": item.get("proceed_basis"),
+            # Carry the uploaded-analysis filename so the review panel can show the
+            # download link (its presence check) and the recorded basis to proceed.
+            "analysis_filename": item.get("analysis_filename"),
             "analysis_original_name": item.get("analysis_original_name"),
         })
     return jsonify(rows)
@@ -219,6 +223,24 @@ def download_model_analysis(meeting_id: str, model_id: str):
         return jsonify({"error": "analysis file missing"}), 404
     return send_file(str(path), as_attachment=True,
                      download_name=item.get("analysis_original_name") or "analysis")
+
+
+@mrc_bp.post("/<meeting_id>/models/<model_id>/analysis/remove")
+def remove_model_analysis(meeting_id: str, model_id: str):
+    """Detach the uploaded analysis from an in-scope model at this meeting. The copy
+    filed on the model (Docs / Analysis) is left in place — it is the model's record."""
+    meeting = get_meeting_raw(meeting_id)
+    if meeting is None:
+        return jsonify({"error": "meeting not found"}), 404
+    item = _in_scope_item(meeting, model_id)
+    if item is None:
+        return jsonify({"error": "model is not in scope for this meeting"}), 400
+    update_collection_item(
+        meeting_id=meeting_id, collection="models_in_scope", item_id=item["item_id"],
+        fields={"analysis_filename": "", "analysis_original_name": ""}, actor=request_actor(),
+    )
+    rebuild_meeting_view()
+    return jsonify(get_meeting(meeting_id)), 200
 
 
 def _agenda_item(meeting: dict, item_id: str) -> dict | None:

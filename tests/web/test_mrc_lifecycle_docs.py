@@ -246,3 +246,23 @@ def test_analysis_presentations_lists_meetings_the_model_was_in_scope_for(client
 
 def test_analysis_presentations_unknown_model_is_404(client):
     assert client.get("/api/models/NOPE/analysis-presentations").status_code == 404
+
+
+def test_model_analysis_remove_detaches_it_from_the_meeting(client):
+    """Remove clears the meeting's analysis reference; the download then 404s."""
+    _seed_mrc(client)
+    _schedule_meeting(client)
+    client.post("/api/models", json={"model_id": "MKM-XR-001", "name": "X", "confirmed": True}, headers=HEADERS)
+    _add(client, "models_in_scope", {"model_id": "MKM-XR-001"})
+    _upload(client, "/api/meetings/MTG1/models/MKM-XR-001/analysis", name="analysis.pdf")
+    assert client.post("/api/meetings/MTG1/models/MKM-XR-001/analysis/remove",
+                       json={}, headers=HEADERS).status_code == 200
+    item = [m for m in client.get("/api/meetings/MTG1").get_json()["data"]["models_in_scope"]
+            if m["model_id"] == "MKM-XR-001"][0]
+    assert not item.get("analysis_filename")
+    assert client.get("/api/meetings/MTG1/models/MKM-XR-001/analysis").status_code == 404
+
+
+def test_model_analysis_remove_unknown_meeting_is_404(client):
+    assert client.post("/api/meetings/none/models/M-A/analysis/remove",
+                       json={}, headers=HEADERS).status_code == 404

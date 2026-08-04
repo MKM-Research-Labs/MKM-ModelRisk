@@ -160,7 +160,11 @@ Object.assign(MeetingDetail, {
         '<div class="row" style="align-items:center;gap:8px">' + fileLink +
         '<input type="file" id="an-file-' + esc(id) + '" style="display:none">' +
         '<button class="btn small" data-an-upload="' + esc(id) + '">' +
-        (m.analysis_filename ? "Replace" : "Upload") + "&hellip;</button></div></div>" +
+        (m.analysis_filename ? "Replace" : "Upload") + "&hellip;</button>" +
+        (m.analysis_filename
+          ? '<button class="btn small danger" data-an-remove="' + esc(id) + '">Remove</button>'
+          : "") +
+        "</div></div>" +
         '<div class="section-header" style="margin-top:8px;font-size:11px">Follow-on remediation</div>' + stepList +
         '<div class="row" style="margin-top:6px;flex-wrap:wrap;align-items:flex-end">' +
         '<div class="field"><label>Remediation</label><input id="act-desc-' + esc(id) + '"></div>' +
@@ -299,6 +303,11 @@ Object.assign(MeetingDetail, {
           reload();
         }).catch((e) => App.toast(e.message, "error"));
       };
+    });
+    document.querySelectorAll("[data-an-remove]").forEach(function (btn) {
+      const id = btn.getAttribute("data-an-remove");
+      btn.onclick = () => App.amend("Remove the analysis for " + id + ".", "POST",
+        "/api/meetings/" + self._id + "/" + cfg.base + "/" + id + "/analysis/remove", {}, reload);
     });
     const saveBtn = document.querySelector("[data-save-scope]");
     if (saveBtn) saveBtn.onclick = function () {
