@@ -166,7 +166,9 @@ def method_section() -> str:
 
 
 def appendix() -> str:
-    """The full weight set, printed from the live constants."""
+    """The full weight set, printed from the live constants, inside the ``appendices``
+    environment so it is lettered (Appendix A) and set off by an Appendices divider,
+    as the ``docs/Swaption.tex`` template does."""
     body = [
         _subsection("Severity bands and remediation targets", _band_table()),
         _subsection("Escalation factors", _factor_table()),
@@ -206,4 +208,6 @@ def appendix() -> str:
              for value in sorted(PLACEHOLDER_VALUES)], [0.35, 0.65],
             caption="Values treated as unrecorded")),
     ]
-    return _section("Appendix: scoring basis", "".join(body))
+    # \begin{appendices} letters the section (Appendix A) and, with the package's
+    # [page] option, prints the "Appendices" divider ahead of it.
+    return "\\begin{appendices}\n" + _section("Scoring basis", "".join(body)) + "\\end{appendices}\n"
