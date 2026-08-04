@@ -36,26 +36,26 @@ const DetailTabs = {
       lbl + '</div><div class="val">' + v + "</div></div>";
     const statuses = ["Addressed", "Partially Addressed", "Not Addressed", "Not Applicable"];
     const rows = questions.map(function (q, i) {
-      let statusCell, rationaleCell, actionCell;
+      let statusCell, rationaleCell;
       if (retired) {
         statusCell = vqBadge(q.status);
         rationaleCell = fieldDisplay(q.rationale);
-        actionCell = "";
       } else {
         const opts = statuses.map((o) =>
           "<option" + (o === q.status ? " selected" : "") + ">" + o + "</option>").join("");
-        statusCell = '<select id="vq-' + esc(q.item_id) + '-status">' + opts + "</select>";
-        rationaleCell = '<input id="vq-' + esc(q.item_id) + '-rationale" value="' +
-          esc(q.rationale || "") + '">';
-        actionCell = '<button class="btn small primary" data-vq-save="' + esc(q.item_id) +
-          '">Save&hellip;</button>';
+        // data-vq-item drives auto-save: changing the status or leaving the
+        // rationale posts the row straight away (see _bindValidationSaves).
+        statusCell = '<select data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
+          '-status" style="width:100%">' + opts + "</select>";
+        rationaleCell = '<input data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
+          '-rationale" style="width:100%" value="' + esc(q.rationale || "") + '">';
       }
       return "<tr><td>" + (i + 1) + "</td><td><b>" + fieldDisplay(q.short_label) +
         '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" + statusCell +
-        "</td><td>" + rationaleCell + "</td><td>" + actionCell + "</td></tr>";
+        "</td><td>" + rationaleCell + "</td></tr>";
     }).join("");
     return '<p class="muted">The nine SR 26-2 questions every model owner should be able to answer. ' +
-      "Set the status and add a rationale, then Save the row.</p>" +
+      "Set the status and add a rationale &mdash; each change saves automatically.</p>" +
       '<div class="summary">' + card("Addressed", counts.Addressed, "#388e3c") +
       card("Partially", counts["Partially Addressed"], "#f57c00") +
       card("Not Addressed", counts["Not Addressed"], "#d32f2f") +
@@ -63,7 +63,12 @@ const DetailTabs = {
       '<div class="muted" style="margin-bottom:6px">Coverage: ' + counts.Addressed + "/" + total +
       " (" + pct + "%)</div>" +
       '<div class="progress"><div class="bar" style="width:' + pct + "%;background:" + barColor(pct) + '"></div></div>' +
-      "<table><thead><tr><th>#</th><th>Question</th><th>Status</th><th>Rationale</th><th></th></tr>" +
+      // Fixed layout so the column widths below are enforced: Status sits compact
+      // on the left and the Rationale takes all the remaining space (there is no
+      // Save column any more).
+      '<table style="table-layout:fixed;width:100%"><colgroup><col style="width:4%">' +
+      '<col style="width:30%"><col style="width:12%"><col style="width:54%"></colgroup>' +
+      "<thead><tr><th>#</th><th>Question</th><th>Status</th><th>Rationale</th></tr>" +
       "</thead><tbody>" + rows + "</tbody></table>";
   },
 

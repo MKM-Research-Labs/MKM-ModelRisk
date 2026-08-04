@@ -280,18 +280,29 @@ const Detail = {
   _bindValidationSaves() {
     if (this._model.retired) return;
     const self = this;
-    document.querySelectorAll("[data-vq-save]").forEach(function (btn) {
-      const itemId = btn.getAttribute("data-vq-save");
-      btn.onclick = function () {
-        const status = val("vq-" + itemId + "-status");
-        const rationale = val("vq-" + itemId + "-rationale");
-        App.amend(
-          "Update " + itemId + ' — status="' + status + '", rationale.', "POST",
-          "/api/models/" + self._id + "/collections/validation_questions/" + itemId,
-          { fields: { status: status, rationale: rationale } },
-          () => self.show(self._id, "validation_questions"),
-        );
-      };
+    // Auto-save: changing a status, or leaving a rationale field (its change event
+    // fires on blur / Enter), posts the row immediately. Updating a validation
+    // question is a non-critical edit, so it applies without a confirmation dialog.
+    // The fresh record the endpoint returns is re-rendered in place, so the
+    // coverage tiles and the tab count reflect the change at once — and, unlike a
+    // full reload, the view does not scroll back to the top on every keystroke.
+    const save = async function (itemId) {
+      try {
+        const updated = await App.send(
+          "POST", "/api/models/" + self._id + "/collections/validation_questions/" + itemId,
+          { fields: { status: val("vq-" + itemId + "-status"),
+                      rationale: val("vq-" + itemId + "-rationale") } });
+        self._model = updated;
+        if (typeof MrcNav !== "undefined") MrcNav.invalidate();
+        if (typeof Nav !== "undefined") Nav.markAllDirty();
+        App.toast("Change recorded in the audit trail", "ok");
+        self._render();
+      } catch (e) {
+        App.toast(e.message, "error");
+      }
+    };
+    document.querySelectorAll("select[data-vq-item], input[data-vq-item]").forEach(function (el) {
+      el.onchange = () => save(el.getAttribute("data-vq-item"));
     });
   },
 };
