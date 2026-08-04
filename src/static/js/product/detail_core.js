@@ -36,7 +36,9 @@ const ProductDetail = {
   _id: null, _product: null, _specs: null, _audit: [], _mrc: null, _risk: null,
   _decisions: [], _actions: [], _tab: "overview",
 
-  async show(productId, tab) {
+  // ``opts.scroll === false`` refreshes in place without jumping to the top — used
+  // by the register tabs so an auto-save does not scroll the page on every edit.
+  async show(productId, tab, opts) {
     this._id = productId;
     this._specs = Product._specs || await Product.specs();
     // Fetch the independent reads in parallel so a re-render settles quickly.
@@ -56,7 +58,9 @@ const ProductDetail = {
     this._actions = actions;
     if (tab) this._tab = tab;
     this._render();
-    document.getElementById("product-detail").scrollIntoView({ block: "start" });
+    if (!opts || opts.scroll !== false) {
+      document.getElementById("product-detail").scrollIntoView({ block: "start" });
+    }
   },
 
   fieldSpec(key) { return Product.fieldSpec(key); },
@@ -175,13 +179,15 @@ const ProductDetail = {
     // autosave=true: the product register tabs edit in place, saving on change.
     let html = Collections.render(d, { collections: [spec] }, this._product.retired, false, true);
     const docCat = COLLECTION_DOC_CATEGORY[this._tab];
+    // Refresh in place (no scroll) so an auto-saved edit does not jump the page.
+    const refresh = () => this.show(this._id, this._tab, { scroll: false });
     const docOpts = { category: docCat, docs: d.documents || [], base: "/api/products/", id: this._id,
-      retired: this._product.retired, refresh: () => this.show(this._id, this._tab) };
+      retired: this._product.retired, refresh: refresh };
     if (docCat) html += '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
       DocPanel.html(docOpts);
     box.innerHTML = html;
     Collections.bind("/api/products/" + this._id + "/collections/", { collections: [spec] },
-      this._product.retired, () => this.show(this._id, this._tab), d);
+      this._product.retired, refresh, d);
     if (docCat) DocPanel.bind(docOpts);
   },
 
