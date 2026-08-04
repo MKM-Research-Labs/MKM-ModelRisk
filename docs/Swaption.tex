@@ -1,75 +1,63 @@
-%\RequirePackage[2020-02-02]{latexrelease} % used for watermark package
-\documentclass{article}
-\setcounter{tocdepth}{3}
-\setcounter{secnumdepth}{3}
-\usepackage{graphicx}
-\usepackage{setspace}
-\onehalfspacing
-\usepackage{geometry}
-\geometry{
- a4paper,
- total={170mm,257mm},
- left=20mm,
- top=20mm,
-}
-\usepackage{amsmath}
-\usepackage{hyperref}
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}\usepackage{longtable}\usepackage{array}\usepackage{booktabs}
+\usepackage{xcolor}\usepackage{parskip}\usepackage{enumitem}\setlist{nosep}
+\usepackage{float}\usepackage{lastpage}\usepackage{fancyhdr}\usepackage{hyperref}
+\usepackage{amsmath}\usepackage{amsfonts}\usepackage{amssymb}
+\usepackage{calc}
 \usepackage[toc,page]{appendix}
-\usepackage{tabto}
-\usepackage{xcolor}
-\usepackage{comment}
- 
-\font\myverylargefont=cmr12 at 35pt
-\font\mylargefont=cmr12 at 25pt
 \usepackage{subcaption}
-\usepackage{booktabs}
-%\usepackage[printwatermark]{xwatermark}
-%\newwatermark[allpages,color=red!50,angle=45,scale=3,xpos=0,ypos=0]{DRAFT}
-\usepackage{amsfonts}
+\usepackage{geometry}\geometry{a4paper, total={170mm,247mm}, left=20mm, top=25mm, bottom=25mm}
+\usepackage{setspace}\onehalfspacing
+\setcounter{tocdepth}{3}\setcounter{secnumdepth}{3}
+% --- MKM Research Labs house style (mirrors src/governance/latex.py) ---
+\definecolor{mkmblue}{HTML}{1565C0}
+\hypersetup{colorlinks=true,linkcolor=mkmblue,citecolor=mkmblue,urlcolor=mkmblue}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\small\textcolor{gray}{MKM Research Labs}}
+\fancyhead[R]{\small\textcolor{gray}{Interest Rate Swaption --- v1.0}}
+\fancyfoot[C]{\small\textcolor{gray}{CONFIDENTIAL --- PROPRIETARY}}
+\fancyfoot[R]{\small\textcolor{gray}{Page \thepage\ of \pageref{LastPage}}}
+\renewcommand{\headrulewidth}{0.4pt}\renewcommand{\footrulewidth}{0.4pt}
 
 \begin{document}
 
-\begin{figure}\centering
-	\includegraphics[width=0.4\textwidth]{../Miscellaneous/logo.jpg}
-\end{figure}
+% --- Title page (mirrors latex.py title_page + legal_notice) ---
+\begin{titlepage}\begin{center}
+\vspace*{1cm}
+\IfFileExists{../Miscellaneous/logo.jpg}{\includegraphics[width=0.4\textwidth]{../Miscellaneous/logo.jpg}\\[1.5cm]}{\vspace*{1cm}}
+{\Huge\bfseries\textcolor{mkmblue}{Interest Rate Swaption}\par}\vspace{0.5cm}
+{\Large\textcolor{gray}{Pricing and Risk Methodology}\par}\vspace{2cm}
+{\large MKM Research Labs\par}\vspace{0.5cm}
+{\large Version 1.0 --- \today\par}\vspace{0.5cm}
+{\large MKM-ModelRisk\par}
+\vspace{2cm}\textcolor{red}{\textbf{CONFIDENTIAL --- PROPRIETARY}}
+\end{center}
+\vfill
+\begin{minipage}{\textwidth}\footnotesize\raggedright
+\textbf{Legal notice}\par\medskip
+PROPRIETARY AND CONFIDENTIAL\par\medskip
+This document, including all algorithms, models, methodology, formulas, calculations, and intellectual concepts contained herein, constitutes the exclusive intellectual property and confidential trade secrets of MKM Research Labs (``MKM'').\par\medskip
+Any usage, reproduction, distribution, modification, or disclosure of this document or any portion thereof, without the express prior written authorisation from MKM Research Labs is strictly prohibited and constitutes an infringement of intellectual property rights.\par\medskip
+The document is provided on an ``as is'' basis. MKM Research Labs makes no representations or warranties of any kind, express or implied, regarding its accuracy, reliability, or suitability for any particular purpose.\par\medskip
+All rights reserved. \textcopyright{} 2021--2026 MKM Research Labs.\par\medskip
+Governed by the laws of the United Kingdom.
+\end{minipage}
+\end{titlepage}
 
-\title{{\mylargefont Example Analytics\vspace*{2\baselineskip} \\
-\mylargefont Interest Rate Swaption \vspace*{1\baselineskip} }}
-
-\vspace{\stretch{3}}
-
-\author{{}}
-\date{\today\\{Document Version 1.0}}
-\maketitle
-\thispagestyle{empty}
-
-\clearpage
-
-\pagenumbering{arabic}
 \tableofcontents
 \clearpage
 
 \section{Purpose and Scope}
-This document provides an outline of how to price and risk an Interest Rate Swaption \par
+This document provides an outline of how to price and risk an Interest Rate Swaption. \par
 
-
- 
 \subsection{Support}
-For any assistance, problems or suggestions regarding Example Analytics:\\
-\indent website: \tabto{2cm} \href{https://example.com}{example.com}\\
-\indent email:   \tabto{2cm} support@example.com
-
-
-\subsection{Document Revision History}
-\begin{table}[ht]
-	\centering
-	\begin{tabular}{c|c|c|c|c}
-		Release Date & Description & Document Version & Library Version & Contributor\\
-		\hline
-		31-Oct-2022 & Internal beta release & v1.0 & v1.0 (Beta) & Author\\
-	\end{tabular}
-	\label{tab:revision_history}
-\end{table}
+For any assistance, problems or suggestions regarding this methodology, contact MKM Research Labs:
+\begin{itemize}
+  \item Website: \href{https://example.com}{example.com}
+  \item Email: \href{mailto:support@example.com}{support@example.com}
+\end{itemize}
 
 \section{Background}
 
@@ -259,6 +247,23 @@ Define $B=[bi]$ that is defined as \par
 	B=U^{-1} V
 \end{equation} 
 
+
+\clearpage
+
+\section{Document History}
+\begin{longtable}{llll}
+\caption{Document history}\\
+\toprule
+\textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+\midrule
+\endhead
+31-Oct-2022 & v1.0 & Internal beta release (library v1.0 Beta) & MKM-ModelRisk \\
+\bottomrule
+\end{longtable}
 
 \clearpage
 
