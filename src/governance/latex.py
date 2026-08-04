@@ -67,15 +67,30 @@ def _esc(value: Any) -> str:
     return "".join(_LATEX_REPLACEMENTS.get(ch, ch) for ch in text)
 
 
-def _table(headers: list[str], rows: list[list[Any]]) -> str:
-    # booktabs house style: no vertical rules, a heavy rule top and bottom and a
-    # light rule under the header — the clean look the model-documentation protocol
-    # uses. \endhead repeats the header if a longtable breaks across pages.
+def _longtable(cols: str, head: str, body: str, caption: str | None) -> str:
+    """Assemble one booktabs longtable — no vertical rules, a heavy rule top and
+    bottom and a light rule under the header, the clean look the model-documentation
+    protocol uses.
+
+    With a ``caption`` the table is numbered (``Table N: ...``): the caption shows
+    once, on the first page, while the column header repeats via ``\\endhead`` on any
+    continuation page. Without one it is an unnumbered table whose header still repeats.
+    """
+    header_rows = "\\toprule\n" + head + "\n\\midrule\n"
+    if caption:
+        top = ("\\caption{" + _esc(caption) + "}\\\\\n" + header_rows +
+               "\\endfirsthead\n" + header_rows + "\\endhead\n")
+    else:
+        top = header_rows + "\\endhead\n"
+    return ("\\begin{longtable}{" + cols + "}\n" + top + body +
+            "\\bottomrule\n\\end{longtable}\n")
+
+
+def _table(headers: list[str], rows: list[list[Any]], caption: str | None = None) -> str:
     cols = "l" * len(headers)
     head = " & ".join("\\textbf{" + _esc(h) + "}" for h in headers) + " \\\\"
     body = "".join(" & ".join(_esc(c) for c in row) + " \\\\\n" for row in rows)
-    return ("\\begin{longtable}{" + cols + "}\n\\toprule\n" + head +
-            "\n\\midrule\n\\endhead\n" + body + "\\bottomrule\n\\end{longtable}\n")
+    return _longtable(cols, head, body, caption)
 
 
 def _wrappable(value: Any) -> str:
@@ -115,7 +130,8 @@ def legal_notice(paragraphs=None) -> str:
             "\n\\end{minipage}\n")
 
 
-def _para_table(headers: list[str], rows: list[list[Any]], weights: list[float]) -> str:
+def _para_table(headers: list[str], rows: list[list[Any]], weights: list[float],
+                caption: str | None = None) -> str:
     """A longtable whose columns wrap, for tables carrying prose rather than codes.
 
     ``weights`` are each column's share of the text width and should sum to 1; they
@@ -124,14 +140,14 @@ def _para_table(headers: list[str], rows: list[list[Any]], weights: list[float])
     column this narrow leaves rivers of white space between the words.
 
     Styled to match ``_table``'s booktabs house style — horizontal rules only, a
-    light rule under the header, and \\addlinespace giving each row a little air."""
+    light rule under the header, and \\addlinespace giving each row a little air. A
+    ``caption`` numbers the table (``Table N: ...``)."""
     col = ">{\\raggedright\\arraybackslash}p{%.4f\\textwidth}"
     cols = " ".join(col % (w * 0.93) for w in weights)
     head = " & ".join("\\textbf{" + _esc(h) + "}" for h in headers) + " \\\\"
     body = "".join(" & ".join(_wrappable(c) for c in row) + " \\\\\n\\addlinespace\n"
                    for row in rows)
-    return ("\\begin{longtable}{" + cols + "}\n\\toprule\n" + head +
-            "\n\\midrule\n\\endhead\n" + body + "\\bottomrule\n\\end{longtable}\n")
+    return _longtable(cols, head, body, caption)
 
 
 def _section(title: str, body: str) -> str:
@@ -196,7 +212,7 @@ def history_page(date: str, description: str, *, org_name: str = "", version: st
     and placed at the END of the document, as the model-documentation protocol does."""
     rows = [[date, version, description, org_name or DEFAULT_ORG]]
     return "\\section{Document History}\n" + _table(
-        ["Date", "Version", "Description", "Author"], rows)
+        ["Date", "Version", "Description", "Author"], rows, caption="Document history")
 
 
 def front_matter(title: str, subtitle: str, *, org_name: str = "", date: str = "",

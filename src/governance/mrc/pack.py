@@ -56,6 +56,7 @@ def _model_remediation_section(
             ["ID", "Description", "Owner", "Priority", "Due", "Status"],
             [[r.get("item_id"), r.get("description"), r.get("owner"),
               r.get("priority"), r.get("due_date"), r.get("status")] for r in rows],
+            caption="Remediation actions for " + model_id,
         )
     return _section("Model Remediation (in-scope)", body) if body else ""
 
@@ -79,7 +80,7 @@ def build_tex(
     participants = _section("Participants", _table(
         ["Name", "Role", "Organisation", "Status"],
         [[p.get("name"), p.get("role"), p.get("organisation"), p.get("status")]
-         for p in data.get("participants", [])])) if data.get("participants") else ""
+         for p in data.get("participants", [])], caption="Participants")) if data.get("participants") else ""
     # A wrapping table: agenda titles can be long (an event review carries the
     # event's summary), and a fixed-width table pushed the Status column — which
     # is where an item shows as reviewed — off the right edge of the page.
@@ -87,7 +88,7 @@ def build_tex(
         ["#", "Title", "Presenter", "Status"],
         [[i + 1, a.get("title"), a.get("presenter"), a.get("status")]
          for i, a in enumerate(data.get("agenda", []))],
-        [0.06, 0.60, 0.17, 0.17])) if data.get("agenda") else ""
+        [0.06, 0.60, 0.17, 0.17], caption="Agenda")) if data.get("agenda") else ""
     # Sign-off agenda items (a model/product + a proposed RAG) called out on
     # their own, with the outcome.
     signoff_items = [
@@ -97,13 +98,14 @@ def build_tex(
     signoffs = _section("Model Sign-offs", _table(
         ["Subject", "Proposed RAG", "Status"],
         [[a.get("subject_model_id") or a.get("subject_product_id"),
-          a.get("proposed_rag"), a.get("status")] for a in signoff_items])) if signoff_items else ""
+          a.get("proposed_rag"), a.get("status")] for a in signoff_items],
+        caption="Model sign-offs")) if signoff_items else ""
     # In-scope models with who presents and whether an analysis was attached.
     in_scope = data.get("models_in_scope") or []
     models_scope = _section("Models in Scope (Analysis)", _table(
         ["Model", "Presenter", "Analysis"],
         [[m.get("model_id"), m.get("presenter"), m.get("analysis_original_name") or "--"]
-         for m in in_scope])) if in_scope else ""
+         for m in in_scope], caption="Models in scope")) if in_scope else ""
     minutes = ""
     if data.get("minutes"):
         # The presenter is only named when one was recorded; minutes captured by
@@ -117,11 +119,11 @@ def build_tex(
     decisions = _section("Decisions", _table(
         ["ID", "Date", "Decision"],
         [[x.get("item_id"), x.get("date"), x.get("description")]
-         for x in data.get("decisions", [])])) if data.get("decisions") else ""
+         for x in data.get("decisions", [])], caption="Decisions")) if data.get("decisions") else ""
     actions = _section("Actions", _table(
         ["ID", "Action", "Owner", "Target", "Status"],
         [[a.get("item_id"), a.get("description"), a.get("owner"), a.get("target_date"),
-          a.get("status")] for a in data.get("actions", [])])) if data.get("actions") else ""
+          a.get("status")] for a in data.get("actions", [])], caption="Actions")) if data.get("actions") else ""
     remediation = _model_remediation_section(
         data.get("models_in_scope") or [], remediations_by_model or {},
     )
