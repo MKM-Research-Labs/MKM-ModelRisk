@@ -72,7 +72,7 @@ const Clients = {
     });
     document.getElementById("client-add").onclick = () => this._add();
     if (this._openId && this._items.some((c) => c.client_id === this._openId)) {
-      this._showDetail(this._openId);
+      await this._showDetail(this._openId);
     } else {
       this._openId = null;
     }

@@ -141,12 +141,28 @@ Object.assign(Clients, {
     this._wireDetail(clientId, client, opts);
   },
 
+  // Refresh after an edit without the page jumping: rebuild, then restore the
+  // scroll position. ``_refreshDetail`` rebuilds only the open client (used by the
+  // register collections); ``_refreshAll`` rebuilds the whole tab so an edited
+  // company field also updates its list row. Either way the viewport stays put.
+  async _refreshDetail(clientId) {
+    const y = window.scrollY;
+    await this._showDetail(clientId);
+    window.scrollTo(0, y);
+  },
+
+  async _refreshAll() {
+    const y = window.scrollY;
+    await this.render();
+    window.scrollTo(0, y);
+  },
+
   _wireDetail(clientId, client, opts) {
     const base = "/api/clients/" + clientId;
     ["name", "legal_entity", "sector", "relationship_owner", "notes", "status"].forEach((key) => {
       const el = document.getElementById("cf-" + key);
       if (el) el.onchange = () => App.amend("Edit " + key + ".", "POST", base + "/field",
-        { field: key, value: el.value.trim() }, () => this.render());
+        { field: key, value: el.value.trim() }, () => this._refreshAll());
     });
     document.querySelectorAll("#client-detail [data-add]").forEach((btn) => {
       btn.onclick = () => this._addItem(clientId, btn.getAttribute("data-add"));
@@ -155,7 +171,7 @@ Object.assign(Clients, {
       const [coll, itemId] = btn.getAttribute("data-del").split("|");
       btn.onclick = () => App.amend("Remove item.", "POST",
         base + "/collections/" + coll + "/" + itemId + "/delete", {},
-        () => this._showDetail(clientId));
+        () => this._refreshDetail(clientId));
     });
     this._wireLinks(clientId);
     if (this._wirePack) this._wirePack(clientId, client);
@@ -170,7 +186,7 @@ Object.assign(Clients, {
     });
     App.amend("Add to " + collKey + ".", "POST",
       "/api/clients/" + clientId + "/collections/" + collKey, { fields: fields },
-      () => this._showDetail(clientId));
+      () => this._refreshDetail(clientId));
   },
 
   _wireLinks(clientId) {
@@ -191,7 +207,7 @@ Object.assign(Clients, {
       App.amend("Link a " + typeSel.value + ".", "POST",
         "/api/clients/" + clientId + "/collections/links",
         { fields: { link_type: typeSel.value, subject_id: subject, note: val("clink-note") } },
-        () => this._showDetail(clientId));
+        () => this._refreshDetail(clientId));
     };
   },
 });
