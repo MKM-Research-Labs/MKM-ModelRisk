@@ -145,18 +145,20 @@ Object.assign(ProductDetail, {
   },
 
   // One inline editor for both scalar fields (POST /field) and bindings (POST /rebind).
+  // The control saves on change (its change event fires on blur / Enter) rather than
+  // via a Save button. Owner and RAG rating are the confirmation-gated product fields,
+  // so those still raise the confirm dialog (App.amend turns the server's 409 into it);
+  // every other field just applies.
   _editor(f, paramKey, endpoint, verb) {
     const row = document.getElementById("row-" + f.key);
     row.innerHTML = '<div class="k">' + esc(f.label) + '</div><div class="editor">' +
-      inputControl("ped-input", f) + '<button class="btn small primary" id="ped-save">' + verb +
-      '…</button><button class="btn small" id="ped-cancel">Cancel</button></div>';
+      inputControl("ped-input", f) + '<button class="btn small" id="ped-cancel">Cancel</button></div>';
     const input = document.getElementById("ped-input");
     const current = this._product.data[f.key];
     if (current !== null && current !== undefined) input.value = current;
+    input.focus();
     document.getElementById("ped-cancel").onclick = () => this.show(this._id, "overview");
-    document.getElementById("ped-save").onclick = () => {
-      // The RAG rating is set directly, like any other field. The MRC meeting
-      // sign-off is the authoritative status; the product does not gate edits.
+    input.onchange = () => {
       const body = paramKey === "component"
         ? { component: f.key, value: input.value.trim() }
         : { field: f.key, value: input.value.trim() };

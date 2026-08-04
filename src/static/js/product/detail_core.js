@@ -172,7 +172,8 @@ const ProductDetail = {
       return;
     }
     const spec = this.collSpec(this._tab);
-    let html = Collections.render(d, { collections: [spec] }, this._product.retired);
+    // autosave=true: the product register tabs edit in place, saving on change.
+    let html = Collections.render(d, { collections: [spec] }, this._product.retired, false, true);
     const docCat = COLLECTION_DOC_CATEGORY[this._tab];
     const docOpts = { category: docCat, docs: d.documents || [], base: "/api/products/", id: this._id,
       retired: this._product.retired, refresh: () => this.show(this._id, this._tab) };

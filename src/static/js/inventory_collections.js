@@ -24,9 +24,12 @@
 // user can capture multiple items (e.g. MRC minutes) in one submission.
 const BULK_ROWS = 5;
 const Collections = {
-  render(data, specs, retired, bulk) {
+  // ``autosave`` (opt-in, used by the Product register tabs) makes every editable
+  // field an inline control that saves on change — text fields included — so a row
+  // needs no Edit/Save step. Callers that omit it keep the Edit-in-place behaviour.
+  render(data, specs, retired, bulk, autosave) {
     return specs.collections.map((c) =>
-      this._section(c, data[c.key] || [], retired, bulk)).join("");
+      this._section(c, data[c.key] || [], retired, bulk, autosave)).join("");
   },
 
   // Fields shown in tables / add forms: internal (hidden) fields — e.g. the
@@ -39,7 +42,7 @@ const Collections = {
   _noActions(c) { return c.key === "remediation_steps"; },
   _hasActions(c, retired) { return !retired && !this._noActions(c); },
 
-  _cell(c, item, f, retired) {
+  _cell(c, item, f, retired, autosave) {
     if (f.type === "choice" && !retired) {
       const opts = ["", ...f.options]
         .map((o) => "<option" + (o === item[f.key] ? " selected" : "") + ">" + esc(o) + "</option>")
@@ -51,24 +54,35 @@ const Collections = {
       return '<td><input type="date" data-upd="' + c.key + "|" + esc(item.item_id) + "|" + f.key +
         '" value="' + esc(item[f.key] || "") + '"></td>';
     }
+    // Auto-save mode: a plain text field is an inline input that saves on change
+    // (its change event fires on blur) through the same data-upd binding.
+    if (autosave && !retired) {
+      return '<td><input data-upd="' + c.key + "|" + esc(item.item_id) + "|" + f.key +
+        '" value="' + esc(item[f.key] || "") + '" style="width:100%"></td>';
+    }
     return "<td>" + fieldDisplay(item[f.key]) + "</td>";
   },
 
-  _row(c, item, retired) {
-    const cells = this._visible(c).map((f) => this._cell(c, item, f, retired)).join("");
-    const actions = this._hasActions(c, retired) ?
-      '<td class="rowact"><button class="btn small" data-ed="' + c.key + "|" + esc(item.item_id) +
-      '">Edit</button> <button class="btn small danger" data-rm="' + c.key + "|" + esc(item.item_id) +
-      '">Remove</button></td>' : "";
+  _row(c, item, retired, autosave) {
+    const cells = this._visible(c).map((f) => this._cell(c, item, f, retired, autosave)).join("");
+    let actions = "";
+    if (this._hasActions(c, retired)) {
+      // In auto-save mode every field is already inline-editable, so the row needs
+      // no Edit step — only Remove.
+      const edit = autosave ? "" : '<button class="btn small" data-ed="' + c.key + "|" +
+        esc(item.item_id) + '">Edit</button> ';
+      actions = '<td class="rowact">' + edit + '<button class="btn small danger" data-rm="' +
+        c.key + "|" + esc(item.item_id) + '">Remove</button></td>';
+    }
     return "<tr>" + cells + actions + "</tr>";
   },
 
-  _section(c, items, retired, bulk) {
+  _section(c, items, retired, bulk, autosave) {
     const head = this._visible(c).map((f) => "<th>" + esc(f.label) + "</th>").join("") +
       (this._hasActions(c, retired) ? "<th></th>" : "");
     const span = this._visible(c).length + (this._hasActions(c, retired) ? 1 : 0);
     const body = items.length
-      ? items.map((it) => this._row(c, it, retired)).join("")
+      ? items.map((it) => this._row(c, it, retired, autosave)).join("")
       : '<tr><td colspan="' + span + '" class="empty">None.</td></tr>';
     const form = retired ? "" : (bulk ? this._bulkAddForm(c) : this._addForm(c));
     return '<div class="section-header">' + esc(c.label) + "</div>" +
