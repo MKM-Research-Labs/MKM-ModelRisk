@@ -19,6 +19,12 @@
 # SOFTWARE.
 """The shared LaTeX house style for every generated PDF.
 
+The house style follows ``docs/Swaption.tex`` as its canonical template — that file
+is the reference for the preamble (geometry, one-half spacing, booktabs tables,
+sectioning depth), the large title fonts and the title-page layout. On top of the
+template we add the governance chrome it omits: the brand colour, the running
+header/footer and the title-page legal notice.
+
 One preamble, one title page, one header/footer, so the Meeting Pack, the Model
 Risk Report and the interoperability handover all read as the same document family:
 the ``mkmblue`` brand colour, one-half spacing, a fancy header carrying the document
@@ -161,21 +167,31 @@ def _subsection(title: str, body: str) -> str:
 
 
 def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") -> str:
-    """The shared document preamble: packages, geometry, brand colour and the
-    fancy header/footer carrying ``doc_title`` and a CONFIDENTIAL / page-count foot."""
+    """The shared document preamble, modelled on the ``docs/Swaption.tex`` house
+    template: its geometry, one-half spacing, booktabs tables, sectioning depth and
+    the large title fonts. On top of the template we keep the governance chrome the
+    template omits — the brand colour and the fancy header/footer carrying
+    ``doc_title`` and a CONFIDENTIAL / page-count foot."""
     org = _esc(org_name or DEFAULT_ORG)
     return (
         "\\documentclass[11pt]{article}\n"
         "\\usepackage[utf8]{inputenc}\n"
+        # Number and list sections/subsections down to the depth the template uses.
+        "\\setcounter{tocdepth}{3}\\setcounter{secnumdepth}{3}\n"
         "\\usepackage{graphicx}\\usepackage{longtable}\\usepackage{array}\\usepackage{booktabs}\n"
+        "\\usepackage{subcaption}\\usepackage[toc,page]{appendix}\n"
         "\\usepackage{xcolor}\\usepackage{parskip}\\usepackage{enumitem}\\setlist{nosep}\n"
         "\\usepackage{float}\\usepackage{lastpage}\\usepackage{fancyhdr}\\usepackage{hyperref}\n"
         # amsmath so model documentation can carry mathematics; \text{} inside a
         # formula is undefined without it, which silently fails a whole compile.
-        "\\usepackage{amsmath}\n"
+        "\\usepackage{amsmath}\\usepackage{amsfonts}\n"
         # calc backs the \real{} column widths pandoc emits for the user guide's tables.
         "\\usepackage{calc}\n"
-        "\\usepackage{geometry}\\geometry{a4paper, total={170mm,247mm}, left=20mm, top=25mm, bottom=25mm}\n"
+        # The template's large title fonts, used on the title page.
+        "\\font\\myverylargefont=cmr12 at 35pt\n\\font\\mylargefont=cmr12 at 25pt\n"
+        # The template's geometry (170mm text, 20mm top); we keep a 25mm bottom so the
+        # footer rule the template does not carry still has room.
+        "\\usepackage{geometry}\\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=25mm}\n"
         "\\usepackage{setspace}\\onehalfspacing\n"
         "\\definecolor{mkmblue}{HTML}{1565C0}\n"
         "\\hypersetup{colorlinks=true,linkcolor=mkmblue,citecolor=mkmblue,urlcolor=mkmblue}\n"
@@ -190,19 +206,26 @@ def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") ->
 
 def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = "1.0",
                date: str = "", author: str = "", logo: bool = False) -> str:
-    """A full title page: optional cover graphic, brand-blue title, subtitle, and the
-    org/version/date, closing with a CONFIDENTIAL mark (no proprietary assertion)."""
-    graphic = ("\\vspace*{1cm}\\includegraphics[width=0.4\\textwidth]{" + LOGO_ASSET + "}\\\\[1.5cm]\n"
-               if logo else "\\vspace*{1cm}\n")
+    """A title page in the ``docs/Swaption.tex`` house style: the logo on top, the
+    organisation and the document subject in the template's large title font, the
+    document type beneath, and a ``Document Version`` / date line pushed toward the
+    foot. We keep the governance chrome the template omits — a CONFIDENTIAL mark and
+    the legal notice (a report cannot be published without it)."""
+    graphic = ("\\includegraphics[width=0.4\\textwidth]{" + LOGO_ASSET + "}\\\\[1.2cm]\n"
+               if logo else "")
     author_line = "{\\large " + _esc(author) + "\\par}\\vspace{0.5cm}\n" if author else ""
     return (
-        "\\begin{titlepage}\\begin{center}\n" + graphic +
-        "{\\Huge\\bfseries\\textcolor{mkmblue}{" + _esc(title) + "}\\par}\\vspace{0.5cm}\n"
-        "{\\Large\\textcolor{gray}{" + _esc(subtitle) + "}\\par}\\vspace{2cm}\n"
-        "{\\large " + _esc(org_name or DEFAULT_ORG) + "\\par}\\vspace{0.5cm}\n"
-        "{\\large Version " + _esc(version) + " --- " + _esc(date) + "\\par}\\vspace{0.5cm}\n"
+        "\\begin{titlepage}\\thispagestyle{empty}\\begin{center}\n"
+        "\\vspace*{1.5cm}\n" + graphic +
+        # Organisation and document subject in the template's large font; the subject
+        # (a model/product identifier and name) can be long, so it is allowed to wrap.
+        "{\\mylargefont " + _esc(org_name or DEFAULT_ORG) + "\\par}\\vspace{2\\baselineskip}\n"
+        "{\\LARGE\\bfseries " + _esc(title) + "\\par}\\vspace{1\\baselineskip}\n"
+        "{\\Large\\textcolor{gray}{" + _esc(subtitle) + "}\\par}\n"
+        "\\vspace{\\stretch{2}}\n"
+        "{\\large " + _esc(date) + "\\\\[0.3cm]Document Version " + _esc(version) + "\\par}\\vspace{0.8cm}\n"
         + author_line +
-        "\\vspace{2cm}\\textcolor{red}{\\textbf{" + _esc(DEFAULT_CLASSIFICATION) + "}}\n"
+        "\\textcolor{red}{\\textbf{" + _esc(DEFAULT_CLASSIFICATION) + "}}\\par\n"
         "\\end{center}\n" + legal_notice() + "\\end{titlepage}\n"
     )
 
