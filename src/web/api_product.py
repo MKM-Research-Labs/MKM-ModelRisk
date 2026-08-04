@@ -32,7 +32,9 @@ from config.governance import (
 )
 from src.command import dispatch
 from src.files import UploadError, upload_path
-from src.governance.documents import add_document, find_document, remove_document
+from src.governance.documents import (
+    add_document, find_document, product_scope as _product_scope, remove_document,
+)
 from src.governance.model_inventory import list_models
 from src.governance.product import (
     add_collection_item,
@@ -59,10 +61,6 @@ from src.web._helpers import (
 )
 
 product_bp = Blueprint("product", __name__, url_prefix="/api/products")
-
-
-def _product_scope(product_id: str) -> str:
-    return f"product/{product_id}"
 
 
 def _grouped_specs(options: dict[str, list]):

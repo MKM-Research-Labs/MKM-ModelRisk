@@ -144,9 +144,31 @@ const ProductDetail = {
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
       // Docs is the product's own documentation and supporting analysis; testing
-      // and evidence categories are captured in-context on their own tabs.
+      // and evidence categories are captured in-context on their own tabs. The
+      // Product Document and the product pack are generated from the current
+      // record on request, so they are offered as actions rather than filed as
+      // rows that could go stale — and the pack pulls in the full pack of every
+      // model the product binds.
+      box.innerHTML =
+        '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">' +
+        '<span class="muted" style="font-size:12px">The full write-up for this product, ' +
+        "generated from the current record — on its own, or zipped with the full pack of every " +
+        "model it binds, to send on.</span>" +
+        '<span><a class="btn small" href="/api/products/' + esc(this._id) +
+        '/pack.zip">Product pack (ZIP)</a> ' +
+        '<a class="btn small primary" target="_blank" rel="noopener" id="prd-issue" href="/api/products/' +
+        esc(this._id) + '/document.pdf">Product Document (PDF)</a></span></div>' +
+        '<div id="pdocs-host"></div>';
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_tab_categories || [],
-        this._product.retired, "/api/products/", () => this.show(this._id, "docs"), "pt-content");
+        this._product.retired, "/api/products/", () => this.show(this._id, "docs"), "pdocs-host");
+      // Issuing a document files a copy under History. The PDF opens in a new
+      // tab, so reload the docs tab or History lags behind what was just issued.
+      const issue = document.getElementById("prd-issue");
+      if (issue) {
+        issue.addEventListener("click", () => {
+          setTimeout(() => this.show(this._id, "docs"), 1500);
+        });
+      }
       return;
     }
     const spec = this.collSpec(this._tab);

@@ -75,6 +75,12 @@ def client_scope(client_id: str) -> str:
     return f"client/{client_id}"
 
 
+def product_scope(product_id: str) -> str:
+    """Where a product's uploaded files live under the upload directory — named
+    beside ``model_scope`` so the API and the product pack agree about the path."""
+    return f"product/{product_id}"
+
+
 def _fold(aggregate_type: str, aggregate_id: str, config) -> tuple[list, int]:
     state: dict = {}
     version = 0
