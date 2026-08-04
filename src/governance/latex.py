@@ -68,11 +68,14 @@ def _esc(value: Any) -> str:
 
 
 def _table(headers: list[str], rows: list[list[Any]]) -> str:
-    cols = "|" + "l|" * len(headers)
-    head = " & ".join("\\textbf{" + _esc(h) + "}" for h in headers) + " \\\\ \\hline"
-    body = "".join(" & ".join(_esc(c) for c in row) + " \\\\ \\hline\n" for row in rows)
-    return ("\\begin{longtable}{" + cols + "}\n\\hline " + head + "\n" + body +
-            "\\end{longtable}\n")
+    # booktabs house style: no vertical rules, a heavy rule top and bottom and a
+    # light rule under the header — the clean look the model-documentation protocol
+    # uses. \endhead repeats the header if a longtable breaks across pages.
+    cols = "l" * len(headers)
+    head = " & ".join("\\textbf{" + _esc(h) + "}" for h in headers) + " \\\\"
+    body = "".join(" & ".join(_esc(c) for c in row) + " \\\\\n" for row in rows)
+    return ("\\begin{longtable}{" + cols + "}\n\\toprule\n" + head +
+            "\n\\midrule\n\\endhead\n" + body + "\\bottomrule\n\\end{longtable}\n")
 
 
 def _wrappable(value: Any) -> str:
@@ -118,13 +121,17 @@ def _para_table(headers: list[str], rows: list[list[Any]], weights: list[float])
     ``weights`` are each column's share of the text width and should sum to 1; they
     are scaled down slightly to leave room for the inter-column padding, otherwise
     the table runs over the right margin. Columns are ragged-right: justifying a
-    column this narrow leaves rivers of white space between the words."""
+    column this narrow leaves rivers of white space between the words.
+
+    Styled to match ``_table``'s booktabs house style — horizontal rules only, a
+    light rule under the header, and \\addlinespace giving each row a little air."""
     col = ">{\\raggedright\\arraybackslash}p{%.4f\\textwidth}"
-    cols = "|" + "|".join(col % (w * 0.93) for w in weights) + "|"
-    head = " & ".join("\\textbf{" + _esc(h) + "}" for h in headers) + " \\\\ \\hline"
-    body = "".join(" & ".join(_wrappable(c) for c in row) + " \\\\ \\hline\n" for row in rows)
-    return ("\\begin{longtable}{" + cols + "}\n\\hline " + head + "\n\\endhead\n" + body +
-            "\\end{longtable}\n")
+    cols = " ".join(col % (w * 0.93) for w in weights)
+    head = " & ".join("\\textbf{" + _esc(h) + "}" for h in headers) + " \\\\"
+    body = "".join(" & ".join(_wrappable(c) for c in row) + " \\\\\n\\addlinespace\n"
+                   for row in rows)
+    return ("\\begin{longtable}{" + cols + "}\n\\toprule\n" + head +
+            "\n\\midrule\n\\endhead\n" + body + "\\bottomrule\n\\end{longtable}\n")
 
 
 def _section(title: str, body: str) -> str:
