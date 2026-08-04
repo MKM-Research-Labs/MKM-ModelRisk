@@ -64,8 +64,8 @@ def test_title_page_without_logo_omits_the_graphic():
 
 def test_history_page_is_a_numbered_document_history_section():
     hist = history_page("2026-07-19", "Report generated", org_name="Acme", version="2.0")
-    # Numbered section (no star), matching the protocol; goes at the end of a doc.
-    assert "\\section{Document History}" in hist
+    # Numbered section (no star), matching the template; placed at the front of a doc.
+    assert "\\section{Document Revision History}" in hist
     for cell in ("2026-07-19", "2.0", "Report generated", "Acme"):
         assert cell in hist
 

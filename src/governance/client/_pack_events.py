@@ -63,8 +63,8 @@ def build_event_writeups_tex(products: list[dict], settings: dict, as_of: str,
         preamble("Operational Event Write-ups", org_name=org) + "\\begin{document}\n"
         + front_matter("Operational Event Write-ups", "Client Pack", org_name=org,
                        date=as_of, logo=logo)
-        + _section("Operational events", body)
         + history_page(as_of, "Client pack event write-ups generated", org_name=org)
+        + _section("Operational events", body)
         + "\\end{document}\n"
     )
 

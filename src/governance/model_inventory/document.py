@@ -57,10 +57,9 @@ def build_model_document_tex(model: dict, settings: dict, as_of: str,
         preamble(DOC_TITLE, org_name=org) + "\\begin{document}\n"
         + front_matter(title, DOC_TITLE, org_name=org, date=issued_at or as_of,
                        logo=logo, toc=True)
-        + model_section(model, review, standalone=True)
-        + "\\clearpage\n"
         + history_page(issued_at or as_of,
                        DOC_TITLE + " generated from the model inventory", org_name=org)
+        + model_section(model, review, standalone=True)
         + "\\end{document}\n"
     )
 
