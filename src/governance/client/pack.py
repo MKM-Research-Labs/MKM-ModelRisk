@@ -47,6 +47,7 @@ from src.governance.model_inventory import get_model
 from src.governance.model_inventory.document import render_model_document_pdf
 from src.governance.mrc import list_meetings
 from src.governance.product import get_product, list_products
+from src.governance.reference import get_reference_lists
 
 PACK_NAME = "{client_id}_client_pack.zip"
 CONTENTS_NAME = "CONTENTS.txt"
@@ -192,18 +193,38 @@ def _add_supplementary(archive, client, packed, missing) -> None:
             missing.append(name + " (recorded but file missing)")
 
 
-def _add_tor(archive, settings, packed, missing) -> None:
-    tor = settings.get("tor")
-    if not tor or not tor.get("filename"):
+def _committee_tors(config) -> list[dict]:
+    """Every MRC committee that has a Terms of Reference on file. The ToR is held per
+    committee (reference collection ``mrc``, field ``tor_filename``), not in global
+    settings, so this is where a client pack must look for it."""
+    return [c for c in (get_reference_lists(config).get("mrc") or []) if c.get("tor_filename")]
+
+
+def _tor_pack_name(committee: dict, labelled: bool) -> str:
+    """Where a committee's ToR is filed in the pack. With one committee the original
+    filename is enough; with several, label each by its committee so they never
+    collide and the reader can tell them apart."""
+    original = committee.get("tor_original_name") or committee["tor_filename"]
+    if not labelled:
+        return "governance/" + original
+    who = str(committee.get("name") or committee.get("item_id") or "MRC")
+    return "governance/" + who + " --- " + original
+
+
+def _add_tor(archive, packed, missing, config) -> None:
+    committees = _committee_tors(config)
+    if not committees:
         missing.append("governance/MRC Terms of Reference (none uploaded)")
         return
-    path = upload_path(_TOR_SCOPE, tor["filename"])
-    name = "governance/" + (tor.get("original_name") or tor["filename"])
-    if path.exists():
-        archive.writestr(name, path.read_bytes())
-        packed.append(name)
-    else:
-        missing.append(name + " (recorded but file missing)")
+    labelled = len(committees) > 1
+    for committee in committees:
+        name = _tor_pack_name(committee, labelled)
+        path = upload_path(_TOR_SCOPE, committee["tor_filename"])
+        if path.exists():
+            archive.writestr(name, path.read_bytes())
+            packed.append(name)
+        else:
+            missing.append(name + " (recorded but file missing)")
 
 
 def _contents(client: dict, as_of: str, generated_at: str,
@@ -279,7 +300,7 @@ def build_client_pack(client: dict, settings: dict, as_of: str,
         archive.writestr(events_name,
                          render_event_writeups_pdf(list_products(config=config), settings, as_of))
         packed.append(events_name)
-        _add_tor(archive, settings, packed, missing)
+        _add_tor(archive, packed, missing, config)
         gaps_name = "governance/completeness_audit.pdf"
         archive.writestr(gaps_name, render_completeness_pdf(settings, as_of))
         packed.append(gaps_name)
@@ -342,15 +363,22 @@ def pack_manifest(client: dict, settings: dict, config=None) -> dict:
             warnings.append(f"Minutes for {meeting['meeting_id']} are recorded but the file is missing.")
     event_count = sum(len((p.get("data") or {}).get("operational_failure_events") or [])
                       for p in list_products(config=config))
-    tor = settings.get("tor")
-    if tor and tor.get("filename"):
-        tor_info = {"present": upload_path(_TOR_SCOPE, tor["filename"]).exists(),
-                    "name": tor.get("original_name") or tor["filename"]}
-        if not tor_info["present"]:
-            warnings.append("The MRC Terms of Reference is recorded but its file is missing.")
-    else:
+    committee_tors = _committee_tors(config)
+    if not committee_tors:
         tor_info = {"present": False, "name": None}
         warnings.append("No MRC Terms of Reference has been uploaded.")
+    else:
+        present = [c for c in committee_tors
+                   if upload_path(_TOR_SCOPE, c["tor_filename"]).exists()]
+        names = [c.get("tor_original_name") or c["tor_filename"] for c in committee_tors]
+        tor_info = {"present": bool(present),
+                    "name": names[0] if len(names) == 1
+                    else f"{len(names)} committees' Terms of Reference"}
+        for committee in committee_tors:
+            if not upload_path(_TOR_SCOPE, committee["tor_filename"]).exists():
+                who = committee.get("name") or committee.get("item_id")
+                warnings.append(f"The MRC Terms of Reference for {who} is "
+                                "recorded but its file is missing.")
     return {"models": models, "supplementary": supplementary, "minutes": minutes,
             "event_count": event_count, "tor": tor_info, "includes_gaps_audit": True,
             "warnings": warnings}

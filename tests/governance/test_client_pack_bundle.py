@@ -28,8 +28,12 @@ import pytest
 from src.governance.client.pack import build_client_pack, pack_manifest
 from src.governance.client._pack_events import event_rows
 
-SETTINGS = {"fields": {"org_name": "MKM"}, "tor": {"filename": "tor.docx",
-                                                   "original_name": "MRC ToR.docx"}}
+SETTINGS = {"fields": {"org_name": "MKM"}}
+
+# The MRC Terms of Reference is held on the committee (reference collection ``mrc``),
+# not in settings. One committee whose ToR file is the fixture's seeded tor.docx.
+_MRC_WITH_TOR = [{"item_id": "MRC-001", "name": "Division MRC",
+                  "tor_filename": "tor.docx", "tor_original_name": "MRC ToR.docx"}]
 
 
 @pytest.fixture
@@ -45,7 +49,16 @@ def stub(tmp_path, monkeypatch):
     (tmp_path / "meeting_minutes" / "minutes_MRC-1.pdf").write_bytes(b"%PDF-minutes")
     (tmp_path / "mrc").mkdir(parents=True)
     (tmp_path / "mrc" / "tor.docx").write_bytes(b"TOR-BYTES")
+    # The ToR is held per MRC committee (reference collection ``mrc``); default to one
+    # committee whose ToR file is the seeded tor.docx. Tests override via _stub_tor.
+    _stub_tor(monkeypatch, _MRC_WITH_TOR)
     return tmp_path
+
+
+def _stub_tor(monkeypatch, committees):
+    """Stub the MRC committee list the pack reads its Terms of Reference from."""
+    monkeypatch.setattr("src.governance.client.pack.get_reference_lists",
+                        lambda config=None: {"mrc": list(committees)})
 
 
 def _client(links):
@@ -167,6 +180,7 @@ def test_pack_includes_minutes_events_tor_and_gaps(stub, monkeypatch):
 
 def test_pack_notes_missing_minutes_file_and_absent_tor(stub, monkeypatch):
     _model(monkeypatch)
+    _stub_tor(monkeypatch, [])  # no committee has a ToR
     monkeypatch.setattr("src.governance.client.pack.list_products", lambda config=None: [])
     monkeypatch.setattr("src.governance.client.pack.list_meetings",
                         lambda config=None: [{"meeting_id": "MRC-9", "data": {
@@ -182,9 +196,10 @@ def test_pack_notes_missing_minutes_file_and_absent_tor(stub, monkeypatch):
 def test_pack_notes_a_recorded_tor_whose_file_is_missing(stub, monkeypatch):
     _model(monkeypatch)
     _no_meetings_or_products(monkeypatch)
-    settings = {"fields": {}, "tor": {"filename": "absent.docx", "original_name": "ToR.docx"}}
+    _stub_tor(monkeypatch, [{"item_id": "MRC-1", "name": "Division MRC",
+                             "tor_filename": "absent.docx", "tor_original_name": "ToR.docx"}])
     contents = _open(build_client_pack(
-        _client([]), settings, "2026-07-27", "2026-07-27T09:30:00")).read(
+        _client([]), SETTINGS, "2026-07-27", "2026-07-27T09:30:00")).read(
         "CONTENTS.txt").decode()
     assert "governance/ToR.docx (recorded but file missing)" in contents
 
@@ -230,6 +245,7 @@ def test_manifest_previews_contents_without_compiling(stub, monkeypatch):
 def test_manifest_warns_about_unknown_model_and_missing_tor(stub, monkeypatch):
     _model(monkeypatch)
     _no_meetings_or_products(monkeypatch)
+    _stub_tor(monkeypatch, [])  # no committee has a ToR
     m = pack_manifest(_client([{"link_type": "Model", "subject_id": "MKM-NONE"}]),
                       {"fields": {}})
     assert m["models"][0]["present"] is False
@@ -241,6 +257,8 @@ def test_manifest_flags_every_missing_file(stub, monkeypatch):
     # Model present but one attachment absent; a supplementary doc absent; a
     # meeting whose minutes file is absent; a ToR recorded but absent.
     _model(monkeypatch)  # default docs: tests.pdf (present) + gone.pdf (absent)
+    _stub_tor(monkeypatch, [{"item_id": "MRC-1", "name": "Division MRC",
+                             "tor_filename": "no.docx", "tor_original_name": "ToR.docx"}])
     monkeypatch.setattr("src.governance.client.pack.list_products", lambda config=None: [])
     monkeypatch.setattr("src.governance.client.pack.list_meetings",
                         lambda config=None: [{"meeting_id": "MRC-9", "data": {
@@ -249,15 +267,14 @@ def test_manifest_flags_every_missing_file(stub, monkeypatch):
     client = _client_with_supplementary(
         [{"link_type": "Model", "subject_id": "MKM-EF-001"}],
         [{"item_id": "DOC-001", "filename": "absent.pdf", "original_name": "absent.pdf"}])
-    m = pack_manifest(client, {"fields": {}, "tor": {"filename": "no.docx",
-                                                     "original_name": "ToR.docx"}})
+    m = pack_manifest(client, {"fields": {}})
     assert m["models"][0]["present"] is True and "gone.pdf" in m["models"][0]["attachments"]
     assert m["supplementary"][0]["present"] is False
     assert m["minutes"][0]["present"] is False
     assert m["tor"]["present"] is False
     joined = " ".join(m["warnings"])
     assert "gone.pdf" in joined and "absent.pdf" in joined
-    assert "MRC-9" in joined and "Terms of Reference is recorded" in joined
+    assert "MRC-9" in joined and "Terms of Reference for Division MRC is recorded" in joined
 
 
 def test_event_rows_sorted_newest_first_across_products():
