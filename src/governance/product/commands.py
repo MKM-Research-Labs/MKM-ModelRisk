@@ -22,7 +22,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import PRODUCT_COMPONENTS
+from config.governance import DEFAULT_RACI, PRODUCT_COMPONENTS
+from src.governance import collections as coll
 from src.governance.errors import DomainError
 from src.database import Event, append_event, read_stream
 from src.governance.product._rules import (
@@ -85,15 +86,39 @@ def _is_duplicate(name: str, components: frozenset, *, exclude_product_id: str,
     return False
 
 
+def _seed_raci(product_id, after_version, actor, config) -> None:
+    """Scaffold the four RACI accountabilities immediately after registration.
+
+    A product's RACI operating model is complete only with all of Responsible /
+    Accountable / Consulted / Informed, so registration seeds one entry per code
+    (each with a standard governance role the owner edits) — the same way a model's
+    nine SR 26-2 validation questions are seeded on registration.
+    """
+    version = after_version
+    for index, (raci, role) in enumerate(DEFAULT_RACI, start=1):
+        append_event(
+            aggregate_type=AGGREGATE_TYPE, aggregate_id=product_id,
+            event_type=coll.EVENT_ITEM_ADDED,
+            payload={"collection": "raci_roles", "item_id": f"RC-{index:03d}",
+                     "role": role, "raci": raci},
+            actor=actor, reason="Seed the four RACI accountabilities",
+            expected_version=version, config=config,
+        )
+        version += 1
+
+
 def register_product(
     *, product_id: str, product: str, fields: dict[str, Any] | None = None, actor: str,
     reason: str | None = None, config=None,
 ) -> Event:
-    """Register a Product binding a product to its three components."""
+    """Register a Product binding a product to its three components, then seed its
+    four RACI accountabilities."""
     state, version = _load(product_id, config)
     decision = decide_register(
         state, product_id=product_id, product=product, fields=dict(fields or {}))
-    return _record(product_id, decision, version, actor, reason, config)
+    event = _record(product_id, decision, version, actor, reason, config)
+    _seed_raci(product_id, event.stream_seq, actor, config)
+    return event
 
 
 def rebind_component(

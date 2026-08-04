@@ -77,6 +77,17 @@ def test_register_and_derived_identifier():
     assert get_product("Product-0001")["data"]["identifier"] == "MKM-AN-001.Murex"
 
 
+def test_registration_seeds_the_four_raci_accountabilities():
+    """A product's RACI operating model is scaffolded at registration: one entry
+    per accountability, with a standard governance role the owner then edits."""
+    _register()
+    raci = get_product("Product-0001")["data"]["raci_roles"]
+    assert [r["raci"] for r in raci] == ["Responsible", "Accountable", "Consulted", "Informed"]
+    assert [r["role"] for r in raci] == [
+        "Model user", "Model owner", "Model Risk Committee", "Senior management"]
+    assert [r["item_id"] for r in raci] == ["RC-001", "RC-002", "RC-003", "RC-004"]
+
+
 def test_first_component_gives_the_product_its_org_home():
     # A product's division / line of business follow its first component, so it
     # lands under the right MRC region instead of unscoped (and hidden from the

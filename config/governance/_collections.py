@@ -56,6 +56,17 @@ VALID_INFORMED = ("Yes", "No")
 # The four RACI accountabilities, defining who does what for a product's use of
 # models in production (the RACI operating model, held at the product level).
 VALID_RACI_CODES = ("Responsible", "Accountable", "Consulted", "Informed")
+# The RACI operating model seeded when a product is registered: one entry per
+# accountability, each with a standard governance role the adopter then edits. A
+# product's RACI is complete only with all four, so registration scaffolds them —
+# the way a model's nine SR 26-2 questions are seeded on registration. Pairs of
+# (raci code, default role).
+DEFAULT_RACI = (
+    ("Responsible", "Model user"),
+    ("Accountable", "Model owner"),
+    ("Consulted", "Model Risk Committee"),
+    ("Informed", "Senior management"),
+)
 # An operational event's MRC review state. "Pending" = raised on the product,
 # awaiting a committee; "Received" = the MRC reviewed and formally received it.
 VALID_EVENT_REVIEW_STATUS = ("Pending", "Received")
