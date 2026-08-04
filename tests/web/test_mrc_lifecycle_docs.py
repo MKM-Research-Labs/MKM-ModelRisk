@@ -23,7 +23,7 @@ from __future__ import annotations
 import io
 import zipfile
 
-from src.files import upload_path
+from src.files import save_upload, upload_path
 from tests.web.conftest import HEADERS
 from tests.web.test_mrc_signoff_api import _add, _schedule_meeting, _seed_mrc
 
@@ -158,6 +158,23 @@ def test_agenda_document_upload_download_roundtrip(client):
     down = client.get(f"/api/meetings/MTG1/agenda/{item_id}/document")
     assert down.status_code == 200
     assert down.data == b"%PDF payload"
+
+
+def test_agenda_document_falls_back_to_the_previous_minutes_scope(client):
+    """The minutes sign-off item references the previous meeting's minutes, stored
+    under meeting_minutes (not uploaded as an agenda document), so the download
+    must find it there rather than 404."""
+    _seed_mrc(client)
+    _schedule_meeting(client)
+    item_id = _agenda_item_id(client)
+    meta = save_upload("meeting_minutes", "minutes_prev.pdf", b"%PDF prev minutes")
+    r = client.post(f"/api/meetings/MTG1/collections/agenda/{item_id}",
+                    json={"fields": {"document_filename": meta["filename"],
+                                     "document_original_name": "minutes_prev.pdf"}}, headers=HEADERS)
+    assert r.status_code in (200, 201)
+    down = client.get(f"/api/meetings/MTG1/agenda/{item_id}/document")
+    assert down.status_code == 200
+    assert down.data == b"%PDF prev minutes"
 
 
 def test_agenda_document_unknown_item_is_404(client):

@@ -246,6 +246,11 @@ def download_agenda_document(meeting_id: str, item_id: str):
         return jsonify({"error": "no document uploaded"}), 404
     path = upload_path("meeting_agenda", item["document_filename"])
     if not path.exists():
+        # The minutes sign-off item does not carry an uploaded agenda document — it
+        # references the previous meeting's minutes, which are stored under the
+        # meeting_minutes scope. Fall back to it so the link retrieves that file.
+        path = upload_path("meeting_minutes", item["document_filename"])
+    if not path.exists():
         return jsonify({"error": "document file missing"}), 404
     return send_file(str(path), as_attachment=True,
                      download_name=item.get("document_original_name") or "document")
