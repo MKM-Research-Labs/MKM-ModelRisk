@@ -177,6 +177,10 @@ MRC_COLLECTION_SPECS = {
         {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
          "options": VALID_ANALYSIS_STATUS},
         {"key": "analysis_note", "label": "Analysis note", "type": "text"},
+        # What the committee is letting the presenter proceed on the basis of —
+        # the conditions/scope of the confirmation to proceed, in the presenter's
+        # own terms. Recorded alongside the outcome, distinct from the discussion.
+        {"key": "proceed_basis", "label": "Basis to proceed", "type": "text"},
         # The paper tabled for this item: a reference to a document the model
         # already holds, not a copy taken into the meeting. A committee reviews
         # what the model actually has on file, and one document cannot drift from
@@ -195,6 +199,10 @@ MRC_COLLECTION_SPECS = {
         {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
          "options": VALID_ANALYSIS_STATUS},
         {"key": "analysis_note", "label": "Analysis note", "type": "text"},
+        # What the committee is letting the presenter proceed on the basis of —
+        # the conditions/scope of the confirmation to proceed, in the presenter's
+        # own terms. Recorded alongside the outcome, distinct from the discussion.
+        {"key": "proceed_basis", "label": "Basis to proceed", "type": "text"},
         {"key": "analysis_item_id", "label": "Tabled paper", "type": "text", "hidden": True},
         {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
         {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},

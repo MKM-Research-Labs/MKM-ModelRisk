@@ -136,11 +136,31 @@ Object.assign(MeetingDetail, {
         '<div><span class="muted" style="font-size:11px">Outcome</span> ' +
         '<select data-analysis-status="' + esc(id) + '">' + opts(m.analysis_status) + "</select></div></div>";
       if (!open) return '<div class="card" style="margin-bottom:6px">' + head + "</div>";
+      // The presenter's supporting analysis: a document uploaded against this
+      // meeting item, shown as a download link once present.
+      const fileLink = m.analysis_filename
+        ? '<a href="/api/meetings/' + this._id + "/" + cfg.base + "/" + esc(id) +
+          '/analysis" target="_blank" rel="noopener">' +
+          esc(m.analysis_original_name || m.analysis_filename) + "</a>"
+        : '<span class="muted" style="font-size:12px">None uploaded.</span>';
       return '<div class="card" style="margin-bottom:8px">' + head +
         '<div class="field" style="margin-top:6px"><label>Discussion note</label>' +
         '<div class="row" style="align-items:flex-end;gap:6px">' +
         '<input data-analysis-note="' + esc(id) + '" value="' + esc(m.analysis_note || "") + '" style="flex:1">' +
         '<button class="btn small" data-analysis-note-save="' + esc(id) + '">Save note</button></div></div>' +
+        // What the MRC is allowing the presenter to proceed on the basis of.
+        '<div class="field" style="margin-top:6px">' +
+        "<label>Basis the MRC is allowing the presenter to proceed on</label>" +
+        '<div class="row" style="align-items:flex-end;gap:6px">' +
+        '<textarea data-analysis-basis="' + esc(id) + '" rows="2" style="flex:1;resize:vertical">' +
+        esc(m.proceed_basis || "") + "</textarea>" +
+        '<button class="btn small" data-analysis-basis-save="' + esc(id) + '">Save basis</button></div></div>' +
+        // The presenter uploads their supporting analysis here.
+        '<div class="field" style="margin-top:6px"><label>Supporting analysis</label>' +
+        '<div class="row" style="align-items:center;gap:8px">' + fileLink +
+        '<input type="file" id="an-file-' + esc(id) + '" style="display:none">' +
+        '<button class="btn small" data-an-upload="' + esc(id) + '">' +
+        (m.analysis_filename ? "Replace" : "Upload") + "&hellip;</button></div></div>" +
         '<div class="section-header" style="margin-top:8px;font-size:11px">Follow-on remediation</div>' + stepList +
         '<div class="row" style="margin-top:6px;flex-wrap:wrap;align-items:flex-end">' +
         '<div class="field"><label>Remediation</label><input id="act-desc-' + esc(id) + '"></div>' +
@@ -233,6 +253,15 @@ Object.assign(MeetingDetail, {
         const inp = document.querySelector('[data-analysis-note="' + id + '"]');
         App.amend("Set analysis note for " + id + ".", "POST",
           scopePath(id), { fields: { analysis_note: inp.value } }, reload);
+      };
+    });
+    // The basis-to-proceed saves via its own button, like the discussion note.
+    document.querySelectorAll("[data-analysis-basis-save]").forEach(function (btn) {
+      const id = btn.getAttribute("data-analysis-basis-save");
+      btn.onclick = function () {
+        const inp = document.querySelector('[data-analysis-basis="' + id + '"]');
+        App.amend("Set basis to proceed for " + id + ".", "POST",
+          scopePath(id), { fields: { proceed_basis: inp.value } }, reload);
       };
     });
     document.querySelectorAll("[data-presenter]").forEach(function (sel) {
