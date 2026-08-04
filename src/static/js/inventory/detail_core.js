@@ -190,13 +190,25 @@ const Detail = {
         '<div id="docs-host"></div>';
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_tab_categories || [],
         this._model.retired, "/api/models/", () => this.show(this._id, "docs"), "docs-host");
-      // Issuing a document files a copy under History. The PDF opens in a new
-      // tab, so this one has to reload itself or History silently lags behind
-      // what was just issued.
+      // Issuing files a copy under History. Fetch the PDF ourselves so we know
+      // when the server has finished generating and filing it, then refresh so the
+      // new copy appears in History at once — a fixed timer used to race a slow
+      // LaTeX compile and leave History lagging. The tab is opened up front, inside
+      // the click, so the browser does not treat it as a blocked pop-up.
       const issue = document.getElementById("mrd-issue");
       if (issue) {
-        issue.addEventListener("click", () => {
-          setTimeout(() => this.show(this._id, "docs"), 1500);
+        issue.addEventListener("click", async (e) => {
+          e.preventDefault();
+          const win = window.open("", "_blank");
+          try {
+            const res = await fetch(issue.getAttribute("href"), { headers: App.headers() });
+            if (!res.ok) throw new Error("The document could not be generated.");
+            if (win) win.location = URL.createObjectURL(await res.blob());
+            await this.show(this._id, "docs", { scroll: false });
+          } catch (err) {
+            if (win) win.close();
+            App.toast(err.message || "Document generation failed.", "error");
+          }
         });
       }
       return;
