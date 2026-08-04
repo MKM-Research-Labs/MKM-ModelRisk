@@ -41,6 +41,8 @@ from src.files import extension, upload_path
 from src.governance.client._pack_events import render_event_writeups_pdf
 from src.governance.completeness.report import render_completeness_pdf
 from src.governance.documents import client_scope, model_scope
+from src.governance.model_handoff.document import render_handover_pdf
+from src.governance.model_handoff.projection import get_handoff_for_edge
 from src.governance.model_inventory import get_model
 from src.governance.model_inventory.document import render_model_document_pdf
 from src.governance.mrc import list_meetings
@@ -94,6 +96,33 @@ def _packable(data: dict) -> list[dict]:
                                        str(d.get("original_name") or "")))
 
 
+def _handover_edge(original_name: str) -> tuple[str, str] | None:
+    """The provider/consumer models a handover evidence file names, or None if the
+    file is not a handover. Handover documents are filed as ``handover_<from>_to_<to>
+    .pdf``; model ids carry no underscores, so ``_to_`` is an unambiguous separator."""
+    name = original_name or ""
+    if not (name.startswith("handover_") and name.endswith(".pdf")):
+        return None
+    core = name[len("handover_"):-len(".pdf")]
+    frm, sep, to = core.partition("_to_")
+    return (frm, to) if sep and frm and to else None
+
+
+def _fresh_handover(original_name: str, as_of: str, config) -> bytes | None:
+    """A freshly-compiled handover PDF for a handover evidence file, or None if the
+    file is not a handover or its declared edge no longer exists. Rendering at pack
+    time means the bundled handover reflects the current template and the current
+    field lineage, rather than whatever was uploaded as evidence earlier."""
+    edge = _handover_edge(original_name)
+    if edge is None:
+        return None
+    handoff = get_handoff_for_edge(edge[0], edge[1], config=config)
+    if handoff is None:
+        return None
+    return render_handover_pdf(handoff, get_model(edge[0], config=config),
+                               get_model(edge[1], config=config), as_of)
+
+
 def _recent_minutes(config) -> list[dict]:
     """The most-recent completed meetings that have a saved minutes PDF."""
     meetings = [m for m in list_meetings(config=config)
@@ -113,9 +142,16 @@ def _add_models(archive, client, settings, as_of, config, packed, missing) -> No
         archive.writestr(doc_name, render_model_document_pdf(model, settings, as_of))
         packed.append(doc_name)
         for doc in _packable(model.get("data", {})):
-            path = upload_path(model_scope(model_id), doc["filename"])
             name = (f"models/{model_id}/" + str(doc.get("category") or UNCATEGORISED) +
                     "/" + str(doc.get("original_name") or doc["filename"]))
+            # Handover documents are re-rendered fresh from their handoff record so
+            # the pack carries the current template and lineage, not stale evidence.
+            fresh = _fresh_handover(doc.get("original_name", ""), as_of, config)
+            if fresh is not None:
+                archive.writestr(name, fresh)
+                packed.append(name)
+                continue
+            path = upload_path(model_scope(model_id), doc["filename"])
             if not path.exists():
                 missing.append(name)
                 continue
@@ -268,6 +304,11 @@ def _manifest_models(client: dict, config, warnings: list[str]) -> list[dict]:
         data = model.get("data") or {}
         docs = _packable(data)
         for doc in docs:
+            # A handover is regenerated from its handoff record at pack time, so a
+            # missing evidence file is not a gap as long as the edge still exists.
+            edge = _handover_edge(doc.get("original_name", ""))
+            if edge and get_handoff_for_edge(edge[0], edge[1], config=config) is not None:
+                continue
             if not upload_path(model_scope(model_id), doc["filename"]).exists():
                 warnings.append(
                     f"{model_id}: attachment '{doc.get('original_name') or doc['filename']}' "
