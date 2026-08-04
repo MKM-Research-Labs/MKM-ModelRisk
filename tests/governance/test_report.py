@@ -137,7 +137,9 @@ def test_history_merges_change_entries_and_drops_the_duplicate_section():
     section = model_section(MODELS[0], "On Track")
     assert "Change history" not in section
     assert "First cut" in section              # recorded only in change history
-    history_table = section.split("Version history")[1]
+    # "Version history" now appears twice — the section heading and the table's
+    # caption — so isolate the table body from the last occurrence (the caption).
+    history_table = section.rsplit("Version history", 1)[1]
     assert history_table.count("1.0.0") == 1   # the duplicated entry appears once
 
 
