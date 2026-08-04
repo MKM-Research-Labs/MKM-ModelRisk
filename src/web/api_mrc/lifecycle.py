@@ -29,7 +29,9 @@ from flask import Response, jsonify, request, send_file
 
 from src.command import dispatch
 from src.files import UploadError, save_upload, upload_path
-from src.governance.model_inventory import get_model
+from src.governance.documents import add_document, model_scope
+from src.governance.model_inventory import get_model, rebuild_inventory_view
+from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory.review import compute_review_status
 from src.governance.mrc import (
     get_meeting as get_meeting_raw,
@@ -182,8 +184,9 @@ def upload_model_analysis(meeting_id: str, model_id: str):
     file = request.files.get("file")
     if file is None:
         return jsonify({"error": "no file provided"}), 400
+    data = file.read()
     try:
-        meta = save_upload("meeting_analysis", file.filename, file.read())
+        meta = save_upload("meeting_analysis", file.filename, data)
     except UploadError as exc:
         return jsonify({"error": str(exc)}), 400
     update_collection_item(
@@ -191,6 +194,15 @@ def upload_model_analysis(meeting_id: str, model_id: str):
         fields={"analysis_filename": meta["filename"], "analysis_original_name": meta["original_name"]},
         actor=request_actor(),
     )
+    # File the presented analysis on the model itself, under Docs / Analysis, so it
+    # lives with the model's record and shows on its Docs tab — not only on the
+    # meeting. The meeting keeps its own reference (analysis_filename) above.
+    add_document(
+        aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id, scope=model_scope(model_id),
+        category="Analysis", filename=meta["original_name"] or file.filename, data=data,
+        description=f"Analysis presented to the MRC at {meeting_id}", actor=request_actor(),
+    )
+    rebuild_inventory_view()
     rebuild_meeting_view()
     return jsonify(get_meeting(meeting_id)), 201
 

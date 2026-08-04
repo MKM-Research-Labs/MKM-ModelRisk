@@ -211,6 +211,15 @@ def actions_for_model(model_id: str):
     return jsonify(meeting_items_for_model("actions", model_id))
 
 
+@models_bp.get("/<model_id>/analysis-presentations")
+def analysis_presentations_for_model(model_id: str):
+    """Read-only: every meeting where this model was in scope for analysis — i.e.
+    where its analysis was presented to an MRC, with the outcome and any paper."""
+    if get_model(model_id) is None:
+        return jsonify({"error": "model not found"}), 404
+    return jsonify(meeting_items_for_model("models_in_scope", model_id))
+
+
 @models_bp.post("")
 def register():
     body = json_body()

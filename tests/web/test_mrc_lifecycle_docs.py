@@ -93,6 +93,21 @@ def test_model_analysis_upload_download_roundtrip(client):
     assert down.data == b"%PDF payload"
 
 
+def test_uploaded_analysis_is_also_filed_on_the_model(client):
+    """Uploading a model's analysis at a meeting also files it on the model, under
+    Docs / Analysis, so it lives with the model's record."""
+    _seed_mrc(client)
+    _schedule_meeting(client)
+    client.post("/api/models", json={"model_id": "MKM-XA-001", "name": "X", "confirmed": True}, headers=HEADERS)
+    _add(client, "models_in_scope", {"model_id": "MKM-XA-001"})
+    up = _upload(client, "/api/meetings/MTG1/models/MKM-XA-001/analysis", name="analysis.pdf")
+    assert up.status_code == 201
+    docs = client.get("/api/models/MKM-XA-001").get_json()["data"]["documents"]
+    analysis = [d for d in docs if d.get("category") == "Analysis"]
+    assert analysis, "the presented analysis should be filed on the model under Analysis"
+    assert analysis[0].get("original_name") == "analysis.pdf"
+
+
 def test_model_analysis_unknown_meeting_is_404(client):
     assert _upload(client, "/api/meetings/none/models/M-A/analysis").status_code == 404
 
@@ -216,3 +231,18 @@ def test_agenda_document_download_file_gone_is_404(client):
             if a["item_id"] == item_id][0]
     upload_path("meeting_agenda", item["document_filename"]).unlink()
     assert client.get(f"/api/meetings/MTG1/agenda/{item_id}/document").status_code == 404
+
+
+def test_analysis_presentations_lists_meetings_the_model_was_in_scope_for(client):
+    """The model-side read view lists every meeting where its analysis was
+    presented (it was in scope), for the MRC Linkage tab."""
+    _seed_mrc(client)
+    _schedule_meeting(client)
+    client.post("/api/models", json={"model_id": "MKM-XP-001", "name": "X", "confirmed": True}, headers=HEADERS)
+    _add(client, "models_in_scope", {"model_id": "MKM-XP-001"})
+    pres = client.get("/api/models/MKM-XP-001/analysis-presentations").get_json()
+    assert [p["meeting_id"] for p in pres] == ["MTG1"]
+
+
+def test_analysis_presentations_unknown_model_is_404(client):
+    assert client.get("/api/models/NOPE/analysis-presentations").status_code == 404

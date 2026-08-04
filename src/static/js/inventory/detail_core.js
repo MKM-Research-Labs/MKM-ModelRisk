@@ -60,18 +60,20 @@ const Detail = {
     this._id = modelId;
     this._specs = await Inventory.specs();
     // Fetch the independent reads in parallel so a re-render settles quickly.
-    const [model, risk, mrc, audit, decisions] = await Promise.all([
+    const [model, risk, mrc, audit, decisions, presentations] = await Promise.all([
       App.get("/api/models/" + modelId),
       App.get("/api/models/" + modelId + "/risk-rating"),
       App.get("/api/models/" + modelId + "/mrc"),
       App.get("/api/audit"),
       App.get("/api/models/" + modelId + "/decisions"),
+      App.get("/api/models/" + modelId + "/analysis-presentations"),
     ]);
     this._model = model;
     this._risk = risk;
     this._mrc = mrc;
     this._audit = audit.filter((e) => e.aggregate_id === modelId);
     this._decisions = decisions;
+    this._analysisPresentations = presentations;
     if (tab) this._tab = tab;
     this._render();
     if (!opts || opts.scroll !== false) {
@@ -279,9 +281,27 @@ const Detail = {
       ? DetailTabs.signoffHistory(signoffs)
       : '<div class="section-header">Sign-off history</div>' +
         '<div class="empty">No MRC sign-offs granted yet.</div>';
-    return '<p class="muted">The model&rsquo;s MRC record — granted rating sign-offs, plus ' +
-      "decisions linked from meetings (read-only, sourced from the meeting log).</p>" +
+    // Every meeting where this model's analysis was presented (it was in scope),
+    // with the committee's outcome and a link to the paper if one was tabled.
+    const pres = this._analysisPresentations || [];
+    const presSection = pres.length
+      ? pres.map((a) => {
+          const paper = a.analysis_filename
+            ? ' &middot; <a href="/api/meetings/' + esc(a.meeting_id) + "/models/" + esc(this._id) +
+              '/analysis" target="_blank" rel="noopener">analysis paper</a>'
+            : "";
+          return '<div class="prow"><div style="font-size:12px"><b>' + esc(a.meeting_id) + "</b> " +
+            '<span class="muted">' + esc(a.meeting_date || "") + "</span> &mdash; " +
+            esc(a.analysis_status || "Pending") +
+            (a.presenter ? ' <span class="muted">presented by ' + esc(a.presenter) + "</span>" : "") +
+            paper + "</div></div>";
+        }).join("")
+      : '<div class="empty">No analysis presented to an MRC yet.</div>';
+    return '<p class="muted">The model&rsquo;s MRC record — granted rating sign-offs, the meetings ' +
+      "its analysis was presented at, plus decisions linked from meetings (read-only, sourced from " +
+      "the meeting log).</p>" +
       soSection +
+      '<div class="section-header">Analysis presented to the MRC</div>' + presSection +
       '<div class="section-header">Decisions</div>' +
       DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]);
   },
