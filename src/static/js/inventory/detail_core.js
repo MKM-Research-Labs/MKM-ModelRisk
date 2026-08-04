@@ -308,8 +308,9 @@ const Detail = {
         App.toast(e.message, "error");
       }
     };
-    document.querySelectorAll("select[data-vq-item], input[data-vq-item]").forEach(function (el) {
-      el.onchange = () => save(el.getAttribute("data-vq-item"));
-    });
+    document.querySelectorAll("select[data-vq-item], input[data-vq-item], textarea[data-vq-item]")
+      .forEach(function (el) {
+        el.onchange = () => save(el.getAttribute("data-vq-item"));
+      });
   },
 };

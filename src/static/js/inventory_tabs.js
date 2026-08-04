@@ -47,8 +47,11 @@ const DetailTabs = {
         // rationale posts the row straight away (see _bindValidationSaves).
         statusCell = '<select data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
           '-status" style="width:100%">' + opts + "</select>";
-        rationaleCell = '<input data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
-          '-rationale" style="width:100%" value="' + esc(q.rationale || "") + '">';
+        // A three-line textarea (not a single-line input) so a full rationale is
+        // visible; it scrolls once the text runs past three lines.
+        rationaleCell = '<textarea data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
+          '-rationale" rows="3" style="width:100%;resize:vertical;overflow-y:auto">' +
+          esc(q.rationale || "") + "</textarea>";
       }
       return "<tr><td>" + (i + 1) + "</td><td><b>" + fieldDisplay(q.short_label) +
         '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" + statusCell +
