@@ -134,7 +134,7 @@ def _groups() -> dict[str, list[str]]:
 
 def _field_group(data: dict, title: str, keys: list[str], extra: list, heading) -> str:
     rows = [[MODEL_FIELD_SPECS[k].get("label", k), _value(data, k)] for k in keys] + extra
-    return heading(title, _para_table(["Field", "Value"], rows, [0.28, 0.72]))
+    return heading(title, _para_table(["Field", "Value"], rows, [0.28, 0.72], caption=title))
 
 
 def _blocks(entries: list[dict], fields: list[dict]) -> str:
@@ -164,7 +164,7 @@ def _collection(data: dict, name: str, label: str | None, heading,
     if layout == "blocks":
         return heading(title, _blocks(entries, fields))
     rows = [[item.get(f["key"], "") for f in fields] for item in entries]
-    return heading(title, _para_table([f["label"] for f in fields], rows, list(layout)))
+    return heading(title, _para_table([f["label"] for f in fields], rows, list(layout), caption=title))
 
 
 def _testing_evidence(data: dict) -> str:
@@ -179,7 +179,8 @@ def _testing_evidence(data: dict) -> str:
     rows = [[d.get("category", ""), d.get("original_name", ""), d.get("description", "")]
             for d in docs]
     return ("\\textbf{Testing evidence attached}\\par\\medskip\n" +
-            _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45]))
+            _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45],
+                        caption="Testing evidence attached"))
 
 
 def _documents(data: dict, heading) -> str:
@@ -192,7 +193,8 @@ def _documents(data: dict, heading) -> str:
         return heading("Attached documents", NOT_RECORDED)
     rows = [[d.get("category", ""), d.get("filename", ""), d.get("description", "")]
             for d in docs]
-    body = _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45])
+    body = _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45],
+                       caption="Attached documents")
     return heading("Attached documents", body)
 
 

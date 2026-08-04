@@ -136,7 +136,8 @@ def _criticality_rows(weights: dict, default: float, universe) -> list[list]:
 def _band_table() -> str:
     rows = [[label, f"{floor:.2f} and above", f"{REMEDIATION_SLA_DAYS[label]} days"]
             for label, floor in SEVERITY_BANDS]
-    return _para_table(["Band", "Severity", "Target to close"], rows, [0.3, 0.4, 0.3])
+    return _para_table(["Band", "Severity", "Target to close"], rows, [0.3, 0.4, 0.3],
+                       caption="Severity bands and remediation targets")
 
 
 def _factor_table() -> str:
@@ -157,7 +158,7 @@ def _factor_table() -> str:
                  else "Review overdue at all")
         rows.append([label, f"{multiplier:.2f}"])
     rows.append(["Review not yet due, or none scheduled", "1.00"])
-    return _para_table(["Condition", "Factor"], rows, [0.7, 0.3])
+    return _para_table(["Condition", "Factor"], rows, [0.7, 0.3], caption="Escalation factors")
 
 
 def method_section() -> str:
@@ -173,17 +174,17 @@ def appendix() -> str:
             ["Field", "Weight"],
             _criticality_rows(FIELD_CRITICALITY, DEFAULT_FIELD_CRITICALITY,
                               [k for k in MODEL_FIELD_SPECS if k not in EXEMPT_FIELDS]),
-            [0.7, 0.3])),
+            [0.7, 0.3], caption="Field criticality")),
         _subsection("Collection criticality", _para_table(
             ["Collection", "Weight"],
             _criticality_rows(COLLECTION_CRITICALITY, DEFAULT_COLLECTION_CRITICALITY,
                               sorted(COLLECTION_CRITICALITY)),
-            [0.7, 0.3])),
+            [0.7, 0.3], caption="Collection criticality")),
         _subsection("Documentation criticality", _para_table(
             ["Category", "Weight"],
             _criticality_rows(DOC_CRITICALITY, DEFAULT_DOC_CRITICALITY,
                               sorted(DOC_CRITICALITY)),
-            [0.7, 0.3])),
+            [0.7, 0.3], caption="Documentation criticality")),
         _subsection("Exclusions", _para_table(
             ["Excluded", "Reason"],
             [[name, "Empty is a legitimate state; scoring it would penalise a "
@@ -198,10 +199,11 @@ def appendix() -> str:
             + [[name, f"Reported within the {covering} pack; a second upload "
                       "restating it would close no gap"]
                for name, covering in sorted(DOC_CATEGORY_SATISFIED_BY.items())],
-            [0.35, 0.65])),
+            [0.35, 0.65], caption="Exclusions from scoring")),
         _subsection("Values treated as unrecorded", _para_table(
             ["Value", "Effect"],
             [[_literal(value), "Scored as absent, not as an answer"]
-             for value in sorted(PLACEHOLDER_VALUES)], [0.35, 0.65])),
+             for value in sorted(PLACEHOLDER_VALUES)], [0.35, 0.65],
+            caption="Values treated as unrecorded")),
     ]
     return _section("Appendix: scoring basis", "".join(body))

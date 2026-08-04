@@ -88,7 +88,8 @@ def _profile(models: list, as_of: str) -> str:
             "}. Remediation steps outstanding: \\textbf{" + str(open_steps) + "}.\n\n"]
     for title, key, order in TALLIES:
         body.append(_subsection("By " + title, _para_table(
-            [title, "Models"], _tally(models, key, order, as_of), [0.5, 0.5])))
+            [title, "Models"], _tally(models, key, order, as_of), [0.5, 0.5],
+            caption="Models by " + title.lower())))
     return _section("Portfolio profile", "".join(body))
 
 
@@ -107,7 +108,8 @@ def _inventory(models: list, as_of: str) -> str:
     # The model column is wide enough to hold the longest id on one line: a wrapped
     # id reads as two different models when the table is skimmed.
     table = _para_table(["Model", "Name", "Tier", "RAG", "Validation", "Review"],
-                        rows, [0.19, 0.28, 0.06, 0.10, 0.15, 0.22])
+                        rows, [0.19, 0.28, 0.06, 0.10, 0.15, 0.22],
+                        caption="Model inventory index")
     return _section("Model inventory", table)
 
 

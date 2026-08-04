@@ -90,7 +90,7 @@ def _activity(found: list[dict], configured: bool = True) -> str:
         else:
             rows.append([entry["catchment"], "--", NO_PORTFOLIO_STATEMENT])
     table = _para_table(["Catchment", "Last built", "Population"], rows,
-                        [0.22, 0.16, 0.62])
+                        [0.22, 0.16, 0.62], caption="Portfolio activity by catchment")
     return _section("Portfolio activity", lead + table)
 
 
@@ -102,7 +102,7 @@ def _weaknesses(data: dict) -> str:
              str(w.get("impact") or ""), NO_EXCEPTION] for w in entries]
     return _subsection("Recorded weaknesses", _para_table(
         ["Ref", "Weakness", "Impact", "Monitoring position"], rows,
-        [0.09, 0.42, 0.11, 0.38]))
+        [0.09, 0.42, 0.11, 0.38], caption="Recorded weaknesses"))
 
 
 def _limitations(data: dict) -> str:
@@ -120,7 +120,7 @@ def _limitations(data: dict) -> str:
             str(limit.get("monitoring_trigger") or "--"), NO_EXCEPTION])
     return _subsection("Limitations of use", _para_table(
         ["Ref", "Limitation", "Impact", "Monitoring trigger", "Position"], rows,
-        [0.08, 0.30, 0.10, 0.29, 0.23]))
+        [0.08, 0.30, 0.10, 0.29, 0.23], caption="Limitations of use"))
 
 
 def build_monitoring_tex(model: dict, settings: dict, as_of: str, *,

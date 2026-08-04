@@ -56,7 +56,8 @@ def build_event_writeups_tex(products: list[dict], settings: dict, as_of: str,
     # narratives get the width; the identifiers and status flags stay narrow.
     body = (_para_table(
         ["Product", "Date", "What happened", "Remediation", "MRC status", "MRC comments"],
-        rows, [0.13, 0.10, 0.29, 0.19, 0.12, 0.17]) if rows
+        rows, [0.13, 0.10, 0.29, 0.19, 0.12, 0.17],
+        caption="Operational failure events across linked products") if rows
             else "No operational events have been recorded across the linked products.")
     return (
         preamble("Operational Event Write-ups", org_name=org) + "\\begin{document}\n"

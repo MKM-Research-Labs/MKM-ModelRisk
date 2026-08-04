@@ -101,14 +101,17 @@ def _tally(gaps: list[dict], key: str, order: list, labels=None) -> list[list]:
 def _summary(rows: list[dict], gaps: list[dict]) -> str:
     body = [_headline(rows, gaps)]
     body.append(_subsection("Findings by severity", _para_table(
-        ["Severity", "Findings"], _tally(gaps, "band", BAND_ORDER), [0.6, 0.4])))
+        ["Severity", "Findings"], _tally(gaps, "band", BAND_ORDER), [0.6, 0.4],
+        caption="Findings by severity")))
     body.append(_subsection("Findings by type", _para_table(
         ["Type", "Findings"],
-        _tally(gaps, "kind", list(KIND_LABELS), KIND_LABELS), [0.7, 0.3])))
+        _tally(gaps, "kind", list(KIND_LABELS), KIND_LABELS), [0.7, 0.3],
+        caption="Findings by type")))
     by_tier = Counter(str(r["tier"] or "Not recorded") for r in rows)
     body.append(_subsection("Records by tier", _para_table(
         ["Tier", "Records"],
-        [[t, str(by_tier[t])] for t in sorted(by_tier)], [0.6, 0.4])))
+        [[t, str(by_tier[t])] for t in sorted(by_tier)], [0.6, 0.4],
+        caption="Records by tier")))
     return _section("Summary of findings", "".join(body))
 
 
@@ -133,7 +136,8 @@ def _register(rows: list[dict]) -> str:
     return _section("Register", _para_table(
         ["Record", "Kind", "Tier", "RAG", "Evts", "Esc.", "Compl.",
          "Gaps", "Crit.", "Assessment"],
-        table_rows, [0.17, 0.08, 0.05, 0.08, 0.05, 0.06, 0.08, 0.05, 0.05, 0.13]))
+        table_rows, [0.17, 0.08, 0.05, 0.08, 0.05, 0.06, 0.08, 0.05, 0.05, 0.13],
+        caption="Completeness register"))
 
 
 def _priority(gaps: list[dict]) -> str:
@@ -154,7 +158,7 @@ def _priority(gaps: list[dict]) -> str:
         ["Sev.", "Record", "Finding", "Action", "Days"],
         [[g["band"], g["entity_id"], g["label"], g["action"], str(g["sla_days"])]
          for g in ranked],
-        [0.09, 0.18, 0.19, 0.46, 0.08])
+        [0.09, 0.18, 0.19, 0.46, 0.08], caption="Remediation priority (Critical and High)")
     return _section("Remediation priority", intro + table)
 
 
@@ -179,7 +183,8 @@ def _dossier(row: dict) -> str:
         [[g["band"], g["label"], KIND_LABELS.get(g["kind"], g["kind"]),
           f"{g['criticality']:.2f}", f"{g['severity']:.2f}", g["action"],
           str(g["sla_days"])] for g in row["gaps"]],
-        [0.08, 0.15, 0.15, 0.07, 0.10, 0.36, 0.09])
+        [0.08, 0.15, 0.15, 0.07, 0.10, 0.36, 0.09],
+        caption="Findings for " + str(row["entity_id"]))
     return _subsection(heading, context + table)
 
 

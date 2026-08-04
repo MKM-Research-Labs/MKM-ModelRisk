@@ -110,9 +110,11 @@ def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | No
     specifics = _table(
         ["Role", "Model ID", "Name", "Owner", "Tier"],
         [_model_line("Provider", provider, from_id), _model_line("Consumer", consumer, to_id)],
+        caption="Provider and consumer models",
     )
     lineage = _lineage_rows(handoff)
-    lineage_tbl = (_table(["Provider field", "Type/units", "Consumer field", "Type/units", "Note"], lineage)
+    lineage_tbl = (_table(["Provider field", "Type/units", "Consumer field", "Type/units", "Note"],
+                          lineage, caption="Field lineage across the handover")
                    if lineage else "\\textit{\\textcolor{gray}{No field mappings declared yet.}}\n")
 
     body = (

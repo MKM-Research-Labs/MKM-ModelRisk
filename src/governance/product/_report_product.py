@@ -98,7 +98,7 @@ def _groups() -> dict[str, list[str]]:
 
 def _field_group(data: dict, title: str, keys: list[str], extra: list) -> str:
     rows = [[PRODUCT_FIELD_SPECS[k].get("label", k), _value(data, k)] for k in keys] + extra
-    return _section(title, _para_table(["Field", "Value"], rows, [0.28, 0.72]))
+    return _section(title, _para_table(["Field", "Value"], rows, [0.28, 0.72], caption=title))
 
 
 def _component_models(data: dict, config) -> str:
@@ -121,7 +121,8 @@ def _component_models(data: dict, config) -> str:
         else:
             model_cell = "Not recorded"
         rows.append([comp.get("component_type", ""), model_cell, comp.get("role", "")])
-    body = _para_table(["Type", "Model", "Role in product"], rows, [0.26, 0.44, 0.30])
+    body = _para_table(["Type", "Model", "Role in product"], rows, [0.26, 0.44, 0.30],
+                       caption="Component models")
     return _section("Component models", body)
 
 
@@ -151,7 +152,7 @@ def _collection(data: dict, name: str, label: str | None) -> str:
     if layout == "blocks":
         return _section(title, _blocks(entries, fields))
     rows = [[item.get(f["key"], "") for f in fields] for item in entries]
-    return _section(title, _para_table([f["label"] for f in fields], rows, list(layout)))
+    return _section(title, _para_table([f["label"] for f in fields], rows, list(layout), caption=title))
 
 
 def _documents(data: dict) -> str:
@@ -163,7 +164,8 @@ def _documents(data: dict) -> str:
         return _section("Attached documents", NOT_RECORDED)
     rows = [[d.get("category", ""), d.get("filename", ""), d.get("description", "")]
             for d in docs]
-    body = _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45])
+    body = _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45],
+                       caption="Attached documents")
     return _section("Attached documents", body)
 
 
