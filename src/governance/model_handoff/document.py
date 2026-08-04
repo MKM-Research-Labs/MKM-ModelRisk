@@ -146,8 +146,8 @@ def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | No
         preamble("Model Interoperability Validation") + "\\begin{document}\n"
         + front_matter("Model Interoperability Validation",
                        from_id + " to " + to_id + " handover", date=as_of, logo=logo, toc=True)
-        + body
         + history_page(as_of, "Interoperability validation generated")
+        + body
         + "\\end{document}\n"
     )
 

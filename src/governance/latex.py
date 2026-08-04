@@ -231,18 +231,20 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
 
 
 def history_page(date: str, description: str, *, org_name: str = "", version: str = "1.0") -> str:
-    """The Document History section (Date / Version / Description / Author). Numbered,
-    and placed at the END of the document, as the model-documentation protocol does."""
+    """The Document Revision History section (Date / Version / Description / Author).
+    Numbered, and placed at the FRONT of the document (right after the table of
+    contents), as the ``docs/Swaption.tex`` template does."""
     rows = [[date, version, description, org_name or DEFAULT_ORG]]
-    return "\\section{Document History}\n" + _table(
-        ["Date", "Version", "Description", "Author"], rows, caption="Document history")
+    return "\\section{Document Revision History}\n" + _table(
+        ["Date", "Version", "Description", "Author"], rows, caption="Document revision history")
 
 
 def front_matter(title: str, subtitle: str, *, org_name: str = "", date: str = "",
                  author: str = "", logo: bool = False, version: str = "1.0",
                  toc: bool = False) -> str:
     """A document's opening: the title page, then (for multi-section documents) a
-    Table of Contents. The Document History goes at the end via ``history_page``."""
+    Table of Contents. Builders follow this with ``history_page`` so the Document
+    Revision History is the first numbered section, as the template places it."""
     front = title_page(title, subtitle, org_name=org_name, date=date,
                        author=author or DEFAULT_AUTHOR, version=version, logo=logo)
     if toc:

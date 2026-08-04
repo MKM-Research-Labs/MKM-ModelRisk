@@ -126,12 +126,11 @@ def build_report_tex(models: list, settings: dict, as_of: str, *, logo: bool = F
         "\\setcounter{tocdepth}{1}\n"
         + front_matter("Model Risk Report", "Model inventory and validation record",
                        org_name=org, date=as_of, logo=logo, toc=True)
+        + history_page(as_of, "Model risk report generated from the inventory", org_name=org)
         + _section("Scope and basis of preparation", SCOPE + "\n\n")
         + _profile(models, as_of)
         + _inventory(models, as_of)
         + dossiers
-        + "\\clearpage\n"
-        + history_page(as_of, "Model risk report generated from the inventory", org_name=org)
         + "\\end{document}\n"
     )
 

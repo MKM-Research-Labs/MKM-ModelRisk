@@ -199,6 +199,9 @@ def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
         # table of contents past the report it introduces.
         "\\setcounter{tocdepth}{1}\n"
         + front_matter(TITLE, SUBTITLE, org_name=org, date=as_of, logo=logo, toc=True)
+        + history_page(as_of, "Completeness audit generated from the model "
+                              "inventory, the product register and the document "
+                              "store", org_name=org)
         + method_section()
         + _summary(rows, gaps)
         + _register(rows)
@@ -206,10 +209,6 @@ def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
         + _section("Findings by record",
                    "".join(_dossier(row) for row in rows))
         + appendix()
-        + "\\clearpage\n"
-        + history_page(as_of, "Completeness audit generated from the model "
-                              "inventory, the product register and the document "
-                              "store", org_name=org)
         + "\\end{document}\n"
     )
 

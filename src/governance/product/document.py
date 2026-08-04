@@ -52,10 +52,9 @@ def build_product_document_tex(product: dict, settings: dict, as_of: str,
         preamble(DOC_TITLE, org_name=org) + "\\begin{document}\n"
         + front_matter(title, DOC_TITLE, org_name=org, date=issued_at or as_of,
                        logo=logo, toc=True)
-        + product_section(product, review, config=config)
-        + "\\clearpage\n"
         + history_page(issued_at or as_of,
                        DOC_TITLE + " generated from the product register", org_name=org)
+        + product_section(product, review, config=config)
         + "\\end{document}\n"
     )
 

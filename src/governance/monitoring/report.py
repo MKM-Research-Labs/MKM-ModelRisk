@@ -135,13 +135,12 @@ def build_monitoring_tex(model: dict, settings: dict, as_of: str, *,
     return (
         preamble(TITLE, org_name=org) + "\\begin{document}\n"
         + front_matter(title, TITLE, org_name=org, date=as_of, logo=logo, toc=True)
+        + history_page(as_of, TITLE + " generated from the inventory and the "
+                              "portfolio generator's output", org_name=org)
         + _basis(model)
         + _activity(found, configured)
         + _section("Monitoring position",
                    _weaknesses(data) + _limitations(data))
-        + "\\clearpage\n"
-        + history_page(as_of, TITLE + " generated from the inventory and the "
-                              "portfolio generator's output", org_name=org)
         + "\\end{document}\n"
     )
 

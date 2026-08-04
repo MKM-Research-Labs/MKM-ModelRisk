@@ -134,8 +134,8 @@ def build_tex(
         + front_matter(title, "MRC Meeting Pack", org_name=org, date=data.get("date", ""),
                        author=data.get("chair", ""), logo=logo, toc=True)
         + info + "\\par\\bigskip\n"
-        + participants + agenda + signoffs + models_scope + minutes + decisions + actions + remediation
         + history_page(data.get("date", ""), "MRC meeting pack generated", org_name=org)
+        + participants + agenda + signoffs + models_scope + minutes + decisions + actions + remediation
         + "\\end{document}\n"
     )
 
