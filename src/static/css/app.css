@@ -189,6 +189,12 @@ textarea { box-sizing: border-box; }
 .chain-node rect { transition: stroke-width 0.1s ease, filter 0.1s ease; }
 .chain-node:hover rect { stroke-width: 3; filter: brightness(0.97); }
 .chain-node:hover text { text-decoration: underline; }
+/* Edges are clickable: they jump to their row in the Handoffs table. The wide
+   invisible hit-line makes the thin arrow comfortable to click. */
+.chain-edge { cursor: pointer; }
+.chain-edge-hit { stroke: transparent; stroke-width: 12; }
+.chain-edge-line { stroke: #94a3b8; stroke-width: 1.5; transition: stroke 0.1s ease, stroke-width 0.1s ease; }
+.chain-edge:hover .chain-edge-line { stroke: var(--accent); stroke-width: 2.5; }
 .chain-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .chain-item { display: flex; align-items: baseline; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: #fff; }
 .chain-item:hover { border-color: var(--accent); background: #f7fbff; }

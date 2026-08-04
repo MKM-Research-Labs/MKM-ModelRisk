@@ -143,6 +143,14 @@ const Chain = {
         Handoffs.open(parts[0], parts[1], () => this.render());
       };
     });
+    // Clicking an arrow in the diagram opens that edge's handoff editor — the
+    // same action as its "Edit handoff" button in the table below.
+    document.querySelectorAll("[data-edge-line]").forEach((g) => {
+      g.onclick = () => {
+        const parts = g.getAttribute("data-edge-line").split("|");
+        Handoffs.open(parts[0], parts[1], () => this.render());
+      };
+    });
   },
 
   // Longest-path layering: a node's rank is the longest chain of producers behind
@@ -191,12 +199,18 @@ const Chain = {
         pos[n.model_id] = { x: x0 + i * (BOX_W + COL_GAP), y: PAD + r * (BOX_H + ROW_GAP) };
       });
     });
+    // Each edge is drawn twice: a wide, invisible line that gives a comfortable
+    // click target, and the visible arrow on top. Clicking either jumps to (and
+    // flashes) that edge's row in the Handoffs table below.
     const edges = links.map((l) => {
       const a = pos[l.from], b = pos[l.to];
       if (!a || !b) return "";
-      return '<line x1="' + (a.x + BOX_W / 2) + '" y1="' + (a.y + BOX_H) +
-        '" x2="' + (b.x + BOX_W / 2) + '" y2="' + b.y +
-        '" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#chain-arrow)"/>';
+      const x1 = a.x + BOX_W / 2, y1 = a.y + BOX_H, x2 = b.x + BOX_W / 2, y2 = b.y;
+      return '<g class="chain-edge" data-edge-line="' + esc(l.from) + "|" + esc(l.to) + '">' +
+        "<title>" + esc(l.from) + " → " + esc(l.to) + " — open handoff</title>" +
+        '<line class="chain-edge-hit" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"/>' +
+        '<line class="chain-edge-line" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+        '" marker-end="url(#chain-arrow)"/></g>';
     }).join("");
     const boxes = nodes.map((n) => {
       const p = pos[n.model_id];
