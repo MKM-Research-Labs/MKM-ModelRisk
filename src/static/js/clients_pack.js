@@ -111,9 +111,16 @@ Object.assign(Clients, {
     try {
       m = await App.get("/api/clients/" + clientId + "/pack/preview");
     } catch (e) { App.toast(e.message, "error"); this._closePreview(); return; }
-    ov.innerHTML = '<div class="modal" style="max-width:640px;text-align:left">' +
-      "<h2>Client pack — preview</h2>" + this._previewBody(m) +
-      '<div class="modal-actions"><button id="cpack-cancel" class="btn ghost">Cancel</button>' +
+    // Cap the modal to the viewport and scroll its body: the preview lists every
+    // model and its documents, so it easily runs taller than the screen. The
+    // header and action buttons stay put while the body scrolls (bar on the right).
+    ov.innerHTML = '<div class="modal" style="width:680px;max-width:92vw;max-height:85vh;' +
+      'text-align:left;display:flex;flex-direction:column">' +
+      '<h2 style="flex:0 0 auto">Client pack — preview</h2>' +
+      '<div style="overflow-y:auto;flex:1 1 auto;margin:0 -4px;padding:0 4px">' +
+      this._previewBody(m) + "</div>" +
+      '<div class="modal-actions" style="flex:0 0 auto">' +
+      '<button id="cpack-cancel" class="btn ghost">Cancel</button>' +
       '<button id="cpack-commit" class="btn primary">Generate &amp; retain</button></div></div>';
     document.getElementById("cpack-cancel").onclick = () => this._closePreview();
     document.getElementById("cpack-commit").onclick = () => this._commitPack(clientId);
