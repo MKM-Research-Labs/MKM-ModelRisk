@@ -20,6 +20,8 @@
 """Tests for the risk-policy HTTP API: the registry, per-division detail, and propose."""
 from __future__ import annotations
 
+import io
+
 from tests.web.conftest import HEADERS
 
 
@@ -62,3 +64,16 @@ def test_propose_rejects_a_broken_policy(client):
     resp = client.post("/api/risk-policy/BadDiv/propose",
                        json={"policy": policy, "confirmed": True}, headers=HEADERS)
     assert resp.status_code >= 400
+
+
+def test_upload_and_surface_the_policy_document(client, tmp_path, monkeypatch):
+    monkeypatch.setattr("src.files.store.UPLOAD_DIR", tmp_path)
+    data = {"file": (io.BytesIO(b"%PDF-policy"), "Division Risk Policy.pdf")}
+    resp = client.post("/api/risk-policy/DocDiv/document", data=data,
+                       content_type="multipart/form-data", headers=HEADERS)
+    assert resp.status_code == 201
+    assert resp.get_json()["document"]["original_name"] == "Division Risk Policy.pdf"
+    # The detail endpoint now surfaces the uploaded document, and it downloads.
+    assert client.get("/api/risk-policy/DocDiv").get_json()["document"] is not None
+    dl = client.get("/api/risk-policy/DocDiv/document")
+    assert dl.status_code == 200 and dl.data == b"%PDF-policy"

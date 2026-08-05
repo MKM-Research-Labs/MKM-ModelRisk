@@ -41,6 +41,7 @@ AGGREGATE_TYPE = "RiskPolicy"
 EVENT_POLICY_PROPOSED = "RiskPolicyProposed"
 EVENT_POLICY_APPROVED = "RiskPolicyApproved"
 EVENT_POLICY_REJECTED = "RiskPolicyRejected"
+EVENT_POLICY_DOCUMENT = "RiskPolicyDocumentUploaded"
 
 # Lifecycle states surfaced to the UI.
 STATE_SEED = "seed"          # no policy ever ratified — running on the firm-wide default
@@ -57,6 +58,7 @@ def load(division: str, config=None) -> dict:
     """
     live = default_policy()
     draft = None
+    document = None
     approved = False
     version = 0
     for event in read_stream(
@@ -70,9 +72,12 @@ def load(division: str, config=None) -> dict:
             approved = True
         elif event.event_type == EVENT_POLICY_REJECTED:
             draft = None
+        elif event.event_type == EVENT_POLICY_DOCUMENT:
+            document = {"filename": event.payload["filename"],
+                        "original_name": event.payload["original_name"]}
         version = event.stream_seq
     state = STATE_DRAFT if draft is not None else (STATE_APPROVED if approved else STATE_SEED)
-    return {"live": live, "draft": draft, "state": state,
+    return {"live": live, "draft": draft, "document": document, "state": state,
             "approved": approved, "version": version}
 
 

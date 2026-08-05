@@ -25,13 +25,21 @@ vocabulary per a model's division. The console loads this once at startup.
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request, send_file
 
 from src.command import dispatch
-from src.governance.risk_policy import default_policy, get_risk_policy, load, propose_policy
-from src.web._helpers import context_from_request, json_body, reference_options
+from src.files import UploadError, save_upload, upload_path
+from src.governance.risk_policy import (
+    default_policy,
+    get_risk_policy,
+    load,
+    propose_policy,
+    set_policy_document,
+)
+from src.web._helpers import context_from_request, json_body, reference_options, request_actor
 
 risk_policy_bp = Blueprint("risk_policy", __name__)
+_DOCUMENT_SCOPE = "risk_policy"
 
 
 @risk_policy_bp.get("/api/risk-policy")
@@ -44,13 +52,17 @@ def risk_policy_registry():
     })
 
 
+def _detail(division: str) -> dict:
+    state = load(division)
+    return {"division": division, "live": state["live"], "draft": state["draft"],
+            "document": state["document"], "state": state["state"], "seed": default_policy()}
+
+
 @risk_policy_bp.get("/api/risk-policy/<division>")
 def risk_policy_detail(division: str):
     """One division's policy for the Admin editor: its live (approved) policy, any draft
-    awaiting MRC sign-off, and the lifecycle state (seed / draft / approved)."""
-    state = load(division)
-    return jsonify({"division": division, "live": state["live"], "draft": state["draft"],
-                    "state": state["state"], "seed": default_policy()})
+    awaiting MRC sign-off, the uploaded policy document, and the lifecycle state."""
+    return jsonify(_detail(division))
 
 
 @risk_policy_bp.post("/api/risk-policy/<division>/propose")
@@ -60,6 +72,31 @@ def propose_risk_policy(division: str):
     body = json_body()
     dispatch("propose_risk_policy", propose_policy, context=context_from_request(body),
              division=division, policy=body.get("policy"))
-    state = load(division)
-    return jsonify({"division": division, "live": state["live"], "draft": state["draft"],
-                    "state": state["state"]})
+    return jsonify(_detail(division))
+
+
+@risk_policy_bp.post("/api/risk-policy/<division>/document")
+def upload_risk_policy_document(division: str):
+    """Upload the division's formal written risk-policy document (PDF/Word)."""
+    file = request.files.get("file")
+    if file is None:
+        return jsonify({"error": "no file provided"}), 400
+    try:
+        meta = save_upload(_DOCUMENT_SCOPE, file.filename, file.read())
+    except UploadError as exc:
+        return jsonify({"error": str(exc)}), 400
+    set_policy_document(division=division, filename=meta["filename"],
+                        original_name=meta["original_name"], actor=request_actor())
+    return jsonify(_detail(division)), 201
+
+
+@risk_policy_bp.get("/api/risk-policy/<division>/document")
+def download_risk_policy_document(division: str):
+    """Download the division's uploaded risk-policy document, if any."""
+    document = load(division)["document"]
+    if not document:
+        return jsonify({"error": "no policy document uploaded"}), 404
+    path = upload_path(_DOCUMENT_SCOPE, document["filename"])
+    if not path.exists():
+        return jsonify({"error": "policy document file missing"}), 404
+    return send_file(str(path), as_attachment=True, download_name=document["original_name"])

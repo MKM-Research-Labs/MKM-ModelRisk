@@ -28,6 +28,7 @@ from src.governance.risk_policy.commands import (
     approve_policy,
     propose_policy,
     reject_policy,
+    set_policy_document,
 )
 
 __all__ = [
@@ -38,4 +39,5 @@ __all__ = [
     "propose_policy",
     "approve_policy",
     "reject_policy",
+    "set_policy_document",
 ]

@@ -31,6 +31,7 @@ from src.governance.errors import DomainError
 from src.governance.risk_policy._store import (
     AGGREGATE_TYPE,
     EVENT_POLICY_APPROVED,
+    EVENT_POLICY_DOCUMENT,
     EVENT_POLICY_PROPOSED,
     EVENT_POLICY_REJECTED,
     load,
@@ -137,5 +138,20 @@ def reject_policy(*, division: str, actor: str, meeting_id: str | None = None,
     return append_event(
         aggregate_type=AGGREGATE_TYPE, aggregate_id=division,
         event_type=EVENT_POLICY_REJECTED, payload={"meeting_id": meeting_id},
+        actor=actor, reason=reason, expected_version=state["version"], config=config,
+    )
+
+
+def set_policy_document(*, division: str, filename: str, original_name: str,
+                        actor: str, reason: str | None = None, config=None) -> Event:
+    """Attach the division's formal written policy document (the uploaded PDF/Word that
+    the MRC ratifies), replacing any earlier one."""
+    if not str(division).strip():
+        raise DomainError("a risk policy document must belong to a division")
+    state = load(division, config)
+    return append_event(
+        aggregate_type=AGGREGATE_TYPE, aggregate_id=division,
+        event_type=EVENT_POLICY_DOCUMENT,
+        payload={"filename": filename, "original_name": original_name},
         actor=actor, reason=reason, expected_version=state["version"], config=config,
     )

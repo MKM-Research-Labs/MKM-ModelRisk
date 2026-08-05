@@ -27,6 +27,7 @@ const RiskEditor = {
     }
     const detail = await App.get("/api/risk-policy/" + encodeURIComponent(this._division));
     this._state = detail.state;
+    this._document = detail.document || null;
     // Edit the pending draft if there is one, otherwise start from the live policy.
     this._policy = JSON.parse(JSON.stringify(detail.draft || detail.live));
     this._draw();
@@ -91,7 +92,13 @@ const RiskEditor = {
       '<div class="section-header" style="margin-top:18px">Risk tables</div>' +
       '<p class="muted" style="font-size:11px">Generated from the dimensions — one ' +
       "Materiality × Complexity table per Mission-Criticality band. Pick each cell's rating.</p>" +
-      '<div id="rp-grids"></div>';
+      '<div id="rp-grids"></div>' +
+      '<div class="section-header" style="margin-top:18px">Policy document</div>' +
+      '<p class="muted" style="font-size:11px">The formal written risk policy for this ' +
+      "division (PDF or Word), sent to the MRC alongside the configuration above.</p>" +
+      '<div class="row" style="align-items:center;gap:10px"><span id="rp-doc-current"></span>' +
+      '<input type="file" id="rp-doc-file" accept=".pdf,.doc,.docx">' +
+      '<button class="btn small" id="rp-doc-upload">Upload</button></div>';
     document.getElementById("rp-div").onchange = (e) => {
       this._division = e.target.value; this._load();
     };
@@ -99,6 +106,33 @@ const RiskEditor = {
     this._drawDims();
     this._drawRatings();
     this._drawGrids();
+    this._drawDocument();
+  },
+
+  _drawDocument() {
+    const el = document.getElementById("rp-doc-current");
+    if (el) {
+      el.innerHTML = this._document
+        ? '<a href="/api/risk-policy/' + encodeURIComponent(this._division) +
+          '/document" target="_blank">↓ ' + esc(this._document.original_name) + "</a>"
+        : '<span class="muted">None uploaded.</span>';
+    }
+    const btn = document.getElementById("rp-doc-upload");
+    if (btn) btn.onclick = () => this._uploadDocument();
+  },
+
+  _uploadDocument() {
+    const file = document.getElementById("rp-doc-file");
+    if (!file.files.length) { App.toast("Choose a file first", "error"); return; }
+    const form = new FormData();
+    form.append("file", file.files[0]);
+    fetch("/api/risk-policy/" + encodeURIComponent(this._division) + "/document", {
+      method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
+    }).then(async (res) => {
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "upload failed"); }
+      App.toast("Policy document uploaded", "ok");
+      this._load();
+    }).catch((e) => App.toast(e.message, "error"));
   },
 
   _drawStatus() {
