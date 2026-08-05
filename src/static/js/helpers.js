@@ -49,6 +49,22 @@ const Policy = {
     const i = (p.risk_ratings || []).findIndex((x) => x.name === name);
     return i < 0 ? null : i;
   },
+  // Option lists for the risk fields, from the division's policy (null when not loaded,
+  // so callers fall back to the field spec's constant options).
+  ratingNames(division) {
+    const p = this._for(division);
+    return p ? (p.risk_ratings || []).map((r) => r.name) : null;
+  },
+  dimensionBandNames(key, division) {
+    const p = this._for(division);
+    const dim = p && p.dimensions && p.dimensions[key];
+    return dim ? (dim.bands || []).map((b) => b.name) : null;
+  },
+  tierScores(division) {
+    const p = this._for(division);
+    const dim = p && p.dimensions && p.dimensions.mission_criticality;
+    return dim ? (dim.bands || []).map((b) => b.score) : null;
+  },
   // The Mission-Criticality band a tier selects (band score == tier), clamped like the
   // backend: out-of-range → nearest, missing → most conservative (first) band.
   mcBand(tier, division) {

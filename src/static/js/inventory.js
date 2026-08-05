@@ -18,15 +18,25 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Build the input control for one field spec (used by the register form).
-function inputControl(id, spec) {
+// Risk choice fields whose options come from a division's policy, not the field spec.
+const POLICY_DIMENSION_FIELD = { materiality: "materiality", complexity: "complexity" };
+
+// Build the input control for one field spec. For the risk fields the option list comes
+// from the entity's DIVISION policy (falling back to the spec's constant options / 1-3).
+function inputControl(id, spec, division) {
   if (spec.type === "choice") {
-    const opts = ["", ...spec.options].map((o) => "<option>" + esc(o) + "</option>").join("");
+    let options = spec.options;
+    if (spec.key === "rag_rating") options = Policy.ratingNames(division) || options;
+    else if (POLICY_DIMENSION_FIELD[spec.key]) {
+      options = Policy.dimensionBandNames(POLICY_DIMENSION_FIELD[spec.key], division) || options;
+    }
+    const opts = ["", ...options].map((o) => "<option>" + esc(o) + "</option>").join("");
     return '<select id="' + id + '">' + opts + "</select>";
   }
   if (spec.type === "tier") {
-    // Tiers 1-3 (mission critical / important / not important); mirrors TIER_MAX.
-    const opts = ["", 1, 2, 3].map((o) => "<option>" + esc(o) + "</option>").join("");
+    // The division's Mission-Criticality band scores (fallback tiers 1-3).
+    const tiers = Policy.tierScores(division) || [1, 2, 3];
+    const opts = ["", ...tiers].map((o) => "<option>" + esc(o) + "</option>").join("");
     return '<select id="' + id + '">' + opts + "</select>";
   }
   if (spec.type === "date") return '<input id="' + id + '" type="date">';

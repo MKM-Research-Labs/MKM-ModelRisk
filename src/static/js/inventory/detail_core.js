@@ -108,12 +108,12 @@ const Detail = {
       // The RAG rating is the governed
       // one, and a second, differently-derived verdict in the header invited the
       // question "where does that come from?" without answering it.
-      '<div style="margin-top:8px">' + tierBadge(d.tier) + ' <span class="muted">' +
-      esc(tierFullLabel(d.tier)) + "</span></div>" +
+      '<div style="margin-top:8px">' + tierBadge(d.tier, d.division) + ' <span class="muted">' +
+      esc(tierFullLabel(d.tier, d.division)) + "</span></div>" +
       '<div class="dh-dates">' + dates + "</div></div>" +
       '<div class="right"><div class="olabel">OWNER</div>' +
       '<div class="oname">' + fieldDisplay(d.owner) + "</div>" +
-      '<div style="margin-top:6px">' + ragBadge(d.rag_rating) + "</div></div></div>";
+      '<div style="margin-top:6px">' + ragBadge(d.rag_rating, d.division) + "</div></div></div>";
   },
 
   _tabbar(d) {

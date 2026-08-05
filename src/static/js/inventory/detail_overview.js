@@ -144,9 +144,9 @@ Object.assign(Detail, {
       // Show the owner's RAG alongside what the tier heatmap ("the table") says,
       // so any divergence needing MRC sign-off is visible at a glance.
       const tableRag = (this._risk.heatmap || {}).rag;
-      value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key]) +
+      value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key], d.division) +
         '<span class="muted" style="font-size:11px;margin-left:12px">Table</span> ' +
-        (tableRag ? ragBadge(tableRag) : '<span class="muted">&mdash;</span>');
+        (tableRag ? ragBadge(tableRag, d.division) : '<span class="muted">&mdash;</span>');
       // A proposed rating waits for the committee, so the stored rating does not
       // move when it is raised. Saying so here is the difference between "my
       // change was ignored" and "my change is with the MRC" — without it the
@@ -157,13 +157,14 @@ Object.assign(Detail, {
       if (pending.length) {
         const p = pending[pending.length - 1];
         value += '<div class="muted" style="font-size:11px;margin-top:4px">Proposed ' +
-          ragBadge(p.proposed_rag) + " &mdash; awaiting " +
+          ragBadge(p.proposed_rag, d.division) + " &mdash; awaiting " +
           esc(p.target_mrc || "MRC") +
           (p.meeting_id ? " at " + esc(p.meeting_id) : " (not yet on an agenda)") +
           "</div>";
       }
     } else if (key === "tier" && (d[key] || d[key] === 0)) {
-      value = tierBadge(d[key]) + ' <span class="muted">' + esc(tierFullLabel(d[key])) + "</span>";
+      value = tierBadge(d[key], d.division) + ' <span class="muted">' +
+        esc(tierFullLabel(d[key], d.division)) + "</span>";
     } else if (key === "source_module" && d[key]) {
       value = '<span class="code">' + esc(d[key]) + "</span>";
     } else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
@@ -242,7 +243,8 @@ Object.assign(Detail, {
   _edit(f, current) {
     const row = document.getElementById("row-" + f.key);
     row.innerHTML = '<div class="k">' + esc(f.label) + '</div><div class="editor">' +
-      inputControl("ed-input", f) + '<button class="btn small primary" id="ed-save">Save…</button>' +
+      inputControl("ed-input", f, (this._model.data || {}).division) +
+      '<button class="btn small primary" id="ed-save">Save…</button>' +
       '<button class="btn small" id="ed-cancel">Cancel</button></div>';
     const input = document.getElementById("ed-input");
     if (current !== null && current !== undefined) input.value = current;
