@@ -8,6 +8,7 @@
 // using its last approved (or the firm-wide seed) policy until the MRC signs the draft off.
 const RiskEditor = {
   _division: null, _divisions: [], _policy: null, _state: "seed", _box: null,
+  _sub: "dimensions",   // active sub-tab: dimensions | ratings | grids
 
   async render(container) {
     this._box = container;
@@ -78,6 +79,8 @@ const RiskEditor = {
     const divSel = '<select id="rp-div">' + this._divisions.map((d) =>
       '<option' + (d === this._division ? " selected" : "") + ">" + esc(d) + "</option>").join("") +
       "</select>";
+    const sub = (k, label) => '<button class="dtab' + (this._sub === k ? " active" : "") +
+      '" data-rp-sub="' + k + '">' + label + "</button>";
     this._box.innerHTML =
       '<div class="row" style="justify-content:space-between;align-items:center">' +
       '<div class="row" style="align-items:center;gap:8px"><label class="muted" style="font-size:11px">Division</label>' +
@@ -87,14 +90,18 @@ const RiskEditor = {
       '<p class="lead muted" style="font-size:12px;max-width:74ch">Define this division\'s risk ' +
       "vocabulary. Edits save as a draft and are proposed to the division's MRC — models keep " +
       "using the last approved (or firm-wide seed) policy until the committee signs it off.</p>" +
-      '<div id="rp-dims"></div>' +
-      '<div class="section-header" style="margin-top:18px">Overall risk ratings</div>' +
-      '<p class="muted" style="font-size:11px">The ratings a model can carry. The score is the ' +
-      "completeness-audit escalation multiplier.</p><div id=\"rp-ratings\"></div>" +
-      '<div class="section-header" style="margin-top:18px">Risk tables</div>' +
-      '<p class="muted" style="font-size:11px">Generated from the dimensions — one ' +
-      "Materiality × Complexity table per Mission-Criticality band. Pick each cell's rating.</p>" +
-      '<div id="rp-grids"></div>' +
+      // Three sub-tabs, matching the Admin mockup: Dimensions | Risk Ratings | Risk Tables.
+      '<div class="dtabs" id="rp-subtabs">' + sub("dimensions", "Dimensions") +
+      sub("ratings", "Risk Ratings") + sub("grids", "Risk Tables") + "</div>" +
+      '<section data-rp="dimensions"><p class="muted" style="font-size:11px">Each dimension ' +
+      "is an ordered set of bands — set each band's name, colour, explanation and score, and " +
+      'add or remove bands as the division needs.</p><div id="rp-dims"></div></section>' +
+      '<section data-rp="ratings"><p class="muted" style="font-size:11px">The ratings a model ' +
+      "can carry. The score is the completeness-audit escalation multiplier.</p>" +
+      '<div id="rp-ratings"></div></section>' +
+      '<section data-rp="grids"><p class="muted" style="font-size:11px">Generated from the ' +
+      "dimensions — one Materiality × Complexity table per Mission-Criticality band. Pick each " +
+      'cell\'s rating.</p><div id="rp-grids"></div></section>' +
       '<div class="section-header" style="margin-top:18px">Risk Policy document</div>' +
       '<p class="muted" style="font-size:11px">The division\'s formal written Risk Policy ' +
       "(PDF or Word) — a separate document from the categorisation configured above, sent to " +
@@ -105,11 +112,27 @@ const RiskEditor = {
     document.getElementById("rp-div").onchange = (e) => {
       this._division = e.target.value; this._load();
     };
+    this._box.querySelectorAll("[data-rp-sub]").forEach((b) => {
+      b.onclick = () => { this._sub = b.getAttribute("data-rp-sub"); this._showSub(); };
+    });
     this._drawStatus();
     this._drawDims();
     this._drawRatings();
     this._drawGrids();
     this._drawDocument();
+    this._showSub();
+  },
+
+  // Show the active sub-tab's section, hide the others. `this._sub` survives the
+  // full re-renders triggered by adding/removing bands, so the tab stays put.
+  _showSub() {
+    const active = this._sub || "dimensions";
+    this._box.querySelectorAll("[data-rp-sub]").forEach((b) => {
+      b.classList.toggle("active", b.getAttribute("data-rp-sub") === active);
+    });
+    this._box.querySelectorAll("[data-rp]").forEach((s) => {
+      s.hidden = s.getAttribute("data-rp") !== active;
+    });
   },
 
   _drawDocument() {
