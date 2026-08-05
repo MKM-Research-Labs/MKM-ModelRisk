@@ -33,30 +33,24 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Any
 
-from config.governance import (
-    EVENTS_WINDOW_DAYS,
-    RISK_HEATMAP_BY_TIER,
-    RISK_TIER_LABELS,
-)
+from config.governance import EVENTS_WINDOW_DAYS
+from src.governance.risk_policy import get_risk_policy
 
 
-def _tier_band(tier: Any) -> int:
-    """Map a model tier to its heatmap band (1/2/3).
-
-    Tiers are 1-3; the clamp is a safety net for any out-of-range legacy value,
-    and anything missing or unparseable is treated as Tier 1 (most conservative)."""
+def _mission_criticality_band(policy: dict, tier: Any) -> dict:
+    """The Mission-Criticality band a model's ``tier`` selects, from the division's
+    policy. A band's score is its tier value, so we match by score; an out-of-range
+    tier clamps to the nearest band and a missing/unparseable one is the most
+    conservative (lowest-score) band — mirroring the legacy 1-3 clamp."""
+    bands = policy["dimensions"]["mission_criticality"]["bands"]
+    by_score = {band["score"]: band for band in bands}
     try:
-        return min(max(int(tier), 1), 3)
+        wanted = int(tier)
     except (TypeError, ValueError):
-        return 1
-
-
-def _heatmap_rag(tier: Any, materiality: str | None, complexity: str | None) -> str | None:
-    """Heatmap lookup: the owner-set Materiality × Complexity cell for the
-    model's tier band → RAG."""
-    if not materiality or not complexity:
-        return None
-    return RISK_HEATMAP_BY_TIER[_tier_band(tier)].get((materiality, complexity))
+        return by_score[min(by_score)]
+    if wanted in by_score:
+        return by_score[wanted]
+    return by_score[min(max(wanted, min(by_score)), max(by_score))]
 
 
 def _events_in_window(data: dict[str, Any], as_of: str) -> int:
@@ -83,24 +77,30 @@ def _events_in_window(data: dict[str, Any], as_of: str) -> int:
     return count
 
 
-def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
+def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dict[str, Any]:
     """Return the risk rating envelope: the heatmap cell, the owner's recorded
-    rating, whether the MRC has signed that cell off, and the events count."""
+    rating, whether the MRC has signed that cell off, and the events count.
+
+    The heatmap is resolved from the model's DIVISION policy (the live, MRC-approved
+    one, or the firm-wide seed for a division that has not set its own), so different
+    divisions can carry different risk vocabularies and grids."""
     materiality = data.get("materiality")
     complexity = data.get("complexity")
     tier = data.get("tier")
-    band = _tier_band(tier)
-    table = RISK_HEATMAP_BY_TIER[band]
+    policy = get_risk_policy(data.get("division") or "", config)
+    band = _mission_criticality_band(policy, tier)
+    table = policy["grid"].get(band["name"], {})
     heatmap = {
         "tier": tier,
-        "tier_band": band,
-        "tier_label": RISK_TIER_LABELS[band],
+        "tier_band": band["score"],
+        "tier_label": band["name"],
         "materiality": materiality,
         "complexity": complexity,
-        "rag": _heatmap_rag(tier, materiality, complexity),
-        # The tier's full lookup as pipe-joined keys so the UI can colour every
-        # cell without knowing the mapping itself (R1: config is the single truth).
-        "grid": {f"{m}|{c}": rag for (m, c), rag in table.items()},
+        # The owner-set Materiality × Complexity cell → risk rating (only when both axes set).
+        "rag": table.get(f"{materiality}|{complexity}") if materiality and complexity else None,
+        # The band's full lookup as pipe-joined keys so the UI can colour every cell
+        # without knowing the mapping itself (the policy is the single truth).
+        "grid": dict(table),
     }
     # A rating is "signed off" only once the MRC has approved the current heatmap
     # RAG — i.e. the most recent sign-off recorded that exact rating. This holds
@@ -124,4 +124,8 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str) -> dict[str, Any]:
         "events_in_window": _events_in_window(data, as_of),
         "events_window_days": EVENTS_WINDOW_DAYS,
         "signoff_history": signoff_history,
+        # Each risk rating's numeric score, from the division's policy. The completeness
+        # audit escalates on this, so a division's own multipliers drive its remediation.
+        "rag_scores": {rating["name"]: rating["score"]
+                       for rating in policy.get("risk_ratings", [])},
     }
