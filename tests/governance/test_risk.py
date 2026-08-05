@@ -64,6 +64,17 @@ def test_heatmap_response_includes_full_grid():
     assert len(grid) == 9
 
 
+def test_envelope_carries_policy_axes_and_rating_colours():
+    """The heatmap echoes the division's axis vocabulary and rating colours so the UI
+    draws and shades the grid from policy, not hardcoded literals."""
+    hm = compute_risk_rating(
+        {"materiality": "High", "complexity": "Low", "tier": 1}, as_of=AS_OF)["heatmap"]
+    assert hm["axes"]["materiality"] == ["Low", "Medium", "High"]
+    assert hm["axes"]["complexity"] == ["Low", "Medium", "High"]
+    assert hm["rating_colours"]["Red"] == "#d32f2f"
+    assert hm["rating_colours"]["Green"] == "#388e3c"
+
+
 def _hm(materiality, complexity, tier):
     return compute_risk_rating(
         {"materiality": materiality, "complexity": complexity, "tier": tier}, as_of=AS_OF,

@@ -101,6 +101,15 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dic
         # The band's full lookup as pipe-joined keys so the UI can colour every cell
         # without knowing the mapping itself (the policy is the single truth).
         "grid": dict(table),
+        # The dimension band names in policy order, so the UI draws the axes from the
+        # division's own vocabulary rather than hardcoded Low/Medium/High literals.
+        "axes": {
+            "materiality": [b["name"] for b in policy["dimensions"]["materiality"]["bands"]],
+            "complexity": [b["name"] for b in policy["dimensions"]["complexity"]["bands"]],
+        },
+        # Each rating's colour, so the UI shades every cell from the division policy
+        # instead of a hardcoded RAG palette.
+        "rating_colours": {r["name"]: r["colour"] for r in policy["risk_ratings"]},
     }
     # A rating is "signed off" only once the MRC has approved the current heatmap
     # RAG — i.e. the most recent sign-off recorded that exact rating. This holds
