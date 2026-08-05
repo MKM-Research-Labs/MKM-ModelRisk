@@ -29,8 +29,12 @@
 // the config specs via _row. They had been dropped from these lists, which left them
 // uneditable while the audit still expected them.
 const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebase", "type", "vendor",
-  "short_name", "methodology", "methodology_rationale", "source_module", "materiality", "complexity",
-  "tier", "tier_rationale", "rating_rationale"];
+  "short_name", "methodology", "methodology_rationale", "source_module"];
+// The owner's risk assessment (what places the model on the heatmap) lives on the Risk
+// tab, next to the grid it drives — not the Overview. Only the headline rag_rating (owner
+// vs table) stays on Overview, under Governance.
+const RISK_ASSESSMENT_FIELDS = ["tier", "materiality", "complexity", "tier_rationale",
+  "rating_rationale"];
 // Governance column. Note: recertification / review_frequency / last_review_date remain
 // intentionally off the overview (the MRC sets sign-off + next review at sign-off); that
 // they are still audit-scored is a separate, open decision, not this regression.
@@ -161,8 +165,15 @@ const Detail = {
       return;
     }
     if (this._tab === "risk") {
-      box.innerHTML = DetailTabs.risk(this._risk, false);  // events are product-only
-      this._bindSignoffRequest(); return;
+      box.innerHTML =
+        '<div class="section-header">Risk assessment</div>' +
+        '<p class="muted" style="font-size:12px;margin:0 0 8px">The owner sets these; they place ' +
+        "the model on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
+        RISK_ASSESSMENT_FIELDS.map((k) => this._row(k, d)).join("") +
+        DetailTabs.risk(this._risk, false);  // events are product-only
+      this._bindEdits();          // the risk-assessment fields are editable here now
+      this._bindSignoffRequest();
+      return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }

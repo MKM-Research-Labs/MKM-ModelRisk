@@ -24,7 +24,9 @@
 // from detail_edit.js, loaded after. The identifier is derived from the bindings.
 const PRODUCT_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
 const PRODUCT_OVERVIEW_ORG = ["division", "line_of_business"];
-const PRODUCT_OVERVIEW_CLASS = ["tier", "materiality", "complexity"];
+// The risk assessment (what places the product on the heatmap) lives on the Risk tab,
+// next to the grid it drives; only the headline rag_rating stays on Overview.
+const PRODUCT_RISK_ASSESSMENT = ["tier", "materiality", "complexity"];
 // The standing description of how the product is monitored. The results
 // themselves are no longer a scalar field — they are timestamped uploads under
 // the "Monitoring" category, on the Docs tab's Monitoring sub-tab.
@@ -139,7 +141,17 @@ const ProductDetail = {
       return;
     }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); this._bindDanger(); return; }
-    if (this._tab === "risk") { box.innerHTML = DetailTabs.risk(this._risk); return; }
+    if (this._tab === "risk") {
+      box.innerHTML =
+        '<div class="section-header">Risk assessment</div>' +
+        '<p class="muted" style="font-size:12px;margin:0 0 8px">The owner sets these; they place ' +
+        "the product on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
+        PRODUCT_RISK_ASSESSMENT.map((k) => this._row(k, d)).join("") +
+        DetailTabs.risk(this._risk);
+      this._bindEdits();
+      this._bindSignoffRequest();
+      return;
+    }
     if (this._tab === "linkage") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "docs") {
@@ -195,7 +207,6 @@ const ProductDetail = {
       this._componentRows(d) + bindings +
       this._section("Product", PRODUCT_OVERVIEW_PRODUCT, d) +
       this._section("Organisation", PRODUCT_OVERVIEW_ORG, d) +
-      this._section("Classification", PRODUCT_OVERVIEW_CLASS, d) +
       this._section("Monitoring", PRODUCT_OVERVIEW_MONITORING, d);
     const right = this._section("Risk rating", ["rag_rating"], d) + this._signoffPanel(d) +
       this._section("Governance &amp; review", PRODUCT_OVERVIEW_GOV, d) +
