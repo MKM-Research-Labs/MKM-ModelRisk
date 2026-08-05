@@ -43,11 +43,22 @@ from src.governance.mrc import (
 )
 from src.governance.mrc.pack import TectonicNotFound
 from src.governance.mrc_settings import get_settings
+from src.governance.reference import get_reference_lists
 from src.web._helpers import request_actor
 from src.web.api_mrc._bp import mrc_bp
 
 AUDIT_SCOPE = "meeting_audit"
 AUDIT_KIND = "completeness_audit"
+
+
+def _actor_name(actor: str) -> str:
+    """Resolve an actor identity (an email) to the person's name from the People
+    directory, so the audit records who ran it by name rather than by login.
+    Falls back to the raw identity when it isn't a registered person."""
+    for person in (get_reference_lists().get("people") or []):
+        if person.get("email") == actor:
+            return person.get("name") or actor
+    return actor
 
 
 def _audit_item(meeting: dict) -> dict | None:
@@ -108,7 +119,7 @@ def run_completeness_audit(meeting_id: str):
             "audit_filename": meta["filename"],
             "audit_original_name": meta["original_name"],
             "audit_generated_at": datetime.now().isoformat(timespec="minutes"),
-            "audit_generated_by": request_actor(),
+            "audit_generated_by": _actor_name(request_actor()),
             "audit_entities": str(len(rows)),
             "audit_findings": str(findings),
         },

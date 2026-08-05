@@ -154,10 +154,10 @@ Object.assign(MeetingDetail, {
       dis + ">" + esc(item.audit_comfort_note || "") + "</textarea></div></div>";
     const runBtn = '<button class="btn small" data-audit-run="' + esc(item.item_id) + '"' +
       (closed ? ' disabled title="Meeting closed"' : "") + ">" + (has ? "Re-run audit" : "Run audit") + "&hellip;</button>";
-    const signoff = done ? statusBadge("Completed")
+    const review = done ? statusBadge("Completed")
       : '<button class="btn small primary" data-ag-confirm="completeness_audit" data-ag-id="' +
-        esc(item.item_id) + '"' + (has ? "" : ' disabled title="Run the audit first"') + ">Sign off</button>";
-    return this._agendaShell(item, idx, body, runBtn + " " + signoff);
+        esc(item.item_id) + '"' + (has ? "" : ' disabled title="Run the audit first"') + ">Mark reviewed</button>";
+    return this._agendaShell(item, idx, body, runBtn + " " + review);
   },
 
   // Run (or re-run) the scoped completeness audit; the PDF compile is synchronous

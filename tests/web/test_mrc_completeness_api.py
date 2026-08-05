@@ -66,6 +66,17 @@ def test_run_generates_and_stamps_item(client, monkeypatch):
     assert item["audit_entities"] == "1", "only the one in-scope model is audited"
 
 
+def test_run_records_generator_by_name(client, monkeypatch):
+    """The audit records who ran it by their People-directory name, not their login
+    identity — committee records name people, not emails."""
+    client.post("/api/reference/collections/people",
+                json={"fields": {"name": "Alice Adams", "email": "alice@corp"},
+                      "confirmed": True}, headers=HEADERS)
+    _scoped_meeting(client, monkeypatch)
+    client.post("/api/meetings/MTG1/completeness-audit/run", json={}, headers=HEADERS)
+    assert _audit_item(client)["audit_generated_by"] == "Alice Adams"
+
+
 def test_run_serves_latest_pdf(client, monkeypatch):
     _scoped_meeting(client, monkeypatch)
     client.post("/api/meetings/MTG1/completeness-audit/run", json={}, headers=HEADERS)
