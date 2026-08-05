@@ -87,7 +87,9 @@ document.addEventListener("DOMContentLoaded", function () {
     if (document.getElementById("m-list")) Inventory.loadList();
   };
   OrgScope.onChange(refreshInventory);
-  showTab("inventory");
+  // Load the risk policy first so badges/heatmaps colour from it on the first render,
+  // then show the inventory. Failure is non-fatal — helpers fall back to the palette.
+  Policy.load().then(function () { showTab("inventory"); });
   // Populate the scope dropdowns, then re-filter (applies any saved selection).
   OrgScope.init().then(refreshInventory);
   // The actor picker lists real People, so it loads with the reference data.
