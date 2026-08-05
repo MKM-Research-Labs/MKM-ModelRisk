@@ -301,11 +301,21 @@ const RiskEditor = {
         return '<td class="hcell" style="background:' + bg + '"><select data-mc="' + esc(mc) +
           '" data-cell="' + esc(a + "|" + c) + '">' + opts(rag) + "</select></td>";
       }).join("") + "</tr>").join("");
+    const mcLabel = p.dimensions.mission_criticality.label || "Mission Criticality";
+    const bands = p.dimensions.mission_criticality.bands;
     document.getElementById("rp-grids").innerHTML =
+      '<p class="muted" style="font-size:11px;margin:0 0 12px">' + bands.length +
+      " tables — one per " + esc(mcLabel) + " band (rows = " +
+      esc(p.dimensions.materiality.label || "Materiality") + ", columns = " +
+      esc(p.dimensions.complexity.label || "Complexity") + ").</p>" +
       '<div style="display:flex;flex-wrap:wrap;gap:22px">' +
-      p.dimensions.mission_criticality.bands.map((b) =>
-        '<div><div class="grid-cap" style="font-size:11px;font-weight:700;text-transform:uppercase;' +
-        'color:var(--muted);margin-bottom:6px">' + esc(b.name) + "</div>" +
+      bands.map((b) =>
+        '<div><div class="grid-cap" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
+        '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' +
+        esc(b.colour || "#9e9e9e") + '"></span>' +
+        '<span style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em">' +
+        esc(mcLabel) + "</span>" +
+        '<span style="font-size:14px;font-weight:700;color:var(--text)">' + esc(b.name) + "</span></div>" +
         '<table class="heatmap"><thead><tr><th></th>' +
         comp.map((c) => "<th>" + esc(c) + "</th>").join("") + "</tr></thead><tbody>" +
         rowsFor(b.name) + "</tbody></table></div>").join("") + "</div>";
