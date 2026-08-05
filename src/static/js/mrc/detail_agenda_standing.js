@@ -69,7 +69,8 @@ Object.assign(MeetingDetail, {
     if (kind === "review_signoff") return this._agendaShell(item, idx, this._signoffStatusList(), complete("Mark reviewed"));
     if (kind === "review_analysis") return this._agendaShell(item, idx, this._analysisStatusList(), complete("Mark reviewed"));
     return this._agendaShell(item, idx,   // aob
-      '<div class="muted" style="margin-top:8px;font-size:12px">Any other business raised by members.</div>',
+      '<div class="muted" style="margin-top:8px;font-size:12px">Any other business raised by members.</div>' +
+      this._categorisationAob(),
       complete("Complete"));
   },
 
@@ -125,6 +126,13 @@ Object.assign(MeetingDetail, {
       const id = btn.getAttribute("data-ag-id");
       btn.onclick = () => self._confirmStanding(kind, id);
     });
+    // The risk-categorisation sign-off raised under AOB (present only when the division
+    // has a pending draft).
+    const division = (self._meeting.data || {}).division;
+    const approve = document.getElementById("aob-cat-approve");
+    if (approve) approve.onclick = () => self._decidePolicy(division, "approve");
+    const reject = document.getElementById("aob-cat-reject");
+    if (reject) reject.onclick = () => self._decidePolicy(division, "reject");
     document.querySelectorAll("[data-prevmin]").forEach(function (sel) {
       const id = sel.getAttribute("data-prevmin");
       sel.onchange = function () {
