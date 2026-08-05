@@ -30,6 +30,8 @@ from config.governance import (
     TIER_LABELS,
 )
 from src.governance.errors import DomainError
+from src.governance.model_inventory._rules import decide_update_field
+from src.governance.model_inventory._state import ModelState
 from src.governance.risk_policy import (
     approve_policy,
     default_policy,
@@ -142,3 +144,21 @@ def test_missing_dimension_is_rejected():
     del policy["dimensions"]["complexity"]
     with pytest.raises(DomainError):
         propose_policy(division="DivBadDims", policy=policy, actor="a")
+
+
+# --- Model validation resolves choices from the model's division policy (P3) ---
+
+def test_field_validation_follows_the_divisions_approved_policy():
+    div = "DivExtraRating"
+    policy = default_policy()
+    policy["risk_ratings"].append(
+        {"name": "Blue", "colour": "#1565c0", "explanation": "An extra rating", "score": 0.9})
+    propose_policy(division=div, policy=policy, actor="admin")
+    approve_policy(division=div, actor="mrc")
+    # A model in that division may carry the division's new rating...
+    in_div = ModelState(exists=True, retired=False, fields={"division": div})
+    decide_update_field(in_div, field="rag_rating", value="Blue")  # does not raise
+    # ...but a model in a division still on the firm-wide seed may not.
+    seeded = ModelState(exists=True, retired=False, fields={"division": "SeedDivision"})
+    with pytest.raises(DomainError):
+        decide_update_field(seeded, field="rag_rating", value="Blue")

@@ -32,8 +32,6 @@ from config.governance import (
     EDITABLE_FIELDS,
     FIELD_CHOICES,
     SIGNOFF_COLLECTIONS,
-    TIER_MAX,
-    TIER_MIN,
 )
 from src.governance import collections as coll
 from src.governance.errors import DomainError
@@ -44,14 +42,34 @@ from src.governance.model_inventory._state import (
     EVENT_RETIRED,
     ModelState,
 )
+from src.governance.risk_policy import get_risk_policy
+
+# Risk fields whose allowed values come from the DIVISION's live policy, not a global
+# constant: the bands of a dimension, or the overall risk-rating names.
+_POLICY_CHOICE_FIELDS = {
+    "materiality": lambda policy: [b["name"] for b in policy["dimensions"]["materiality"]["bands"]],
+    "complexity": lambda policy: [b["name"] for b in policy["dimensions"]["complexity"]["bands"]],
+    "rag_rating": lambda policy: [b["name"] for b in policy["risk_ratings"]],
+}
 
 
-def _validate_field(field: str, value: Any) -> None:
+def _validate_field(field: str, value: Any, division: Any) -> None:
+    """Validate one field. Risk fields (tier == Mission Criticality, materiality,
+    complexity, rag_rating) are checked against the model's DIVISION policy; everything
+    else against the global choice sets."""
     if field == "tier":
         if isinstance(value, bool) or not isinstance(value, int):
             raise DomainError("tier must be an integer")
-        if not TIER_MIN <= value <= TIER_MAX:
-            raise DomainError(f"tier must be in [{TIER_MIN}, {TIER_MAX}]")
+        # Mission-Criticality band scores are the valid tier values for this division.
+        bands = get_risk_policy(division or "")["dimensions"]["mission_criticality"]["bands"]
+        scores = [b["score"] for b in bands]
+        if value not in scores:
+            allowed = ", ".join(str(s) for s in sorted(scores))
+            raise DomainError(f"tier must be one of: {allowed}")
+    elif field in _POLICY_CHOICE_FIELDS:
+        allowed = _POLICY_CHOICE_FIELDS[field](get_risk_policy(division or ""))
+        if value not in allowed:
+            raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
     elif field in FIELD_CHOICES:
         if value not in FIELD_CHOICES[field]:
             allowed = ", ".join(FIELD_CHOICES[field])
@@ -65,10 +83,13 @@ def decide_register(
         raise DomainError(f"model {model_id} is already registered")
     if not model_id or not name:
         raise DomainError("model_id and name are required")
+    # Risk fields are validated against this model's division policy — set in the same
+    # command at registration.
+    division = fields.get("division")
     for field, value in fields.items():
         if field not in EDITABLE_FIELDS:
             raise DomainError(f"unknown field: {field}")
-        _validate_field(field, value)
+        _validate_field(field, value, division)
     payload: dict[str, Any] = {"model_id": model_id, "name": name}
     payload.update(fields)
     return EVENT_REGISTERED, payload
@@ -83,7 +104,10 @@ def decide_update_field(
         raise DomainError("cannot edit a retired model")
     if field not in EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
-    _validate_field(field, value)
+    # Editing division itself changes which policy governs the risk fields; otherwise
+    # use the model's current division.
+    division = value if field == "division" else state.fields.get("division")
+    _validate_field(field, value, division)
     # Capture the prior value so the audit trail can show old -> new. Older
     # events predate this and simply have no "from" (rendered as blank).
     return EVENT_FIELD_UPDATED, {
