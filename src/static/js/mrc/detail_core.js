@@ -168,11 +168,15 @@ const MeetingDetail = {
     // Participants moved out to the persistent left panel — no longer a tab.
     const tabs = [
       ["agenda", "Agenda"], ["models_in_scope", "Signoff"], ["actions", "Actions"],
-      ["minutes", "Minutes"],
+      ["minutes", "Minutes"], ["risk_policy", "Risk Policy"],
     ];
-    return '<div class="dtabs">' + tabs.map((t) =>
-      '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-mtab="' + t[0] + '">' +
-      esc(t[1]) + " (" + n(t[0]) + ")</button>").join("") + "</div>";
+    return '<div class="dtabs">' + tabs.map((t) => {
+      // The Risk Policy tab carries no per-meeting count (it reflects the division's
+      // pending draft, fetched on demand).
+      const label = t[0] === "risk_policy" ? esc(t[1]) : esc(t[1]) + " (" + n(t[0]) + ")";
+      return '<button class="dtab' + (t[0] === this._tab ? " active" : "") +
+        '" data-mtab="' + t[0] + '">' + label + "</button>";
+    }).join("") + "</div>";
   },
 
   _renderContent() {
@@ -188,6 +192,7 @@ const MeetingDetail = {
     // Minutes has a bespoke form: presenter from the participants, a related
     // model/product picker, and an expandable text box.
     if (this._tab === "minutes") { box.innerHTML = this._minutesContent(); this._bindMinutes(); return; }
+    if (this._tab === "risk_policy") { box.innerHTML = '<div class="empty">Loading…</div>'; this._renderRiskPolicy(box); return; }
     const spec = this.collSpec(this._tab);
     // Decisions / actions accept multiple new entries at once; participants and
     // minutes have their own bespoke tabs.
@@ -195,6 +200,59 @@ const MeetingDetail = {
     box.innerHTML = Collections.render(d, { collections: [spec] }, false, bulk);
     Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
       false, () => this.show(this._id, this._tab), d, bulk);
+  },
+
+  // The division's pending risk-policy draft, ratified (or declined) here at its MRC.
+  async _renderRiskPolicy(box) {
+    const division = (this._meeting.data || {}).division;
+    if (!division) {
+      box.innerHTML = '<div class="empty">This meeting has no division, so there is no ' +
+        "risk policy for it to sign off.</div>";
+      return;
+    }
+    const detail = await App.get("/api/risk-policy/" + encodeURIComponent(division));
+    const header = '<div class="section-header">Risk policy sign-off — ' + esc(division) + "</div>";
+    if (detail.state !== "draft") {
+      box.innerHTML = header + '<div class="empty">No risk-policy change is awaiting ' +
+        "sign-off. The division is on " + (detail.state === "approved" ?
+        "its approved policy" : "the firm-wide seed") + ".</div>";
+      return;
+    }
+    const draft = detail.draft;
+    const ratings = (draft.risk_ratings || []).map((r) =>
+      '<span class="ragdot"><span class="dot" style="background:' + esc(r.colour) +
+      '"></span><span style="color:' + esc(r.colour) + '">' + esc(r.name) +
+      "</span></span>").join(" &nbsp; ");
+    const dims = ["mission_criticality", "materiality", "complexity"].map((k) => {
+      const dim = draft.dimensions[k];
+      return "<b>" + esc(dim.label) + ":</b> " +
+        dim.bands.map((b) => esc(b.name)).join(", ");
+    }).join("<br>");
+    const doc = detail.document
+      ? '<div style="margin-top:6px"><a href="/api/risk-policy/' + encodeURIComponent(division) +
+        '/document" target="_blank">↓ ' + esc(detail.document.original_name) + "</a></div>"
+      : '<div class="muted" style="margin-top:6px">No policy document uploaded.</div>';
+    box.innerHTML = header +
+      '<p class="muted">' + esc(division) + " has proposed a revised risk policy. Approving it " +
+      "makes it the live policy for this division's models; the current policy stays in force " +
+      "until then.</p>" +
+      '<div class="inforow"><div class="k">Dimensions</div><div class="v">' + dims + "</div></div>" +
+      '<div class="inforow"><div class="k">Risk ratings</div><div class="v">' + ratings + "</div></div>" +
+      '<div class="inforow"><div class="k">Policy document</div><div class="v">' + doc + "</div></div>" +
+      '<div class="row" style="margin-top:12px;gap:8px">' +
+      '<button class="btn primary" id="rp-approve">Approve &amp; make live</button>' +
+      '<button class="btn danger" id="rp-reject">Reject</button></div>';
+    document.getElementById("rp-approve").onclick = () => this._decidePolicy(division, "approve");
+    document.getElementById("rp-reject").onclick = () => this._decidePolicy(division, "reject");
+  },
+
+  async _decidePolicy(division, action) {
+    try {
+      await App.send("POST", "/api/risk-policy/" + encodeURIComponent(division) + "/" + action,
+        { meeting_id: this._id, confirmed: true });
+      App.toast("Risk policy " + (action === "approve" ? "approved and live" : "rejected"), "ok");
+      this._render();
+    } catch (e) { App.toast(e.message || "failed", "error"); }
   },
 
   _bindInfo(d) {
