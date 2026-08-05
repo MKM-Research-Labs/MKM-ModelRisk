@@ -82,7 +82,7 @@ const RiskEditor = {
       '<div class="row" style="justify-content:space-between;align-items:center">' +
       '<div class="row" style="align-items:center;gap:8px"><label class="muted" style="font-size:11px">Division</label>' +
       divSel + '<a href="/api/risk-policy/' + encodeURIComponent(this._division) +
-      '/sign-off.pdf" target="_blank" style="font-size:12px">↓ PDF</a></div>' +
+      '/categorisation.pdf" target="_blank" style="font-size:12px">↓ Categorisation PDF</a></div>' +
       '<div id="rp-status"></div></div>' +
       '<p class="lead muted" style="font-size:12px;max-width:74ch">Define this division\'s risk ' +
       "vocabulary. Edits save as a draft and are proposed to the division's MRC — models keep " +
@@ -95,9 +95,10 @@ const RiskEditor = {
       '<p class="muted" style="font-size:11px">Generated from the dimensions — one ' +
       "Materiality × Complexity table per Mission-Criticality band. Pick each cell's rating.</p>" +
       '<div id="rp-grids"></div>' +
-      '<div class="section-header" style="margin-top:18px">Policy document</div>' +
-      '<p class="muted" style="font-size:11px">The formal written risk policy for this ' +
-      "division (PDF or Word), sent to the MRC alongside the configuration above.</p>" +
+      '<div class="section-header" style="margin-top:18px">Risk Policy document</div>' +
+      '<p class="muted" style="font-size:11px">The division\'s formal written Risk Policy ' +
+      "(PDF or Word) — a separate document from the categorisation configured above, sent to " +
+      "the MRC alongside it.</p>" +
       '<div class="row" style="align-items:center;gap:10px"><span id="rp-doc-current"></span>' +
       '<input type="file" id="rp-doc-file" accept=".pdf,.doc,.docx">' +
       '<button class="btn small" id="rp-doc-upload">Upload</button></div>';

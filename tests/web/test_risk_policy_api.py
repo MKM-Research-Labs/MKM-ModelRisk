@@ -103,8 +103,8 @@ def test_approve_without_a_draft_is_rejected(client):
     assert resp.status_code >= 400
 
 
-def test_sign_off_pdf_renders(client):
-    resp = client.get("/api/risk-policy/PdfDiv/sign-off.pdf")
+def test_categorisation_pdf_renders(client):
+    resp = client.get("/api/risk-policy/PdfDiv/categorisation.pdf")
     assert resp.status_code == 200
     assert resp.mimetype == "application/pdf"
     assert resp.data[:4] == b"%PDF"

@@ -100,12 +100,13 @@ def reject_risk_policy(division: str):
     return jsonify(_detail(division))
 
 
-@risk_policy_bp.get("/api/risk-policy/<division>/sign-off.pdf")
-def risk_policy_signoff_pdf(division: str):
-    """The division's proposed (or live) risk policy as a PDF for the MRC to sign off."""
+@risk_policy_bp.get("/api/risk-policy/<division>/categorisation.pdf")
+def risk_categorisation_pdf(division: str):
+    """The division's proposed (or live) risk categorisation as a PDF for the MRC to sign
+    off — distinct from the uploaded Risk Policy document."""
     pdf = render_policy_document_pdf(division, get_settings(), date.today().isoformat())
     return Response(pdf, mimetype="application/pdf", headers={
-        "Content-Disposition": 'inline; filename="' + division + ' Risk Policy.pdf"'})
+        "Content-Disposition": 'inline; filename="' + division + ' Risk Categorisation.pdf"'})
 
 
 @risk_policy_bp.post("/api/risk-policy/<division>/document")

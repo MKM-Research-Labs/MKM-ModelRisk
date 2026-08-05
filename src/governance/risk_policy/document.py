@@ -17,11 +17,15 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""The Risk Policy sign-off document: one PDF of a division's proposed risk policy.
+"""The Risk Categorisation document: one PDF of a division's proposed categorisation.
 
 Generated for the division's MRC to ratify — the three dimensions, the overall risk
 ratings (each with its colour, explanation and score) and the generated Materiality x
 Complexity grids per Mission-Criticality band — in the shared LaTeX house style.
+
+This is DISTINCT from the division's Risk Policy document, which is the formal written
+policy uploaded separately (see the ``document`` on the risk-policy store); the two are
+referenced against each other but are not the same artefact.
 """
 from __future__ import annotations
 
@@ -38,7 +42,7 @@ from src.governance.latex import (
 from src.governance.mrc.pack import compile_tex
 from src.governance.risk_policy._store import load
 
-DOC_TITLE = "Risk Policy"
+DOC_TITLE = "Risk Categorisation"
 
 _STATUS_SUBTITLE = {
     "draft": "Proposed for MRC sign-off",
@@ -109,13 +113,18 @@ def build_policy_document_tex(division: str, detail: dict, settings: dict, *,
     policy = detail.get("draft") or detail.get("live")
     org = (settings.get("fields") or {}).get("org_name", "")
     subtitle = _STATUS_SUBTITLE.get(detail.get("state"), DOC_TITLE)
+    # Division-qualified title so the running header on EVERY page names the division —
+    # the policy is owned and signed off at the division level.
+    doc_title = division + " " + DOC_TITLE
 
     intro = _section(
         "Purpose",
-        "This document sets out the risk policy for the \\textbf{" + _esc(division)
+        "This document sets out the risk categorisation for the \\textbf{" + _esc(division)
         + "} division, submitted to its Model Risk Committee for ratification. Once approved "
         "it governs how the division's models are placed on the risk grid, the ratings they "
-        "can carry, and the escalation weights applied in the completeness audit.\n")
+        "can carry, and the escalation weights applied in the completeness audit. It is "
+        "distinct from the division's formal written Risk Policy document, which is filed "
+        "separately.\n")
 
     dims = "".join(
         _band_table(policy["dimensions"][key]["bands"], "Score",
@@ -138,16 +147,17 @@ def build_policy_document_tex(division: str, detail: dict, settings: dict, *,
 
     doc_note = ""
     if detail.get("document"):
-        doc_note = _section("Supporting document",
-                            "The formal written policy \\textbf{"
+        doc_note = _section("Risk Policy document",
+                            "The division's formal written Risk Policy, \\textbf{"
                             + _wrappable(detail["document"]["original_name"])
-                            + "} is filed with this submission.\n")
+                            + "}, is filed alongside this categorisation.\n")
 
     return (
-        preamble(DOC_TITLE, org_name=org) + "\\begin{document}\n"
-        + front_matter(division + " --- Risk Policy", subtitle, org_name=org,
+        preamble(doc_title, org_name=org) + "\\begin{document}\n"
+        + front_matter(division + " --- Risk Categorisation", subtitle, org_name=org,
                        date=as_of, logo=logo, toc=True)
-        + history_page(as_of, "Risk policy submitted for MRC sign-off", org_name=org)
+        + history_page(as_of, "Risk categorisation for the " + division + " division "
+                       "submitted for MRC sign-off", org_name=org)
         + intro + dims_section + ratings_section + grids_section + doc_note
         + "\\end{document}\n"
     )
