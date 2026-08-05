@@ -17,8 +17,10 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Tests for the risk-policy registry HTTP API the console loads at startup."""
+"""Tests for the risk-policy HTTP API: the registry, per-division detail, and propose."""
 from __future__ import annotations
+
+from tests.web.conftest import HEADERS
 
 
 def test_registry_returns_seed_and_per_division_policies(client):
@@ -31,3 +33,32 @@ def test_registry_returns_seed_and_per_division_policies(client):
     assert isinstance(reg["divisions"], dict)
     for policy in reg["divisions"].values():
         assert policy["risk_ratings"] == reg["seed"]["risk_ratings"]
+
+
+def test_division_detail_defaults_to_the_seed(client):
+    detail = client.get("/api/risk-policy/UntouchedDivision").get_json()
+    assert detail["state"] == "seed"
+    assert detail["draft"] is None
+    assert detail["live"]["risk_ratings"] == detail["seed"]["risk_ratings"]
+
+
+def test_propose_saves_a_draft_without_going_live(client):
+    div = "TestProposeDiv"
+    policy = client.get(f"/api/risk-policy/{div}").get_json()["seed"]
+    policy["risk_ratings"][0]["colour"] = "#000000"
+    resp = client.post(f"/api/risk-policy/{div}/propose",
+                       json={"policy": policy, "confirmed": True}, headers=HEADERS)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["state"] == "draft"
+    assert body["draft"]["risk_ratings"][0]["colour"] == "#000000"
+    # The live policy is unchanged until the division's MRC signs the draft off.
+    assert body["live"]["risk_ratings"][0]["colour"] != "#000000"
+
+
+def test_propose_rejects_a_broken_policy(client):
+    policy = client.get("/api/risk-policy/BadDiv").get_json()["seed"]
+    policy["grid"] = {}  # no longer covers the Mission-Criticality bands
+    resp = client.post("/api/risk-policy/BadDiv/propose",
+                       json={"policy": policy, "confirmed": True}, headers=HEADERS)
+    assert resp.status_code >= 400

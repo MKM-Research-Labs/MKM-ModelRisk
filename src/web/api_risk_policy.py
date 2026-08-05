@@ -27,8 +27,9 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify
 
-from src.governance.risk_policy import default_policy, get_risk_policy
-from src.web._helpers import reference_options
+from src.command import dispatch
+from src.governance.risk_policy import default_policy, get_risk_policy, load, propose_policy
+from src.web._helpers import context_from_request, json_body, reference_options
 
 risk_policy_bp = Blueprint("risk_policy", __name__)
 
@@ -41,3 +42,24 @@ def risk_policy_registry():
         "seed": default_policy(),
         "divisions": {division: get_risk_policy(division) for division in divisions},
     })
+
+
+@risk_policy_bp.get("/api/risk-policy/<division>")
+def risk_policy_detail(division: str):
+    """One division's policy for the Admin editor: its live (approved) policy, any draft
+    awaiting MRC sign-off, and the lifecycle state (seed / draft / approved)."""
+    state = load(division)
+    return jsonify({"division": division, "live": state["live"], "draft": state["draft"],
+                    "state": state["state"], "seed": default_policy()})
+
+
+@risk_policy_bp.post("/api/risk-policy/<division>/propose")
+def propose_risk_policy(division: str):
+    """Save a division's edited policy as a draft for its MRC to sign off. The draft does
+    not affect any model until approved at the division's MRC meeting."""
+    body = json_body()
+    dispatch("propose_risk_policy", propose_policy, context=context_from_request(body),
+             division=division, policy=body.get("policy"))
+    state = load(division)
+    return jsonify({"division": division, "live": state["live"], "draft": state["draft"],
+                    "state": state["state"]})
