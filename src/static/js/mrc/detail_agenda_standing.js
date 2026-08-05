@@ -139,19 +139,14 @@ Object.assign(MeetingDetail, {
         '<a href="/api/meetings/' + esc(this._id) +
         '/completeness-audit.pdf" target="_blank" rel="noopener">View / download</a></div>'
       : '<div class="muted" style="font-size:12px">Not yet run.</div>';
-    const comfortOpts = ['<option value="">&mdash; select &mdash;</option>'].concat(
-      ["Comfortable", "Comfortable with actions", "Not comfortable"].map((s) =>
-        "<option" + (s === (item.audit_comfort || "") ? " selected" : "") + ">" + esc(s) + "</option>")).join("");
     const dis = closed ? " disabled" : "";
     const body = '<div style="margin-top:8px">' +
       '<div class="muted" style="font-size:12px">Scoped to ' + nModels + " model(s) and " +
       nProducts + " product(s) in scope for this committee.</div>" +
       '<div style="margin-top:6px">' + latest + "</div>" +
-      '<div class="field" style="margin-top:8px"><label>Committee comfort with the audit outcome</label>' +
-      '<select data-audit-comfort="' + esc(item.item_id) + '"' + dis + ">" + comfortOpts + "</select></div>" +
-      '<div class="field" style="margin-top:6px"><label>Comfort note</label>' +
+      '<div class="field" style="margin-top:8px"><label>Committee notes on the audit outcome</label>' +
       '<textarea data-audit-note="' + esc(item.item_id) + '" rows="2" style="width:100%;resize:vertical"' +
-      dis + ">" + esc(item.audit_comfort_note || "") + "</textarea></div></div>";
+      dis + ">" + esc(item.audit_notes || "") + "</textarea></div></div>";
     const runBtn = '<button class="btn small" data-audit-run="' + esc(item.item_id) + '"' +
       (closed ? ' disabled title="Meeting closed"' : "") + ">" + (has ? "Re-run audit" : "Run audit") + "&hellip;</button>";
     const review = done ? statusBadge("Completed")
@@ -177,17 +172,11 @@ Object.assign(MeetingDetail, {
       const id = btn.getAttribute("data-audit-run");
       btn.onclick = () => self._runAudit(id);
     });
-    document.querySelectorAll("[data-audit-comfort]").forEach(function (sel) {
-      const id = sel.getAttribute("data-audit-comfort");
-      sel.onchange = () => App.amend("Record the committee's comfort with the completeness audit.", "POST",
-        "/api/meetings/" + self._id + "/collections/agenda/" + id,
-        { fields: { audit_comfort: sel.value } }, () => self.show(self._id, "agenda"));
-    });
     document.querySelectorAll("[data-audit-note]").forEach(function (inp) {
       const id = inp.getAttribute("data-audit-note");
-      inp.onchange = () => App.amend("Record the committee's comfort note on the completeness audit.", "POST",
+      inp.onchange = () => App.amend("Record the committee's notes on the completeness audit.", "POST",
         "/api/meetings/" + self._id + "/collections/agenda/" + id,
-        { fields: { audit_comfort_note: inp.value } }, () => self.show(self._id, "agenda"));
+        { fields: { audit_notes: inp.value } }, () => self.show(self._id, "agenda"));
     });
     document.querySelectorAll("[data-ag-confirm]").forEach(function (btn) {
       if (btn.disabled) return;
@@ -226,11 +215,14 @@ Object.assign(MeetingDetail, {
       text: "The committee reviewed the model analyses tabled at this meeting and confirmed the outcomes (see the Models tab, Analysis)." };
     if (kind === "completeness_audit") {
       const it = (d.agenda || []).find((a) => a.kind === "completeness_audit") || {};
-      const comfort = it.audit_comfort ? " The committee recorded its comfort as: " + it.audit_comfort + "." : "";
-      const note = it.audit_comfort_note ? " Note: " + it.audit_comfort_note : "";
+      const detail = it.audit_version
+        ? " (version " + it.audit_version + " — " + (it.audit_entities || "0") + " record(s), "
+          + (it.audit_findings || "0") + " finding(s))"
+        : "";
+      const notes = it.audit_notes ? " Committee notes: " + it.audit_notes : "";
       return { title: "Completeness audit reviewed",
         text: "The committee reviewed the governance completeness audit for the models and products in "
-          + "scope for this committee." + comfort + note };
+          + "scope for this committee" + detail + "." + notes };
     }
     return { title: "Any other business", text: "Any other business was invited by the chair." };
   },

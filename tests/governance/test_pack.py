@@ -59,6 +59,32 @@ def test_build_tex_includes_logo_org_and_sections():
     assert tex.strip().endswith("\\end{document}")
 
 
+def test_build_tex_includes_completeness_audit_and_notes():
+    """Once the completeness audit has been run, the minutes carry its outcome and
+    the committee's notes."""
+    meeting = {"meeting_id": "MTG1", "data": {
+        "title": "Q2 MRC", "date": "2026-02-16",
+        "agenda": [{"kind": "completeness_audit", "title": "Governance completeness audit",
+                    "status": "Completed", "audit_version": "2", "audit_entities": "5",
+                    "audit_findings": "3", "audit_generated_by": "David Kelly",
+                    "audit_notes": "Two gaps to remediate before Q3."}],
+    }}
+    tex = build_tex(meeting, {"fields": {"org_name": "MKM"}})
+    assert "Completeness Audit" in tex
+    assert "David Kelly" in tex
+    assert "Two gaps to remediate before Q3." in tex
+
+
+def test_build_tex_omits_completeness_audit_before_first_run():
+    """No audit run yet → no Completeness Audit section (nothing to report)."""
+    meeting = {"meeting_id": "MTG1", "data": {
+        "title": "Q2 MRC", "date": "2026-02-16",
+        "agenda": [{"kind": "completeness_audit", "title": "Governance completeness audit",
+                    "status": "Pending"}],
+    }}
+    assert "Completeness Audit" not in build_tex(meeting, {"fields": {"org_name": "MKM"}})
+
+
 def test_build_tex_escapes_special_characters():
     tex = build_tex({"meeting_id": "M", "data": {"title": "P&L 50% _x_"}}, {"fields": {}})
     assert "P\\&L 50\\% \\_x\\_" in tex
