@@ -216,12 +216,17 @@ const RiskEditor = {
       esc(b.explanation || "") + "</textarea></td>" +
       '<td><input data-f="score" value="' + esc(b.score) +
       '" style="width:80px;text-align:right"></td>' +
-      '<td style="text-align:center"><button class="edit-btn" data-remove="' + i +
-      '" data-rscope="' + scope + '">✕</button></td></tr>').join("");
+      '<td style="text-align:center;white-space:nowrap">' +
+      '<button class="edit-btn" data-move="up" data-mi="' + i + '" data-mscope="' + scope +
+      '" title="Move up"' + (i === 0 ? " disabled" : "") + ">↑</button>" +
+      '<button class="edit-btn" data-move="down" data-mi="' + i + '" data-mscope="' + scope +
+      '" title="Move down"' + (i === bands.length - 1 ? " disabled" : "") + ">↓</button>" +
+      '<button class="edit-btn" data-remove="' + i +
+      '" data-rscope="' + scope + '" title="Remove">✕</button></td></tr>').join("");
     const label = isRating ? "rating" : "band";
     return '<table><thead><tr><th style="width:160px">Name</th><th style="width:60px">Colour</th>' +
       "<th>Explanation</th><th style=\"width:90px;text-align:right\">" + scoreHead +
-      '</th><th style="width:40px"></th></tr></thead><tbody>' + rows + "</tbody></table>" +
+      '</th><th style="width:76px"></th></tr></thead><tbody>' + rows + "</tbody></table>" +
       '<div style="margin-top:6px"><button class="btn small" data-add="' + scope + '">+ Add ' +
       label + "</button></div>";
   },
@@ -255,6 +260,19 @@ const RiskEditor = {
         const bands = this._bandsFor(btn.getAttribute("data-rscope"));
         if (bands.length <= 1) return;
         bands.splice(Number(btn.getAttribute("data-remove")), 1);
+        this._save();
+        this._draw();
+      };
+    });
+    // Reorder a band within its scale — this is the axis order in the generated
+    // grids and the badge sort order, independent of the score value.
+    host.querySelectorAll("[data-move]").forEach((btn) => {
+      btn.onclick = () => {
+        const bands = this._bandsFor(btn.getAttribute("data-mscope"));
+        const i = Number(btn.getAttribute("data-mi"));
+        const j = btn.getAttribute("data-move") === "up" ? i - 1 : i + 1;
+        if (j < 0 || j >= bands.length) return;
+        const t = bands[i]; bands[i] = bands[j]; bands[j] = t;
         this._save();
         this._draw();
       };
