@@ -103,6 +103,13 @@ def test_approve_without_a_draft_is_rejected(client):
     assert resp.status_code >= 400
 
 
+def test_sign_off_pdf_renders(client):
+    resp = client.get("/api/risk-policy/PdfDiv/sign-off.pdf")
+    assert resp.status_code == 200
+    assert resp.mimetype == "application/pdf"
+    assert resp.data[:4] == b"%PDF"
+
+
 def test_upload_and_surface_the_policy_document(client, tmp_path, monkeypatch):
     monkeypatch.setattr("src.files.store.UPLOAD_DIR", tmp_path)
     data = {"file": (io.BytesIO(b"%PDF-policy"), "Division Risk Policy.pdf")}

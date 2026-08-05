@@ -81,7 +81,9 @@ const RiskEditor = {
     this._box.innerHTML =
       '<div class="row" style="justify-content:space-between;align-items:center">' +
       '<div class="row" style="align-items:center;gap:8px"><label class="muted" style="font-size:11px">Division</label>' +
-      divSel + '</div><div id="rp-status"></div></div>' +
+      divSel + '<a href="/api/risk-policy/' + encodeURIComponent(this._division) +
+      '/sign-off.pdf" target="_blank" style="font-size:12px">↓ PDF</a></div>' +
+      '<div id="rp-status"></div></div>' +
       '<p class="lead muted" style="font-size:12px;max-width:74ch">Define this division\'s risk ' +
       "vocabulary. Edits save as a draft and are proposed to the division's MRC — models keep " +
       "using the last approved (or firm-wide seed) policy until the committee signs it off.</p>" +

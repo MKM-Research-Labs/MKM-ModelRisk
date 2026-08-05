@@ -25,10 +25,13 @@ vocabulary per a model's division. The console loads this once at startup.
 """
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request, send_file
+from datetime import date
+
+from flask import Blueprint, Response, jsonify, request, send_file
 
 from src.command import dispatch
 from src.files import UploadError, save_upload, upload_path
+from src.governance.mrc_settings import get_settings
 from src.governance.risk_policy import (
     approve_policy,
     default_policy,
@@ -38,6 +41,7 @@ from src.governance.risk_policy import (
     reject_policy,
     set_policy_document,
 )
+from src.governance.risk_policy.document import render_policy_document_pdf
 from src.web._helpers import context_from_request, json_body, reference_options, request_actor
 
 risk_policy_bp = Blueprint("risk_policy", __name__)
@@ -94,6 +98,14 @@ def reject_risk_policy(division: str):
     dispatch("reject_risk_policy", reject_policy, context=context_from_request(body),
              division=division, meeting_id=body.get("meeting_id"))
     return jsonify(_detail(division))
+
+
+@risk_policy_bp.get("/api/risk-policy/<division>/sign-off.pdf")
+def risk_policy_signoff_pdf(division: str):
+    """The division's proposed (or live) risk policy as a PDF for the MRC to sign off."""
+    pdf = render_policy_document_pdf(division, get_settings(), date.today().isoformat())
+    return Response(pdf, mimetype="application/pdf", headers={
+        "Content-Disposition": 'inline; filename="' + division + ' Risk Policy.pdf"'})
 
 
 @risk_policy_bp.post("/api/risk-policy/<division>/document")

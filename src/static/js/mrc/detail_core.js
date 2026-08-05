@@ -239,6 +239,9 @@ const MeetingDetail = {
       '<div class="inforow"><div class="k">Dimensions</div><div class="v">' + dims + "</div></div>" +
       '<div class="inforow"><div class="k">Risk ratings</div><div class="v">' + ratings + "</div></div>" +
       '<div class="inforow"><div class="k">Policy document</div><div class="v">' + doc + "</div></div>" +
+      '<div class="inforow"><div class="k">Sign-off pack</div><div class="v">' +
+      '<a href="/api/risk-policy/' + encodeURIComponent(division) +
+      '/sign-off.pdf" target="_blank">↓ Proposed risk policy (PDF)</a></div></div>' +
       '<div class="row" style="margin-top:12px;gap:8px">' +
       '<button class="btn primary" id="rp-approve">Approve &amp; make live</button>' +
       '<button class="btn danger" id="rp-reject">Reject</button></div>';
