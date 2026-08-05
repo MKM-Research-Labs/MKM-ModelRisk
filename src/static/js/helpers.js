@@ -65,6 +65,19 @@ const Policy = {
     const dim = p && p.dimensions && p.dimensions.mission_criticality;
     return dim ? (dim.bands || []).map((b) => b.score) : null;
   },
+  // A dimension's admin-defined display label (so a renamed dimension shows through).
+  dimensionLabel(key, division) {
+    const p = this._for(division);
+    const dim = p && p.dimensions && p.dimensions[key];
+    return (dim && dim.label) || null;
+  },
+  // Mission-Criticality bands as {value: score, label: name} for a select — the model
+  // stores the score, but the owner picks by the admin-defined band name.
+  missionOptions(division) {
+    const p = this._for(division);
+    const bands = (((p || {}).dimensions || {}).mission_criticality || {}).bands || [];
+    return bands.length ? bands.map((b) => ({ value: b.score, label: b.name })) : null;
+  },
   // The Mission-Criticality band a tier selects (band score == tier), clamped like the
   // backend: out-of-range → nearest, missing → most conservative (first) band.
   mcBand(tier, division) {
@@ -100,12 +113,26 @@ function ragOrder(rating, division) {
   return order !== null ? order : (RAG_ORDER[rating] !== undefined ? RAG_ORDER[rating] : 99);
 }
 
-// Tier as a coloured pill ("Tier 2"); colour from the division's Mission-Criticality band.
+// Mission-Criticality as a coloured pill showing the division's band NAME (was "Tier N");
+// colour and name come from the division's Mission-Criticality band for that tier score.
 function tierBadge(tier, division) {
   const band = Policy.mcBand(tier, division);
   const color = (band && band.colour) || TIER_COLORS[tier];
+  const label = (band && band.name) || TIER_DESCRIPTORS[tier] || ("Tier " + tier);
   if (!color) return '<span class="muted">—</span>';
-  return '<span class="badge" style="background:' + color + '">Tier ' + esc(tier) + "</span>";
+  return '<span class="badge" style="background:' + color + '">' + esc(label) + "</span>";
+}
+
+// Risk-assessment field labels follow the division's policy: "Tier" shows as the
+// Mission-Criticality dimension's admin-defined label, and Materiality/Complexity
+// reflect a rename too. Falls back to the field spec's own label.
+const RISK_FIELD_DIMENSION = {
+  tier: "mission_criticality", materiality: "materiality", complexity: "complexity",
+};
+function riskFieldLabel(f, division) {
+  const dim = RISK_FIELD_DIMENSION[f.key];
+  if (dim) { const l = Policy.dimensionLabel(dim, division); if (l) return l; }
+  return f.label;
 }
 
 const MEETING_STATUS_COLORS = {
@@ -123,9 +150,11 @@ function statusBadge(status) {
 // Mission-Criticality band names.
 const TIER_DESCRIPTORS = { 1: "Mission critical", 2: "Important", 3: "Not important" };
 
-// "Tier 2 - Important" descriptor, from the division's Mission-Criticality band.
+// The descriptor shown next to the Mission-Criticality pill: the band's admin-defined
+// explanation. Empty when the band carries none (the pill already names it).
 function tierFullLabel(tier, division) {
   const band = Policy.mcBand(tier, division);
+  if (band && band.explanation) return band.explanation;
   const d = (band && band.name) || TIER_DESCRIPTORS[tier];
   return d ? "Tier " + tier + " - " + d : "";
 }

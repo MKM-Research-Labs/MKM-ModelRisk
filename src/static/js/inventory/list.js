@@ -38,7 +38,7 @@ const InventoryList = {
       cell: (m) => '<span class="modelid">' + esc(m.model_id) + "</span>" },
     { key: "name", label: "Name", sortVal: (m) => (m.d.name || "").toLowerCase(),
       cell: (m) => fieldDisplay(m.d.name) },
-    { key: "tier", label: "Tier", sortVal: (m) => m.d.tier || 99,
+    { key: "tier", label: "Criticality", sortVal: (m) => m.d.tier || 99,
       cell: (m) => tierBadge(m.d.tier, m.d.division) },
     { key: "rag", label: "RAG", sortVal: (m) => ragOrder(m.d.rag_rating, m.d.division),
       cell: (m) => ragBadge(m.d.rag_rating, m.d.division) },

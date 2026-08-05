@@ -34,9 +34,15 @@ function inputControl(id, spec, division) {
     return '<select id="' + id + '">' + opts + "</select>";
   }
   if (spec.type === "tier") {
-    // The division's Mission-Criticality band scores (fallback tiers 1-3).
-    const tiers = Policy.tierScores(division) || [1, 2, 3];
-    const opts = ["", ...tiers].map((o) => "<option>" + esc(o) + "</option>").join("");
+    // Pick by the division's Mission-Criticality band NAME; the option value is the
+    // band score the model actually stores. Fallback to bare tiers 1-3.
+    const bands = Policy.missionOptions(division);
+    if (bands) {
+      const opts = '<option value=""></option>' + bands.map((b) =>
+        '<option value="' + esc(b.value) + '">' + esc(b.label) + "</option>").join("");
+      return '<select id="' + id + '">' + opts + "</select>";
+    }
+    const opts = ["", 1, 2, 3].map((o) => "<option>" + esc(o) + "</option>").join("");
     return '<select id="' + id + '">' + opts + "</select>";
   }
   if (spec.type === "date") return '<input id="' + id + '" type="date">';

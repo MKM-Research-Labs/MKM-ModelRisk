@@ -174,7 +174,8 @@ Object.assign(Detail, {
     // Sign-off + next review are set by the MRC at sign-off, not edited by hand.
     const editLink = (key === "mrc_signoff_date" || key === "next_review_date")
       ? "" : this._editLink(key);
-    return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
+    return '<div class="inforow" id="row-' + key + '"><div class="k">' +
+      esc(riskFieldLabel(f, d.division)) +
       '</div><div class="v">' + value + "</div>" + editLink + "</div>";
   },
 
@@ -242,8 +243,9 @@ Object.assign(Detail, {
 
   _edit(f, current) {
     const row = document.getElementById("row-" + f.key);
-    row.innerHTML = '<div class="k">' + esc(f.label) + '</div><div class="editor">' +
-      inputControl("ed-input", f, (this._model.data || {}).division) +
+    const division = (this._model.data || {}).division;
+    row.innerHTML = '<div class="k">' + esc(riskFieldLabel(f, division)) + '</div><div class="editor">' +
+      inputControl("ed-input", f, division) +
       '<button class="btn small primary" id="ed-save">Save…</button>' +
       '<button class="btn small" id="ed-cancel">Cancel</button></div>';
     const input = document.getElementById("ed-input");

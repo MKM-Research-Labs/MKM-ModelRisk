@@ -72,7 +72,8 @@ Object.assign(ProductDetail, {
     }
     // The sign-off date/meeting are set by the MRC approval, not edited by hand.
     const editLink = key === "mrc_signoff_date" ? "" : this._editLink(key);
-    return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(f.label) +
+    return '<div class="inforow" id="row-' + key + '"><div class="k">' +
+      esc(riskFieldLabel(f, d.division)) +
       '</div><div class="v">' + value + "</div>" + editLink + "</div>";
   },
 
@@ -152,8 +153,9 @@ Object.assign(ProductDetail, {
   // every other field just applies.
   _editor(f, paramKey, endpoint, verb) {
     const row = document.getElementById("row-" + f.key);
-    row.innerHTML = '<div class="k">' + esc(f.label) + '</div><div class="editor">' +
-      inputControl("ped-input", f, (this._product.data || {}).division) +
+    const division = (this._product.data || {}).division;
+    row.innerHTML = '<div class="k">' + esc(riskFieldLabel(f, division)) + '</div><div class="editor">' +
+      inputControl("ped-input", f, division) +
       '<button class="btn small" id="ped-cancel">Cancel</button></div>';
     const input = document.getElementById("ped-input");
     const current = this._product.data[f.key];
@@ -161,9 +163,12 @@ Object.assign(ProductDetail, {
     input.focus();
     document.getElementById("ped-cancel").onclick = () => this.show(this._id, "overview");
     input.onchange = () => {
+      // Tier stores the Mission-Criticality band SCORE (an integer), though the owner
+      // picks it by band name.
+      const value = f.type === "tier" ? parseInt(input.value, 10) : input.value.trim();
       const body = paramKey === "component"
         ? { component: f.key, value: input.value.trim() }
-        : { field: f.key, value: input.value.trim() };
+        : { field: f.key, value: value };
       App.amend(verb + " " + f.label + ' to "' + input.value + '" on ' + this._id + ".", "POST",
         "/api/products/" + this._id + endpoint, body,
         () => { this.show(this._id, "overview"); Product.loadList(); });
