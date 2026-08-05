@@ -31,7 +31,8 @@ Object.assign(MeetingDetail, {
 
   // Standing items in a fixed order, then manual items, then AOB last.
   _orderedAgenda() {
-    const order = { rollcall: 0, minutes_signoff: 1, review_signoff: 2, review_analysis: 3, aob: 100 };
+    const order = { rollcall: 0, minutes_signoff: 1, review_signoff: 2, review_analysis: 3,
+      completeness_audit: 4, aob: 100 };
     const rank = (it) => {
       const k = this._agendaKind(it);
       return k in order ? order[k] : 50;   // manual items sit between reviews and AOB

@@ -60,6 +60,20 @@ def test_scan_orders_worst_completeness_first(register):
     assert scores == sorted(scores), "least complete record should be read first"
 
 
+def test_scan_scoped_to_ids_audits_only_those(register):
+    """A per-MRC audit passes the committee's in-scope ids; only those records are
+    audited (here, the model but not the product)."""
+    rows = scan(AS_OF, model_ids=["M1"], product_ids=[])
+    ids = {(r["entity_kind"], r["entity_id"]) for r in rows}
+    assert ids == {(MODEL_KIND, "M1")}, "only the in-scope model should be audited"
+
+
+def test_scan_empty_scope_audits_nothing(register):
+    """A committee that oversees nothing gets an empty audit, not the whole estate
+    (the None default is what audits everything)."""
+    assert scan(AS_OF, model_ids=[], product_ids=[]) == []
+
+
 def test_a_recorded_document_with_no_file_is_not_counted_as_present(tmp_path, monkeypatch):
     """A document recorded against a model whose file is missing from disk is a
     gap, not evidence: an audit that trusted the metadata would report a pack that

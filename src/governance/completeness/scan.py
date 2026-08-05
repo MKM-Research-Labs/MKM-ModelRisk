@@ -75,20 +75,32 @@ def _audit(kind, entity_id, name, data, field_specs, collection_specs, scope, as
     )
 
 
-def scan(as_of: str, config=None) -> list[dict[str, Any]]:
+def scan(as_of: str, config=None, model_ids=None, product_ids=None) -> list[dict[str, Any]]:
     """Audit every model and product, worst weighted completeness first.
 
     Products follow the models so that a reader working down the register meets
     the model gaps before the product gaps that inherit from them.
+
+    ``model_ids`` / ``product_ids`` scope the audit to a named subset (the models
+    and products in scope for one MRC committee); leaving them ``None`` audits the
+    whole estate — the global Audit Reports behaviour. An empty sequence audits
+    nothing of that kind, so a committee that oversees only models still gets a
+    models-only report rather than the whole estate.
     """
+    want_models = None if model_ids is None else set(model_ids)
+    want_products = None if product_ids is None else set(product_ids)
     rows = []
     for model in list_models(config=config):
+        if want_models is not None and model["model_id"] not in want_models:
+            continue
         data = model.get("data") or {}
         rows.append(_audit(
             MODEL_KIND, model["model_id"], data.get("name"), data,
             MODEL_FIELD_SPECS, COLLECTION_SPECS,
             model_scope(model["model_id"]), as_of))
     for product in list_products(config=config):
+        if want_products is not None and product["product_id"] not in want_products:
+            continue
         data = product.get("data") or {}
         rows.append(_audit(
             PRODUCT_KIND, product["product_id"], data.get("product"), data,

@@ -23,7 +23,7 @@ from src.web.api_mrc._bp import mrc_bp
 # Side-effect imports attach every endpoint to mrc_bp; import order doesn't
 # matter as long as the blueprint exists first.
 from src.web.api_mrc import (  # noqa: F401
-    lifecycle, collections, signoff, close, products_scope, events,
+    lifecycle, collections, signoff, close, products_scope, events, completeness,
 )
 
 __all__ = ["mrc_bp"]
