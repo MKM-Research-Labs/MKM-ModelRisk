@@ -59,11 +59,12 @@ Object.assign(ProductDetail, {
       // Owner's RAG alongside the heatmap ("Table") RAG — any divergence needing
       // MRC sign-off is visible at a glance, exactly as on a model.
       const tableRag = (this._risk.heatmap || {}).rag;
-      value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key]) +
+      value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key], d.division) +
         '<span class="muted" style="font-size:11px;margin-left:12px">Table</span> ' +
-        (tableRag ? ragBadge(tableRag) : '<span class="muted">&mdash;</span>');
+        (tableRag ? ragBadge(tableRag, d.division) : '<span class="muted">&mdash;</span>');
     } else if (key === "tier" && (d[key] || d[key] === 0)) {
-      value = tierBadge(d[key]) + ' <span class="muted">' + esc(tierFullLabel(d[key])) + "</span>";
+      value = tierBadge(d[key], d.division) + ' <span class="muted">' +
+        esc(tierFullLabel(d[key], d.division)) + "</span>";
     }
     // MRC sign-off shows the granting meeting (not the raw date) once approved.
     else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
@@ -152,7 +153,8 @@ Object.assign(ProductDetail, {
   _editor(f, paramKey, endpoint, verb) {
     const row = document.getElementById("row-" + f.key);
     row.innerHTML = '<div class="k">' + esc(f.label) + '</div><div class="editor">' +
-      inputControl("ped-input", f) + '<button class="btn small" id="ped-cancel">Cancel</button></div>';
+      inputControl("ped-input", f, (this._product.data || {}).division) +
+      '<button class="btn small" id="ped-cancel">Cancel</button></div>';
     const input = document.getElementById("ped-input");
     const current = this._product.data[f.key];
     if (current !== null && current !== undefined) input.value = current;

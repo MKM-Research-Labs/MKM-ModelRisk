@@ -18,9 +18,67 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Visual badge helpers, matching the PhysicalRisk governance palette.
+// Fallback palette (used before the policy loads, or for unknown values). The live
+// colours/labels/order come from the risk policy, resolved per a model's division.
 const RAG_COLORS = { Green: "#388e3c", Amber: "#f57c00", Red: "#d32f2f" };
 const TIER_COLORS = { 1: "#d32f2f", 2: "#f57c00", 3: "#1976d2", 4: "#388e3c", 5: "#9e9e9e" };
+
+// The risk-policy registry: the firm-wide seed + each division's live policy, loaded
+// once at startup. Colours, labels and ordering resolve per a model's division and
+// fall back to the seed, then to the built-in palette above.
+const Policy = {
+  _seed: null,
+  _divisions: {},
+  async load() {
+    try {
+      const reg = await App.get("/api/risk-policy");
+      this._seed = reg.seed || null;
+      this._divisions = reg.divisions || {};
+    } catch (e) { /* keep the built-in fallbacks */ }
+  },
+  _for(division) { return (division && this._divisions[division]) || this._seed; },
+  ratingColour(name, division) {
+    const p = this._for(division);
+    const r = p && (p.risk_ratings || []).find((x) => x.name === name);
+    return r ? r.colour : null;
+  },
+  // Ratings are ordered most-severe first, so the list index is the sort key.
+  ratingOrder(name, division) {
+    const p = this._for(division);
+    if (!p) return null;
+    const i = (p.risk_ratings || []).findIndex((x) => x.name === name);
+    return i < 0 ? null : i;
+  },
+  // Option lists for the risk fields, from the division's policy (null when not loaded,
+  // so callers fall back to the field spec's constant options).
+  ratingNames(division) {
+    const p = this._for(division);
+    return p ? (p.risk_ratings || []).map((r) => r.name) : null;
+  },
+  dimensionBandNames(key, division) {
+    const p = this._for(division);
+    const dim = p && p.dimensions && p.dimensions[key];
+    return dim ? (dim.bands || []).map((b) => b.name) : null;
+  },
+  tierScores(division) {
+    const p = this._for(division);
+    const dim = p && p.dimensions && p.dimensions.mission_criticality;
+    return dim ? (dim.bands || []).map((b) => b.score) : null;
+  },
+  // The Mission-Criticality band a tier selects (band score == tier), clamped like the
+  // backend: out-of-range → nearest, missing → most conservative (first) band.
+  mcBand(tier, division) {
+    const p = this._for(division);
+    const bands = (((p || {}).dimensions || {}).mission_criticality || {}).bands || [];
+    if (!bands.length) return null;
+    const byScore = {}; bands.forEach((b) => { byScore[b.score] = b; });
+    const t = parseInt(tier, 10);
+    if (byScore[t]) return byScore[t];
+    if (isNaN(t)) return bands[0];
+    const scores = bands.map((b) => b.score);
+    return byScore[Math.min(Math.max(t, Math.min.apply(null, scores)), Math.max.apply(null, scores))] || null;
+  },
+};
 
 // Display a scalar value, or an em dash when empty.
 function fieldDisplay(value) {
@@ -28,17 +86,24 @@ function fieldDisplay(value) {
   return esc(value);
 }
 
-// RAG rating as a coloured dot + label.
-function ragBadge(rating) {
-  const color = RAG_COLORS[rating];
+// RAG rating as a coloured dot + label; colour from the division's policy.
+function ragBadge(rating, division) {
+  const color = Policy.ratingColour(rating, division) || RAG_COLORS[rating];
   if (!color) return '<span class="muted">—</span>';
   return '<span class="ragdot"><span class="dot" style="background:' + color +
     '"></span><span style="color:' + color + '">' + esc(rating) + "</span></span>";
 }
 
-// Tier as a coloured pill ("Tier 2").
-function tierBadge(tier) {
-  const color = TIER_COLORS[tier];
+// Sort key for a rating (lower = higher risk), from the division's policy order.
+function ragOrder(rating, division) {
+  const order = Policy.ratingOrder(rating, division);
+  return order !== null ? order : (RAG_ORDER[rating] !== undefined ? RAG_ORDER[rating] : 99);
+}
+
+// Tier as a coloured pill ("Tier 2"); colour from the division's Mission-Criticality band.
+function tierBadge(tier, division) {
+  const band = Policy.mcBand(tier, division);
+  const color = (band && band.colour) || TIER_COLORS[tier];
   if (!color) return '<span class="muted">—</span>';
   return '<span class="badge" style="background:' + color + '">Tier ' + esc(tier) + "</span>";
 }
@@ -54,12 +119,14 @@ function statusBadge(status) {
   return '<span class="badge" style="background:' + color + '">' + esc(status) + "</span>";
 }
 
-// Mirrors config TIER_LABELS (tiers 1-3 by criticality).
+// Fallback descriptors (before the policy loads); live labels are the division's
+// Mission-Criticality band names.
 const TIER_DESCRIPTORS = { 1: "Mission critical", 2: "Important", 3: "Not important" };
 
-// "Tier 2 - Substantial" descriptor.
-function tierFullLabel(tier) {
-  const d = TIER_DESCRIPTORS[tier];
+// "Tier 2 - Important" descriptor, from the division's Mission-Criticality band.
+function tierFullLabel(tier, division) {
+  const band = Policy.mcBand(tier, division);
+  const d = (band && band.name) || TIER_DESCRIPTORS[tier];
   return d ? "Tier " + tier + " - " + d : "";
 }
 

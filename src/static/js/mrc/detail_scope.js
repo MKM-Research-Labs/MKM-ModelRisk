@@ -72,7 +72,7 @@ Object.assign(MeetingDetail, {
       const inS = inScope.has(id);
       return '<tr><td><input type="checkbox" data-scope="' + esc(id) + '"' + (inS ? " checked" : "") +
         '></td><td class="modelid">' + esc(id) + "</td><td>" + fieldDisplay(d[cfg.nameKey]) +
-        "</td><td>" + tierBadge(d.tier) + "</td><td>" + ragBadge(d.rag_rating) +
+        "</td><td>" + tierBadge(d.tier, d.division) + "</td><td>" + ragBadge(d.rag_rating, d.division) +
         "</td><td>" + this._presenterCell(id, inS, presBy) +
         "</td><td>" + this._analysisCell(cfg, id, inS, docBy) + "</td></tr>";
     }).join("") : '<tr><td colspan="7" class="empty">No ' + lc + "s match this scope.</td></tr>";

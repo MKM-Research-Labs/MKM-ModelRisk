@@ -43,10 +43,22 @@ from src.governance.product._state import (
     EVENT_RETIRED,
     ProductState,
 )
+from src.governance.risk_policy import get_risk_policy
+
+# Risk fields whose allowed values come from the product's DIVISION policy.
+_POLICY_CHOICE_FIELDS = {
+    "materiality": lambda policy: [b["name"] for b in policy["dimensions"]["materiality"]["bands"]],
+    "complexity": lambda policy: [b["name"] for b in policy["dimensions"]["complexity"]["bands"]],
+    "rag_rating": lambda policy: [b["name"] for b in policy["risk_ratings"]],
+}
 
 
-def _validate_field(field: str, value: Any) -> None:
-    if field in PRODUCT_FIELD_CHOICES and value not in PRODUCT_FIELD_CHOICES[field]:
+def _validate_field(field: str, value: Any, division: Any) -> None:
+    if field in _POLICY_CHOICE_FIELDS:
+        allowed = _POLICY_CHOICE_FIELDS[field](get_risk_policy(division or ""))
+        if value not in allowed:
+            raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
+    elif field in PRODUCT_FIELD_CHOICES and value not in PRODUCT_FIELD_CHOICES[field]:
         allowed = ", ".join(PRODUCT_FIELD_CHOICES[field])
         raise DomainError(f"{field} must be one of: {allowed}")
 
@@ -77,10 +89,11 @@ def decide_register(
     for binding in PRODUCT_BINDINGS:
         if not fields.get(binding):
             raise DomainError(f"{binding} is required")
+    division = fields.get("division")
     for field, value in fields.items():
         if field not in PRODUCT_FIELD_SPECS:
             raise DomainError(f"unknown field: {field}")
-        _validate_field(field, value)
+        _validate_field(field, value, division)
     payload: dict[str, Any] = {"product_id": product_id, "product": product, "status": "Proposed"}
     payload.update(fields)
     return EVENT_REGISTERED, payload
@@ -104,7 +117,8 @@ def decide_edit_field(
     _require_editable(state)
     if field not in PRODUCT_EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
-    _validate_field(field, value)
+    division = value if field == "division" else state.fields.get("division")
+    _validate_field(field, value, division)
     return EVENT_FIELD_EDITED, {"field": field, "value": value}
 
 

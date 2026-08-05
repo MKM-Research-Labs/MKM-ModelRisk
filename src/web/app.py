@@ -44,6 +44,7 @@ from src.web import api_product_risk  # noqa: F401 — attaches endpoints to pro
 from src.web import api_product_documents  # noqa: F401 — attaches endpoints to product_bp
 from src.web.api_ingest import ingest_bp
 from src.web.api_reference import reference_bp
+from src.web.api_risk_policy import risk_policy_bp
 from src.web.views import views_bp
 from src.web._startup import reconcile_read_models
 
@@ -89,6 +90,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(mrc_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(reference_bp)
+    app.register_blueprint(risk_policy_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(audit_bp)
     app.register_blueprint(audit_reports_bp)

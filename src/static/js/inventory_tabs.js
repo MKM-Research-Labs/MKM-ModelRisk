@@ -78,18 +78,22 @@ const DetailTabs = {
   // W4a: 3×3 heatmap grid (Materiality × Complexity → RAG) for the model's
   // tier. The current cell is highlighted; the rating headline is its colour.
   heatmap(hm) {
-    const tierCaption = hm.tier_band
-      ? '<div class="section-header">Tier ' + esc(hm.tier_band) +
-        ' heatmap &mdash; ' + esc(hm.tier_label || "") + "</div>"
+    const tierCaption = hm.tier_label
+      ? '<div class="section-header">' + esc(hm.tier_label) + " heatmap</div>"
       : "";
-    const rows = ["High", "Medium", "Low"];
-    const cols = ["Low", "Medium", "High"];
+    // Axes and cell colours come from the division's policy (echoed on the envelope),
+    // falling back to the classic Low/Medium/High + RAG palette for older payloads.
+    const axes = hm.axes || {};
+    const ratingColours = hm.rating_colours || RAG_COLORS;
+    const matOrder = axes.materiality || ["Low", "Medium", "High"];
+    const cols = axes.complexity || ["Low", "Medium", "High"];
+    const rows = matOrder.slice().reverse();  // highest materiality at the top
     const grid = hm.grid || {};
     const cellRag = (m, c) => grid[m + "|" + c] || "";
     const table = rows.map(function (m) {
       const cells = cols.map(function (c) {
         const rag = cellRag(m, c);
-        const bg = RAG_COLORS[rag] || "#9e9e9e";
+        const bg = ratingColours[rag] || RAG_COLORS[rag] || "#9e9e9e";
         const here = (m === hm.materiality && c === hm.complexity);
         const style = "background:" + bg + "22;color:" + bg + ";" +
           (here ? "outline:3px solid " + bg + ";outline-offset:-3px;font-weight:800;" : "");
@@ -156,9 +160,18 @@ const DetailTabs = {
       'style="border-left-color:#1976d2"><div class="lbl">Events (past ' + rating.events_window_days +
       ' days)</div><div class="val">' + rating.events_in_window + "</div></div></div>" : "";
     const signoff = this._signoffPanel(rating);
+    // A prior sign-off made under an older categorisation is no longer valid: the owner
+    // must re-confirm the classification and re-request MRC sign-off.
+    const reclassify = rating.needs_reclassification
+      ? '<div class="riskbanner" style="border-color:var(--amber);background:#fff8e1">' +
+        '<div style="font-weight:700;color:#b26a00">Re-classification needed</div>' +
+        '<div class="muted" style="font-size:12px">The division\'s risk categorisation has ' +
+        "changed since this model was signed off. Re-confirm Materiality, Complexity and " +
+        "Mission Criticality on Overview, then request MRC sign-off again.</div></div>"
+      : "";
     return '<p class="muted">Risk rating is set by the owner via Materiality and Complexity ' +
       "(the heatmap), and takes effect once the MRC signs that cell off.</p>" +
-      headline + signoff + this.heatmap(hm) + events +
+      reclassify + headline + signoff + this.heatmap(hm) + events +
       this.signoffHistory(rating.signoff_history);
   },
 

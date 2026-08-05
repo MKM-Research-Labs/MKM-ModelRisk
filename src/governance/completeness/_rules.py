@@ -79,9 +79,14 @@ def tier_weight(tier: Any) -> float:
         return UNTIERED_WEIGHT
 
 
-def rag_multiplier(rag: Any) -> float:
-    """Escalation from the governed RAG rating; unrated sits above Green."""
-    return RAG_MULTIPLIERS.get(str(rag), UNRATED_MULTIPLIER)
+def rag_multiplier(rag: Any, scores: dict | None = None) -> float:
+    """Escalation from the governed risk rating; unrated sits above the lowest rating.
+
+    ``scores`` is the division policy's rating→score map (carried on the risk envelope);
+    when absent it falls back to the firm-wide defaults, so the seed reproduces today's
+    Red/Amber/Green = 1.25/1.10/1.00."""
+    table = scores if scores is not None else RAG_MULTIPLIERS
+    return table.get(str(rag), UNRATED_MULTIPLIER)
 
 
 def event_pressure(events: int) -> float:
@@ -156,7 +161,9 @@ def audit_entity(
     rag = risk.get("heatmap", {}).get("rag") or data.get("rag_rating")
     factors = {
         "tier_weight": tier_weight(tier),
-        "rag_multiplier": rag_multiplier(rag),
+        # The rating's escalation weight is its score in the division's policy (carried on
+        # the risk envelope); an unrated model sits just above the lowest rating.
+        "rag_multiplier": rag_multiplier(rag, risk.get("rag_scores")),
         "event_pressure": event_pressure(risk.get("events_in_window", 0)),
         "staleness": staleness(data.get("next_review_date"), as_of),
     }

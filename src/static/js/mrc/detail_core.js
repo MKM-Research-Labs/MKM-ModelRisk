@@ -50,6 +50,11 @@ const MeetingDetail = {
     // Prior closed meetings (same MRC) with saved minutes — offered on the
     // previous-minutes sign-off item.
     this._priorMinutes = await App.get("/api/meetings/" + meetingId + "/prior-minutes");
+    // The division's risk-categorisation state, so a pending draft surfaces as an AOB
+    // agenda item for this meeting to sign off.
+    const division = (this._meeting.data || {}).division;
+    this._categorisation = division
+      ? await App.get("/api/risk-policy/" + encodeURIComponent(division)) : null;
     if (tab) this._tab = tab;
     this._render();
     document.getElementById("mt-detail").scrollIntoView({ block: "start" });
@@ -195,6 +200,47 @@ const MeetingDetail = {
     box.innerHTML = Collections.render(d, { collections: [spec] }, false, bulk);
     Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
       false, () => this.show(this._id, this._tab), d, bulk);
+  },
+
+  // The AOB agenda item's risk-categorisation sign-off block, shown when the meeting's
+  // division has a pending draft and the meeting is still open — a one-off item raised
+  // under Any Other Business for the committee to ratify. Empty otherwise.
+  _categorisationAob() {
+    const detail = this._categorisation;
+    const division = (this._meeting.data || {}).division;
+    if (!division || !detail || detail.state !== "draft") return "";
+    if (this._meeting.status === CLOSED_MEETING_STATUS) return "";
+    const draft = detail.draft;
+    const ratings = (draft.risk_ratings || []).map((r) =>
+      '<span class="ragdot"><span class="dot" style="background:' + esc(r.colour) +
+      '"></span><span style="color:' + esc(r.colour) + '">' + esc(r.name) +
+      "</span></span>").join(" &nbsp; ");
+    const doc = detail.document
+      ? '<a href="/api/risk-policy/' + encodeURIComponent(division) + '/document" target="_blank">↓ ' +
+        esc(detail.document.original_name) + "</a>"
+      : '<span class="muted">none uploaded</span>';
+    return '<div style="margin-top:10px;padding:10px 12px;border:1px solid var(--amber);' +
+      'border-radius:6px;background:#fff8e1">' +
+      '<b>Risk categorisation sign-off &mdash; ' + esc(division) + "</b>" +
+      '<p class="muted" style="font-size:12px;margin:4px 0">' + esc(division) + " has proposed a " +
+      "revised risk categorisation. Approving it makes it live for this division's models; the " +
+      "current categorisation stays in force until then.</p>" +
+      '<div style="font-size:12px">Ratings: ' + ratings + "</div>" +
+      '<div style="font-size:12px;margin-top:4px">Risk Policy document: ' + doc + " &nbsp;|&nbsp; " +
+      '<a href="/api/risk-policy/' + encodeURIComponent(division) +
+      '/categorisation.pdf" target="_blank">↓ Proposed categorisation (PDF)</a></div>' +
+      '<div class="row" style="margin-top:8px;gap:8px">' +
+      '<button class="btn small primary" id="aob-cat-approve">Approve &amp; make live</button>' +
+      '<button class="btn small danger" id="aob-cat-reject">Reject</button></div></div>';
+  },
+
+  async _decidePolicy(division, action) {
+    try {
+      await App.send("POST", "/api/risk-policy/" + encodeURIComponent(division) + "/" + action,
+        { meeting_id: this._id, confirmed: true });
+      App.toast("Risk categorisation " + (action === "approve" ? "approved and live" : "rejected"), "ok");
+      this.show(this._id, this._tab);   // reload so the AOB item reflects the new state
+    } catch (e) { App.toast(e.message || "failed", "error"); }
   },
 
   _bindInfo(d) {
