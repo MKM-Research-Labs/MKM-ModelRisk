@@ -34,6 +34,8 @@ const Reference = {
     // reference list could not be maintained from the UI. Vendor sits with it —
     // both classify the model itself (its type and who supplies it).
     ["model_type", "Model Type"], ["vendor", "Vendor"],
+    // The per-division risk policy: dimensions, ratings and the generated grids.
+    ["risk", "Risk"],
   ],
 
   async render() {
@@ -53,6 +55,11 @@ const Reference = {
     // not the reference lists — edited as one record, never added to.
     if (this._tab === "company") {
       await this._renderInstitution(container);
+      return;
+    }
+    // The risk policy is per-division structured config, not a flat reference list.
+    if (this._tab === "risk") {
+      await RiskEditor.render(container);
       return;
     }
     const res = await App.get("/api/reference");
