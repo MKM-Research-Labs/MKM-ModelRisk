@@ -30,10 +30,12 @@ from flask import Blueprint, jsonify, request, send_file
 from src.command import dispatch
 from src.files import UploadError, save_upload, upload_path
 from src.governance.risk_policy import (
+    approve_policy,
     default_policy,
     get_risk_policy,
     load,
     propose_policy,
+    reject_policy,
     set_policy_document,
 )
 from src.web._helpers import context_from_request, json_body, reference_options, request_actor
@@ -72,6 +74,25 @@ def propose_risk_policy(division: str):
     body = json_body()
     dispatch("propose_risk_policy", propose_policy, context=context_from_request(body),
              division=division, policy=body.get("policy"))
+    return jsonify(_detail(division))
+
+
+@risk_policy_bp.post("/api/risk-policy/<division>/approve")
+def approve_risk_policy(division: str):
+    """Ratify the division's pending draft — its MRC has signed it off, so it becomes the
+    live policy. Called from the division's MRC meeting, which it records for the audit."""
+    body = json_body()
+    dispatch("approve_risk_policy", approve_policy, context=context_from_request(body),
+             division=division, meeting_id=body.get("meeting_id"))
+    return jsonify(_detail(division))
+
+
+@risk_policy_bp.post("/api/risk-policy/<division>/reject")
+def reject_risk_policy(division: str):
+    """Decline the division's pending draft at its MRC. The live policy is unchanged."""
+    body = json_body()
+    dispatch("reject_risk_policy", reject_policy, context=context_from_request(body),
+             division=division, meeting_id=body.get("meeting_id"))
     return jsonify(_detail(division))
 
 

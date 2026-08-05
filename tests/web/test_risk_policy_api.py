@@ -66,6 +66,43 @@ def test_propose_rejects_a_broken_policy(client):
     assert resp.status_code >= 400
 
 
+def _propose_edit(client, division, colour="#010203"):
+    policy = client.get(f"/api/risk-policy/{division}").get_json()["seed"]
+    policy["risk_ratings"][0]["colour"] = colour
+    client.post(f"/api/risk-policy/{division}/propose",
+                json={"policy": policy, "confirmed": True}, headers=HEADERS)
+    return colour
+
+
+def test_approve_makes_the_draft_live(client):
+    div = "ApproveDiv"
+    colour = _propose_edit(client, div)
+    resp = client.post(f"/api/risk-policy/{div}/approve",
+                       json={"meeting_id": "MTG-1", "confirmed": True}, headers=HEADERS)
+    assert resp.status_code == 200
+    body = resp.get_json()
+    assert body["state"] == "approved"
+    assert body["draft"] is None
+    assert body["live"]["risk_ratings"][0]["colour"] == colour
+
+
+def test_reject_leaves_the_live_policy_unchanged(client):
+    div = "RejectDiv"
+    _propose_edit(client, div, "#999999")
+    resp = client.post(f"/api/risk-policy/{div}/reject",
+                       json={"confirmed": True}, headers=HEADERS)
+    body = resp.get_json()
+    assert body["state"] == "seed"
+    assert body["draft"] is None
+    assert body["live"]["risk_ratings"][0]["colour"] != "#999999"
+
+
+def test_approve_without_a_draft_is_rejected(client):
+    resp = client.post("/api/risk-policy/NoDraftDiv/approve",
+                       json={"confirmed": True}, headers=HEADERS)
+    assert resp.status_code >= 400
+
+
 def test_upload_and_surface_the_policy_document(client, tmp_path, monkeypatch):
     monkeypatch.setattr("src.files.store.UPLOAD_DIR", tmp_path)
     data = {"file": (io.BytesIO(b"%PDF-policy"), "Division Risk Policy.pdf")}
