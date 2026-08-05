@@ -60,6 +60,7 @@ def load(division: str, config=None) -> dict:
     draft = None
     document = None
     approved = False
+    approved_at = None
     version = 0
     for event in read_stream(
         aggregate_type=AGGREGATE_TYPE, aggregate_id=division, config=config
@@ -70,6 +71,9 @@ def load(division: str, config=None) -> dict:
             live = event.payload["policy"]
             draft = None
             approved = True
+            # When the current live categorisation was ratified — a model signed off
+            # before this date was assessed under an older categorisation.
+            approved_at = _recorded_date(event.recorded_at)
         elif event.event_type == EVENT_POLICY_REJECTED:
             draft = None
         elif event.event_type == EVENT_POLICY_DOCUMENT:
@@ -78,7 +82,17 @@ def load(division: str, config=None) -> dict:
         version = event.stream_seq
     state = STATE_DRAFT if draft is not None else (STATE_APPROVED if approved else STATE_SEED)
     return {"live": live, "draft": draft, "document": document, "state": state,
-            "approved": approved, "version": version}
+            "approved": approved, "approved_at": approved_at, "version": version}
+
+
+def _recorded_date(recorded_at) -> str | None:
+    """The date (YYYY-MM-DD) an event was recorded, for comparing against a model's
+    sign-off date."""
+    if recorded_at is None:
+        return None
+    if hasattr(recorded_at, "date"):
+        return recorded_at.date().isoformat()
+    return str(recorded_at)[:10]
 
 
 def get_risk_policy(division: str, config=None) -> dict:

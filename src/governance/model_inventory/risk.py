@@ -34,7 +34,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from config.governance import EVENTS_WINDOW_DAYS
-from src.governance.risk_policy import get_risk_policy
+from src.governance.risk_policy import load as _load_policy
 
 
 def _mission_criticality_band(policy: dict, tier: Any) -> dict:
@@ -87,7 +87,9 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dic
     materiality = data.get("materiality")
     complexity = data.get("complexity")
     tier = data.get("tier")
-    policy = get_risk_policy(data.get("division") or "", config)
+    policy_state = _load_policy(data.get("division") or "", config)
+    policy = policy_state["live"]
+    approved_at = policy_state.get("approved_at")
     band = _mission_criticality_band(policy, tier)
     table = policy["grid"].get(band["name"], {})
     heatmap = {
@@ -121,15 +123,26 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dic
     # decision, so a Revoke returns the subject to "needs MRC sign-off".
     signoff_history = data.get("signoff_history") or []
     latest_signoff = signoff_history[-1] if signoff_history else None
+    live_signoff = bool(
+        latest_signoff and latest_signoff.get("outcome") not in ("Rejected", "Revoked"))
     signed_off = bool(
-        heatmap["rag"] and latest_signoff
-        and latest_signoff.get("outcome") not in ("Rejected", "Revoked")
+        heatmap["rag"] and live_signoff
         and latest_signoff.get("to_rating") == heatmap["rag"]
     )
+    # A sign-off recorded before the division's current categorisation was approved was
+    # made under older categories: the model must be re-classified by its owner and
+    # re-sent to the MRC. Such a model is not treated as signed off.
+    signoff_date = (latest_signoff or {}).get("date")
+    needs_reclassification = bool(
+        live_signoff and approved_at and signoff_date and signoff_date < approved_at)
+    if needs_reclassification:
+        signed_off = False
     return {
         "heatmap": heatmap,
         "approved_rag": data.get("rag_rating"),
         "signed_off": signed_off,
+        # True when a prior sign-off is stale because the categorisation has since changed.
+        "needs_reclassification": needs_reclassification,
         "events_in_window": _events_in_window(data, as_of),
         "events_window_days": EVENTS_WINDOW_DAYS,
         "signoff_history": signoff_history,

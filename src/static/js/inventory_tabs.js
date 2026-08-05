@@ -152,9 +152,18 @@ const DetailTabs = {
       'style="border-left-color:#1976d2"><div class="lbl">Events (past ' + rating.events_window_days +
       ' days)</div><div class="val">' + rating.events_in_window + "</div></div></div>" : "";
     const signoff = this._signoffPanel(rating);
+    // A prior sign-off made under an older categorisation is no longer valid: the owner
+    // must re-confirm the classification and re-request MRC sign-off.
+    const reclassify = rating.needs_reclassification
+      ? '<div class="riskbanner" style="border-color:var(--amber);background:#fff8e1">' +
+        '<div style="font-weight:700;color:#b26a00">Re-classification needed</div>' +
+        '<div class="muted" style="font-size:12px">The division\'s risk categorisation has ' +
+        "changed since this model was signed off. Re-confirm Materiality, Complexity and " +
+        "Mission Criticality on Overview, then request MRC sign-off again.</div></div>"
+      : "";
     return '<p class="muted">Risk rating is set by the owner via Materiality and Complexity ' +
       "(the heatmap), and takes effect once the MRC signs that cell off.</p>" +
-      headline + signoff + this.heatmap(hm) + events +
+      reclassify + headline + signoff + this.heatmap(hm) + events +
       this.signoffHistory(rating.signoff_history);
   },
 

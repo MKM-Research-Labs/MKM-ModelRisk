@@ -32,6 +32,7 @@ from config.governance import (
 from src.governance.errors import DomainError
 from src.governance.model_inventory._rules import decide_update_field
 from src.governance.model_inventory._state import ModelState
+from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.risk_policy import (
     approve_policy,
     default_policy,
@@ -162,3 +163,32 @@ def test_field_validation_follows_the_divisions_approved_policy():
     seeded = ModelState(exists=True, retired=False, fields={"division": "SeedDivision"})
     with pytest.raises(DomainError):
         decide_update_field(seeded, field="rag_rating", value="Blue")
+
+
+# --- Changing the categorisation invalidates prior model sign-offs (needs re-classification) ---
+
+def _model(division, signoff_date):
+    return {"division": division, "tier": 1, "materiality": "Low", "complexity": "Low",
+            "rag_rating": "Green",
+            "signoff_history": [{"to_rating": "Green", "date": signoff_date, "outcome": "Approved"}]}
+
+
+def test_signoff_goes_stale_after_a_new_categorisation_is_approved():
+    div = "ReclassifyDiv"
+    propose_policy(division=div, policy=default_policy(), actor="admin")
+    approve_policy(division=div, actor="mrc")  # approved today
+    # Signed off in the past — before the categorisation was ratified — so it is stale.
+    stale = compute_risk_rating(_model(div, "2020-01-01"), as_of="2026-08-05")
+    assert stale["needs_reclassification"] is True
+    assert stale["signed_off"] is False
+    # Signed off after the ratification — still valid.
+    fresh = compute_risk_rating(_model(div, "2999-01-01"), as_of="2026-08-05")
+    assert fresh["needs_reclassification"] is False
+    assert fresh["signed_off"] is True
+
+
+def test_seed_division_signoff_is_not_stale():
+    # A division still on the firm-wide seed has had no categorisation change.
+    result = compute_risk_rating(_model("SeedOnlyDiv", "2020-01-01"), as_of="2026-08-05")
+    assert result["needs_reclassification"] is False
+    assert result["signed_off"] is True
