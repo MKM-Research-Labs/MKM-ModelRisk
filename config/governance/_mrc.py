@@ -257,7 +257,7 @@ STANDING_AGENDA = (
     {"kind": "completeness_audit", "title": "Governance completeness audit",
      "description": "Run and review the completeness audit for the models and "
                     "products in scope for this committee; record the committee's "
-                    "comfort with the outcome."},
+                    "notes on the outcome."},
     {"kind": "aob", "title": "Any Other Business (AOB)", "description": ""},
 )
 STANDING_AGENDA_KINDS = frozenset(item["kind"] for item in STANDING_AGENDA)
