@@ -61,6 +61,12 @@ const Policy = {
     const p = this._for(division);
     return p ? (p.risk_ratings || []).map((r) => r.name) : null;
   },
+  // The full ratings ({name, colour, explanation, score}) in policy order, for the surfaces
+  // that count or colour every rating rather than just naming them.
+  ratings(division) {
+    const p = this._for(division);
+    return p ? (p.risk_ratings || []) : null;
+  },
   dimensionBandNames(key, division) {
     const p = this._for(division);
     const dim = p && p.dimensions && p.dimensions[key];

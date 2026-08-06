@@ -184,3 +184,18 @@ function riskAssessmentTable(opts) {
   return '<table class="risk-assess"><thead><tr><th>Dimension</th><th>Rating</th>' +
     "<th>Rationale</th></tr></thead><tbody>" + rows + overall + "</tbody></table>";
 }
+
+// A one-line heads-up for a LIST: which of the divisions on it have a categorisation draft
+// waiting on their MRC. A list speaks the approved vocabulary, so a band renamed in Admin
+// but not yet ratified simply does not appear here — which reads as the console having
+// ignored the edit. The subject Risk tabs say this per division; a list says it once.
+function policyDraftNotice(divisions) {
+  const pending = [...new Set((divisions || []).filter(Boolean))]
+    .filter((d) => ((Policy.state(d) || {}).state) === "draft");
+  if (!pending.length) return "";
+  return '<div class="policy-note draft"><span class="badge" style="background:var(--amber)">' +
+    "Draft with the MRC</span> " + esc(pending.join(", ")) +
+    (pending.length > 1 ? " have" : " has") + " a risk-policy draft awaiting sign-off. This " +
+    "list shows the approved bands and ratings until the committee ratifies it " +
+    "(Admin &rarr; Risk).</div>";
+}
