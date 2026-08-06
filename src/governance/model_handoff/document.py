@@ -33,6 +33,7 @@ from src.governance.latex import (
     _esc, _section, _table, front_matter, history_page, logo_asset, preamble,
 )
 from src.governance.mrc.pack import compile_tex
+from src.governance.mrc_settings import get_settings
 
 # The template's narrative sections and the content each expects. Kept here so the
 # generated document mirrors the interoperability template's structure even where
@@ -98,7 +99,7 @@ def _lineage_rows(handoff: dict) -> list[list[str]]:
 
 
 def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | None,
-                       as_of: str, *, logo: bool = False) -> str:
+                       as_of: str, *, logo: bool = False, org_name: str = "") -> str:
     """LaTeX source for the interoperability-validation document of one handoff."""
     data = handoff.get("data", {})
     from_id, to_id = data.get("from_model", "?"), data.get("to_model", "?")
@@ -143,10 +144,11 @@ def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | No
                      + _guidance(["Author sign-off", "Provider and consumer handover sign-off"]))
 
     return (
-        preamble("Model Interoperability Validation") + "\\begin{document}\n"
+        preamble("Model Interoperability Validation", org_name=org_name) + "\\begin{document}\n"
         + front_matter("Model Interoperability Validation",
-                       from_id + " to " + to_id + " handover", date=as_of, logo=logo, toc=True)
-        + history_page(as_of, "Interoperability validation generated")
+                       from_id + " to " + to_id + " handover", org_name=org_name,
+                       date=as_of, logo=logo, toc=True)
+        + history_page(as_of, "Interoperability validation generated", org_name=org_name)
         + body
         + "\\end{document}\n"
     )
@@ -155,6 +157,10 @@ def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | No
 def render_handover_pdf(handoff: dict, provider: dict | None, consumer: dict | None,
                         as_of: str) -> bytes:
     """Build and compile the handover document to PDF bytes."""
-    assets = logo_asset()
-    tex = build_handover_tex(handoff, provider, consumer, as_of, logo=bool(assets))
+    # One settings read for both the logo and the institution heading the page —
+    # this document is published by the adopter, not by the platform.
+    settings = get_settings()
+    assets = logo_asset(settings)
+    tex = build_handover_tex(handoff, provider, consumer, as_of, logo=bool(assets),
+                             org_name=(settings.get("fields") or {}).get("org_name", ""))
     return compile_tex(tex, assets=assets)

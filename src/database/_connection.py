@@ -31,10 +31,7 @@ import psycopg
 from psycopg import sql
 
 from config import DatabaseConfig
-
-# A pre-existing database to connect to while creating another (you cannot
-# connect to the database you are about to CREATE).
-_MAINTENANCE_DB = "mkm_modelrisk"
+from config.database import MAINTENANCE_DB as _MAINTENANCE_DB
 
 
 def create_database(name: str, *, config: DatabaseConfig | None = None) -> bool:

@@ -115,9 +115,17 @@ const MeetingDetail = {
       right.push('<button class="btn small primary" id="mt-close"' +
         (block ? ' disabled title="' + esc(block) + '"' : "") + ">Close meeting&hellip;</button>");
     }
+    // The title is edited here, on the heading itself, rather than down in the
+    // info bar: it is the thing you read to know which meeting you are in. It
+    // goes through the same field editor as the logistics, so a rename is on the
+    // audit trail — and a closed meeting withdraws the affordance, as the info
+    // fields do, because the domain will not amend a finished record.
+    const rename = m.status === CLOSED_MEETING_STATUS ? "" :
+      ' <span class="edit-btn" data-minfo="title">rename</span>';
     return '<div class="detail-header"><div>' +
       '<button class="btn small" id="mt-back">&larr; Back</button> ' +
-      '<span class="name" style="margin-left:8px">' + esc(d.title || m.meeting_id) + "</span> " +
+      '<span class="name" id="minfo-title" style="margin-left:8px">' +
+      esc(d.title || m.meeting_id) + rename + "</span> " +
       statusBadge(m.status) + "</div>" +
       '<div class="right">' + right.join(" ") + "</div></div>";
   },
@@ -275,6 +283,12 @@ const MeetingDetail = {
     if (current !== null && current !== undefined) input.value = current;
     document.getElementById("mf-cancel").onclick = () => this.show(this._id, this._tab);
     document.getElementById("mf-save").onclick = () => {
+      // A required field cannot be emptied — clearing the title would leave the
+      // meeting headed by its bare id in every list, pack and minute.
+      if (f.required && !input.value.trim()) {
+        App.toast(f.label + " cannot be empty", "error");
+        return;
+      }
       App.amend("Set " + f.label + ' = "' + input.value + '" on ' + this._id + ".", "POST",
         "/api/meetings/" + this._id + "/field", { field: key, value: input.value.trim() },
         () => { this.show(this._id, this._tab); MRC.loadList(); });

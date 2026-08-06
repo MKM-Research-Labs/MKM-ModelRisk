@@ -190,15 +190,20 @@ def _render_user_guide(dest):
         ["pandoc", str(USER_GUIDE_MD), "-t", "latex"],
         check=True, capture_output=True, text=True).stdout
     as_of = date.today().isoformat()
-    assets = logo_asset()
+    # The institution heads this document like every other one it publishes; the
+    # guide is the only report that used to head itself with the platform's name.
+    settings = get_settings()
+    org = (settings.get("fields") or {}).get("org_name", "")
+    assets = logo_asset(settings)
     tex = (
-        preamble("User Guide")
+        preamble("User Guide", org_name=org)
         # pandoc's LaTeX uses \tightlist, which its standalone template defines;
         # a fragment does not, so provide it here.
         + "\\providecommand{\\tightlist}{\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}\n"
         + "\\begin{document}\n"
-        + front_matter("User Guide", "MKM-ModelRisk", date=as_of, logo=bool(assets), toc=True)
-        + history_page(as_of, "User guide generated")
+        + front_matter("User Guide", "Model risk governance console", org_name=org,
+                       date=as_of, logo=bool(assets), toc=True)
+        + history_page(as_of, "User guide generated", org_name=org)
         + body
         + "\\end{document}\n"
     )

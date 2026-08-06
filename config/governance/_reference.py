@@ -72,10 +72,15 @@ DEFAULT_MODEL_TYPES = (
 # Simple single-value lists seeded on first use (same "seed a vacuum, never
 # reconcile a curated list" rule as the model types above). Data sources are the
 # feeds a model pulls its inputs from; Vendor names who supplies the model
-# itself. Both are strict lists an adopter re-seeds to its own estate — a Moody's
-# install would seed "Moody's" as its vendor.
+# itself. Both are strict lists an adopter re-seeds to its own estate.
+#
+# The vendor seed names no institution: a fresh install should not plant this
+# platform's author in an adopter's inventory, where it would sit in the Vendor
+# menu as though it supplied their models. "In-house" is the honest starting
+# point (most banks build their own), and every real supplier — including this
+# one, on the MKM estate — is added in Admin > Vendor.
 DEFAULT_DATA_SOURCES = ("ICE", "Reuters", "Bloomberg", "Manual", "Simulated", "Other")
-DEFAULT_VENDORS = ("MKM Research Labs", "Other")
+DEFAULT_VENDORS = ("In-house", "Other")
 
 # MRC committees are anchored to one of the three org tiers. A Line of Business-level
 # MRC only sees models in that line of business; Division sees everything across its

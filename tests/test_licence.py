@@ -22,14 +22,16 @@
 Two files carry the licence, and both are handover artefacts:
 
 * ``LICENSE`` — the grant that ships with the code.
-* ``docs/shared/copyright.py`` — the canonical header block that audit R5 stamps
-  on every source file.
+* ``docs/shared/copyright.py`` — the canonical block every source file's header
+  is copied from.
 
 They have gone missing from the working tree once. Losing either is quiet and
 expensive: without ``LICENSE`` the code ships with no stated grant, and without
-the template the R5 header audit cannot run at all. Worse than either is the two
-drifting apart, which would leave every file's header claiming something the
-LICENSE does not say. These tests make any of that a named failure.
+the template there is nothing to copy a header from. Worse than either is the
+two drifting apart, which would leave every file's header claiming something the
+LICENSE does not say. These tests make any of that a named failure — they are
+about the licence itself, not about which files carry a header (R5 is checked by
+hand, not by the audit).
 """
 from __future__ import annotations
 

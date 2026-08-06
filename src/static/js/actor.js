@@ -48,7 +48,9 @@ const Actor = {
     // action; Confirm is enabled once the People list has loaded.
     if (overlay) overlay.classList.remove("hidden");
     if (confirmBtn) confirmBtn.disabled = true;
-    const fallback = el.getAttribute("data-default") || "david.kelly@mkmresearchlabs.com";
+    // The identity the server resolved for this request (SSO, or the deployment's
+    // configured dev fallback). Blank only if it could not resolve one at all.
+    const fallback = el.getAttribute("data-default") || "";
     let people = [];
     try {
       // /api/reference returns {collections: [specs], data: {list: [rows]}}.
@@ -60,8 +62,16 @@ const Actor = {
       .filter((o) => o.value);
     // A fresh instance has no People yet; the fallback keeps the console usable
     // (and keeps whatever the deployment's SSO header already resolved to).
-    if (!options.some((o) => o.value === fallback)) {
+    if (fallback && !options.some((o) => o.value === fallback)) {
       options.unshift({ value: fallback, label: fallback });
+    }
+    // Neither a directory nor a resolved identity: say so rather than offering a
+    // blank option that would attribute changes to nobody.
+    if (!options.length) {
+      if (confirmBtn) confirmBtn.disabled = true;
+      el.innerHTML = "";
+      if (gate) gate.innerHTML = '<option value="">No people on record</option>';
+      return;
     }
     const optionsHtml = options.map((o) =>
       '<option value="' + esc(o.value) + '">' + esc(o.label) + "</option>").join("");

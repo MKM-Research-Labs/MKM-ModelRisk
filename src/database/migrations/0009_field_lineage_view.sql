@@ -15,4 +15,4 @@ CREATE TABLE IF NOT EXISTS field_lineage_view (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON field_lineage_view TO mkm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON field_lineage_view TO {{app_user}};

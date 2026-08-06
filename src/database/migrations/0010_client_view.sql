@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS client_view (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON client_view TO mkm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON client_view TO {{app_user}};

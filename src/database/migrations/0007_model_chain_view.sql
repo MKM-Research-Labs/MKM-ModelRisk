@@ -14,4 +14,4 @@ CREATE TABLE IF NOT EXISTS model_chain_view (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON model_chain_view TO mkm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON model_chain_view TO {{app_user}};

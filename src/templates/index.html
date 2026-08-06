@@ -17,7 +17,7 @@
     </div>
     <div class="actor">
       <label for="actor-input">Acting as</label>
-      <select id="actor-input" data-default="{{ actor_default | default('david.kelly@mkmresearchlabs.com', true) }}"></select>
+      <select id="actor-input" data-default="{{ actor_default | default('', true) }}"></select>
       <span class="hint" title="In production this is set by the client's SSO. Here you can pick who you are acting as to see attribution in the audit trail.">simulated SSO identity</span>
     </div>
   </header>
@@ -58,7 +58,7 @@
     <div class="modal">
       <h2>Register a model</h2>
       <p class="muted">This model is registered into the region selected above; pick its owner and set the rest on the model afterwards.</p>
-      <div class="field"><label for="reg-model_id">Model ID *</label><input id="reg-model_id" placeholder="MKM-CR-001"></div>
+      <div class="field"><label for="reg-model_id">Model ID *</label><input id="reg-model_id" placeholder="CR-001"></div>
       <div class="field"><label for="reg-name">Name *</label><input id="reg-name" placeholder="Retail Credit Scoring"></div>
       <div class="field"><label for="reg-type">Type</label><select id="reg-type"></select></div>
       <div class="field"><label>Division</label><div id="reg-division-val" class="reg-scope">—</div></div>

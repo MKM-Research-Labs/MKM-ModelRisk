@@ -101,7 +101,11 @@ REVIEW_UPCOMING_DAYS = 90
 # on read from the MRC entry; they're not stored on the meeting.
 MEETING_FIELD_SPECS = {
     "mrc": {"label": "MRC", "type": "text", "reference": "mrc"},
-    "title": {"label": "Title", "type": "text"},
+    # The meeting's name, as it heads the console and the Meeting Pack. Editable
+    # like the logistics below — a meeting gets renamed when its period or scope
+    # turns out differently from what was scheduled — but never to nothing: it is
+    # how a committee refers to the meeting in its own minutes.
+    "title": {"label": "Title", "type": "text", "required": True},
     "date": {"label": "Date", "type": "date"},
     "time": {"label": "Time", "type": "text"},
     "location": {"label": "Location", "type": "text"},

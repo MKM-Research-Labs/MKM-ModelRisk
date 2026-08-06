@@ -8,4 +8,4 @@ CREATE TABLE IF NOT EXISTS product_view (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON product_view TO mkm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON product_view TO {{app_user}};

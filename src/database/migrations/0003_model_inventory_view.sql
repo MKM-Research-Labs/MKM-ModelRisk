@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS model_inventory_view (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON model_inventory_view TO mkm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON model_inventory_view TO {{app_user}};
