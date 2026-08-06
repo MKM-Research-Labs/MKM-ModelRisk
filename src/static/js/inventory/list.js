@@ -49,7 +49,7 @@ const InventoryList = {
     // The derived review status (On Track / Overdue) is no longer a column — it
     // only re-stated the Next Review date beside it. The Overdue / Due Soon tiles
     // and the review filter still surface it as a portfolio-health signal.
-    { key: "mrc", label: "MRC Status", sortVal: (m) => mrcOutcome(m.d),
+    { key: "mrc", label: "MRC Status", sortVal: (m) => mrcState(m.d),
       cell: (m) => mrcStatusBadge(m.d) },
     { key: "lifecycle", label: "Lifecycle", sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || m.d.status || "").toLowerCase(),
       cell: (m) => m.retired ? '<span class="pill">retired</span>' : fieldDisplay(m.d.lifecycle_stage || m.d.status) },
@@ -94,8 +94,11 @@ const InventoryList = {
   _tiles() {
     const byTier = (t) => this._models.filter((m) => m.d.tier === t).length;
     const byRag = (r) => this._models.filter((m) => m.d.rag_rating === r).length;
-    // Approved = models whose latest MRC sign-off outcome is an approval.
-    const approved = this._models.filter((m) => mrcOutcome(m.d) === "Approved").length;
+    // Approved = models whose CURRENT MRC state is an approval, the same rule the status
+    // column and the Risk tab use: a model awaiting a decision, or approved under a
+    // categorisation the division has since replaced, is not covered by a sign-off. Counting
+    // the last historical outcome instead read 25/25 while the column beside it said Pending.
+    const approved = this._models.filter((m) => mrcState(m.d) === "Approved").length;
     // R/A/G breakdown, each count coloured to its rating.
     const ragCount = (r) => '<span style="color:' + RAG_COLORS[r] + '">' + byRag(r) + "</span>";
     const ragVal = ragCount("Red") + " / " + ragCount("Amber") + " / " + ragCount("Green");
