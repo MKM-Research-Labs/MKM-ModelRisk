@@ -21,7 +21,9 @@
 from __future__ import annotations
 
 from config.reporting import DEFAULT_LEGAL_NOTICE
+from src.governance import wording
 from src.governance.latex import _quoted, legal_notice, title_page
+from src.governance.mrc_settings import set_field
 from src.governance.model_inventory.document import build_model_document_tex
 from src.governance.model_inventory.report import build_report_tex
 from src.governance.mrc.pack import build_tex as build_pack_tex
@@ -70,3 +72,29 @@ def test_notice_block_is_empty_when_an_adopter_clears_it():
     """An institution that files its own notice elsewhere can empty the setting
     rather than having a block it did not write printed on its documents."""
     assert legal_notice(()) == ""
+
+
+def test_title_page_carries_the_adopters_notice():
+    """The notice is the institution's own words, recorded in Admin > Misc; a bank
+    should not be publishing MKM Research Labs' notice on its model documentation.
+    Blank lines separate paragraphs, and each becomes its own block."""
+    set_field(
+        field="report_legal_notice", actor="a@b.c",
+        value="Property of Sterling Bank plc.\n\nCirculation is restricted.",
+    )
+    tex = title_page("T", "S")
+    assert "Property of Sterling Bank plc." in tex
+    assert "Circulation is restricted." in tex
+    assert PHRASE not in tex                      # the shipped default is gone
+    assert tex.count("\\par\\medskip") == 2       # heading + one paragraph break
+
+
+def test_notice_is_dropped_when_the_setting_is_saved_empty():
+    set_field(field="report_legal_notice", value="", actor="a@b.c")
+    assert "Legal notice" not in title_page("T", "S")
+
+
+def test_notice_falls_back_to_the_shipped_default(monkeypatch):
+    """Unreadable settings must not silently publish a document with no notice."""
+    monkeypatch.setattr(wording, "_settings_fields", lambda settings=None: {})
+    assert PHRASE in title_page("T", "S")

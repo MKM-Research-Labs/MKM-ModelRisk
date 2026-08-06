@@ -28,17 +28,22 @@ header/footer and the title-page legal notice.
 One preamble, one title page, one header/footer, so the Meeting Pack, the Model
 Risk Report and the interoperability handover all read as the same document family:
 the ``mkmblue`` brand colour, one-half spacing, a fancy header carrying the document
-title, and a ``Page x of y`` / classification footer. Every title page carries the
-legal notice from ``config.reporting``, which asserts rights over the *contents* of
-the generated document — the models, methodology and calculations it describes. That
-is separate from the software that produced it, which remains MIT-licensed.
+title, and a ``Page x of y`` / classification footer. Every title page carries a
+legal notice, which asserts rights over the *contents* of the generated document —
+the models, methodology and calculations it describes. That is separate from the
+software that produced it, which remains MIT-licensed.
+
+The classification banner, the "prepared by" author line and the legal notice are
+the adopting institution's own words: they are settings, edited in Admin > Misc and
+read here at generation time. ``config.reporting`` holds only the shipped defaults,
+used until an institution records its own.
 """
 from __future__ import annotations
 
 from typing import Any
 
-from config.reporting import (DEFAULT_AUTHOR, DEFAULT_CLASSIFICATION,
-                              DEFAULT_LEGAL_NOTICE, DEFAULT_ORG)
+from config.reporting import DEFAULT_ORG
+from src.governance.wording import report_wording
 
 _LATEX_REPLACEMENTS = {
     "\\": r"\textbackslash{}", "&": r"\&", "%": r"\%", "$": r"\$", "#": r"\#",
@@ -125,9 +130,10 @@ def legal_notice(paragraphs=None) -> str:
     It covers the contents of the generated document -- the models, methodology and
     calculations it describes -- and is deliberately silent about the software that
     produced it, which is MIT-licensed. Every document family reaches this through
-    ``title_page``, so a new report cannot be published without it.
+    ``title_page``, so a new report cannot be published without it. The wording is
+    the adopter's, edited in Admin > Misc.
     """
-    text = DEFAULT_LEGAL_NOTICE if paragraphs is None else paragraphs
+    text = report_wording()["legal_notice"] if paragraphs is None else paragraphs
     if not text:
         return ""
     body = "\\par\\medskip\n".join(_quoted(_esc(p)) for p in text)
@@ -173,6 +179,7 @@ def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") ->
     template omits — the brand colour and the fancy header/footer carrying
     ``doc_title`` and a CONFIDENTIAL / page-count foot."""
     org = _esc(org_name or DEFAULT_ORG)
+    classification = report_wording()["classification"]
     return (
         "\\documentclass[11pt]{article}\n"
         "\\usepackage[utf8]{inputenc}\n"
@@ -198,7 +205,7 @@ def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") ->
         "\\pagestyle{fancy}\\fancyhf{}\n"
         "\\fancyhead[L]{\\small\\textcolor{gray}{" + org + "}}\n"
         "\\fancyhead[R]{\\small\\textcolor{gray}{" + _esc(doc_title) + " --- v" + _esc(doc_version) + "}}\n"
-        "\\fancyfoot[C]{\\small\\textcolor{gray}{" + _esc(DEFAULT_CLASSIFICATION) + "}}\n"
+        "\\fancyfoot[C]{\\small\\textcolor{gray}{" + _esc(classification) + "}}\n"
         "\\fancyfoot[R]{\\small\\textcolor{gray}{Page \\thepage\\ of \\pageref{LastPage}}}\n"
         "\\renewcommand{\\headrulewidth}{0.4pt}\\renewcommand{\\footrulewidth}{0.4pt}\n"
     )
@@ -214,6 +221,8 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
     graphic = ("\\includegraphics[width=0.4\\textwidth]{" + LOGO_ASSET + "}\\\\[1.2cm]\n"
                if logo else "")
     author_line = "{\\large " + _esc(author) + "\\par}\\vspace{0.5cm}\n" if author else ""
+    # One read of the adopter's wording for both the mark and the notice below it.
+    wording = report_wording()
     return (
         "\\begin{titlepage}\\thispagestyle{empty}\\begin{center}\n"
         "\\vspace*{1.5cm}\n" + graphic +
@@ -225,8 +234,8 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
         "\\vspace{\\stretch{2}}\n"
         "{\\large " + _esc(date) + "\\\\[0.3cm]Document Version " + _esc(version) + "\\par}\\vspace{0.8cm}\n"
         + author_line +
-        "\\textcolor{red}{\\textbf{" + _esc(DEFAULT_CLASSIFICATION) + "}}\\par\n"
-        "\\end{center}\n" + legal_notice() + "\\end{titlepage}\n"
+        "\\textcolor{red}{\\textbf{" + _esc(wording["classification"]) + "}}\\par\n"
+        "\\end{center}\n" + legal_notice(wording["legal_notice"]) + "\\end{titlepage}\n"
     )
 
 
@@ -246,7 +255,7 @@ def front_matter(title: str, subtitle: str, *, org_name: str = "", date: str = "
     Table of Contents. Builders follow this with ``history_page`` so the Document
     Revision History is the first numbered section, as the template places it."""
     front = title_page(title, subtitle, org_name=org_name, date=date,
-                       author=author or DEFAULT_AUTHOR, version=version, logo=logo)
+                       author=author or report_wording()["author"], version=version, logo=logo)
     if toc:
         front += "\\tableofcontents\n\\clearpage\n"
     return front

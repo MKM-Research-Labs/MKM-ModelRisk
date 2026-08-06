@@ -98,8 +98,8 @@ The main tabs, left to right, are: **MRC**, **Models**, **Model Chain**,
 **Admin**.
 
 Click **Admin**. Its sub-tabs are **Company**, **Division**, **Line of Business**,
-**MRC**, **Calc Agent**, **People**, and **Model Type**. All the setup in
-sections 3–7 happens here.
+**MRC**, **Calc Agent**, **Data Source**, **People**, **Model Type**, **Vendor**,
+**Risk** and **Misc**. All the setup in sections 3–7 happens here.
 
 ---
 
@@ -113,6 +113,33 @@ sections 3–7 happens here.
 2. **Logo** — choose a PNG/JPEG and click **Upload logo**. It is embedded in the
    Meeting Pack, Model Risk Report and client-pack PDFs. (Logo upload is immediate,
    no confirm dialog.)
+
+### What your PDFs say — Admin → Misc
+
+The wording every generated PDF carries is yours, not the platform's. **Admin →
+Misc** holds it, and each field is edited in place (**edit** → type → **Save** →
+confirm) like any other setting:
+
+| Field | Where it appears |
+|---|---|
+| **Classification banner** | Title page (in red) and the centre of every page footer — e.g. *CONFIDENTIAL — PROPRIETARY*, *OFFICIAL-SENSITIVE* |
+| **Prepared by (document author)** | The author line on the title page, beneath the date and version |
+| **Legal notice** | The block at the foot of the title page. Leave a blank line between paragraphs; each becomes its own paragraph in the PDF |
+
+The legal notice covers the **contents** of the document — the models, methodology
+and calculations it describes. It says nothing about the software that generated
+it, which is MIT-licensed (see `LICENSE`). Until you change them, these fields
+carry MKM Research Labs' shipped wording, so **set them before you publish
+documents outside your institution**. Saving a field empty drops that line from
+your documents altogether — for an institution that classifies nothing, or that
+files its legal notice elsewhere.
+
+Changes apply to every document generated afterwards: Meeting Packs, Model Risk
+Reports, model and product documents, completeness audits, risk-categorisation
+documents and client packs. PDFs already generated and stored are unchanged.
+
+This sub-tab also holds **Document model types** — the comma-separated tag
+taxonomy offered on the top-level Documents tab.
 
 ---
 

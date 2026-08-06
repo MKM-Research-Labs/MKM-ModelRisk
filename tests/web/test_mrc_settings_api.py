@@ -23,6 +23,7 @@ from __future__ import annotations
 import base64
 import io
 
+from config.reporting import DEFAULT_CLASSIFICATION, DEFAULT_LEGAL_NOTICE
 from tests.web.conftest import HEADERS
 
 PNG = base64.b64decode(
@@ -35,6 +36,26 @@ def test_get_settings_has_defaults_and_specs(client):
     assert settings["fields"]["frequency"] == "Quarterly"
     assert settings["logo"] is None
     assert any(spec["key"] == "chair" for spec in settings["specs"])
+
+
+def test_report_wording_is_served_to_the_misc_tab(client):
+    """Admin > Misc edits the document wording that used to live in config code, so
+    the API has to say which settings belong to it and what they currently say."""
+    settings = client.get("/api/mrc/settings").get_json()
+    misc = {spec["key"] for spec in settings["specs"] if spec["group"] == "misc"}
+    assert {"report_classification", "report_author", "report_legal_notice"} <= misc
+    assert settings["fields"]["report_classification"] == DEFAULT_CLASSIFICATION
+    assert DEFAULT_LEGAL_NOTICE[0] in settings["fields"]["report_legal_notice"]
+
+
+def test_update_report_legal_notice(client):
+    response = client.post(
+        "/api/mrc/settings/field",
+        json={"field": "report_legal_notice", "value": "Property of Sterling Bank plc.",
+              "confirmed": True},
+        headers=HEADERS,
+    )
+    assert response.get_json()["fields"]["report_legal_notice"] == "Property of Sterling Bank plc."
 
 
 def test_update_setting_field(client):

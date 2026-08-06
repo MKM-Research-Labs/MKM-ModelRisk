@@ -17,16 +17,18 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Defaults for generated documents, meant to be edited by an adopting institution.
+"""Shipped defaults for generated documents, overridden by the adopting institution.
 
-Every PDF the platform generates goes through the shared LaTeX house style, which
-reads these values. The classification banner is deliberately generic — an adopter
-(inside their own governance framework) changes it here to re-label every document
-at once, rather than hunting through the code.
+Every PDF the platform generates goes through the shared LaTeX house style. The
+classification banner, the author line and the legal notice below are one
+institution's words rather than platform constants, so they are settings: an
+adopter records its own in **Admin > Misc**, which re-labels every document at
+once. The values here are what a fresh install prints until it does — the wording
+that ships, not the wording that is fixed.
 """
 
 # The classification banner stamped on the title page and page footer of every
-# generated document. Adopters to date have kept "CONFIDENTIAL"; change it here.
+# generated document. Adopters to date have kept "CONFIDENTIAL".
 DEFAULT_CLASSIFICATION = "CONFIDENTIAL — PROPRIETARY"
 
 # Fallback organisation name for document headers/title pages when the singleton
@@ -40,8 +42,10 @@ DEFAULT_AUTHOR = "MKM-ModelRisk"
 # The legal notice printed on the title page of every generated document. It covers
 # the *contents* of the document -- the models, methodology and calculations it
 # describes -- and says nothing about the software that produced it, which is
-# MIT-licensed (see LICENSE). An adopting institution asserting rights over its own
-# model documentation changes the wording here, as with the classification banner.
+# MIT-licensed (see LICENSE). This wording asserts MKM Research Labs' rights; an
+# institution asserting rights over its own model documentation replaces it in
+# Admin > Misc, as with the classification banner. Paragraphs are one per entry
+# here and separated by a blank line in the setting.
 DEFAULT_LEGAL_NOTICE = (
     "PROPRIETARY AND CONFIDENTIAL",
     "This document, including all algorithms, models, methodology, formulas, "

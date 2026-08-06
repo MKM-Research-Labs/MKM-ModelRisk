@@ -20,6 +20,8 @@
 """MRC settings, branding and meeting field specs (coding rule R1)."""
 from config.governance._collections import VALID_SIGNOFF_KINDS
 from config.governance._inventory import VALID_RAG_RATINGS
+from config.reporting import (DEFAULT_AUTHOR, DEFAULT_CLASSIFICATION,
+                              DEFAULT_LEGAL_NOTICE)
 
 # --- MRC settings & branding (header for the console and Meeting Pack PDF) ---
 # Address, handbook reference and framework were dropped as not required; the
@@ -38,6 +40,14 @@ MEETING_INTERVAL_MONTHS = {
     "Monthly": 1, "Quarterly": 3, "Semi-annual": 6, "Annual": 12,
 }
 DEFAULT_INTERVAL_MONTHS = 3
+# The wording every generated PDF carries. These are one institution's words, not
+# platform constants: the values in ``config/reporting.py`` are only the shipped
+# defaults, and an adopter overrides them here (Admin > Misc) rather than editing
+# code. Grouped as "misc" so the Admin tab knows which sub-tab shows them.
+MISC_SETTINGS_GROUP = "misc"
+# Paragraphs of the legal notice are separated by a blank line, so a multi-paragraph
+# notice can be typed into (and read back from) one text box.
+LEGAL_NOTICE_SEPARATOR = "\n\n"
 MRC_SETTINGS_SPECS = (
     {"key": "org_name", "label": "Organisation name", "type": "text"},
     {"key": "chair", "label": "Chair", "type": "text"},
@@ -45,8 +55,15 @@ MRC_SETTINGS_SPECS = (
     # Comma-separated taxonomy of model types used to tag external reference
     # documents (the top-level Documents tab). Admin-editable here; the Documents
     # tab reads it to offer tags and to filter.
-    {"key": "document_model_types", "label": "Document model types (comma-separated)",
-     "type": "text"},
+    {"key": "document_model_types", "label": "Document model types",
+     "type": "text", "group": MISC_SETTINGS_GROUP},
+    # --- Generated-document wording (title page and running footer) ---
+    {"key": "report_classification", "label": "Classification banner", "type": "text",
+     "group": MISC_SETTINGS_GROUP},
+    {"key": "report_author", "label": "Prepared by", "type": "text",
+     "group": MISC_SETTINGS_GROUP},
+    {"key": "report_legal_notice", "label": "Legal notice", "type": "textarea",
+     "group": MISC_SETTINGS_GROUP},
 )
 MRC_SETTINGS_KEYS = tuple(spec["key"] for spec in MRC_SETTINGS_SPECS)
 MRC_SETTINGS_DEFAULTS = {
@@ -56,6 +73,9 @@ MRC_SETTINGS_DEFAULTS = {
         "Hazard, Pricing, Valuation, Resilience-Credit, Analytics, "
         "Regulatory, Market & Product, Academic & Method"
     ),
+    "report_classification": DEFAULT_CLASSIFICATION,
+    "report_author": DEFAULT_AUTHOR,
+    "report_legal_notice": LEGAL_NOTICE_SEPARATOR.join(DEFAULT_LEGAL_NOTICE),
 }
 
 # --- Model Risk Committee (MRC) meetings ---

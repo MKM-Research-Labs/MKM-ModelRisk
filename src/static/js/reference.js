@@ -36,6 +36,9 @@ const Reference = {
     ["model_type", "Model Type"], ["vendor", "Vendor"],
     // The per-division risk policy: dimensions, ratings and the generated grids.
     ["risk", "Risk"],
+    // Institution-specific wording that is not a reference list — what the
+    // generated PDFs say (classification, author, legal notice).
+    ["misc", "Misc"],
   ],
 
   async render() {
@@ -60,6 +63,11 @@ const Reference = {
     // The risk policy is per-division structured config, not a flat reference list.
     if (this._tab === "risk") {
       await RiskEditor.render(container);
+      return;
+    }
+    // Misc is the singleton settings that are wording, not lists.
+    if (this._tab === "misc") {
+      await AdminMisc.render(container);
       return;
     }
     const res = await App.get("/api/reference");

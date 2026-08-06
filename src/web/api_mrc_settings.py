@@ -33,7 +33,10 @@ settings_bp = Blueprint("mrc_settings", __name__, url_prefix="/api/mrc")
 
 def _specs():
     return [
-        {"key": s["key"], "label": s["label"], "type": s["type"], "options": list(s.get("options", []))}
+        {"key": s["key"], "label": s["label"], "type": s["type"],
+         "options": list(s.get("options", [])),
+         # Which Admin sub-tab owns this setting ("misc", or the MRC detail when unset).
+         "group": s.get("group", "")}
         for s in MRC_SETTINGS_SPECS
     ]
 

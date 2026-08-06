@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.governance import latex
+from src.governance import wording
 from src.governance.latex import (
     DEFAULT_ORG,
     LOGO_ASSET,
@@ -32,6 +32,7 @@ from src.governance.latex import (
     preamble,
     title_page,
 )
+from src.governance.mrc_settings import set_field
 
 
 def test_preamble_carries_org_title_and_confidential_footer():
@@ -45,11 +46,24 @@ def test_preamble_defaults_the_org():
     assert DEFAULT_ORG in preamble("X")
 
 
-def test_classification_is_config_driven(monkeypatch):
-    # An adopter re-labels every document by changing the config value, not code.
-    monkeypatch.setattr(latex, "DEFAULT_CLASSIFICATION", "OFFICIAL-SENSITIVE")
+def test_classification_is_settings_driven():
+    # An adopter re-labels every document from Admin > Misc, not by editing code.
+    set_field(field="report_classification", value="OFFICIAL-SENSITIVE", actor="a@b.c")
     assert "OFFICIAL-SENSITIVE" in preamble("X")
     assert "OFFICIAL-SENSITIVE" in title_page("T", "s", logo=False)
+
+
+def test_classification_falls_back_to_the_shipped_default(monkeypatch):
+    # Nothing recorded (a fresh install, or the settings unreadable): the document
+    # still carries the banner config ships rather than none at all.
+    monkeypatch.setattr(wording, "_settings_fields", lambda settings=None: {})
+    monkeypatch.setattr(wording, "DEFAULT_CLASSIFICATION", "OFFICIAL-SENSITIVE")
+    assert "OFFICIAL-SENSITIVE" in preamble("X")
+
+
+def test_author_line_is_settings_driven():
+    set_field(field="report_author", value="Sterling Bank Model Risk", actor="a@b.c")
+    assert "Sterling Bank Model Risk" in front_matter("Doc", "sub", date="2026-07-19")
 
 
 def test_title_page_with_logo_references_the_cover_asset():
@@ -79,7 +93,7 @@ def test_front_matter_is_title_page_then_optional_contents():
 
 
 def test_front_matter_defaults_the_author():
-    from src.governance.latex import DEFAULT_AUTHOR
+    from config.reporting import DEFAULT_AUTHOR
     assert DEFAULT_AUTHOR in front_matter("Doc", "sub", date="2026-07-19")
 
 
