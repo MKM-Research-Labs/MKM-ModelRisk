@@ -33,8 +33,10 @@ const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebas
 // The owner's risk assessment (what places the model on the heatmap) lives on the Risk
 // tab, next to the grid it drives — not the Overview. Only the headline rag_rating (owner
 // vs table) stays on Overview, under Governance.
-const RISK_ASSESSMENT_FIELDS = ["tier", "materiality", "complexity", "tier_rationale",
-  "rating_rationale"];
+// Each dimension is followed by the owner's justification for that choice — the Admin tab
+// defines the bands, and this is where the owner says why this model sits in one.
+const RISK_ASSESSMENT_FIELDS = ["tier", "tier_rationale", "materiality",
+  "materiality_rationale", "complexity", "complexity_rationale", "rating_rationale"];
 // Governance column. Note: recertification / review_frequency / last_review_date remain
 // intentionally off the overview (the MRC sets sign-off + next review at sign-off); that
 // they are still audit-scored is a separate, open decision, not this regression.
@@ -175,6 +177,7 @@ const Detail = {
         '<div class="section-header">Risk assessment</div>' +
         '<p class="muted" style="font-size:12px;margin:0 0 8px">The owner sets these; they place ' +
         "the model on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
+        policyNotice(d.division) +
         RISK_ASSESSMENT_FIELDS.map((k) => this._row(k, d)).join("") +
         DetailTabs.risk(this._risk, false);  // events are product-only
       this._bindEdits();          // the risk-assessment fields are editable here now

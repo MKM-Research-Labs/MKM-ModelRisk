@@ -73,6 +73,10 @@ FIELD_CRITICALITY = {
     "methodology_rationale": 0.75,
     "tier_rationale": 0.80,
     "rating_rationale": 0.80,
+    # The per-dimension justifications. Below the Mission-Criticality one: that band is the
+    # headline classification, while these explain the two heatmap axes.
+    "materiality_rationale": 0.65,
+    "complexity_rationale": 0.65,
     # --- Review cycle. ---
     "next_review_date": 0.85,
     "last_review_date": 0.70,

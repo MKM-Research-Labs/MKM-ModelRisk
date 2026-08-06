@@ -62,6 +62,14 @@ PRODUCT_FIELD_SPECS = {
                     "group": "Classification"},
     "complexity": {"label": "Complexity", "type": "choice", "options": VALID_COMPLEXITY,
                    "group": "Classification"},
+    # One justification per risk dimension, plus the overall rating — the same record a
+    # model keeps, so a product's categorisation can be challenged on the same terms.
+    "tier_rationale": {"label": "Tier rationale", "type": "text", "group": "Classification"},
+    "materiality_rationale": {"label": "Materiality rationale", "type": "text",
+                              "group": "Classification"},
+    "complexity_rationale": {"label": "Complexity rationale", "type": "text",
+                             "group": "Classification"},
+    "rating_rationale": {"label": "Rating rationale", "type": "text", "group": "Classification"},
     "calculating_agent": {"label": "Calculating Agent", "type": "text", "group": "Bindings",
                           "reference": "calculating_agent"},
     "rag_rating": {"label": "RAG rating", "type": "choice", "options": VALID_RAG_RATINGS,
@@ -87,6 +95,7 @@ PRODUCT_FIELD_SPECS = {
 PRODUCT_EDITABLE_FIELDS = (
     "product", "product_id", "description", "division", "line_of_business",
     "tier", "materiality", "complexity",
+    "tier_rationale", "materiality_rationale", "complexity_rationale", "rating_rationale",
     "rag_rating", "status", "owner", "notes",
     "mrc_signoff_date", "mrc_signoff_meeting", "next_review_date", "last_review_date",
     "monitoring_approach",

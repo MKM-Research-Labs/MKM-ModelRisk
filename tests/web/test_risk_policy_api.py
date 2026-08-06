@@ -27,7 +27,7 @@ from tests.web.conftest import HEADERS
 
 def test_registry_returns_seed_and_per_division_policies(client):
     reg = client.get("/api/risk-policy").get_json()
-    assert set(reg) == {"seed", "divisions"}
+    assert set(reg) == {"seed", "divisions", "states"}
     ratings = {r["name"]: (r["colour"], r["score"]) for r in reg["seed"]["risk_ratings"]}
     assert ratings["Red"] == ("#d32f2f", 1.25)
     assert ratings["Green"] == ("#388e3c", 1.0)
@@ -35,6 +35,23 @@ def test_registry_returns_seed_and_per_division_policies(client):
     assert isinstance(reg["divisions"], dict)
     for policy in reg["divisions"].values():
         assert policy["risk_ratings"] == reg["seed"]["risk_ratings"]
+
+
+def test_registry_reports_the_lifecycle_state_of_each_division(client):
+    """A model's Risk tab offers the APPROVED bands, so it has to be able to say when a
+    newer draft is sitting with the MRC — otherwise an admin edit that has not been
+    ratified simply looks like it never arrived."""
+    div = "StateDiv"
+    client.post("/api/reference/collections/division",
+                json={"fields": {"value": div}, "confirmed": True}, headers=HEADERS)
+    assert client.get("/api/risk-policy").get_json()["states"][div]["state"] == "seed"
+    _propose_edit(client, div)
+    assert client.get("/api/risk-policy").get_json()["states"][div]["state"] == "draft"
+    client.post(f"/api/risk-policy/{div}/approve",
+                json={"meeting_id": "MTG-STATE", "confirmed": True}, headers=HEADERS)
+    state = client.get("/api/risk-policy").get_json()["states"][div]
+    assert state["state"] == "approved"
+    assert state["approved_at"]  # when the live categorisation was ratified
 
 
 def test_division_detail_defaults_to_the_seed(client):

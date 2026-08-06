@@ -35,7 +35,6 @@ from src.governance.mrc_settings import get_settings
 from src.governance.risk_policy import (
     approve_policy,
     default_policy,
-    get_risk_policy,
     load,
     propose_policy,
     reject_policy,
@@ -50,11 +49,19 @@ _DOCUMENT_SCOPE = "risk_policy"
 
 @risk_policy_bp.get("/api/risk-policy")
 def risk_policy_registry():
-    """The seed policy + every division's live policy, keyed by division name."""
+    """The seed policy + every division's live policy, keyed by division name.
+
+    ``states`` carries each division's lifecycle alongside it, so a model's Risk tab can
+    say which policy its bands come from — and that a newer draft is with the MRC. Without
+    it, an admin edit that is still a draft simply looks like it never arrived.
+    """
     divisions = reference_options().get("division") or []
+    states = {division: load(division) for division in divisions}
     return jsonify({
         "seed": default_policy(),
-        "divisions": {division: get_risk_policy(division) for division in divisions},
+        "divisions": {division: state["live"] for division, state in states.items()},
+        "states": {division: {"state": state["state"], "approved_at": state["approved_at"]}
+                   for division, state in states.items()},
     })
 
 

@@ -71,6 +71,16 @@ const InventoryList = {
     this._renderTable();
   },
 
+  // The Mission-Criticality bands the tiles and the filter speak in: the scoped division's
+  // policy (the firm-wide seed under "All"), so the list uses the same vocabulary as the
+  // Risk tab and the Criticality column instead of a fixed Tier 1/2/3.
+  _mcBands() {
+    const bands = Policy.dimensionBands("mission_criticality",
+      (typeof MrcNav !== "undefined" && MrcNav.state) ? MrcNav.state.div : null);
+    if (bands && bands.length) return bands;
+    return [1, 2, 3].map((t) => ({ name: "Tier " + t, score: t, colour: TIER_COLORS[t] }));
+  },
+
   // --- tiles ---
   _tiles() {
     const byTier = (t) => this._models.filter((m) => m.d.tier === t).length;
@@ -86,9 +96,8 @@ const InventoryList = {
       '</div><div class="val">' + val + "</div></div>";
     return '<div class="summary">' +
       tile("Total Models", this._models.length, "#1976d2", "") +
-      tile("Tier 1", byTier(1), "#d32f2f", "tier=1") +
-      tile("Tier 2", byTier(2), "#f57c00", "tier=2") +
-      tile("Tier 3", byTier(3), "#1976d2", "tier=3") +
+      this._mcBands().map((b) => tile(esc(b.name), byTier(b.score),
+        b.colour || TIER_COLORS[b.score] || "#9e9e9e", "tier=" + b.score)).join("") +
       tile("R / A / G", ragVal, "#388e3c", "") +
       tile("Approved", approved + " / " + this._models.length, "#388e3c", "") +
       "</div>";
@@ -115,9 +124,18 @@ const InventoryList = {
       '<select id="' + id + '"><option value="">' + opts[0] + "</option>" +
       opts.slice(1).map((o) => '<option' + (o === cur ? " selected" : "") + ">" + esc(o) + "</option>").join("") +
       "</select>";
+    // The criticality filter offers band NAMES but still filters on the stored score, so
+    // the option's value and its label differ — hence its own builder.
+    const mcLabel = Policy.dimensionLabel("mission_criticality",
+      (typeof MrcNav !== "undefined" && MrcNav.state) ? MrcNav.state.div : null);
+    const tierSel = '<select id="mf-tier"><option value="">All ' +
+      esc(mcLabel || "tiers") + "</option>" +
+      this._mcBands().map((b) => '<option value="' + esc(b.score) + '"' +
+        (String(b.score) === String(f.tier) ? " selected" : "") + ">" + esc(b.name) +
+        "</option>").join("") + "</select>";
     document.getElementById("m-filters").innerHTML =
       '<input id="mf-q" placeholder="Search id or name…" value="' + esc(f.q) + '">' +
-      sel("mf-tier", f.tier, ["All tiers", "1", "2", "3"]) +
+      tierSel +
       sel("mf-rag", f.rag, ["All RAG", "Green", "Amber", "Red"]) +
       sel("mf-owner", f.owner, ["All owners", ...owners]) +
       sel("mf-review", f.review, ["All reviews", "Overdue", "Due Soon", "On Track", "Not Scheduled"]) +
