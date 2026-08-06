@@ -131,11 +131,11 @@ const Detail = {
     const tst = DocLinks.countIn(d.documents, this._specs.testing_doc_categories);
     const tabs = [
       ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
-      ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
+      ["version_history", "Versions", n("version_history")], ["assumptions", "Assumptions", n("assumptions")],
       ["dependencies", "Dependencies", n("dependencies")],
       ["connections", "Connections", null],
       ["raci_roles", "RACI", n("raci_roles")],
-      ["validation_questions", "Validation & Assumptions", cov],
+      ["review", "Review", cov],
       ["testing", "Testing", tst],
       ["risk", "Risk Rating", null],
       ["decisions", "MRC linkage",
@@ -227,13 +227,12 @@ const Detail = {
       }
       return;
     }
-    // Validation & Assumptions overlap — one tab: the SR 26-2 questions plus
-    // the assumptions register.
-    if (this._tab === "validation_questions") {
-      box.innerHTML = DetailTabs.validation(d, this._model.retired) +
-        this._collSection("assumptions", d);
-      this._bindValidationSaves();
-      this._bindCollections(["assumptions"]); return;
+    // The review, run as a workflow: one rail, one stage at a time. The stages
+    // own the nine questions, the weaknesses and the limitations of use, which is
+    // why none of them is a tab of its own any more.
+    if (this._tab === "review") {
+      box.innerHTML = this._reviewTab(d);
+      this._bindReviewRail(); return;
     }
     // Versions & Changes overlap — one tab: the version timeline plus the
     // change-history register.
@@ -260,12 +259,6 @@ const Detail = {
           DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
       DocPanel.bind(docOpts(TEST_RESULTS_CATEGORY));
       TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k]))); return;
-    }
-    // Limitations tab: Model weaknesses + Limitations.
-    if (this._tab === "limitations") {
-      box.innerHTML = this._collSection("model_weaknesses", d) +
-        this._collSection("limitations", d);
-      this._bindCollections(["model_weaknesses", "limitations"]); return;
     }
     const spec = this.collSpec(this._tab);
     let html = Collections.render(d, { collections: [spec] }, this._model.retired);

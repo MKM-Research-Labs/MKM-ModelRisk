@@ -155,6 +155,15 @@ MODEL_FIELD_SPECS = {
     "mrc_signoff_meeting": {"label": "MRC sign-off meeting", "type": "text", "group": "Review dates"},
     "recertification_date": {"label": "Recertification", "type": "date", "group": "Review dates"},
     "validation_date": {"label": "Validation date", "type": "date", "group": "Review dates"},
+    # --- Review ---
+    # Stage 5 of the review: how the model will be watched once it is in use, in
+    # the owner's and reviewer's own words. Deliberately a narrative rather than a
+    # register of metrics and thresholds — an approach is agreed in sentences long
+    # before anyone can name the numbers. It structures later if it needs to,
+    # without disturbing the workflow around it.
+    "monitoring_approach": {
+        "label": "Monitoring approach", "type": "textarea", "group": "Review",
+    },
     # --- Testing ---
     "unit_tests": {
         "label": "Unit tests", "type": "choice", "options": ("Yes", "No"), "group": "Testing",

@@ -49,7 +49,12 @@ DEFAULT_FIELD_CRITICALITY = 0.40
 # Fields whose absence is not a finding. ``review_status`` is derived from the
 # review dates rather than typed, so an empty one restates a gap already raised
 # against ``next_review_date``; counting it twice would inflate the register.
-EXEMPT_FIELDS = ("review_status",)
+# ``monitoring_approach`` is exempt while the review workflow is being built: it
+# lands as an empty field on every existing model, and scoring it on the day the
+# tab appears would drop every score for a gap nobody has been asked to fill yet.
+# It becomes a finding when the workflow's sign-off gate lands and a review can
+# actually be completed (see docs/design/review-workflow.md).
+EXEMPT_FIELDS = ("review_status", "monitoring_approach")
 
 FIELD_CRITICALITY = {
     # --- Drives the risk rating. Without these the model cannot be rated at

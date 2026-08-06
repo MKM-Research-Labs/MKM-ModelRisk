@@ -26,7 +26,7 @@ from flask import request, send_file
 
 from config.files import HIDDEN_DOC_EXTENSIONS, INLINE_VIEW_EXTENSIONS
 from config.governance import (DOC_CATEGORIES, DOC_TAB_CATEGORIES, REFERENCE_SPECS,
-                               TESTING_DOC_CATEGORIES)
+                               REVIEW_DOC_CATEGORIES, TESTING_DOC_CATEGORIES)
 from src.command import CommandContext, context_from_headers
 from src.files import extension
 from src.governance.model_inventory import list_models
@@ -41,6 +41,7 @@ def document_specs() -> dict:
         "doc_categories": list(DOC_CATEGORIES),
         "doc_tab_categories": list(DOC_TAB_CATEGORIES),
         "testing_doc_categories": list(TESTING_DOC_CATEGORIES),
+        "review_doc_categories": list(REVIEW_DOC_CATEGORIES),
         "hidden_doc_extensions": sorted(HIDDEN_DOC_EXTENSIONS),
         "inline_view_extensions": sorted(INLINE_VIEW_EXTENSIONS),
     }

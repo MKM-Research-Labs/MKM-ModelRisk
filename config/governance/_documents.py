@@ -31,6 +31,12 @@
 DOC_TAB_CATEGORIES = ("Core Documentation", "Sensitivity", "Analysis", "Monitoring",
                       "History")
 
+# The Review tab's first stage: the preliminary pack a reviewer works from, and
+# whatever else the review generates as it runs. Offered beside the stage it
+# belongs to rather than on the Docs tab, exactly as the testing evidence is, so
+# a document is listed where the work that produced it happened — never twice.
+REVIEW_DOC_CATEGORIES = ("Review",)
+
 # Generated Model Risk Documents, filed under History. The document is rendered
 # from the inventory as it stood at the moment it was issued, so a filed copy is
 # the record of what the model looked like then — the second time axis alongside
@@ -50,7 +56,8 @@ TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", "Benc
 # evidence, so they are not offered as standalone Docs categories.
 EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
 
-DOC_CATEGORIES = DOC_TAB_CATEGORIES + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
+DOC_CATEGORIES = (DOC_TAB_CATEGORIES + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
+                  + REVIEW_DOC_CATEGORIES)
 
 # --- Ongoing monitoring -----------------------------------------------------
 # The artefacts an adopting institution's portfolio generator leaves behind, and
