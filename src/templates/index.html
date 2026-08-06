@@ -5,6 +5,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Model Risk Governance</title>
+  <!-- Declared so the browser stops probing the site root for /favicon.ico and
+       /apple-touch-icon*.png; views.py also serves those roots for the clients
+       (bookmarks, iOS home screen) that ask for them regardless. -->
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml" />
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" sizes="any" />
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=asset_version) }}" />
 </head>
 <body>
