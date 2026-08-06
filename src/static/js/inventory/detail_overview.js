@@ -165,6 +165,10 @@ Object.assign(Detail, {
     } else if (key === "tier" && (d[key] || d[key] === 0)) {
       value = tierBadge(d[key], d.division) + ' <span class="muted">' +
         esc(tierFullLabel(d[key], d.division)) + "</span>";
+    } else if ((key === "materiality" || key === "complexity") && d[key]) {
+      // Shown as the admin defined the band — its colour and its explanation — not as a
+      // bare "High", so the level means the same thing here as it does in Admin → Risk.
+      value = bandDisplay(f, d[key], d.division);
     } else if (key === "source_module" && d[key]) {
       value = '<span class="code">' + esc(d[key]) + "</span>";
     } else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
@@ -244,12 +248,16 @@ Object.assign(Detail, {
   _edit(f, current) {
     const row = document.getElementById("row-" + f.key);
     const division = (this._model.data || {}).division;
+    // A risk dimension is chosen from the division's bands as Admin → Risk presents them
+    // (colour, name, the admin's explanation); everything else keeps the compact control.
+    const picker = bandPicker("ed-input", f, division, current);
     row.innerHTML = '<div class="k">' + esc(riskFieldLabel(f, division)) + '</div><div class="editor">' +
-      inputControl("ed-input", f, division) +
+      (picker || inputControl("ed-input", f, division)) +
       '<button class="btn small primary" id="ed-save">Save…</button>' +
       '<button class="btn small" id="ed-cancel">Cancel</button></div>';
     const input = document.getElementById("ed-input");
-    if (current !== null && current !== undefined) input.value = current;
+    if (picker) bindBandPicker("ed-input");
+    else if (current !== null && current !== undefined) input.value = current;
     document.getElementById("ed-cancel").onclick = () => this.show(this._id, this._tab);
     document.getElementById("ed-save").onclick = () => {
       let value = input.value.trim();

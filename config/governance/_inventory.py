@@ -90,6 +90,15 @@ MODEL_FIELD_SPECS = {
     "category": {"label": "Category", "type": "text", "group": "Classification"},
     "tier": {"label": "Tier", "type": "tier", "group": "Classification"},
     "tier_rationale": {"label": "Tier rationale", "type": "text", "group": "Classification"},
+    # One justification per risk dimension. The owner picks the band; SR 26-2 asks for the
+    # reasoning behind the choice, and Mission Criticality had the only rationale field —
+    # so Materiality and Complexity, which place the model on the heatmap, carried none.
+    "materiality_rationale": {
+        "label": "Materiality rationale", "type": "text", "group": "Classification",
+    },
+    "complexity_rationale": {
+        "label": "Complexity rationale", "type": "text", "group": "Classification",
+    },
     # The model owner's narrative for the overall risk rating (materiality +
     # complexity + tier), shown beneath Tier on the overview.
     "rating_rationale": {"label": "Rating rationale", "type": "text", "group": "Classification"},

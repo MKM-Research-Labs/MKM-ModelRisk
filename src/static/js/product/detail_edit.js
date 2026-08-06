@@ -65,6 +65,9 @@ Object.assign(ProductDetail, {
     } else if (key === "tier" && (d[key] || d[key] === 0)) {
       value = tierBadge(d[key], d.division) + ' <span class="muted">' +
         esc(tierFullLabel(d[key], d.division)) + "</span>";
+    } else if ((key === "materiality" || key === "complexity") && d[key]) {
+      // As the admin defined the band — colour, name and its explanation — matching models.
+      value = bandDisplay(f, d[key], d.division);
     }
     // MRC sign-off shows the granting meeting (not the raw date) once approved.
     else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
@@ -154,14 +157,21 @@ Object.assign(ProductDetail, {
   _editor(f, paramKey, endpoint, verb) {
     const row = document.getElementById("row-" + f.key);
     const division = (this._product.data || {}).division;
+    const current = this._product.data[f.key];
+    // A risk dimension is chosen from the division's bands as Admin → Risk presents them
+    // (colour, name, the admin's explanation); everything else keeps the compact control.
+    const picker = bandPicker("ped-input", f, division, current);
     row.innerHTML = '<div class="k">' + esc(riskFieldLabel(f, division)) + '</div><div class="editor">' +
-      inputControl("ped-input", f, division) +
+      (picker || inputControl("ped-input", f, division)) +
       '<button class="btn small" id="ped-cancel">Cancel</button></div>';
     const input = document.getElementById("ped-input");
-    const current = this._product.data[f.key];
-    if (current !== null && current !== undefined) input.value = current;
+    if (picker) bindBandPicker("ped-input");
+    else if (current !== null && current !== undefined) input.value = current;
     input.focus();
-    document.getElementById("ped-cancel").onclick = () => this.show(this._id, "overview");
+    // Editing returns to the tab the row was on — the risk fields live on the Risk tab,
+    // and bouncing back to Overview after every edit lost the owner their place.
+    const back = () => this.show(this._id, this._tab);
+    document.getElementById("ped-cancel").onclick = back;
     input.onchange = () => {
       // Tier stores the Mission-Criticality band SCORE (an integer), though the owner
       // picks it by band name.
@@ -171,7 +181,7 @@ Object.assign(ProductDetail, {
         : { field: f.key, value: value };
       App.amend(verb + " " + f.label + ' to "' + input.value + '" on ' + this._id + ".", "POST",
         "/api/products/" + this._id + endpoint, body,
-        () => { this.show(this._id, "overview"); Product.loadList(); });
+        () => { back(); Product.loadList(); });
     };
   },
 

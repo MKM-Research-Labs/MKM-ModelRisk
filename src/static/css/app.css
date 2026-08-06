@@ -117,7 +117,20 @@ th.sortable:hover { color: var(--accent); }
 .edit-btn { display: inline-block; padding: 1px 7px; font-size: 10px; border: 1px solid var(--line); border-radius: 3px; background: #f9f9f9; color: var(--muted); cursor: pointer; }
 .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
 .inforow .edit-btn { margin-left: 8px; }
-.inforow .editor { display: flex; gap: 6px; align-items: center; flex: 1; }
+.inforow .editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1; }
+/* Which risk policy a subject's Risk tab is showing (mirrors the Admin state chip). */
+.policy-note { font-size: 11px; color: var(--muted); background: #fafafa; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; margin: 0 0 10px; }
+.policy-note.draft { background: #fff8e1; border-color: var(--amber); }
+.policy-note b { color: var(--text); }
+/* Risk-dimension picker: the Admin band table's colour + name + explanation, as a choice
+   the model/product owner makes. */
+.bandpick { display: flex; flex-direction: column; gap: 4px; width: 100%; margin: 2px 0 6px; }
+.bandopt { display: flex; align-items: center; gap: 8px; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; background: #fff; }
+.bandopt:hover { border-color: var(--accent); }
+.bandopt.on { border-color: var(--accent); background: var(--accent-soft); }
+.bandopt .bswatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.bandopt .bname { font-weight: 700; min-width: 120px; }
+.bandopt .bexpl { color: var(--muted); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; background: #f0f0f0; padding: 2px 6px; border-radius: 3px; }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; }
