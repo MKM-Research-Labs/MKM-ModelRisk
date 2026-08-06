@@ -122,6 +122,18 @@ th.sortable:hover { color: var(--accent); }
 .policy-note { font-size: 11px; color: var(--muted); background: #fafafa; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; margin: 0 0 10px; }
 .policy-note.draft { background: #fff8e1; border-color: var(--amber); }
 .policy-note b { color: var(--text); }
+/* Risk Assessment: dimension, the band picked, and why — the Admin band table's shape,
+   with the owner's justification as the third column. */
+.risk-assess { width: 100%; table-layout: fixed; margin-bottom: 4px; }
+.risk-assess thead th { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); }
+.risk-assess thead th:first-child { width: 190px; }
+.risk-assess thead th:nth-child(2) { width: 40%; }
+/* The dimension reads as the admin wrote it — the global th rule shouts every header. */
+.risk-assess tbody th { text-align: left; font-weight: 400; color: var(--muted); font-size: 12px; padding: 8px; vertical-align: top; border-bottom: 1px solid #f5f5f5; text-transform: none; letter-spacing: 0; background: transparent; }
+.risk-assess td { font-size: 12px; padding: 8px; vertical-align: top; border-bottom: 1px solid #f5f5f5; }
+.risk-assess td .edit-btn { float: right; margin-left: 8px; }
+.risk-assess td .editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.risk-assess td .editor input[type="text"], .risk-assess td .editor > input:not([type]) { flex: 1; min-width: 200px; }
 /* Risk-dimension picker: the Admin band table's colour + name + explanation, as a choice
    the model/product owner makes. */
 .bandpick { display: flex; flex-direction: column; gap: 4px; width: 100%; margin: 2px 0 6px; }
