@@ -40,7 +40,9 @@ const InventoryList = {
       cell: (m) => fieldDisplay(m.d.name) },
     { key: "tier", label: "Criticality", sortVal: (m) => m.d.tier || 99,
       cell: (m) => tierBadge(m.d.tier, m.d.division) },
-    { key: "rag", label: "RAG", sortVal: (m) => ragOrder(m.d.rag_rating, m.d.division),
+    // "RAG" named the old fixed Red/Amber/Green scale; a division defines its own ratings
+    // now (this estate has added "Stop"), so the column is named for what it holds.
+    { key: "rag", label: "Risk Rating", sortVal: (m) => ragOrder(m.d.rag_rating, m.d.division),
       cell: (m) => ragBadge(m.d.rag_rating, m.d.division) },
     { key: "owner", label: "Owner", sortVal: (m) => (m.d.owner || "").toLowerCase(),
       cell: (m) => fieldDisplay(m.d.owner) },
@@ -63,7 +65,8 @@ const InventoryList = {
     // are at the top on load; unscheduled ("9999" sort key) fall to the bottom.
     // Any header click still re-sorts and toggles.
     this._sort = { key: "next", dir: 1 };
-    document.getElementById("m-summary").innerHTML = this._tiles();
+    document.getElementById("m-summary").innerHTML = this._tiles() +
+      policyDraftNotice(this._models.map((m) => m.d.division));
     this._wireTiles();
     document.getElementById("m-list").innerHTML =
       '<div id="m-filters" class="filters"></div><div id="m-table"></div>';
@@ -90,18 +93,35 @@ const InventoryList = {
     return byScore.size ? [...byScore.values()] : seed();
   },
 
+  // The risk ratings the tiles and the filter offer, resolved exactly like the bands above:
+  // the scoped division's, or the union across the divisions on the list under "All".
+  _ratings() {
+    const scoped = (typeof MrcNav !== "undefined" && MrcNav.state) ? MrcNav.state.div : null;
+    const of = (division) => Policy.ratings(division) || [];
+    if (scoped) return of(scoped).length ? of(scoped) : of(null);
+    const byName = new Map();
+    [...new Set(this._models.map((m) => m.d.division).filter(Boolean))].forEach((division) =>
+      of(division).forEach((r) => { if (!byName.has(r.name)) byName.set(r.name, r); }));
+    return byName.size ? [...byName.values()] : of(null);
+  },
+
   // --- tiles ---
   _tiles() {
     const byTier = (t) => this._models.filter((m) => m.d.tier === t).length;
     const byRag = (r) => this._models.filter((m) => m.d.rag_rating === r).length;
+    // The ratings tile counted a fixed Red / Amber / Green, so a division that has added a
+    // rating (this estate's "Stop") had models it simply did not show. It lists whatever
+    // the policy defines, in policy order, each count in its own colour.
+    const ratings = this._ratings();
     // Approved = models whose CURRENT MRC state is an approval, the same rule the status
     // column and the Risk tab use: a model awaiting a decision, or approved under a
     // categorisation the division has since replaced, is not covered by a sign-off. Counting
     // the last historical outcome instead read 25/25 while the column beside it said Pending.
     const approved = this._models.filter((m) => mrcState(m.d) === "Approved").length;
-    // R/A/G breakdown, each count coloured to its rating.
-    const ragCount = (r) => '<span style="color:' + RAG_COLORS[r] + '">' + byRag(r) + "</span>";
-    const ragVal = ragCount("Red") + " / " + ragCount("Amber") + " / " + ragCount("Green");
+    const ragCount = (r) => '<span style="color:' + (r.colour || RAG_COLORS[r.name] ||
+      "#9e9e9e") + '">' + byRag(r.name) + "</span>";
+    const ragVal = ratings.map(ragCount).join(" / ");
+    const ragLabel = ratings.map((r) => r.name.charAt(0)).join(" / ");
     const tile = (lbl, val, color, filter) =>
       '<div class="scard" style="border-left-color:' + color + '"' +
       (filter ? ' data-tile="' + filter + '"' : "") + '><div class="lbl">' + lbl +
@@ -110,7 +130,7 @@ const InventoryList = {
       tile("Total Models", this._models.length, "#1976d2", "") +
       this._mcBands().map((b) => tile(esc(b.name), byTier(b.score),
         b.colour || TIER_COLORS[b.score] || "#9e9e9e", "tier=" + b.score)).join("") +
-      tile("R / A / G", ragVal, "#388e3c", "") +
+      tile(esc(ragLabel), ragVal, "#388e3c", "") +
       tile("Approved", approved + " / " + this._models.length, "#388e3c", "") +
       "</div>";
   },
@@ -148,7 +168,8 @@ const InventoryList = {
     document.getElementById("m-filters").innerHTML =
       '<input id="mf-q" placeholder="Search id or name…" value="' + esc(f.q) + '">' +
       tierSel +
-      sel("mf-rag", f.rag, ["All RAG", "Green", "Amber", "Red"]) +
+      // Policy order, so a division's own ratings (and only those) are offered.
+      sel("mf-rag", f.rag, ["All ratings", ...this._ratings().map((r) => r.name)]) +
       sel("mf-owner", f.owner, ["All owners", ...owners]) +
       sel("mf-review", f.review, ["All reviews", "Overdue", "Due Soon", "On Track", "Not Scheduled"]) +
       sel("mf-lifecycle", f.lifecycle, ["All lifecycle", ...LIFECYCLE_STAGES]) +

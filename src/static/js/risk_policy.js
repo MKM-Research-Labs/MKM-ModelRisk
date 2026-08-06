@@ -255,12 +255,24 @@ const RiskEditor = {
     host.querySelectorAll("tr[data-scope]").forEach((tr) => {
       const bands = this._bandsFor(tr.getAttribute("data-scope"));
       const band = bands[Number(tr.getAttribute("data-i"))];
+      const scope = tr.getAttribute("data-scope");
       tr.querySelectorAll("[data-f]").forEach((inp) => {
         inp.onchange = () => {
           const f = inp.getAttribute("data-f");
+          if (f === "name") {
+            // Carry the assignments onto the new name FIRST. The grid is keyed by band
+            // name, so a rename otherwise reads as "old band deleted, new band added" and
+            // _rebuildGrid fills the new one with the default rating — silently discarding
+            // the table the division had built, under a name change nobody expects to
+            // touch it.
+            this._renameInGrid(scope, band.name, inp.value);
+            band.name = inp.value;
+            this._save();
+            this._drawGrids();
+            return;
+          }
           band[f] = f === "score" ? this._num(inp.value) : inp.value;
-          // A name change reshapes the grid; colour/score/explanation do not.
-          if (f === "name") { this._save(); this._drawGrids(); } else { this._save(); }
+          this._save();
         };
       });
     });
@@ -294,6 +306,35 @@ const RiskEditor = {
         this._save();
         this._draw();
       };
+    });
+  },
+
+  // Move a scale's assignments onto its new name. Each scale keys the grid differently: a
+  // Mission-Criticality band names a whole table, Materiality and Complexity name the two
+  // halves of every cell key, and a rating is the cell's VALUE.
+  _renameInGrid(scope, from, to) {
+    const grid = this._policy.grid || {};
+    if (!from || !to || from === to) return;
+    if (scope === "mission_criticality") {
+      if (grid[from]) { grid[to] = grid[from]; delete grid[from]; }
+      return;
+    }
+    if (scope === "risk_ratings") {
+      Object.keys(grid).forEach((band) => Object.keys(grid[band]).forEach((cell) => {
+        if (grid[band][cell] === from) grid[band][cell] = to;
+      }));
+      return;
+    }
+    // Cell key is "materiality|complexity" — rewrite the half this scale owns.
+    const half = scope === "materiality" ? 0 : 1;
+    Object.keys(grid).forEach((band) => {
+      const renamed = {};
+      Object.keys(grid[band]).forEach((cell) => {
+        const parts = cell.split("|");
+        if (parts[half] === from) parts[half] = to;
+        renamed[parts.join("|")] = grid[band][cell];
+      });
+      grid[band] = renamed;
     });
   },
 
