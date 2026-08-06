@@ -96,6 +96,31 @@ def test_close_meeting_already_closed_is_400(client, monkeypatch):
     assert "already closed" in again.get_json()["error"]
 
 
+def test_closed_meeting_refuses_every_amendment(client, monkeypatch):
+    """Closing locks the meeting down. Its minutes are generated and filed, so
+    editing it afterwards would change what the committee is recorded as having
+    decided — renaming it, reopening it, moving its date, rewriting or deleting an
+    agenda item, adding to it, or unlocking the agenda are all refused. A
+    correction is raised and minuted at the next meeting instead."""
+    _ready_to_close(client, monkeypatch)
+    item_id = client.get("/api/meetings/MTG1").get_json()["data"]["agenda"][0]["item_id"]
+    client.post("/api/meetings/MTG1/close", json={"confirmed": True}, headers=HEADERS)
+
+    attempts = [
+        ("/api/meetings/MTG1/field", {"field": "title", "value": "Renamed after the fact"}),
+        ("/api/meetings/MTG1/field", {"field": "status", "value": "Scheduled"}),
+        ("/api/meetings/MTG1/field", {"field": "date", "value": "2026-12-01"}),
+        ("/api/meetings/MTG1/collections/actions", {"fields": {"description": "Late action"}}),
+        (f"/api/meetings/MTG1/collections/agenda/{item_id}", {"fields": {"title": "Rewritten"}}),
+        (f"/api/meetings/MTG1/collections/agenda/{item_id}/delete", {}),
+        ("/api/meetings/MTG1/unlock-agenda", {}),
+    ]
+    for path, body in attempts:
+        response = client.post(path, json={**body, "confirmed": True}, headers=HEADERS)
+        assert response.status_code == 400, path
+        assert "closed" in response.get_json()["error"], path
+
+
 def test_minutes_pdf_served_after_close(client, monkeypatch):
     _ready_to_close(client, monkeypatch)
     client.post("/api/meetings/MTG1/close", json={"confirmed": True}, headers=HEADERS)
