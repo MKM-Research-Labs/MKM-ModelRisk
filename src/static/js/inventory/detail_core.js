@@ -179,7 +179,7 @@ const Detail = {
         "the model on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
         policyNotice(d.division) +
         RISK_ASSESSMENT_FIELDS.map((k) => this._row(k, d)).join("") +
-        DetailTabs.risk(this._risk, false);  // events are product-only
+        DetailTabs.risk(this._risk, false, d.division);  // events are product-only
       this._bindEdits();          // the risk-assessment fields are editable here now
       this._bindSignoffRequest();
       return;
@@ -292,7 +292,7 @@ const Detail = {
   _mrcLinkage(d) {
     const signoffs = d.signoff_history || [];
     const soSection = signoffs.length
-      ? DetailTabs.signoffHistory(signoffs)
+      ? DetailTabs.signoffHistory(signoffs, d.division)
       : '<div class="section-header">Sign-off history</div>' +
         '<div class="empty">No MRC sign-offs granted yet.</div>';
     // Every meeting where this model's analysis was presented (it was in scope),

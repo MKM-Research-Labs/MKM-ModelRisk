@@ -71,14 +71,23 @@ const InventoryList = {
     this._renderTable();
   },
 
-  // The Mission-Criticality bands the tiles and the filter speak in: the scoped division's
-  // policy (the firm-wide seed under "All"), so the list uses the same vocabulary as the
-  // Risk tab and the Criticality column instead of a fixed Tier 1/2/3.
+  // The Mission-Criticality bands the tiles and the filter speak in, so the list uses the
+  // same vocabulary as the Risk tab and the Criticality column instead of a fixed
+  // Tier 1/2/3. Scoped to a division, that division's bands; under "All", the union across
+  // the divisions on the list (keyed by score — the value a model actually stores), because
+  // one division's policy cannot describe another's models. Each division's own ordering is
+  // kept: the admin sets it deliberately with the move up/down controls.
   _mcBands() {
-    const bands = Policy.dimensionBands("mission_criticality",
-      (typeof MrcNav !== "undefined" && MrcNav.state) ? MrcNav.state.div : null);
-    if (bands && bands.length) return bands;
-    return [1, 2, 3].map((t) => ({ name: "Tier " + t, score: t, colour: TIER_COLORS[t] }));
+    const scoped = (typeof MrcNav !== "undefined" && MrcNav.state) ? MrcNav.state.div : null;
+    const seed = () => Policy.dimensionBands("mission_criticality", null) ||
+      [1, 2, 3].map((t) => ({ name: "Tier " + t, score: t, colour: TIER_COLORS[t] }));
+    if (scoped) return Policy.dimensionBands("mission_criticality", scoped) || seed();
+    const byScore = new Map();
+    [...new Set(this._models.map((m) => m.d.division).filter(Boolean))].forEach((division) =>
+      (Policy.dimensionBands("mission_criticality", division) || []).forEach((b) => {
+        if (!byScore.has(b.score)) byScore.set(b.score, b);
+      }));
+    return byScore.size ? [...byScore.values()] : seed();
   },
 
   // --- tiles ---

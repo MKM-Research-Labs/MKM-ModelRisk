@@ -154,7 +154,7 @@ const ProductDetail = {
         "the product on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
         policyNotice(d.division) +
         PRODUCT_RISK_ASSESSMENT.map((k) => this._row(k, d)).join("") +
-        DetailTabs.risk(this._risk);
+        DetailTabs.risk(this._risk, true, d.division);
       this._bindEdits();
       this._bindSignoffRequest();
       return;
@@ -286,7 +286,7 @@ const ProductDetail = {
   _mrcLinkage(d) {
     const signoffs = d.signoff_history || [];
     const soSection = signoffs.length
-      ? DetailTabs.signoffHistory(signoffs)
+      ? DetailTabs.signoffHistory(signoffs, d.division)
       : '<div class="section-header">Sign-off history</div>' +
         '<div class="empty">No MRC sign-offs granted yet.</div>';
     return '<p class="muted">The product&rsquo;s MRC record — granted rating sign-offs, plus ' +
