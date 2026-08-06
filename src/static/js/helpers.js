@@ -110,6 +110,16 @@ const Policy = {
     const scores = bands.map((b) => b.score);
     return byScore[Math.min(Math.max(t, Math.min.apply(null, scores)), Math.max.apply(null, scores))] || null;
   },
+  // The rating a subject's cell resolves to, repeating the risk engine's lookup
+  // (model_inventory/risk.py): Mission-Criticality band → Materiality|Complexity → rating.
+  // Null when either axis is unset, so the subject is not on the heatmap at all.
+  gridRating(tier, materiality, complexity, division) {
+    if (!materiality || !complexity) return null;
+    const p = this._for(division);
+    const band = this.mcBand(tier, division);
+    if (!p || !band) return null;
+    return ((p.grid || {})[band.name] || {})[materiality + "|" + complexity] || null;
+  },
 };
 
 // Display a scalar value, or an em dash when empty.
@@ -209,7 +219,10 @@ function mrcOutcome(data) {
 // an active request supersedes any earlier decision; a Rejected or Revoked latest decision
 // is not a sign-off; and an approval granted before the division ratified its current
 // categorisation is stale, because it was made against categories that no longer exist.
-// Returns "Pending" | "Rejected" | "Revoked" | "Re-classify" | "Approved" | "".
+// A sign-off covers one cell, so it stops covering the subject once the owner moves it to
+// another — "Rating moved" is approved-but-not-for-where-it-now-sits.
+// Returns "Pending" | "Rejected" | "Revoked" | "Re-classify" | "Rating moved" |
+// "Not placed" | "Approved" | "".
 function mrcState(data, division) {
   const reqs = (data && data.signoff_requests) || [];
   if (reqs.some((r) => r.status === "Pending" || r.status === "Attached")) return "Pending";
@@ -218,14 +231,20 @@ function mrcState(data, division) {
   if (!latest) return "";
   const outcome = latest.outcome || "Approved";
   if (outcome === "Rejected" || outcome === "Revoked") return outcome;
-  const ratified = (Policy.state(division === undefined ? data.division : division) || {}).approved_at;
+  const div = division === undefined ? data.division : division;
+  const ratified = (Policy.state(div) || {}).approved_at;
   if (ratified && latest.date && latest.date < ratified) return "Re-classify";
+  const rag = Policy.gridRating(data.tier, data.materiality, data.complexity, div);
+  if (!rag) return "Not placed";
+  if (latest.to_rating !== rag) return "Rating moved";
   return "Approved";
 }
 
+// Everything short of a live sign-off is amber — it is work outstanding, not a failure.
 const MRC_STATE_COLORS = {
   Pending: "#f57c00", Rejected: "var(--red)", Revoked: "var(--red)",
-  "Re-classify": "#f57c00", Approved: "#388e3c",
+  "Re-classify": "#f57c00", "Rating moved": "#f57c00", "Not placed": "#9e9e9e",
+  Approved: "#388e3c",
 };
 
 const LIFECYCLE_COLORS = {
@@ -246,11 +265,20 @@ function lifecycleBadge(lifecycle) {
 function mrcStatusBadge(data) {
   const state = mrcState(data);
   if (!state) return '<span class="muted">—</span>';
-  // "Re-classify" says what the Risk tab's banner says: the approval stands in history but
-  // no longer covers this subject, because the categorisation moved under it.
-  const title = state === "Re-classify"
-    ? ' title="Signed off under an older categorisation — re-confirm the classification and' +
-      ' request sign-off again."' : "";
+  // Each non-approved state says, on hover, what the Risk tab says at length: the approval
+  // is in the history but does not cover the subject as it now stands.
+  const hist = (data && data.signoff_history) || [];
+  const approvedRating = (hist.length ? hist[hist.length - 1].to_rating : "") || "—";
+  const hints = {
+    "Re-classify": "Signed off under an older categorisation — re-confirm the " +
+      "classification and request sign-off again.",
+    "Rating moved": "The MRC approved " + approvedRating + "; the heatmap now says " +
+      (Policy.gridRating(data.tier, data.materiality, data.complexity, data.division) || "—") +
+      ". Request sign-off for the rating it now carries.",
+    "Not placed": "Materiality or Complexity is unset, so this is not on the heatmap and " +
+      "there is no rating to sign off.",
+  };
+  const title = hints[state] ? ' title="' + esc(hints[state]) + '"' : "";
   return '<span style="color:' + (MRC_STATE_COLORS[state] || "#9e9e9e") +
     ';font-weight:600"' + title + ">" + esc(state) + "</span>";
 }
