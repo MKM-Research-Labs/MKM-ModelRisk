@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS data_lineage_view (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON data_lineage_view TO mkm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON data_lineage_view TO {{app_user}};
 
 -- Last accepted ingestion per (artifact, source_repo) (aggregate IngestReceipt).
 CREATE TABLE IF NOT EXISTS ingest_receipts_view (
@@ -26,4 +26,4 @@ CREATE TABLE IF NOT EXISTS ingest_receipts_view (
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON ingest_receipts_view TO mkm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ingest_receipts_view TO {{app_user}};

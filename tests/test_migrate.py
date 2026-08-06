@@ -20,8 +20,15 @@
 """Tests for the schema migration runner."""
 from __future__ import annotations
 
+from dataclasses import replace
+
+import pytest
+
 from config import DatabaseConfig
 from src.database import migration_files, owner_connection, run_migrations
+from src.database._migrate import render
+
+ROLES_SQL = next(p for p in migration_files() if p.stem == "0002_roles_grants")
 
 
 def _drop_everything() -> None:
@@ -72,3 +79,28 @@ def test_run_migrations_applies_then_skips():
 def test_run_migrations_accepts_explicit_config():
     # Exercises the explicit-config path of the owner connection.
     assert run_migrations(config=DatabaseConfig.from_env()) == []
+
+
+def _config(**overrides) -> DatabaseConfig:
+    return replace(DatabaseConfig.from_env(), **overrides)
+
+
+def test_render_grants_to_the_configured_runtime_role():
+    """A deployment that renames the runtime role gets its grants written against
+    that role — otherwise DB_APP_USER would connect as a role holding none."""
+    sql = render(ROLES_SQL.read_text(), _config(app_user="moody_app", app_password="s3cret"))
+    assert "GRANT USAGE ON SCHEMA public TO moody_app;" in sql
+    assert "CREATE ROLE moody_app LOGIN PASSWORD 's3cret'" in sql
+    assert "{{app_user}}" not in sql and "{{app_password}}" not in sql
+
+
+def test_render_escapes_a_quote_in_the_password():
+    sql = render(ROLES_SQL.read_text(), _config(app_password="pa'ss"))
+    assert "LOGIN PASSWORD 'pa''ss'" in sql
+
+
+def test_render_refuses_a_role_name_that_is_not_an_identifier():
+    """The role goes in as a bare identifier (no parameter can carry one), so a
+    name carrying SQL is refused before it reaches a statement."""
+    with pytest.raises(ValueError):
+        render(ROLES_SQL.read_text(), _config(app_user="app; DROP TABLE events"))

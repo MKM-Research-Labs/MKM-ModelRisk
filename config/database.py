@@ -28,6 +28,12 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+# A database that already exists, connected to only while creating another (you
+# cannot connect to the database you are about to CREATE). ``postgres`` is the
+# cluster's standard bookkeeping database, present in every cluster initdb makes;
+# naming a product database here would strand any install that does not have it.
+MAINTENANCE_DB = os.environ.get("DB_MAINTENANCE_NAME", "postgres")
+
 _DEFAULTS = {
     "host": "localhost",
     "port": "5433",
@@ -83,6 +89,19 @@ class DatabaseConfig:
     def owner_conninfo(self) -> dict:
         """Connection kwargs for the schema-owner role (migrations, tests)."""
         return self._conninfo(self.owner_user, self.owner_password)
+
+
+# Tokens the migration runner substitutes before executing a migration, so the
+# runtime role the grants are written against is the one the deployment actually
+# connects as (DB_APP_USER). Written into the SQL as a literal name instead, a
+# deployment that renamed the role would connect as a role holding no grants —
+# the environment variable would be a promise the schema does not keep.
+MIGRATION_APP_USER_TOKEN = "{{app_user}}"
+MIGRATION_APP_PASSWORD_TOKEN = "{{app_password}}"
+
+# A role name is substituted into SQL as a bare identifier (a parameter cannot
+# carry one), so it must look like one before it goes anywhere near a statement.
+ROLE_NAME_PATTERN = r"[A-Za-z_][A-Za-z0-9_]*"
 
 
 # Databases that hold real, non-disposable data. The test suite's teardown

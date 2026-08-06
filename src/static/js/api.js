@@ -34,8 +34,15 @@ function val(id) {
 const App = {
   _pending: null,
 
+  // Who the console says it is acting as. The picker, else the identity the
+  // server resolved for this request (data-default: the SSO user, or the
+  // deployment's configured dev fallback). Never a name baked into the browser:
+  // an empty header leaves the decision with the server, which is where identity
+  // belongs.
   actor() {
-    return document.getElementById("actor-input").value.trim() || "david.kelly@mkmresearchlabs.com";
+    const el = document.getElementById("actor-input");
+    if (!el) return "";
+    return el.value.trim() || el.getAttribute("data-default") || "";
   },
 
   headers() {

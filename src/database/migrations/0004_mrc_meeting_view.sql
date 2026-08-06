@@ -12,4 +12,4 @@ CREATE TABLE IF NOT EXISTS mrc_meeting_view (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-GRANT SELECT, INSERT, UPDATE, DELETE ON mrc_meeting_view TO mkm_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON mrc_meeting_view TO {{app_user}};

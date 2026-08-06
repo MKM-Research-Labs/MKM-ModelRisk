@@ -83,7 +83,9 @@ def test_ensure_default_reference_lists_seeds_and_is_idempotent():
     lists = get_reference_lists()
     assert [o["value"] for o in lists["data_source"]] == [
         "ICE", "Reuters", "Bloomberg", "Manual", "Simulated", "Other"]
-    assert [o["value"] for o in lists["vendor"]] == ["MKM Research Labs", "Other"]
+    # The vendor seed names no institution — a fresh install must not plant the
+    # platform's author in an adopter's inventory.
+    assert [o["value"] for o in lists["vendor"]] == ["In-house", "Other"]
     assert added == 8
     # Seeds a vacuum only — a second run adds nothing and never repopulates a
     # list an adopter has since curated.

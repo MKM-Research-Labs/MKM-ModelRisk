@@ -22,11 +22,19 @@
 Applies numbered ``*.sql`` files in lexical order as the owner role, recording
 each in ``schema_migrations`` so re-running is a no-op. Plain SQL migrations are
 deliberately transparent and reviewable — a good fit for a regulated product.
+
+The one substitution made before a file is executed is the runtime role its
+grants are written against: the SQL names it by token, and the deployment's
+configured ``DB_APP_USER`` fills it in.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
+from config import DatabaseConfig
+from config.database import (MIGRATION_APP_PASSWORD_TOKEN,
+                             MIGRATION_APP_USER_TOKEN, ROLE_NAME_PATTERN)
 from config.paths import MIGRATIONS_DIR as _MIGRATIONS_DIR
 from src.database._connection import owner_connection
 
@@ -49,10 +57,29 @@ def _applied_versions(cur) -> set[str]:
     return {row[0] for row in cur.fetchall()}
 
 
+def render(sql_text: str, config: DatabaseConfig) -> str:
+    """A migration's SQL with the deployment's runtime role filled in.
+
+    The role name goes in as a bare identifier — no parameter can carry one — so
+    it is checked against ``ROLE_NAME_PATTERN`` first and refused outright if it
+    is not a plain identifier. The password is escaped for a SQL string literal.
+    """
+    if not re.fullmatch(ROLE_NAME_PATTERN, config.app_user):
+        raise ValueError(
+            f"DB_APP_USER {config.app_user!r} is not a plain SQL identifier; the "
+            "migrations grant to it by name, so it must match "
+            f"{ROLE_NAME_PATTERN}."
+        )
+    return (sql_text
+            .replace(MIGRATION_APP_USER_TOKEN, config.app_user)
+            .replace(MIGRATION_APP_PASSWORD_TOKEN, config.app_password.replace("'", "''")))
+
+
 def run_migrations(config=None) -> list[str]:
     """Apply any pending migrations; return the versions newly applied."""
     newly_applied: list[str] = []
-    with owner_connection(config) as conn:
+    cfg = config or DatabaseConfig.from_env()
+    with owner_connection(cfg) as conn:
         with conn.cursor() as cur:
             _ensure_table(cur)
             done = _applied_versions(cur)
@@ -60,7 +87,7 @@ def run_migrations(config=None) -> list[str]:
                 version = path.stem
                 if version in done:
                     continue
-                cur.execute(path.read_text())
+                cur.execute(render(path.read_text(), cfg))
                 cur.execute(
                     "INSERT INTO schema_migrations (version) VALUES (%s)",
                     (version,),
