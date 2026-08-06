@@ -178,7 +178,11 @@ def main(argv=None) -> int:
     print(f"{'PASS' if total == 0 else 'FINDINGS'}: {total} gated finding(s)")
     exit_code = 1 if total else 0
     if "--pdf" in argv:
-        exit_code = exit_code or _write_pdfs(report)
+        # Render first, then combine: ``exit_code or _write_pdfs(...)`` skipped the
+        # rendering entirely whenever the audit had a finding — withholding the
+        # reports in exactly the case they are wanted. A failure to render is its
+        # own non-zero code, so neither outcome can mask the other.
+        exit_code = _write_pdfs(report) or exit_code
     return exit_code
 
 

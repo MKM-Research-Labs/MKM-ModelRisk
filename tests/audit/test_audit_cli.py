@@ -59,9 +59,14 @@ def test_pdf_flag_writes_the_full_report_set(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(pack, "compile_tex", lambda tex, assets=None: b"%PDF stub")
     monkeypatch.setattr(cli, "duplication_report", lambda: {"available": False})
 
-    main(["--pdf"])
+    code = main(["--pdf"])
     out = capsys.readouterr().out
     names = sorted(p.name for p in tmp_path.glob("*.pdf"))
+    # The reports render whatever the audit found. They used to be skipped
+    # entirely whenever there was a finding — withholding the evidence in
+    # exactly the case somebody wants to read it — so a non-zero code here must
+    # still come with a full set of PDFs.
+    assert code in (0, 1)
     assert "coding_rule_audit.pdf" in names
     assert "json_files_report.pdf" in names          # standalone JSON-file audit
     assert sum(n.startswith("audit_r") for n in names) == 8
