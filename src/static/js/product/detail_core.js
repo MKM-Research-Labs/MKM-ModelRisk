@@ -26,9 +26,8 @@ const PRODUCT_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
 const PRODUCT_OVERVIEW_ORG = ["division", "line_of_business"];
 // The risk assessment (what places the product on the heatmap) lives on the Risk tab,
 // next to the grid it drives; only the headline rag_rating stays on Overview.
-// Each dimension is followed by the owner's justification for that choice, as on a model.
-const PRODUCT_RISK_ASSESSMENT = ["tier", "tier_rationale", "materiality",
-  "materiality_rationale", "complexity", "complexity_rationale", "rating_rationale"];
+// The fields themselves are the risk-assessment table's business (risk_assessment.js):
+// one row per dimension, in the Admin editor's Dimension / Rating / Rationale columns.
 // The standing description of how the product is monitored. The results
 // themselves are no longer a scalar field — they are timestamped uploads under
 // the "Monitoring" category, on the Docs tab's Monitoring sub-tab.
@@ -153,7 +152,7 @@ const ProductDetail = {
         '<p class="muted" style="font-size:12px;margin:0 0 8px">The owner sets these; they place ' +
         "the product on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
         policyNotice(d.division) +
-        PRODUCT_RISK_ASSESSMENT.map((k) => this._row(k, d)).join("") +
+        this._riskTable(d) +
         DetailTabs.risk(this._risk, true, d.division);
       this._bindEdits();
       this._bindSignoffRequest();

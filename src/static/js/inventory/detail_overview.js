@@ -183,6 +183,20 @@ Object.assign(Detail, {
       '</div><div class="v">' + value + "</div>" + editLink + "</div>";
   },
 
+  // The Risk tab's assessment table: each dimension beside the band the owner picked and
+  // the justification for picking it. The overall-rating cell shows what that lands on —
+  // the committee sets it, so only its rationale is editable.
+  _riskTable(d) {
+    const rag = (this._risk.heatmap || {}).rag;
+    return riskAssessmentTable({
+      data: d,
+      division: d.division,
+      spec: (key) => this.specByKey(key),
+      editLink: (key) => this._editLink(key),
+      ratingBadge: rag ? ragBadge(rag, d.division) : "",
+    });
+  },
+
   _bindEdits() {
     const self = this;
     if (!this._model.retired) {
@@ -246,12 +260,20 @@ Object.assign(Detail, {
   },
 
   _edit(f, current) {
-    const row = document.getElementById("row-" + f.key);
+    // Scoped to this panel: a product detail rendered in its own (hidden) panel carries
+    // rows under the same ids, and a bare getElementById would hand back whichever the
+    // document happens to hold first.
+    const row = document.querySelector("#dt-content #row-" + f.key) ||
+      document.getElementById("row-" + f.key);
     const division = (this._model.data || {}).division;
     // A risk dimension is chosen from the division's bands as Admin → Risk presents them
     // (colour, name, the admin's explanation); everything else keeps the compact control.
     const picker = bandPicker("ed-input", f, division, current);
-    row.innerHTML = '<div class="k">' + esc(riskFieldLabel(f, division)) + '</div><div class="editor">' +
+    // In the risk table the target is a cell, which carries its own Dimension heading —
+    // only an inforow needs the label repeated inside the editor.
+    const heading = row.tagName === "TD"
+      ? "" : '<div class="k">' + esc(riskFieldLabel(f, division)) + "</div>";
+    row.innerHTML = heading + '<div class="editor">' +
       (picker || inputControl("ed-input", f, division)) +
       '<button class="btn small primary" id="ed-save">Save…</button>' +
       '<button class="btn small" id="ed-cancel">Cancel</button></div>';

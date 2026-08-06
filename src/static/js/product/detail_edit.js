@@ -80,6 +80,19 @@ Object.assign(ProductDetail, {
       '</div><div class="v">' + value + "</div>" + editLink + "</div>";
   },
 
+  // The Risk tab's assessment table — the same three columns a model shows, so a product's
+  // categorisation is read and challenged the same way.
+  _riskTable(d) {
+    const rag = (this._risk.heatmap || {}).rag;
+    return riskAssessmentTable({
+      data: d,
+      division: d.division,
+      spec: (key) => this.fieldSpec(key),
+      editLink: (key) => this._editLink(key),
+      ratingBadge: rag ? ragBadge(rag, d.division) : "",
+    });
+  },
+
   // Product-level MRC sign-off removed: the RAG rating is set directly and the
   // committee meeting holds the authoritative MRC status. The read-only "MRC
   // status" row (_mrcStatusRow) still surfaces the latest meeting decision.
@@ -155,13 +168,19 @@ Object.assign(ProductDetail, {
   // so those still raise the confirm dialog (App.amend turns the server's 409 into it);
   // every other field just applies.
   _editor(f, paramKey, endpoint, verb) {
-    const row = document.getElementById("row-" + f.key);
+    // Scoped to this panel — a model detail left rendered in the (hidden) Models panel
+    // carries rows under the same ids, and the editor would open on that one instead.
+    const row = document.querySelector("#pt-content #row-" + f.key) ||
+      document.getElementById("row-" + f.key);
     const division = (this._product.data || {}).division;
     const current = this._product.data[f.key];
     // A risk dimension is chosen from the division's bands as Admin → Risk presents them
     // (colour, name, the admin's explanation); everything else keeps the compact control.
     const picker = bandPicker("ped-input", f, division, current);
-    row.innerHTML = '<div class="k">' + esc(riskFieldLabel(f, division)) + '</div><div class="editor">' +
+    // In the risk table the target is a cell, which carries its own Dimension heading.
+    const heading = row.tagName === "TD"
+      ? "" : '<div class="k">' + esc(riskFieldLabel(f, division)) + "</div>";
+    row.innerHTML = heading + '<div class="editor">' +
       (picker || inputControl("ped-input", f, division)) +
       '<button class="btn small" id="ped-cancel">Cancel</button></div>';
     const input = document.getElementById("ped-input");
