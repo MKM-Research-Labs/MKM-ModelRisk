@@ -50,7 +50,7 @@ def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
     # One standalone PDF per audit rule R1–R8 is generated in the same click.
     assert {"audit_r1_hardcoded_parameters.pdf", "audit_r3_test_coverage.pdf",
             "audit_r8_duplicate_code.pdf"} <= names
-    assert sum(n.startswith("audit_r") for n in names) == 9
+    assert sum(n.startswith("audit_r") for n in names) == 8
 
     catalogue = client.get("/api/audit-reports").get_json()
     labels = {r["label"] for r in catalogue}

@@ -20,10 +20,11 @@
 """Canonical copyright header (coding rule R5).
 
 The comment block above is the single source of truth for the licence header
-that must begin every first-party ``.py`` and ``.js`` file. For ``.js`` files
-the same lines are used with ``//`` in place of ``#``. The header audit reads
-this block verbatim; do not hand-retype it — run ``python -m audit
---fix-headers`` to propagate a change here to every file.
+that begins every first-party ``.py`` and ``.js`` file. For ``.js`` files the
+same lines are used with ``//`` in place of ``#``. Do not hand-retype it — copy
+it verbatim. Propagating a change made here is a manual exercise: the header
+check is no longer part of the coding-rule audit (see R5 in
+``docs/rules/coding_rules.md``).
 
 The full licence text lives in ``LICENSE`` at the repo root; keep the two in
 step — the body of this block is that file's text, comment-prefixed.

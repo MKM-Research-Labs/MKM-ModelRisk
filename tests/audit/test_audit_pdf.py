@@ -28,8 +28,7 @@ from src.governance.mrc.pack import _esc
 
 _CLEAN = {
     "large_source_files": [], "large_web_files": [], "large_test_files": [],
-    "hardcoding": [], "embedded_js": [], "init_files": [], "headers": [],
-    "licence_notices": [],
+    "hardcoding": [], "embedded_js": [], "init_files": [],
     "init_inventory": [{"path": "pkg/__init__.py", "lines": 6, "reexport": True}],
     "data_access": [], "path_definitions": [], "json_files": [],
     "coverage": {"available": True, "line_rate": 0.995, "lines_valid": 1000,
@@ -45,8 +44,6 @@ _FINDINGS = {
     "init_files": [{"path": "p.py", "functions": ["f"], "classes": ["C"]}],
     "init_inventory": [{"path": "p/__init__.py", "lines": 40, "reexport": False},
                        {"path": "q/__init__.py", "lines": 5, "reexport": True}],
-    "headers": [{"path": "h.py"}],
-    "licence_notices": [{"path": "n.sql", "kind": ".sql"}],
     "data_access": [{"path": "d.py", "line": 7, "kind": "sql", "snippet": "SELECT 1 FROM t"}],
     "path_definitions": [{"path": "q.py", "line": 3, "kind": "root_walk",
                           "snippet": "Path(__file__).parents[1]"}],
@@ -72,9 +69,10 @@ def test_build_audit_tex_clean():
 
 def test_summary_table_lists_every_rule_in_order():
     tex = build_audit_tex(_CLEAN, "2026-06-25")
-    # One row per rule, with a short requirement, in ascending order R1–R8.
+    # One row per audited rule, in ascending order. R5 (copyright headers) is
+    # absent by design: it is checked by hand, not by this audit.
     markers = ["config package", "size limit", "test coverage", "init",
-               "copyright header", "src/database", "embedded in", "duplicated code"]
+               "src/database", "embedded in", "duplicated code"]
     positions = [tex.index(m) for m in markers]
     assert positions == sorted(positions)
     assert "Filesystem paths defined only in config" in tex   # R6 path row
@@ -88,7 +86,6 @@ def test_build_audit_tex_with_findings():
     assert "w.js" in tex and "534" in tex     # R2 large web file (reported)
     assert "y.py" in tex
     assert "z.py" in tex and "script" in tex
-    assert "h.py" in tex                      # R5 missing-header finding
     assert "d.py" in tex                      # R6 data-access finding
     assert "q.py" in tex                      # R6 path-definition finding
     assert "src.models" in tex and "60.0\\%" in tex   # R3 below-threshold package
@@ -101,9 +98,10 @@ def test_render_audit_pdf(monkeypatch):
 
 
 def test_one_report_per_audit_rule():
-    # Every R1–R8 rule gets its own standalone report, each with a stable filename.
+    # Every audited rule gets its own standalone report, each with a stable
+    # filename. R5 has none — the copyright-header check is not part of the audit.
     rules = {spec["filename"].split("_")[1] for spec in REPORTS}
-    assert rules == {"r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8"}
+    assert rules == {"r1", "r2", "r3", "r4", "r6", "r7", "r8"}
     assert all(spec["filename"].endswith(".pdf") for spec in REPORTS)
     assert len({spec["filename"] for spec in REPORTS}) == len(REPORTS)
 

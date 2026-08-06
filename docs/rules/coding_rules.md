@@ -87,21 +87,18 @@ them, binaries have no comment syntax — is marked by a sibling `<name>.license
 **Why.** Legal/licensing clarity on every file; a single canonical source for the text.
 Every file states its terms or points at `LICENSE`; none is silently unmarked.
 
-**How to comply.** Don't hand-retype it — run `python -m audit --fix-headers`, which rewrites
-any non-compliant header in place from `docs/shared/copyright.py` (preserving a shebang, and
-leaving a leading comment that isn't a licence header alone).
+**How to comply.** Don't hand-retype it — copy the block from `docs/shared/copyright.py`
+verbatim (preserving any shebang above it).
 
-**Verified by.** The self-healing header audit (`audit/headers.py`): `header_findings()` gates
-`python -m audit` and `tests/audit/test_audit_headers.py`; `apply_headers()` backs
-`--fix-headers`. Scope is repo-wide — root-level files plus `HEADER_SCAN_DIRS` in
-`config/audit.py` (`tests/` and `docs/` included), so the entry point and the test suite
-cannot carry a stale licence while R5 passes.
+**Verified by.** Nobody, automatically — and deliberately so. R5 is **not checked by
+`python -m audit` and does not gate the build**: whose name belongs at the top of a file is
+a commercial question for whoever owns the code, and a failing build forces that question at
+the wrong moment and in the wrong place. The maintainer runs the check by hand from a
+local-only tool that does not ship with the repo.
 
-The one-line notices are checked by `audit/notices.py` (`notice_findings()`), **reported
-rather than gating** — the wording is prose and the comment syntax varies, so it is surfaced
-for review instead of failing the build. `tests/audit/test_audit_headers.py` also asserts the
-canonical block matches `LICENSE` verbatim, so the per-file header and the licence file
-cannot drift apart.
+`tests/test_licence.py` still asserts that `LICENSE` and `docs/shared/copyright.py` exist and
+state the same terms, so the two cannot drift apart — that is about the licence itself, not
+about which files carry a header.
 
 ---
 
@@ -179,10 +176,13 @@ duplication percentage; cross-model duplication is treated as a hard fault in re
 
 ## Change log
 
-- 2026-07-16 — Relicensed to MIT (`LICENSE` at the repo root). R5 extended: the header is
-  now propagated by `python -m audit --fix-headers`, its scope is repo-wide (root files,
-  `tests/`, `docs/`), and every non-`.py`/`.js` file carries a one-line notice — checked,
-  reported, by `audit/notices.py`.
+- 2026-08-06 — R5 stopped being an automated check. The header and licence-notice scans left
+  the audit (and the repo) for a local-only tool the maintainer runs by hand; `python -m audit`
+  no longer reports or gates on them, and there is no longer an R5 report PDF. The rule itself
+  stands — every first-party file still carries its header.
+- 2026-07-16 — Relicensed to MIT (`LICENSE` at the repo root). R5 extended: its scope is
+  repo-wide (root files, `tests/`, `docs/`), and every non-`.py`/`.js` file carries a
+  one-line notice.
 - 2026-06-25 — Added R8 (avoid duplication / extract utilities; zero-tolerance across
   models). Extended R7 to forbid embedding JS/CSS in `.py` files.
 - 2026-06-25 — Added R7 (front-end assets under `src/static` / `src/templates`).

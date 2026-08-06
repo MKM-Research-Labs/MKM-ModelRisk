@@ -72,40 +72,6 @@ MAX_TEST_FILE_LINES = 400
 SOURCE_DIRS = ("config", "src", "scripts", "app")
 CONFIG_DIR = "config"
 
-# Every first-party sub-tree. Coding rule R5 ("every first-party .py and .js
-# file") is licence-bearing scope, so it is repo-wide like R2's: root-level files
-# (model.py) plus these trees — tests, docs, the published packages/ clients and the
-# contracts/ schemas included. Scoping it to SOURCE_DIRS would let the entry point,
-# the test suite and a shipped package carry a stale licence while R5 passed.
-FIRST_PARTY_DIRS = ("config", "src", "scripts", "audit", "tests", "docs",
-                    "packages", "contracts")
-
-# The header gate (audit/headers.py) and the notice scan (audit/notices.py) share
-# that scope: between them they must account for every first-party file.
-HEADER_SCAN_DIRS = FIRST_PARTY_DIRS
-HEADER_EXTENSIONS = (".py", ".js")
-
-# Licence notices on everything R5's full-block gate does not cover (.sql, .css,
-# .html, .sh, .md, .toml, .txt, dotfiles, images, binaries). Those files carry a
-# one-line notice in their own comment syntax rather than the 19-line block; the
-# notice audit is reported, not gating, because the wording is prose and the
-# comment syntax varies. A file that cannot hold a comment at all (JSON forbids
-# them; binaries have no syntax) is marked by a sibling ``<name>.license`` file,
-# REUSE-style — so it is recorded as decided, never as overlooked.
-NOTICE_MARKER = "MIT License"
-NOTICE_SIBLING_SUFFIX = ".license"
-
-# Files that state the licence rather than reference it, so they need no notice.
-NOTICE_EXEMPT_NAMES = frozenset({"LICENSE"})
-
-# Generated or local-only files (mirrors the .gitignore entries that name files
-# rather than directories, which EXCLUDE_DIRS already covers). Not first-party,
-# so the notice scan never reports — or reads — them. ``.env`` holds secrets.
-NOTICE_EXCLUDE_NAMES = frozenset({".DS_Store", ".coverage", "coverage.xml", ".env"})
-# Local-only notes (gitignored via ``*.local.md``, e.g. internal planning that is
-# never committed) are not first-party artefacts, so the notice scan skips them.
-LOCAL_ONLY_SUFFIX = ".local.md"
-
 # Package trees scanned for the R4 ``__init__.py`` inventory. Broader than
 # SOURCE_DIRS so the inventory lists every first-party package initialiser —
 # including the audit suite and the bundled packages/ — not just the app source.

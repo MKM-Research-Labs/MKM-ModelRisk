@@ -105,14 +105,6 @@ def _init_files_body(report: dict) -> str:
         lambda f: [f["path"], f["lines"], "Yes" if f["reexport"] else "No"])
 
 
-def _headers_body(report: dict) -> str:
-    return (_findings_section("R5 — Missing copyright header", report["headers"],
-                              ["File"], lambda f: [f["path"]])
-            + _findings_section("R5 — Missing licence notice (reported)",
-                                report["licence_notices"],
-                                ["File", "Type"], lambda f: [f["path"], f["kind"]]))
-
-
 def _data_access_body(report: dict) -> str:
     return _findings_section(
         "R6 — Data access outside src/database (reported)", report["data_access"],
@@ -173,9 +165,6 @@ REPORTS = [
     {"filename": "audit_r4_init_files.pdf", "label": "R4 — __init__.py",
      "title": "R4 — Substantive __init__.py",
      "subtitle": "No functions or logic in __init__.py", "body": _init_files_body},
-    {"filename": "audit_r5_copyright_headers.pdf", "label": "R5 — Copyright headers",
-     "title": "R5 — Copyright Headers",
-     "subtitle": "Canonical copyright header on every file", "body": _headers_body},
     {"filename": "audit_r6_data_access.pdf", "label": "R6 — Data access",
      "title": "R6 — Data Access",
      "subtitle": "Data store reached only through src/database", "body": _data_access_body},
@@ -233,10 +222,6 @@ def _summary_table(report: dict) -> str:
             ["R3", "At least " + str(COVERAGE_MINIMUM) + "% test coverage, verified each stage",
              cov_result],
             ["R4", "No functions or logic in __init__.py", _result(report["init_files"])],
-            ["R5", "Canonical copyright header on every .py/.js file",
-             _result(report["headers"])],
-            ["R5", "Licence notice on every other first-party file",
-             _reported(report["licence_notices"])],
             ["R6", "Data store reached only through src/database", _reported(report["data_access"])],
             ["R6", "Filesystem paths defined only in config", _reported(report["path_definitions"])],
             ["R7", "No JavaScript or CSS embedded in .py files", _result(report["embedded_js"])],
