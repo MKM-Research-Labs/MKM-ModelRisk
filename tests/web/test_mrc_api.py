@@ -129,6 +129,28 @@ def test_update_meeting_field(client):
     assert response.get_json()["data"]["location"] == "Boardroom 2"
 
 
+def test_rename_meeting(client):
+    """A meeting can be renamed — its period or scope often turns out differently
+    from what was scheduled, and the title is what the committee calls it."""
+    _schedule(client)
+    response = client.post(
+        "/api/meetings/MTG1/field",
+        json={"field": "title", "value": "Q2 2026 — rescheduled", "confirmed": True},
+        headers=HEADERS,
+    )
+    assert response.get_json()["data"]["title"] == "Q2 2026 — rescheduled"
+
+
+def test_rename_meeting_to_nothing_is_400(client):
+    """Scheduling demands a title; renaming is not a way round it."""
+    _schedule(client)
+    response = client.post(
+        "/api/meetings/MTG1/field",
+        json={"field": "title", "value": "   ", "confirmed": True}, headers=HEADERS,
+    )
+    assert response.status_code == 400
+
+
 def test_update_removed_meeting_field_is_400(client):
     """chair / company / division / line_of_business are no longer editable — they're
     derived from the meeting's MRC binding on read."""

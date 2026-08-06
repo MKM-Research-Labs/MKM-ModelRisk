@@ -25,6 +25,7 @@ from typing import Any
 from config.governance import (
     CLOSED_MEETING_STATUS,
     DEFAULT_MEETING_STATUS,
+    MEETING_FIELD_SPECS,
     MEETING_FIELDS,
     MRC_COLLECTION_SPECS,
     VALID_MEETING_STATUSES,
@@ -57,6 +58,10 @@ def _validate_field(field: str, value: Any) -> None:
     if field == "status" and value not in VALID_MEETING_STATUSES:
         allowed = ", ".join(VALID_MEETING_STATUSES)
         raise DomainError(f"status must be one of: {allowed}")
+    # Scheduling demands a title; renaming must not be a way round that. A
+    # meeting with no name reads as its bare id in every list, pack and minute.
+    if MEETING_FIELD_SPECS[field].get("required") and not str(value or "").strip():
+        raise DomainError(f"{MEETING_FIELD_SPECS[field]['label']} is required")
 
 
 def decide_schedule(
