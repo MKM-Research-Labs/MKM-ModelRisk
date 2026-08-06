@@ -204,6 +204,30 @@ function mrcOutcome(data) {
   return hist.length ? (hist[hist.length - 1].outcome || "Approved") : "";
 }
 
+// A subject's CURRENT MRC state — the one thing the status column, the summary tile and
+// the Risk tab must all agree on. It mirrors the risk engine (model_inventory/risk.py):
+// an active request supersedes any earlier decision; a Rejected or Revoked latest decision
+// is not a sign-off; and an approval granted before the division ratified its current
+// categorisation is stale, because it was made against categories that no longer exist.
+// Returns "Pending" | "Rejected" | "Revoked" | "Re-classify" | "Approved" | "".
+function mrcState(data, division) {
+  const reqs = (data && data.signoff_requests) || [];
+  if (reqs.some((r) => r.status === "Pending" || r.status === "Attached")) return "Pending";
+  const hist = (data && data.signoff_history) || [];
+  const latest = hist.length ? hist[hist.length - 1] : null;
+  if (!latest) return "";
+  const outcome = latest.outcome || "Approved";
+  if (outcome === "Rejected" || outcome === "Revoked") return outcome;
+  const ratified = (Policy.state(division === undefined ? data.division : division) || {}).approved_at;
+  if (ratified && latest.date && latest.date < ratified) return "Re-classify";
+  return "Approved";
+}
+
+const MRC_STATE_COLORS = {
+  Pending: "#f57c00", Rejected: "var(--red)", Revoked: "var(--red)",
+  "Re-classify": "#f57c00", Approved: "#388e3c",
+};
+
 const LIFECYCLE_COLORS = {
   "New": "#1976d2", "Being Enhanced": "#f57c00",
   "No New Development": "#9e9e9e", "Marked for Removal": "#d32f2f",
@@ -220,20 +244,15 @@ function lifecycleBadge(lifecycle) {
 // rejected), or a dash when the MRC has not yet ruled. The detail view also
 // surfaces pending requests; the list keeps to the decided outcome.
 function mrcStatusBadge(data) {
-  // An active request (queued to a committee, awaiting its decision) is the
-  // model's current MRC state — it is waiting on approval — so Pending takes
-  // precedence over any earlier decided outcome. "Pending" / "Attached" mirrors
-  // the server's definition of an active request (api_models_signoff.pending_signoff).
-  const reqs = (data && data.signoff_requests) || [];
-  if (reqs.some((r) => r.status === "Pending" || r.status === "Attached")) {
-    return '<span style="color:#f57c00;font-weight:600">Pending</span>';
-  }
-  const hist = (data && data.signoff_history) || [];
-  const latest = hist.length ? hist[hist.length - 1] : null;
-  if (!latest) return '<span class="muted">—</span>';
-  const outcome = latest.outcome || "Approved";
-  const color = outcome === "Rejected" ? "var(--red)" : "#388e3c";
-  return '<span style="color:' + color + ';font-weight:600">' + esc(outcome) + "</span>";
+  const state = mrcState(data);
+  if (!state) return '<span class="muted">—</span>';
+  // "Re-classify" says what the Risk tab's banner says: the approval stands in history but
+  // no longer covers this subject, because the categorisation moved under it.
+  const title = state === "Re-classify"
+    ? ' title="Signed off under an older categorisation — re-confirm the classification and' +
+      ' request sign-off again."' : "";
+  return '<span style="color:' + (MRC_STATE_COLORS[state] || "#9e9e9e") +
+    ';font-weight:600"' + title + ">" + esc(state) + "</span>";
 }
 
 // Every uploaded document is stored, but the console lists each one once and only
