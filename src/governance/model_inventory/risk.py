@@ -96,6 +96,8 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dic
         "tier": tier,
         "tier_band": band["score"],
         "tier_label": band["name"],
+        # The band's own colour, so the heatmap's caption reads like the Admin editor's.
+        "tier_colour": band.get("colour"),
         "materiality": materiality,
         "complexity": complexity,
         # The owner-set Materiality × Complexity cell → risk rating (only when both axes set).
@@ -108,6 +110,12 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dic
         "axes": {
             "materiality": [b["name"] for b in policy["dimensions"]["materiality"]["bands"]],
             "complexity": [b["name"] for b in policy["dimensions"]["complexity"]["bands"]],
+        },
+        # What the division CALLS each dimension, so the axis titles and the prompts around
+        # the grid follow an admin rename instead of saying "Materiality" regardless.
+        "axis_labels": {
+            key: policy["dimensions"][key].get("label")
+            for key in ("mission_criticality", "materiality", "complexity")
         },
         # Each rating's colour, so the UI shades every cell from the division policy
         # instead of a hardcoded RAG palette.

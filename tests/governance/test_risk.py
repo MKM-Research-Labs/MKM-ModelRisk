@@ -75,6 +75,17 @@ def test_envelope_carries_policy_axes_and_rating_colours():
     assert hm["rating_colours"]["Green"] == "#388e3c"
 
 
+def test_envelope_carries_the_dimension_labels_and_band_colour():
+    """The axis titles and the prompts around the grid are the division's own names for
+    the dimensions, so renaming one in Admin renames it everywhere it is drawn."""
+    hm = compute_risk_rating(
+        {"materiality": "High", "complexity": "Low", "tier": 1}, as_of=AS_OF)["heatmap"]
+    assert hm["axis_labels"] == {"mission_criticality": "Mission Criticality",
+                                 "materiality": "Materiality", "complexity": "Complexity"}
+    # The band's colour, for the heatmap caption's swatch.
+    assert hm["tier_colour"] == "#d32f2f"
+
+
 def _hm(materiality, complexity, tier):
     return compute_risk_rating(
         {"materiality": materiality, "complexity": complexity, "tier": tier}, as_of=AS_OF,

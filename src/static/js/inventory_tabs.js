@@ -75,11 +75,30 @@ const DetailTabs = {
       "</thead><tbody>" + rows + "</tbody></table>";
   },
 
-  // W4a: 3×3 heatmap grid (Materiality × Complexity → RAG) for the model's
-  // tier. The current cell is highlighted; the rating headline is its colour.
+  // The dimension names a division uses, from the risk-rating envelope. They fall back to
+  // the built-in names only for a payload that predates the policy (never for a rename).
+  axisLabels(hm) {
+    const labels = (hm && hm.axis_labels) || {};
+    return {
+      mission_criticality: labels.mission_criticality || "Mission Criticality",
+      materiality: labels.materiality || "Materiality",
+      complexity: labels.complexity || "Complexity",
+    };
+  },
+
+  // W4a: the Materiality × Complexity → RAG grid for the model's Mission-Criticality
+  // band. The current cell is highlighted; the rating headline is its colour.
   heatmap(hm) {
+    const labels = this.axisLabels(hm);
+    // Captioned the way Admin → Risk captions the same table: the band's colour, the
+    // dimension it belongs to, then the band itself.
     const tierCaption = hm.tier_label
-      ? '<div class="section-header">' + esc(hm.tier_label) + " heatmap</div>"
+      ? '<div class="grid-cap" style="display:flex;align-items:center;gap:8px;margin:14px 0 6px">' +
+        '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' +
+        esc(hm.tier_colour || "#9e9e9e") + '"></span>' +
+        '<span style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em">' +
+        esc(labels.mission_criticality) + "</span>" +
+        '<span style="font-size:14px;font-weight:700">' + esc(hm.tier_label) + "</span></div>"
       : "";
     // Axes and cell colours come from the division's policy (echoed on the envelope),
     // falling back to the classic Low/Medium/High + RAG palette for older payloads.
@@ -106,21 +125,22 @@ const DetailTabs = {
     // column: materiality runs vertically down the left, complexity across
     // above the column headers.
     return tierCaption + '<div class="heatmap-wrap">' +
-      '<div class="hm-y-axis">Materiality</div>' +
+      '<div class="hm-y-axis">' + esc(labels.materiality) + "</div>" +
       "<div>" +
-      '<div class="hm-x-axis">Complexity &rarr;</div>' +
+      '<div class="hm-x-axis">' + esc(labels.complexity) + " &rarr;</div>" +
       '<table class="heatmap"><thead><tr><th></th>' +
       cols.map((c) => "<th>" + esc(c) + "</th>").join("") +
       "</tr></thead><tbody>" + table + "</tbody></table>" +
       "</div></div>" +
       '<div class="muted" style="font-size:11px;margin-top:2px">' +
-      "Set Materiality and Complexity on the Overview tab.</div>";
+      esc(labels.materiality) + " and " + esc(labels.complexity) +
+      " are set above; this table is the division's policy, not a per-model setting.</div>";
   },
 
   // W4c — chronological table of approved sign-offs on this model. Rendered
   // as a supporting section on the Risk Rating
   // tab. Empty when no sign-offs have been recorded yet.
-  signoffHistory(history) {
+  signoffHistory(history, division) {
     const items = history || [];
     if (!items.length) return "";
     const rows = items.map(function (s) {
@@ -128,8 +148,8 @@ const DetailTabs = {
       const oColor = outcome === "Rejected" ? "#d32f2f" : "#388e3c";
       return "<tr><td>" + fieldDisplay(s.date) + '</td><td style="color:' + oColor +
         ';font-weight:600">' + esc(outcome) + "</td><td>" +
-        (s.from_rating ? ragBadge(s.from_rating) : '<span class="muted">—</span>') +
-        "</td><td>" + ragBadge(s.to_rating) + "</td><td>" +
+        (s.from_rating ? ragBadge(s.from_rating, division) : '<span class="muted">—</span>') +
+        "</td><td>" + ragBadge(s.to_rating, division) + "</td><td>" +
         fieldDisplay(s.meeting_id) + "</td><td>" + fieldDisplay(s.next_review_date) + "</td><td>" +
         fieldDisplay(s.note) + "</td></tr>";
     }).join("");
@@ -139,20 +159,27 @@ const DetailTabs = {
       "</tbody></table>";
   },
 
-  risk(rating, showEvents = true) {
+  risk(rating, showEvents = true, division) {
     const hm = rating.heatmap || {};
+    const labels = this.axisLabels(hm);
+    const subject = showEvents ? "product" : "model";
     const hmRag = hm.rag;
-    const hmColor = RAG_COLORS[hmRag] || "#9e9e9e";
+    // The rating's colour is the division's, from the policy on the envelope — a renamed
+    // or re-coloured rating shaded this banner with the built-in palette before.
+    const hmColor = (hm.rating_colours || {})[hmRag] || RAG_COLORS[hmRag] || "#9e9e9e";
     const headline = hmRag
       ? '<div class="riskbanner" style="border-color:' + hmColor + ";background:" + hmColor + '14">' +
         '<div class="muted" style="text-align:center">HEATMAP RATING</div>' +
         '<div style="text-align:center;font-size:28px;font-weight:800;color:' + hmColor + '">' +
         esc(hmRag) + "</div>" +
-        '<div style="text-align:center" class="muted">Materiality: <b>' + esc(hm.materiality) +
-        "</b> &middot; Complexity: <b>" + esc(hm.complexity) + "</b></div></div>"
+        '<div style="text-align:center" class="muted">' + esc(labels.materiality) + ": <b>" +
+        esc(hm.materiality) + "</b> &middot; " + esc(labels.complexity) + ": <b>" +
+        esc(hm.complexity) + "</b></div></div>"
       : '<div class="riskbanner" style="border-color:#9e9e9e;background:#9e9e9e14">' +
         '<div class="muted" style="text-align:center">HEATMAP RATING</div>' +
-        '<div style="text-align:center;font-size:16px" class="muted">Set Materiality and Complexity on Overview to place this model on the heatmap.</div>' +
+        '<div style="text-align:center;font-size:16px" class="muted">Set ' +
+        esc(labels.materiality) + " and " + esc(labels.complexity) + " above to place this " +
+        subject + " on the heatmap.</div>" +
         "</div>";
     // Events are a product-level (production) concern, so the count shows only on
     // products, not models.
@@ -166,13 +193,16 @@ const DetailTabs = {
       ? '<div class="riskbanner" style="border-color:var(--amber);background:#fff8e1">' +
         '<div style="font-weight:700;color:#b26a00">Re-classification needed</div>' +
         '<div class="muted" style="font-size:12px">The division\'s risk categorisation has ' +
-        "changed since this model was signed off. Re-confirm Materiality, Complexity and " +
-        "Mission Criticality on Overview, then request MRC sign-off again.</div></div>"
+        "changed since this " + subject + " was signed off. Re-confirm " +
+        esc(labels.materiality) + ", " + esc(labels.complexity) + " and " +
+        esc(labels.mission_criticality) +
+        " above, then request MRC sign-off again.</div></div>"
       : "";
-    return '<p class="muted">Risk rating is set by the owner via Materiality and Complexity ' +
-      "(the heatmap), and takes effect once the MRC signs that cell off.</p>" +
+    return '<p class="muted">Risk rating is set by the owner via ' + esc(labels.materiality) +
+      " and " + esc(labels.complexity) +
+      " (the heatmap), and takes effect once the MRC signs that cell off.</p>" +
       reclassify + headline + signoff + this.heatmap(hm) + events +
-      this.signoffHistory(rating.signoff_history);
+      this.signoffHistory(rating.signoff_history, division);
   },
 
   // W4c: sign-off state. A rating needs MRC sign-off until the committee has
