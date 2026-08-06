@@ -35,6 +35,7 @@ from src.web.api_documents import documents_bp
 from src.web.api_handoffs import handoffs_bp
 from src.web.api_models import models_bp
 from src.web import api_models_signoff  # noqa: F401 — attaches endpoints to models_bp
+from src.web import api_models_review  # noqa: F401 — attaches endpoints to models_bp
 from src.web import api_model_documents  # noqa: F401 — attaches endpoints to models_bp
 from src.web.api_mrc import mrc_bp
 from src.web.api_mrc_settings import settings_bp

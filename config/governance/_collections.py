@@ -116,6 +116,18 @@ COLLECTION_SPECS = {
         {"key": "description", "label": "Description", "type": "text", "required": True},
         {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT},
     ]},
+    # The reviewer's interim approvals, one row per stage agreed. Append-only by
+    # intent: it is the record of who agreed what, and when, as the review ran —
+    # the same reason the challenge threads will be. A stage approved twice
+    # (reopened, re-agreed) leaves both rows standing.
+    "review_progress": {"label": "Review progress", "id_prefix": "RP", "fields": [
+        {"key": "stage", "label": "Stage", "type": "text", "required": True},
+        {"key": "stage_label", "label": "Stage name", "type": "text"},
+        {"key": "status", "label": "Review status set", "type": "text"},
+        {"key": "note", "label": "Reviewer's note", "type": "text"},
+        {"key": "approved_by", "label": "Approved by", "type": "text"},
+        {"key": "approved_at", "label": "Approved at", "type": "text"},
+    ]},
     "validation_questions": {"label": "Validation questions", "id_prefix": "VQ", "fields": [
         {"key": "short_label", "label": "Topic", "type": "text"},
         {"key": "question", "label": "Question", "type": "text", "required": True},

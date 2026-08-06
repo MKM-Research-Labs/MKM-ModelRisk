@@ -39,6 +39,13 @@ const REVIEW_STAGES = [
   { key: "signoff", n: 6, label: "Sign-off" },
 ];
 const REVIEW_DOC_CATEGORY = "Review";
+// The brief the owner writes before the review starts, and who is to do it by when.
+const REVIEW_BRIEF_FIELDS = ["review_trigger", "review_scope", "peer_reviewer",
+  "review_due_date"];
+// Shown only for a new version: the three documents that go stale together.
+const NEW_VERSION_CHECKLIST = ["review_docs_updated", "review_sensitivities_updated",
+  "review_test_docs_updated"];
+const NEW_VERSION_TRIGGER = "New version";
 
 Object.assign(Detail, {
   // Which stage is open. Held on Detail (not in the URL) so switching model tabs
@@ -63,6 +70,9 @@ Object.assign(Detail, {
   // and a badge that looked like one would be claiming more than it knows.
   _stageBadge(key, d) {
     const n = (k) => (d[k] || []).length;
+    // An agreed stage says so, in place of its count: once the reviewer has
+    // approved it, how many rows it holds is no longer the interesting fact.
+    if ((d.review_progress || []).some((r) => r.stage === key)) return " ✓";
     if (key === "documents") {
       return " (" + DocLinks.countIn(d.documents, [REVIEW_DOC_CATEGORY]) + ")";
     }
@@ -84,38 +94,52 @@ Object.assign(Detail, {
       refresh: () => this.show(this._id, "review", { scroll: false }),
     };
     if (this._reviewStage === "documents") {
-      box.innerHTML = '<div class="section-header">Preliminary documents</div>' +
+      box.innerHTML = '<div class="section-header">The brief</div>' +
+        '<p class="muted" style="font-size:12px">What this review is for, who is doing it, and ' +
+        "by when. A reviewer handed a model and no brief writes the review they imagine is " +
+        "wanted.</p>" +
+        REVIEW_BRIEF_FIELDS.map((k) => this._row(k, d)).join("") +
+        this._newVersionChecklist(d) +
+        '<div class="section-header" style="margin-top:16px">Preliminary documents</div>' +
         '<p class="muted" style="font-size:12px">The pack the reviewer works from. These are ' +
         "the review's own working papers — the model's documentation lives on the Docs tab.</p>" +
-        DocPanel.html(docOpts);
+        DocPanel.html(docOpts) + this._stageApproval("documents", d);
       DocPanel.bind(docOpts);
+      this._bindEdits();
+      this._bindStageApproval("documents");
       return;
     }
     if (this._reviewStage === "questions") {
-      box.innerHTML = DetailTabs.validation(d, this._model.retired);
+      box.innerHTML = DetailTabs.validation(d, this._model.retired) +
+        this._stageApproval("questions", d);
       this._bindValidationSaves();
+      this._bindStageApproval("questions");
       return;
     }
     if (this._reviewStage === "weaknesses") {
       box.innerHTML = '<p class="muted" style="font-size:12px">What the model does badly, or ' +
         "not at all &mdash; proposed by the owner, agreed with the reviewer.</p>" +
-        this._collSection("model_weaknesses", d);
+        this._collSection("model_weaknesses", d) + this._stageApproval("weaknesses", d);
       this._bindCollections(["model_weaknesses"]);
+      this._bindStageApproval("weaknesses");
       return;
     }
     if (this._reviewStage === "limitations") {
       box.innerHTML = '<p class="muted" style="font-size:12px">Where the model may and may not ' +
         "be used, with the trigger that would surface a breach and the control that compensates.</p>" +
-        this._collSection("limitations", d);
+        this._collSection("limitations", d) + this._stageApproval("limitations", d);
       this._bindCollections(["limitations"]);
+      this._bindStageApproval("limitations");
       return;
     }
     if (this._reviewStage === "monitoring") {
       box.innerHTML = '<div class="section-header">Monitoring approach</div>' +
         '<p class="muted" style="font-size:12px">How this model will be watched once it is in ' +
         "use, in your own words &mdash; what would be looked at, how often, and what would " +
-        "prompt a second look.</p>" + this._row("monitoring_approach", d);
+        "prompt a second look.</p>" + this._row("monitoring_approach", d) +
+        this._stageApproval("monitoring", d);
       this._bindEdits();
+      this._bindStageApproval("monitoring");
       return;
     }
     // Sign-off is the next increment; say so plainly rather than showing an empty
@@ -123,6 +147,65 @@ Object.assign(Detail, {
     box.innerHTML = '<div class="section-header">Reviewer sign-off</div>' +
       '<div class="empty">Not built yet. The reviewer\'s final commentary, the sign-off gate ' +
       "and the Model Review Report the MRC receives land in a later increment.</div>";
+  },
+
+  // The three documents that go stale together when a model is re-versioned. The
+  // owner ticks each; alongside the tick we show what is actually on file, so the
+  // confirmation is made against the record rather than from memory.
+  _newVersionChecklist(d) {
+    if (d.review_trigger !== NEW_VERSION_TRIGGER) return "";
+    const held = {
+      review_docs_updated: DocLinks.countIn(d.documents, ["Core Documentation"]),
+      review_sensitivities_updated: DocLinks.countIn(d.documents, ["Sensitivity"]),
+      review_test_docs_updated: DocLinks.countIn(d.documents, ["Test Results"]),
+    };
+    return '<div class="section-header" style="margin-top:16px">New version checklist</div>' +
+      '<p class="muted" style="font-size:12px">This review follows a new version, so the ' +
+      "model's own documents need to have caught up with it. The count beside each is what " +
+      "is on file today.</p>" +
+      NEW_VERSION_CHECKLIST.map((k) =>
+        this._row(k, d).replace("</div><span class=\"edit-btn\"",
+          '<span class="muted" style="font-size:11px;margin-left:10px">' +
+          held[k] + " on file</span></div><span class=\"edit-btn\"")).join("");
+  },
+
+  // The reviewer's interim approval of a stage: the button, or the record of the
+  // approval already given. Not a lock — the stage stays editable afterwards, and
+  // approving again after a reopening simply adds another row.
+  _stageApproval(stageKey, d) {
+    const given = (d.review_progress || []).filter((r) => r.stage === stageKey).slice(-1)[0];
+    const label = REVIEW_STAGES.find((s) => s.key === stageKey).label;
+    const record = given
+      ? '<div class="muted" style="font-size:12px">Interim approval by <b>' +
+        esc(given.approved_by || "") + "</b> on " + esc((given.approved_at || "").slice(0, 10)) +
+        (given.note ? ' &mdash; "' + esc(given.note) + '"' : "") + "</div>"
+      : '<div class="muted" style="font-size:12px">Not yet agreed.</div>';
+    if (this._model.retired) return '<div style="margin-top:16px">' + record + "</div>";
+    return '<div class="section-header" style="margin-top:18px">Interim approval</div>' +
+      '<p class="muted" style="font-size:12px">The reviewer agrees ' + esc(label.toLowerCase()) +
+      " and the review moves on. This does not close the stage &mdash; it stays open if you " +
+      "need to come back to it.</p>" + record +
+      '<div class="row" style="margin-top:8px"><input id="rv-note" placeholder="Note (optional)" ' +
+      'style="flex:1"><button class="btn small primary" data-rapprove="' + esc(stageKey) + '">' +
+      (given ? "Approve again&hellip;" : "Interim approval&hellip;") + "</button></div>";
+  },
+
+  _bindStageApproval(stageKey) {
+    const btn = document.querySelector('[data-rapprove="' + stageKey + '"]');
+    if (!btn) return;
+    btn.onclick = () => {
+      const label = REVIEW_STAGES.find((s) => s.key === stageKey).label;
+      const note = val("rv-note");
+      App.amend('Interim approval of "' + label + '" for ' + this._id + ".", "POST",
+        "/api/models/" + this._id + "/review/approve-stage", { stage: stageKey, note: note },
+        () => {
+          // Approving moves the review on: land the reviewer on the next stage.
+          const i = REVIEW_STAGES.findIndex((s) => s.key === stageKey);
+          this._reviewStage = REVIEW_STAGES[Math.min(i + 1, REVIEW_STAGES.length - 1)].key;
+          this.show(this._id, "review", { scroll: false });
+          Inventory.loadList();
+        });
+    };
   },
 
   _bindReviewRail() {

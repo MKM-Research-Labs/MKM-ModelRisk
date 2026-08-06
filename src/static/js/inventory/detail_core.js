@@ -38,8 +38,11 @@ const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebas
 // Governance column. Note: recertification / review_frequency / last_review_date remain
 // intentionally off the overview (the MRC sets sign-off + next review at sign-off); that
 // they are still audit-scored is a separate, open decision, not this regression.
+// Reviewer and validation date moved onto the Review tab, where the review is
+// actually run; review_status stays because it is the one-line answer to "where
+// is this model up to", and it links through to the workflow that sets it.
 const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "model_owner_role", "lifecycle_stage",
-  "review_status", "peer_reviewer", "validation_date"];
+  "review_status"];
 const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
 // The document category that backs each Testing field's in-context upload panel.
 const TESTING_DOC_CATEGORY = {
