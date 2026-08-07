@@ -25,7 +25,7 @@ from typing import Any
 from flask import request, send_file
 
 from config.files import HIDDEN_DOC_EXTENSIONS, INLINE_VIEW_EXTENSIONS
-from config.governance import (DOC_CATEGORIES, DOC_TAB_CATEGORIES, REFERENCE_SPECS,
+from config.governance import (DOC_CATEGORIES, DOC_TAB_CATEGORIES, DOC_TAB_GROUPS, REFERENCE_SPECS,
                                REVIEW_DOC_CATEGORIES, TESTING_DOC_CATEGORIES)
 from src.command import CommandContext, context_from_headers
 from src.files import extension
@@ -40,6 +40,9 @@ def document_specs() -> dict:
     return {
         "doc_categories": list(DOC_CATEGORIES),
         "doc_tab_categories": list(DOC_TAB_CATEGORIES),
+        # Which of those tabs is a group, and over what. "Testing" is a panel
+        # of four categories, not a category anything is filed under.
+        "doc_tab_groups": {k: list(v) for k, v in DOC_TAB_GROUPS.items()},
         "testing_doc_categories": list(TESTING_DOC_CATEGORIES),
         "review_doc_categories": list(REVIEW_DOC_CATEGORIES),
         "hidden_doc_extensions": sorted(HIDDEN_DOC_EXTENSIONS),

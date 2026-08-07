@@ -43,14 +43,9 @@ const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebas
 // is this model up to", and it links through to the workflow that sets it.
 const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "model_owner_role", "lifecycle_stage",
   "review_status"];
-const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
-// The document category that backs each Testing field's in-context upload panel.
-const TESTING_DOC_CATEGORY = {
-  unit_tests: "Unit Test", integration_tests: "Integration Test", benchmark_tests: "Benchmark Test",
-};
-// The model-wide test evidence pack, shown at the top of the Testing tab. Mirrors
-// the first entry of config TESTING_DOC_CATEGORIES.
-const TEST_RESULTS_CATEGORY = "Test Results";
+// The testing evidence is documentation, so it lives under Docs (between Analysis
+// and Monitoring) rather than on a tab of its own. The categories behind that panel
+// come from config with the rest — see doc_tab_groups in the field specs.
 // Collection tabs that carry an in-context supporting-documents panel.
 const COLLECTION_DOC_CATEGORY = {
   remediation_steps: "Remediation Evidence",
@@ -129,9 +124,6 @@ const Detail = {
     const n = (k) => (d[k] || []).length;
     const vq = d.validation_questions || [];
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
-    // The Testing tab is document-driven now that the Yes/No flags are gone, so its
-    // badge counts the test evidence attached rather than a stuck "0/3".
-    const tst = DocLinks.countIn(d.documents, this._specs.testing_doc_categories);
     const tabs = [
       ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
       ["version_history", "Versions", n("version_history")],
@@ -139,11 +131,11 @@ const Detail = {
       ["connections", "Connections", null],
       ["raci_roles", "RACI", n("raci_roles")],
       ["review", "Review", cov],
-      ["testing", "Testing", tst],
       ["risk", "Risk Rating", null],
       ["decisions", "MRC linkage",
         (d.signoff_history || []).length + this._decisions.length],
-      ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],
+      ["docs", "Docs", DocLinks.countIn(d.documents, (this._specs.doc_tab_categories || [])
+        .concat(this._specs.testing_doc_categories || []))],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
@@ -206,7 +198,8 @@ const Detail = {
         esc(this._id) + '/risk-document.pdf">Model Risk Document (PDF)</a></span></div>' +
         '<div id="docs-host"></div>';
       ModelDocs.render(this._id, d.documents || [], this._specs.doc_tab_categories || [],
-        this._model.retired, "/api/models/", () => this.show(this._id, "docs"), "docs-host");
+        this._model.retired, "/api/models/", () => this.show(this._id, "docs"), "docs-host",
+        this._specs.doc_tab_groups || {});
       // Issuing files a copy under History. Fetch the PDF ourselves so we know
       // when the server has finished generating and filing it, then refresh so the
       // new copy appears in History at once — a fixed timer used to race a slow
@@ -243,25 +236,6 @@ const Detail = {
       box.innerHTML = DetailTabs.versions(d, this.collSpec("version_history"), this._model.retired) +
         this._collSection("change_history", d);
       this._bindCollections(["version_history", "change_history"]); return;
-    }
-    // Testing tab: every piece of testing evidence for the model. The overall test
-    // results pack sits at the top, then the unit / integration / benchmark fields,
-    // each with its own in-context upload panel. None of this appears under Docs.
-    if (this._tab === "testing") {
-      const docOpts = (cat) => ({ category: cat, docs: d.documents || [], base: "/api/models/",
-        id: this._id, retired: this._model.retired, refresh: () => this.show(this._id, "testing") });
-      // Each test type is a sub-header over its own upload panel. The old Yes/No
-      // flag is gone — the attached documents are the evidence, so a separate
-      // "tests exist?" tick added nothing.
-      box.innerHTML = '<div class="section-header">Test results</div>' +
-        DocPanel.html(docOpts(TEST_RESULTS_CATEGORY)) +
-        '<div class="section-header" style="margin-top:14px">Testing</div>' +
-        TESTING_FIELDS.map((k) =>
-          '<div class="section-header" style="margin-top:12px;font-size:13px">' +
-          esc(this.specByKey(k).label) + "</div>" +
-          DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
-      DocPanel.bind(docOpts(TEST_RESULTS_CATEGORY));
-      TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k]))); return;
     }
     const spec = this.collSpec(this._tab);
     let html = Collections.render(d, { collections: [spec] }, this._model.retired);

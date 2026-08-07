@@ -25,8 +25,9 @@ const ModelDocs = {
   _base: "/api/models/", _refresh: null, _host: "dt-content",
 
   // base / refresh / host let the same renderer serve any aggregate (models, Products).
-  render(modelId, docs, categories, retired, base, refresh, host) {
+  render(modelId, docs, categories, retired, base, refresh, host, groups) {
     this._id = modelId;
+    this._groups = groups || this._groups || {};
     this._docs = docs;
     this._categories = categories;
     this._retired = retired;
@@ -41,21 +42,42 @@ const ModelDocs = {
       b.onclick = function () {
         self._cat = b.getAttribute("data-doctab");
         self.render(self._id, self._docs, self._categories, self._retired,
-          self._base, self._refresh, self._host);
+          self._base, self._refresh, self._host, self._groups);
       };
     });
     this._renderCategory();
   },
 
+  // The real categories behind a tab: itself, unless it is a group (Testing is a
+  // panel over four categories, and nothing is ever filed under the label).
+  _members(cat) {
+    return (this._groups && this._groups[cat]) || [cat];
+  },
+
+  // A grouped panel: one section per member category, each with its own upload
+  // panel, so a document is filed under the test it evidences rather than into one
+  // undifferentiated heap.
+  _renderGroup(members) {
+    const opts = (cat) => ({ category: cat, docs: this._docs, base: this._base,
+      id: this._id, retired: this._retired, refresh: this._refresh });
+    document.getElementById("docs-cat").innerHTML = members.map((cat) =>
+      '<div class="section-header" style="margin-top:12px">' + esc(cat) + "</div>" +
+      DocPanel.html(opts(cat))).join("");
+    members.forEach((cat) => DocPanel.bind(opts(cat)));
+  },
+
   _subtabs() {
     return '<div class="dtabs">' + this._categories.map((c) => {
-      const n = DocLinks.visible(this._docs, c).length;
+      const n = this._members(c)
+        .reduce((sum, m) => sum + DocLinks.visible(this._docs, m).length, 0);
       return '<button class="dtab' + (c === this._cat ? " active" : "") + '" data-doctab="' +
         esc(c) + '">' + esc(c) + " (" + n + ")</button>";
     }).join("") + "</div>";
   },
 
   _renderCategory() {
+    const members = this._members(this._cat);
+    if (members.length > 1) { this._renderGroup(members); return; }
     const items = DocLinks.visible(this._docs, this._cat);
     const rows = items.length ? items.map((d) =>
       "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +

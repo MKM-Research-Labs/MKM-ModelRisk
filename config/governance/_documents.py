@@ -28,8 +28,13 @@
 # Sensitivity sits beside Core Documentation rather than inside Analysis: it is an
 # adjunct to the model's own write-up — how the model responds as its inputs move —
 # where Analysis is the wider work done about the model.
-DOC_TAB_CATEGORIES = ("Core Documentation", "Sensitivity", "Analysis", "Monitoring",
-                      "History")
+# Testing sits between Analysis and Monitoring: it is part of the documentation
+# somebody reads about a model, not a separate concern with its own tab. It is a
+# GROUP rather than a category — the evidence is filed under four categories (the
+# overall pack plus one per test type) and they belong together on one panel.
+TESTING_TAB_LABEL = "Testing"
+DOC_TAB_CATEGORIES = ("Core Documentation", "Sensitivity", "Analysis", TESTING_TAB_LABEL,
+                      "Monitoring", "History")
 
 # The Review tab's first stage: the preliminary pack a reviewer works from, and
 # whatever else the review generates as it runs. Offered beside the stage it
@@ -56,7 +61,15 @@ TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", "Benc
 # evidence, so they are not offered as standalone Docs categories.
 EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
 
-DOC_CATEGORIES = (DOC_TAB_CATEGORIES + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
+# Which of the Docs tabs is a group, and over what. The label is not itself a
+# category — nothing is ever filed under "Testing" — so anything counting or
+# listing documents has to resolve the group to its real categories first.
+DOC_TAB_GROUPS = {TESTING_TAB_LABEL: TESTING_DOC_CATEGORIES}
+
+# Every category a document can actually carry. The group label is excluded on
+# purpose: it names a panel, not a filing place.
+DOC_CATEGORIES = (tuple(c for c in DOC_TAB_CATEGORIES if c not in DOC_TAB_GROUPS)
+                  + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
                   + REVIEW_DOC_CATEGORIES)
 
 # --- Ongoing monitoring -----------------------------------------------------
