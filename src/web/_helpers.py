@@ -112,6 +112,11 @@ def resolve_field(field: dict, options_by_list: dict | None = None) -> dict:
     # agenda escalation back-pointers) in tables and add forms.
     if field.get("hidden"):
         resolved["hidden"] = True
+    # What each option MEANS, where the config defines it (a person's roles). An
+    # administrator granting a role should be able to see what they are granting, so the
+    # explanation travels with the option rather than living only in the config file.
+    if field.get("explanations"):
+        resolved["explanations"] = field["explanations"]
     return resolved
 
 

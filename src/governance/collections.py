@@ -95,6 +95,18 @@ def _validate(spec: dict, fields: dict[str, Any], *, require_required: bool) -> 
         if field_spec["type"] == "choice" and value not in field_spec["options"]:
             allowed = ", ".join(field_spec["options"])
             raise DomainError(f"{field_spec['label']} must be one of: {allowed}")
+        # A multichoice holds SEVERAL of its options (a person may be both an owner and a
+        # committee member). Stored as a list so the record says what it means; a bare
+        # string would make "owner" and "owner,chair" the same shape and invite parsing.
+        if field_spec["type"] == "multichoice":
+            if not isinstance(value, list):
+                raise DomainError(f"{field_spec['label']} must be a list of values")
+            unknown = [v for v in value if v not in field_spec["options"]]
+            if unknown:
+                allowed = ", ".join(field_spec["options"])
+                raise DomainError(
+                    f"{field_spec['label']}: unknown value(s) {', '.join(map(str, unknown))} "
+                    f"— must be drawn from: {allowed}")
     if require_required:
         for field_spec in spec["fields"]:
             if field_spec.get("required") and not fields.get(field_spec["key"]):

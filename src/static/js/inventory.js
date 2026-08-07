@@ -45,6 +45,19 @@ function inputControl(id, spec, division) {
     const opts = ["", 1, 2, 3].map((o) => "<option>" + esc(o) + "</option>").join("");
     return '<select id="' + id + '">' + opts + "</select>";
   }
+  // Several of the options at once (a person's roles). The stored value is a list, so the
+  // control is a real multi-select rather than a comma-separated text box; each option
+  // carries the spec's explanation as its tooltip, so an administrator granting a role can
+  // see what it means.
+  if (spec.type === "multichoice") {
+    const explain = spec.explanations || {};
+    const opts = (spec.options || []).map((o) =>
+      '<option value="' + esc(o) + '"' +
+      (explain[o] ? ' title="' + esc(explain[o]) + '"' : "") + ">" + esc(o) +
+      "</option>").join("");
+    return '<select id="' + id + '" multiple size="' +
+      Math.min((spec.options || []).length, 6) + '">' + opts + "</select>";
+  }
   if (spec.type === "date") return '<input id="' + id + '" type="date">';
   if (spec.type === "textarea") return '<textarea id="' + id + '" rows="4"></textarea>';
   return '<input id="' + id + '">';

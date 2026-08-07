@@ -51,3 +51,26 @@ MACHINE_ACTOR_PREFIX = "ingest:"
 # first one — a fresh install has an empty list and a protected database name. While the
 # list is empty the rule stands down; the first person added closes it.
 ALLOW_WHEN_NO_PEOPLE_REGISTERED = True
+
+# ---------------------------------------------------------------------------
+# Phase P2: what a person can BE. Held on their People record; a person may hold several
+# (an owner who also sits on a committee is ordinary). The explanations are shown beside
+# the choice, so an administrator assigning a role can see what they are granting —
+# the same treatment the risk policy gives its bands.
+#
+# This is the vocabulary an adopting institution re-sets to its own framework. Changing a
+# role's NAME here without changing it on the People records that hold it un-assigns it,
+# exactly as renaming a risk band would; add a new role and migrate rather than rename in
+# place on a live estate.
+# ---------------------------------------------------------------------------
+ROLES = {
+    "owner": "Owns models or products: sets their classification and rationale, and asks "
+             "the committee to sign them off.",
+    "validator": "Validates models independently of the people who built them, and "
+                 "answers the validation questions.",
+    "committee": "Sits on an MRC: votes on sign-off, ratification and retirement.",
+    "chair": "Chairs an MRC: tables papers, closes meetings and records decisions.",
+    "administrator": "Maintains the admin reference lists and drafts the risk policy for "
+                     "the committee to ratify.",
+    "reader": "Reads the governance record; authors nothing.",
+}

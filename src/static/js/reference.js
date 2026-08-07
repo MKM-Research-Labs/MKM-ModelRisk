@@ -160,7 +160,12 @@ const Reference = {
       '<button class="btn small" data-add="' + esc(spec.key) + '">Add&hellip;</button></div>';
     container.querySelector('[data-add="' + spec.key + '"]').onclick = () => {
       const fields = {};
-      cols.forEach((f) => { const v = val("add-" + spec.key + "-" + f.key); if (v !== "") fields[f.key] = v; });
+      // An empty list is dropped on ADD (nothing to say yet); on edit it is kept, so a
+      // role can be taken away.
+      cols.forEach((f) => {
+        const v = val("add-" + spec.key + "-" + f.key);
+        if (v !== "" && !(Array.isArray(v) && !v.length)) fields[f.key] = v;
+      });
       App.amend("Add to " + spec.label + ".", "POST",
         "/api/reference/collections/" + spec.key, { fields: fields }, () => this.render());
     };
@@ -185,12 +190,24 @@ const Reference = {
       '<button class="btn small" id="ce-cancel">Cancel</button></div></td>';
     cols.forEach((f) => {
       const el = document.getElementById("ce-" + f.key);
-      if (item[f.key] !== null && item[f.key] !== undefined) el.value = item[f.key];
+      const current = item[f.key];
+      if (current === null || current === undefined) return;
+      // A multi-select cannot be filled by assigning `.value`; each held value has to be
+      // marked selected, or editing a person would quietly drop their roles.
+      if (el.multiple) {
+        const held = new Set(Array.isArray(current) ? current : [current]);
+        [...el.options].forEach((o) => { o.selected = held.has(o.value); });
+      } else {
+        el.value = current;
+      }
     });
     document.getElementById("ce-cancel").onclick = () => this.render();
     document.getElementById("ce-save").onclick = () => {
       const fields = {};
-      cols.forEach((f) => { const v = val("ce-" + f.key); if (v !== "") fields[f.key] = v; });
+      cols.forEach((f) => {
+        const v = val("ce-" + f.key);
+        if (v !== "" || Array.isArray(v)) fields[f.key] = v;
+      });
       App.amend("Update " + item.item_id + ".", "POST",
         "/api/reference/collections/" + spec.key + "/" + item.item_id, { fields: fields }, () => this.render());
     };

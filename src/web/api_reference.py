@@ -26,27 +26,15 @@ from config.governance import REFERENCE_SPECS
 from src.command import dispatch
 from src.files import UploadError, save_upload, upload_path
 from src.governance.reference import add_option, get_reference_lists, remove_option, update_option
-from src.web._helpers import context_from_request, json_body, reference_options, request_actor
+from src.web._helpers import (
+    context_from_request,
+    json_body,
+    reference_options,
+    request_actor,
+    resolve_field,
+)
 
 reference_bp = Blueprint("reference", __name__, url_prefix="/api/reference")
-
-
-def _field_spec(field: dict, options: dict[str, list]) -> dict:
-    # A field backed by another list (e.g. a Division's Company, or an Owner)
-    # becomes a dropdown once that list has values. ``hidden`` fields (e.g. the
-    # MRC ToR file metadata) are passed through so the UI can skip them.
-    reference = field.get("reference")
-    if reference and options.get(reference):
-        spec = {"key": field["key"], "label": field["label"], "type": "choice",
-                "options": options[reference], "required": bool(field.get("required"))}
-    else:
-        # Otherwise keep the field's own type and any static options (e.g. a
-        # choice field like the MRC frequency).
-        spec = {"key": field["key"], "label": field["label"], "type": field["type"],
-                "options": list(field.get("options", [])), "required": bool(field.get("required"))}
-    if field.get("hidden"):
-        spec["hidden"] = True
-    return spec
 
 
 def _specs():
@@ -54,7 +42,7 @@ def _specs():
     return [
         {
             "key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
-            "fields": [_field_spec(f, options) for f in spec["fields"]],
+            "fields": [resolve_field(f, options) for f in spec["fields"]],
         }
         for key, spec in REFERENCE_SPECS.items()
     ]

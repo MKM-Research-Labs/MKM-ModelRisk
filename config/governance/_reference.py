@@ -21,6 +21,9 @@
 
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
+from __future__ import annotations
+
+from config.permissions import ROLES
 
 # Order: the Division/Line of Business org tree first, then the MRC committees
 # anchored to that tree, then the Product platform (Calculating Agent), then
@@ -176,11 +179,17 @@ REFERENCE_SPECS = {
     ]},
     # People carry an org unit — Division + Line of Business, backed by the admin lists,
     # exactly like a model's org fields. This anchoring is what makes a person
-    # eligible to sit on a given MRC or own a model in that scope. Role and
-    # organisation are not tracked — every person belongs to this institution.
+    # eligible to sit on a given MRC or own a model in that scope. Organisation is not
+    # tracked — every person belongs to this institution.
+    #
+    # Roles (permissions P2) say what a person may BE; a person may hold several. They are
+    # recorded here rather than in a separate register so that adding somebody and saying
+    # what they do is one act, and so every change is an audited reference-list event.
     "people": {"label": "People", "id_prefix": "PE", "display": "name", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},
         {"key": "email", "label": "Email", "type": "text"},
+        {"key": "roles", "label": "Roles", "type": "multichoice", "options": list(ROLES),
+         "explanations": ROLES},
         {"key": "division", "label": "Division", "type": "text", "reference": "division"},
         {"key": "line_of_business", "label": "Line of Business", "type": "text", "reference": "line_of_business"},
     ]},

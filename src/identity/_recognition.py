@@ -69,6 +69,23 @@ def registered_identities() -> set[str]:
     return identities
 
 
+def roles_for(actor: str) -> frozenset[str]:
+    """The roles the People register gives this actor (permissions P2).
+
+    Empty for an unregistered actor, for the platform and machine principals, and for a
+    person nobody has given a role yet — so a caller must decide what "no roles" means
+    rather than being handed a default. P3 answers that; today nothing consumes it but
+    the Admin screen that sets them.
+    """
+    from src.governance.reference import get_reference_lists
+
+    wanted = _normalise(actor)
+    for person in get_reference_lists().get("people") or []:
+        if wanted in {_normalise(person.get(f)) for f in ("name", "email") if person.get(f)}:
+            return frozenset(person.get("roles") or ())
+    return frozenset()
+
+
 def is_recognised(actor: str) -> bool:
     """Whether ``actor`` is the platform, a machine producer, or a registered person."""
     if not actor:

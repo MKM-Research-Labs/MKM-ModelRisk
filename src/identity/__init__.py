@@ -25,6 +25,7 @@ from src.identity._recognition import (
     assert_recognised,
     enforcement_applies,
     is_recognised,
+    roles_for,
 )
 from src.identity.resolver import IdentityError, ingest_principal, resolve_principal
 
@@ -37,4 +38,5 @@ __all__ = [
     "assert_recognised",
     "is_recognised",
     "enforcement_applies",
+    "roles_for",
 ]

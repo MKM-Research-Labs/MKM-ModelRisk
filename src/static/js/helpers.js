@@ -131,6 +131,12 @@ const Policy = {
 // Display a scalar value, or an em dash when empty.
 function fieldDisplay(value) {
   if (value === null || value === undefined || value === "") return '<span class="muted">—</span>';
+  // A multi-value field (a person's roles) reads as a list, not as "a,b,c".
+  if (Array.isArray(value)) {
+    return value.length
+      ? value.map((v) => '<span class="pill">' + esc(v) + "</span>").join(" ")
+      : '<span class="muted">—</span>';
+  }
   return esc(value);
 }
 
