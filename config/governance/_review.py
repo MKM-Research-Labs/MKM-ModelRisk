@@ -42,6 +42,9 @@ REVIEW_STAGES = (
     {"key": "weaknesses", "label": "Model weaknesses", "status": "Weaknesses agreed"},
     {"key": "limitations", "label": "Limitations of use", "status": "Limitations agreed"},
     {"key": "monitoring", "label": "Monitoring approach", "status": "Monitoring agreed"},
+    # Last before sign-off: the committee should see what the review found outstanding,
+    # and what is being done about it, before it signs anything off.
+    {"key": "remediation", "label": "Remediation", "status": "Remediation agreed"},
 )
 REVIEW_STAGE_KEYS = tuple(stage["key"] for stage in REVIEW_STAGES)
 DEFAULT_REVIEW_STATUS = "Not started"

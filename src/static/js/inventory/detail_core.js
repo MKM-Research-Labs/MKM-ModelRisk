@@ -125,7 +125,7 @@ const Detail = {
     const vq = d.validation_questions || [];
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
     const tabs = [
-      ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
+      ["overview", "Overview", null],
       ["version_history", "Versions", n("version_history")],
       ["dependencies", "Dependencies", n("dependencies")],
       ["connections", "Connections", null],

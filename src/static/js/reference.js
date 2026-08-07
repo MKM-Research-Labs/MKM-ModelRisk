@@ -150,7 +150,9 @@ const Reference = {
           '">Edit</button> <button class="btn small danger" data-rm="' + esc(spec.key) + "|" + esc(it.item_id) +
           '">Remove</button></td></tr>').join("")
       : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">None yet.</td></tr>';
-    const addInputs = cols.map((f) =>
+    // A readonly field (a person's ratified roles) is recorded by the process that
+    // grants it, so it is shown in the table but never offered as an input.
+    const addInputs = cols.filter((f) => !f.readonly).map((f) =>
       '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
       inputControl("add-" + spec.key + "-" + f.key, f) + "</div>").join("");
     container.innerHTML =
@@ -162,7 +164,7 @@ const Reference = {
       const fields = {};
       // An empty list is dropped on ADD (nothing to say yet); on edit it is kept, so a
       // role can be taken away.
-      cols.forEach((f) => {
+      cols.filter((f) => !f.readonly).forEach((f) => {
         const v = val("add-" + spec.key + "-" + f.key);
         if (v !== "" && !(Array.isArray(v) && !v.length)) fields[f.key] = v;
       });
@@ -185,10 +187,11 @@ const Reference = {
     const row = document.getElementById("rlrow-" + item.item_id);
     row.innerHTML = '<td colspan="' + (cols.length + 1) + '"><div class="row">' +
       cols.map((f) => '<div class="field"><label>' + esc(f.label) + "</label>" +
-        inputControl("ce-" + f.key, f) + "</div>").join("") +
+        (f.readonly ? '<div class="ro">' + fieldDisplay(item[f.key]) + "</div>"
+                    : inputControl("ce-" + f.key, f)) + "</div>").join("") +
       '<button class="btn small primary" id="ce-save">Save&hellip;</button>' +
       '<button class="btn small" id="ce-cancel">Cancel</button></div></td>';
-    cols.forEach((f) => {
+    cols.filter((f) => !f.readonly).forEach((f) => {
       const el = document.getElementById("ce-" + f.key);
       const current = item[f.key];
       if (current === null || current === undefined) return;
@@ -204,7 +207,7 @@ const Reference = {
     document.getElementById("ce-cancel").onclick = () => this.render();
     document.getElementById("ce-save").onclick = () => {
       const fields = {};
-      cols.forEach((f) => {
+      cols.filter((f) => !f.readonly).forEach((f) => {
         const v = val("ce-" + f.key);
         if (v !== "" || Array.isArray(v)) fields[f.key] = v;
       });

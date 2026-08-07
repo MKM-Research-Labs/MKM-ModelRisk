@@ -70,6 +70,7 @@ Object.assign(MeetingDetail, {
     if (kind === "review_signoff") return this._agendaShell(item, idx, this._signoffStatusList(), complete("Mark reviewed"));
     if (kind === "review_analysis") return this._agendaShell(item, idx, this._analysisStatusList(), complete("Mark reviewed"));
     if (kind === "completeness_audit") return this._completenessAuditCard(item, idx, done);
+    if (kind === "membership") return this._membershipCard(item, idx, done);
     return this._agendaShell(item, idx,   // aob
       '<div class="muted" style="margin-top:8px;font-size:12px">Any other business raised by members.</div>' +
       this._categorisationAob(),
@@ -118,6 +119,34 @@ Object.assign(MeetingDetail, {
       (m.name ? " " + esc(m.name) : "") + "</div>" +
       statusBadge(m.analysis_status || "Pending") + "</div>").join("") +
       '</div><p class="muted" style="font-size:11px;margin-top:6px">Outcomes are recorded in the Models tab (Analysis).</p>';
+  },
+
+  // Committee membership and roles: the changes Admin has proposed for the people this
+  // committee covers. A role is what lets somebody own, validate or approve, so the
+  // committee grants it here — Admin only asks. Ratifying takes effect at once; declining
+  // leaves the person with what they already hold.
+  _membershipCard(item, idx, done) {
+    const proposals = this._membership || [];
+    const body = proposals.length
+      ? '<div style="margin-top:8px">' + proposals.map((p) => {
+          const roles = (list) => list.length
+            ? list.map((r) => '<span class="pill">' + esc(r) + "</span>").join(" ")
+            : '<span class="muted">none</span>';
+          return '<div class="prow"><div style="font-size:12px"><b>' + esc(p.name || "") + "</b>" +
+            (p.division ? ' <span class="muted">' + esc(p.division) + "</span>" : "") +
+            '<div style="margin-top:2px">' + roles(p.holds) +
+            ' <span class="muted">&rarr;</span> ' + roles(p.proposed) + "</div></div>" +
+            '<div class="rowact"><button class="btn small primary" data-mem-ratify="' +
+            esc(p.item_id) + '">Ratify&hellip;</button> ' +
+            '<button class="btn small" data-mem-decline="' + esc(p.item_id) +
+            '">Decline&hellip;</button></div></div>';
+        }).join("") + "</div>"
+      : '<div class="muted" style="margin-top:8px;font-size:12px">No membership or role ' +
+        "changes are waiting on this committee. Changes are proposed in Admin &rarr; People.</div>";
+    const actions = done ? statusBadge("Completed")
+      : '<button class="btn small primary" data-ag-confirm="membership" data-ag-id="' +
+        esc(item.item_id) + '">Mark reviewed</button>';
+    return this._agendaShell(item, idx, body, actions);
   },
 
   // The Governance completeness audit standing item: run (or re-run) the audit
@@ -184,6 +213,22 @@ Object.assign(MeetingDetail, {
       const id = btn.getAttribute("data-ag-id");
       btn.onclick = () => self._confirmStanding(kind, id);
     });
+    // Membership and roles: the committee grants or declines what Admin proposed. Both
+    // go through the confirm-to-amend flow — granting somebody the right to approve is
+    // not a click to make absent-mindedly.
+    const rule = (attr, verb, summary) =>
+      document.querySelectorAll("[" + attr + "]").forEach(function (btn) {
+        const itemId = btn.getAttribute(attr);
+        const person = (self._membership || []).find((p) => p.item_id === itemId) || {};
+        btn.onclick = () => App.amend(
+          summary.replace("%s", person.name || itemId) +
+            " (" + (person.proposed || []).join(", ") + ").",
+          "POST", "/api/meetings/" + self._id + "/membership/" + itemId + "/" + verb, {},
+          () => self.show(self._id, "agenda"));
+      });
+    rule("data-mem-ratify", "ratify", "Ratify %s's roles");
+    rule("data-mem-decline", "decline", "Decline the proposed roles for %s");
+
     // The risk-categorisation sign-off raised under AOB (present only when the division
     // has a pending draft).
     const division = (self._meeting.data || {}).division;

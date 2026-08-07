@@ -50,6 +50,8 @@ const MeetingDetail = {
     // Prior closed meetings (same MRC) with saved minutes — offered on the
     // previous-minutes sign-off item.
     this._priorMinutes = await App.get("/api/meetings/" + meetingId + "/prior-minutes");
+    // The membership/role changes waiting on this committee, for the standing item.
+    this._membership = (await App.get("/api/meetings/" + meetingId + "/membership")).proposals || [];
     // The division's risk-categorisation state, so a pending draft surfaces as an AOB
     // agenda item for this meeting to sign off.
     const division = (this._meeting.data || {}).division;

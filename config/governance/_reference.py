@@ -188,8 +188,18 @@ REFERENCE_SPECS = {
     "people": {"label": "People", "id_prefix": "PE", "display": "name", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},
         {"key": "email", "label": "Email", "type": "text"},
+        # Two fields, because a role is granted by a committee and not by whoever is
+        # editing the screen. "Proposed roles" is what an administrator sets; "Roles" is
+        # what the MRC has ratified and what the system acts on. Only the ratification
+        # path writes it, so it is readonly to the client.
         {"key": "roles", "label": "Roles", "type": "multichoice", "options": list(ROLES),
-         "explanations": ROLES},
+         "explanations": ROLES, "readonly": True},
+        {"key": "pending_roles", "label": "Proposed roles", "type": "multichoice",
+         "options": list(ROLES), "explanations": ROLES},
+        # The meeting that last ratified this person's roles — the answer to "who
+        # granted this approver their seat".
+        {"key": "roles_ratified_meeting", "label": "Ratified at", "type": "text",
+         "readonly": True},
         {"key": "division", "label": "Division", "type": "text", "reference": "division"},
         {"key": "line_of_business", "label": "Line of Business", "type": "text", "reference": "line_of_business"},
     ]},

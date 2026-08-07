@@ -17,7 +17,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Roles are held on the People record, and every change to them is audited (P2)."""
+"""Roles are held on the People record, and every change to them is audited (P2).
+
+An administrator PROPOSES roles here; the committee grants them (see
+test_membership_ratification_api.py). So these cover the proposal half.
+"""
 from __future__ import annotations
 
 from src.identity import roles_for
@@ -29,7 +33,7 @@ PEOPLE = "/api/reference/collections/people"
 def _add(client, name, roles=None, email=None):
     fields = {"name": name}
     if roles is not None:
-        fields["roles"] = roles
+        fields["pending_roles"] = roles
     if email:
         fields["email"] = email
     return client.post(PEOPLE, json={"fields": fields, "confirmed": True}, headers=HEADERS)
@@ -39,11 +43,13 @@ def _people(client):
     return client.get("/api/reference").get_json()["data"]["people"]
 
 
-def test_a_person_can_hold_several_roles(client):
+def test_a_person_can_be_proposed_for_several_roles(client):
     """An owner who also sits on a committee is ordinary, not an edge case."""
     assert _add(client, "Ada Owner", ["owner", "committee"]).status_code == 201
     person = next(p for p in _people(client) if p["name"] == "Ada Owner")
-    assert person["roles"] == ["owner", "committee"]
+    assert person["pending_roles"] == ["owner", "committee"]
+    # Proposed only: nothing is granted until the committee says so.
+    assert not person.get("roles")
 
 
 def test_roles_are_optional(client):
@@ -52,6 +58,7 @@ def test_roles_are_optional(client):
     assert _add(client, "Unassigned Person").status_code == 201
     person = next(p for p in _people(client) if p["name"] == "Unassigned Person")
     assert not person.get("roles")
+    assert not person.get("pending_roles")
 
 
 def test_an_invented_role_is_refused(client):
@@ -67,18 +74,20 @@ def test_a_role_must_be_a_list_not_a_string(client):
     assert "list" in response.get_json()["error"]
 
 
-def test_roles_can_be_taken_away(client):
+def test_a_proposal_can_be_withdrawn(client):
+    """Thinking better of it before the committee meets is an ordinary admin act."""
     _add(client, "Temporary Chair", ["chair"])
     item_id = next(p["item_id"] for p in _people(client) if p["name"] == "Temporary Chair")
     response = client.post(f"{PEOPLE}/{item_id}",
-                           json={"fields": {"roles": []}, "confirmed": True}, headers=HEADERS)
+                           json={"fields": {"pending_roles": []}, "confirmed": True},
+                           headers=HEADERS)
     assert response.status_code == 200
     person = next(p for p in _people(client) if p["item_id"] == item_id)
-    assert person["roles"] == []
+    assert person["pending_roles"] == []
 
 
-def test_assigning_a_role_is_audited(client):
-    """Who granted an approver their seat is exactly what an examiner asks."""
+def test_proposing_a_role_is_audited(client):
+    """Who ASKED for an approver's seat, alongside who granted it."""
     _add(client, "Audited Person", ["validator"])
     events = client.get("/api/audit").get_json()
     granting = [e for e in events
@@ -87,13 +96,12 @@ def test_assigning_a_role_is_audited(client):
     assert granting[-1]["actor"] == HEADERS["X-Auth-Request-User"]
 
 
-def test_roles_are_readable_by_actor_name_or_email(client):
-    """P3 will ask "what may this actor do"; the actor arrives as a name from the console
-    and as an email from SSO."""
+def test_a_proposal_grants_nothing_until_it_is_ratified(client):
+    """roles_for is what P3 will authorise against, so it must read the GRANTED roles and
+    never the proposed ones — otherwise proposing a role would be granting it."""
     _add(client, "Dual Identified", ["administrator"], email="dual@corp")
-    assert roles_for("Dual Identified") == frozenset({"administrator"})
-    assert roles_for("dual@corp") == frozenset({"administrator"})
-    assert roles_for("  DUAL@CORP ") == frozenset({"administrator"})
+    assert roles_for("Dual Identified") == frozenset()
+    assert roles_for("dual@corp") == frozenset()
 
 
 def test_an_unregistered_actor_holds_no_roles(client):

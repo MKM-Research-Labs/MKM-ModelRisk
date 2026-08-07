@@ -37,7 +37,11 @@ const REVIEW_STAGES = [
   { key: "weaknesses", n: 3, label: "Model weaknesses" },
   { key: "limitations", n: 4, label: "Limitations of use" },
   { key: "monitoring", n: 5, label: "Monitoring approach" },
-  { key: "signoff", n: 6, label: "Sign-off" },
+  // Remediation is part of the review, not a parallel tab: what the review found and what
+  // is being done about it belong together, and the committee should see the open steps
+  // before it signs anything off — which is why this sits immediately before Sign-off.
+  { key: "remediation", n: 6, label: "Remediation" },
+  { key: "signoff", n: 7, label: "Sign-off" },
 ];
 const REVIEW_DOC_CATEGORY = "Review";
 // The brief the owner writes before the review starts, and who is to do it by when.
@@ -160,6 +164,18 @@ Object.assign(Detail, {
       this._bindEdits();
       this._bindThread("monitoring");
       this._bindStageApproval("monitoring");
+      return;
+    }
+    if (this._reviewStage === "remediation") {
+      box.innerHTML = '<div class="section-header">Remediation</div>' +
+        '<p class="muted" style="font-size:12px">What the review found that has to be put ' +
+        "right, and where each step has got to. The committee sees these before it signs the " +
+        "review off.</p>" +
+        this._collSection("remediation_steps", d) +
+        this._thread("remediation", d) + this._stageApproval("remediation", d);
+      this._bindCollections(["remediation_steps"]);
+      this._bindThread("remediation");
+      this._bindStageApproval("remediation");
       return;
     }
     box.innerHTML = this._signoffPanel(d);

@@ -55,12 +55,17 @@ def add_option(
 
 def update_option(
     *, list_name: str, item_id: str, fields: dict[str, Any], actor: str,
-    reason: str | None = None, config=None,
+    reason: str | None = None, config=None, allow_readonly: bool = False,
 ) -> Event:
-    """Edit an existing reference entry (e.g. a company's name or owner)."""
+    """Edit an existing reference entry (e.g. a company's name or owner).
+
+    ``allow_readonly`` is passed only by the process that grants a readonly field — the
+    MRC ratifying a person's roles — never by the admin edit screen.
+    """
     collections, version = load(config)
     decision = coll.decide_update(
-        collections, REFERENCE_SPECS, collection=list_name, item_id=item_id, fields=fields
+        collections, REFERENCE_SPECS, collection=list_name, item_id=item_id, fields=fields,
+        allow_readonly=allow_readonly,
     )
     return _record(decision, version, actor, reason, config)
 

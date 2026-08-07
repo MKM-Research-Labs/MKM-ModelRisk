@@ -282,6 +282,14 @@ STANDING_AGENDA = (
      "description": "Run and review the completeness audit for the models and "
                     "products in scope for this committee; record the committee's "
                     "notes on the outcome."},
+    # Who sits on this committee, and what they are allowed to be. A person's roles
+    # decide who may own, validate and approve, so granting them is the committee's
+    # decision rather than an administrator's — the same reasoning that sends the risk
+    # policy here rather than letting Admin set it directly.
+    {"kind": "membership", "title": "Committee membership and roles",
+     "description": "Ratify proposed changes to who sits on this committee and the "
+                    "roles they hold. Proposed in Admin -> People; a role takes effect "
+                    "only once ratified here."},
     {"kind": "aob", "title": "Any Other Business (AOB)", "description": ""},
 )
 STANDING_AGENDA_KINDS = frozenset(item["kind"] for item in STANDING_AGENDA)

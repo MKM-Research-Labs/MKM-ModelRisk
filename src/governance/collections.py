@@ -86,12 +86,24 @@ def _find_item(collections: dict, collection: str, item_id: str) -> dict | None:
     return next((it for it in collections.get(collection, ()) if it["item_id"] == item_id), None)
 
 
-def _validate(spec: dict, fields: dict[str, Any], *, require_required: bool) -> None:
+def _validate(
+    spec: dict, fields: dict[str, Any], *, require_required: bool, allow_readonly: bool = False
+) -> None:
     by_key = {f["key"]: f for f in spec["fields"]}
     for key, value in fields.items():
         field_spec = by_key.get(key)
         if field_spec is None:
             raise DomainError(f"unknown field: {key}")
+        # None clears a field — how a proposal is withdrawn once it has been ruled on.
+        if value is None:
+            continue
+        # A readonly field is written by one sanctioned path and no other — a person's
+        # ratified roles are granted by their MRC, so the generic edit screen must not be
+        # able to set them, whatever it sends.
+        if field_spec.get("readonly") and not allow_readonly:
+            raise DomainError(
+                f"{field_spec['label']} is not set directly — it is recorded by the "
+                "process that grants it")
         if field_spec["type"] == "choice" and value not in field_spec["options"]:
             allowed = ", ".join(field_spec["options"])
             raise DomainError(f"{field_spec['label']} must be one of: {allowed}")
@@ -125,13 +137,16 @@ def decide_add(
 
 
 def decide_update(
-    collections: dict, specs: dict, *, collection: str, item_id: str, fields: dict[str, Any]
+    collections: dict, specs: dict, *, collection: str, item_id: str, fields: dict[str, Any],
+    allow_readonly: bool = False,
 ) -> tuple[str, dict[str, Any]]:
+    """``allow_readonly`` is for the one sanctioned writer of a readonly field — the MRC
+    ratifying a person's roles. The generic edit path never passes it."""
     spec = _spec(specs, collection)
     current = _find_item(collections, collection, item_id)
     if current is None:
         raise DomainError(f"unknown item: {item_id}")
-    _validate(spec, fields, require_required=False)
+    _validate(spec, fields, require_required=False, allow_readonly=allow_readonly)
     payload: dict[str, Any] = {"collection": collection, "item_id": item_id}
     payload.update(fields)
     # Capture the before/after for the audit trail (skipped by ``fold``).

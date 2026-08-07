@@ -120,6 +120,10 @@ def resolve_field(field: dict, options_by_list: dict | None = None) -> dict:
     # explanation travels with the option rather than living only in the config file.
     if field.get("explanations"):
         resolved["explanations"] = field["explanations"]
+    # Shown, but not offered as an input: the value is recorded by the process that grants
+    # it (a person's ratified roles) rather than typed on this screen.
+    if field.get("readonly"):
+        resolved["readonly"] = True
     return resolved
 
 
