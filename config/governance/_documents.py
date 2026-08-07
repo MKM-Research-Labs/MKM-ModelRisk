@@ -33,14 +33,23 @@
 # GROUP rather than a category — the evidence is filed under four categories (the
 # overall pack plus one per test type) and they belong together on one panel.
 TESTING_TAB_LABEL = "Testing"
+# The Review tab lists the SIGNED reports a review produces — the issued document, not
+# the reviewer's working papers, which stay beside the stage that produced them. It is a
+# group for the same reason Testing is: the tab is called "Review", nothing is filed under
+# that name here, and the panel resolves to the report category.
+REVIEW_TAB_LABEL = "Review"
 DOC_TAB_CATEGORIES = ("Core Documentation", "Sensitivity", "Analysis", TESTING_TAB_LABEL,
-                      "Monitoring", "History")
+                      REVIEW_TAB_LABEL, "Monitoring", "History")
 
 # The Review tab's first stage: the preliminary pack a reviewer works from, and
 # whatever else the review generates as it runs. Offered beside the stage it
 # belongs to rather than on the Docs tab, exactly as the testing evidence is, so
 # a document is listed where the work that produced it happened — never twice.
-REVIEW_DOC_CATEGORIES = ("Review",)
+# The signed output is filed apart from the working papers: the committee is given
+# the report, not the reviewer's drafts, and only one of the two is a document
+# anybody should be tabling.
+REVIEW_REPORT_CATEGORY = "Model Review Report"
+REVIEW_DOC_CATEGORIES = ("Review", REVIEW_REPORT_CATEGORY)
 
 # Generated Model Risk Documents, filed under History. The document is rendered
 # from the inventory as it stood at the moment it was issued, so a filed copy is
@@ -51,7 +60,8 @@ HISTORY_DOC_CATEGORY = "History"
 # The categories the MRC can table for review against a model in scope. The paper
 # lives on the model and is referenced from the meeting, so a committee always
 # reviews the document the model actually holds rather than a copy of it.
-MRC_REVIEWABLE_CATEGORIES = ("Sensitivity", "Analysis", "Test Results")
+MRC_REVIEWABLE_CATEGORIES = ("Sensitivity", "Analysis", "Test Results",
+                             REVIEW_REPORT_CATEGORY)
 
 # The Testing tab. "Test Results" is the overall evidence pack; the other three back
 # the in-context upload panel beside each unit / integration / benchmark test field.
@@ -64,7 +74,10 @@ EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
 # Which of the Docs tabs is a group, and over what. The label is not itself a
 # category — nothing is ever filed under "Testing" — so anything counting or
 # listing documents has to resolve the group to its real categories first.
-DOC_TAB_GROUPS = {TESTING_TAB_LABEL: TESTING_DOC_CATEGORIES}
+# The Review panel lists every report a review has issued, the way History lists every
+# Model Risk Document: the sign-off stage links the current one, and this is the archive.
+DOC_TAB_GROUPS = {TESTING_TAB_LABEL: TESTING_DOC_CATEGORIES,
+                  REVIEW_TAB_LABEL: (REVIEW_REPORT_CATEGORY,)}
 
 # Every category a document can actually carry. The group label is excluded on
 # purpose: it names a panel, not a filing place.
