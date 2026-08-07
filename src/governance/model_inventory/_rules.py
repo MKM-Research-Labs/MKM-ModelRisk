@@ -28,6 +28,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (
+    APPEND_ONLY_COLLECTIONS,
     COLLECTION_SPECS,
     EDITABLE_FIELDS,
     FIELD_CHOICES,
@@ -156,12 +157,29 @@ def decide_add_item(
     return coll.decide_add(state.collections, COLLECTION_SPECS, collection=collection, fields=fields)
 
 
+def _require_amendable(collection: str) -> None:
+    """Refuse to change or remove a row in an append-only collection.
+
+    The review notes are the record of how a model was challenged, and they are
+    printed in the report the committee receives. A challenge that could be edited
+    or deleted afterwards is not evidence of anything — so the rule lives here, in
+    the domain, rather than resting on the console not offering the button. A
+    correction is a new note, as it would be in minutes.
+    """
+    if collection in APPEND_ONLY_COLLECTIONS:
+        raise DomainError(
+            f"{collection} is append-only: a note cannot be edited or removed, "
+            "only answered by another note"
+        )
+
+
 def decide_update_item(
     state: ModelState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     # Same exemption as adding: a hibernated model's reactivate request still has
     # to be walked through the queue (Pending -> Attached -> Completed), which is
     # an update on the retired model itself.
+    _require_amendable(collection)
     if collection in SIGNOFF_COLLECTIONS:
         if not state.exists:
             raise DomainError("model does not exist")
@@ -175,6 +193,7 @@ def decide_update_item(
 def decide_remove_item(
     state: ModelState, *, collection: str, item_id: str
 ) -> tuple[str, dict[str, Any]]:
+    _require_amendable(collection)
     _require_editable(state)
     return coll.decide_remove(
         state.collections, COLLECTION_SPECS, collection=collection, item_id=item_id

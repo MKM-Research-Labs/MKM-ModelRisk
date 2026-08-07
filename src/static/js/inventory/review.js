@@ -27,8 +27,8 @@
 // far through a review actually was. The rail below is that answer.
 //
 // Built so far: the rail, the stages, the owner's brief, the reviewer's interim
-// approval of each stage, and both sides of the nine questions. The owner/reviewer
-// challenge threads and the sign-off that files the report follow
+// approval of each stage, both sides of the nine questions, and the record of
+// challenge under each stage. The sign-off that files the report follows
 // (see docs/design/review-workflow.md).
 const REVIEW_STAGES = [
   { key: "documents", n: 1, label: "Preliminary documents" },
@@ -104,32 +104,36 @@ Object.assign(Detail, {
         '<div class="section-header" style="margin-top:16px">Preliminary documents</div>' +
         '<p class="muted" style="font-size:12px">The pack the reviewer works from. These are ' +
         "the review's own working papers — the model's documentation lives on the Docs tab.</p>" +
-        DocPanel.html(docOpts) + this._stageApproval("documents", d);
+        DocPanel.html(docOpts) + this._thread("documents", d) + this._stageApproval("documents", d);
       DocPanel.bind(docOpts);
       this._bindEdits();
+      this._bindThread("documents");
       this._bindStageApproval("documents");
       return;
     }
     if (this._reviewStage === "questions") {
-      box.innerHTML = this._questionsTable(d) + this._stageApproval("questions", d);
+      box.innerHTML = this._questionsTable(d) + this._thread("questions", d) + this._stageApproval("questions", d);
       this._bindValidationSaves();
       this._bindVerdictSaves();
+      this._bindThread("questions");
       this._bindStageApproval("questions");
       return;
     }
     if (this._reviewStage === "weaknesses") {
       box.innerHTML = '<p class="muted" style="font-size:12px">What the model does badly, or ' +
         "not at all &mdash; proposed by the owner, agreed with the reviewer.</p>" +
-        this._collSection("model_weaknesses", d) + this._stageApproval("weaknesses", d);
+        this._collSection("model_weaknesses", d) + this._thread("weaknesses", d) + this._stageApproval("weaknesses", d);
       this._bindCollections(["model_weaknesses"]);
+      this._bindThread("weaknesses");
       this._bindStageApproval("weaknesses");
       return;
     }
     if (this._reviewStage === "limitations") {
       box.innerHTML = '<p class="muted" style="font-size:12px">Where the model may and may not ' +
         "be used, with the trigger that would surface a breach and the control that compensates.</p>" +
-        this._collSection("limitations", d) + this._stageApproval("limitations", d);
+        this._collSection("limitations", d) + this._thread("limitations", d) + this._stageApproval("limitations", d);
       this._bindCollections(["limitations"]);
+      this._bindThread("limitations");
       this._bindStageApproval("limitations");
       return;
     }
@@ -138,8 +142,9 @@ Object.assign(Detail, {
         '<p class="muted" style="font-size:12px">How this model will be watched once it is in ' +
         "use, in your own words &mdash; what would be looked at, how often, and what would " +
         "prompt a second look.</p>" + this._row("monitoring_approach", d) +
-        this._stageApproval("monitoring", d);
+        this._thread("monitoring", d) + this._stageApproval("monitoring", d);
       this._bindEdits();
+      this._bindThread("monitoring");
       this._bindStageApproval("monitoring");
       return;
     }
@@ -148,6 +153,72 @@ Object.assign(Detail, {
     box.innerHTML = '<div class="section-header">Reviewer sign-off</div>' +
       '<div class="empty">Not built yet. The reviewer\'s final commentary, the sign-off gate ' +
       "and the Model Review Report the MRC receives land in a later increment.</div>";
+  },
+
+  // The record of challenge: the exchange between owner and reviewer, under the
+  // stage it happened on. It is not chat — it is the evidence that the model was
+  // challenged, it is printed in the report the committee receives, and nothing
+  // posted here can be edited or taken back. A correction is another note.
+  _thread(stage, d) {
+    const notes = (d.review_notes || []).filter((n) => n.stage === stage);
+    const answered = new Set(notes.map((n) => n.resolves).filter(Boolean));
+    const open = notes.filter((n) => n.kind === "Challenge" && !answered.has(n.item_id));
+    const line = (n) => {
+      const challenge = n.kind === "Challenge";
+      const isOpen = challenge && !answered.has(n.item_id);
+      const tag = challenge
+        ? '<span class="pill" style="background:' + (isOpen ? "#8e24aa" : "#607d8b") +
+          ';color:#fff">' + (isOpen ? "Challenge — open" : "Challenge — answered") + "</span> "
+        : "";
+      const answers = n.resolves
+        ? '<span class="muted" style="font-size:11px"> answering ' + esc(n.resolves) + "</span>" : "";
+      return '<div style="padding:8px 0;border-bottom:1px solid var(--line)">' +
+        '<div class="muted" style="font-size:11px">' + esc(n.author_role || "") + " &middot; " +
+        esc(n.author || "") + " &middot; " + esc((n.posted_at || "").replace("T", " ").slice(0, 16)) +
+        " &middot; " + esc(n.item_id) + answers + "</div>" +
+        tag + '<span style="white-space:pre-wrap">' + esc(n.text || "") + "</span></div>";
+    };
+    const banner = open.length
+      ? '<div class="quorum-banner">' + open.length + " open challenge" +
+        (open.length === 1 ? "" : "s") + " on this stage &mdash; a challenge is answered by " +
+        "another note, never by deleting it.</div>"
+      : "";
+    const answering = open.map((n) =>
+      '<option value="' + esc(n.item_id) + '">answers ' + esc(n.item_id) + " — " +
+      esc((n.text || "").slice(0, 60)) + "</option>").join("");
+    const composer = this._model.retired ? "" :
+      '<div class="row" style="margin-top:8px;align-items:flex-start">' +
+      '<textarea id="rn-text-' + stage + '" rows="2" placeholder="Add a note, or raise a challenge" ' +
+      'style="flex:1;resize:vertical"></textarea>' +
+      '<select id="rn-kind-' + stage + '"><option>Note</option><option>Challenge</option></select>' +
+      (answering ? '<select id="rn-resolves-' + stage + '"><option value="">&mdash;</option>' +
+        answering + "</select>" : "") +
+      '<button class="btn small primary" id="rn-post-' + stage + '">Post</button></div>';
+    return '<div class="section-header" style="margin-top:16px">Record of challenge</div>' +
+      '<p class="muted" style="font-size:12px">What the owner and the reviewer said to each ' +
+      "other about this stage. Append-only, and printed in the report the MRC receives.</p>" +
+      banner +
+      (notes.length ? notes.map(line).join("") : '<div class="empty">Nothing said yet.</div>') +
+      composer;
+  },
+
+  _bindThread(stage) {
+    const btn = document.getElementById("rn-post-" + stage);
+    if (!btn) return;
+    btn.onclick = async () => {
+      const text = val("rn-text-" + stage);
+      if (!text) { App.toast("A note cannot be empty", "error"); return; }
+      const resolves = document.getElementById("rn-resolves-" + stage);
+      try {
+        this._model = await App.send("POST", "/api/models/" + this._id + "/review/note",
+          { stage: stage, text: text, kind: val("rn-kind-" + stage),
+            resolves: resolves ? resolves.value : "" });
+        App.toast("Note recorded", "ok");
+        this._render();
+      } catch (e) {
+        App.toast(e.message, "error");
+      }
+    };
   },
 
   // The nine questions, both sides. The owner says what the model does; the

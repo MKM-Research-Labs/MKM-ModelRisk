@@ -71,3 +71,29 @@ VALID_REVIEWER_VERDICTS = (DEFAULT_REVIEWER_VERDICT, "Accepted", "Challenged")
 # The verdict that stands in the way of sign-off: a challenge is either answered
 # or it is a reason the review is not finished.
 CHALLENGED_VERDICT = "Challenged"
+
+# --- The record of challenge --------------------------------------------------
+# The thread between owner and reviewer is not a convenience: it is the evidence
+# that the model was challenged, and it is printed in the report the committee
+# receives. A note is either an ordinary remark or a Challenge — a stated
+# objection, which is Open until a later note answers it.
+NOTE_KIND_NOTE = "Note"
+NOTE_KIND_CHALLENGE = "Challenge"
+VALID_NOTE_KINDS = (NOTE_KIND_NOTE, NOTE_KIND_CHALLENGE)
+# A challenge is Open until a later note answers it. Both words are derived state
+# — no row is ever edited to carry them — but they are named here so the console,
+# the sign-off gate and the report all use the same two.
+CHALLENGE_OPEN = "Open"
+CHALLENGE_RESOLVED = "Resolved"
+
+# Which side of the review a note came from. Derived from the signed-in identity
+# against the model's owner and reviewer — never typed, and never chosen from a
+# dropdown, or "who challenged whom" would be a matter of what somebody selected.
+NOTE_ROLE_OWNER = "Owner"
+NOTE_ROLE_REVIEWER = "Reviewer"
+NOTE_ROLE_OTHER = "Participant"
+
+# Collections nobody may edit or delete, only add to. A challenge that could be
+# tidied away afterwards is not evidence of anything: the record of what was said
+# in a review has to be as fixed as the log it sits in.
+APPEND_ONLY_COLLECTIONS = ("review_notes",)
