@@ -19,7 +19,8 @@
 # SOFTWARE.
 """Structured-collection field specs on a model (coding rule R1)."""
 from config.governance._inventory import VALID_RAG_RATINGS
-from config.governance._review import VALID_NOTE_KINDS, VALID_REVIEWER_VERDICTS
+from config.governance._review import (REVIEW_COLLECTION_SPECS,
+                                       VALID_REVIEWER_VERDICTS)
 
 # Closed value sets used by structured collections.
 VALID_IMPACT = ("Low", "Medium", "High")
@@ -99,6 +100,7 @@ VALID_SIGNOFF_OUTCOME = ("Approved", "Rejected", "Revoked")
 # field specs below; ``id_prefix`` seeds generated item ids (e.g. AS-001). One
 # generic add/update/remove command set serves every collection.
 COLLECTION_SPECS = {
+    **REVIEW_COLLECTION_SPECS,
     "assumptions": {"label": "Assumptions", "id_prefix": "AS", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
         {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT},
@@ -116,36 +118,6 @@ COLLECTION_SPECS = {
     "model_weaknesses": {"label": "Model weaknesses", "id_prefix": "MW", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
         {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT},
-    ]},
-    # The owner/reviewer exchange, one row per note, scoped to the stage it was
-    # said under. Append-only (see APPEND_ONLY_COLLECTIONS): this is the evidence
-    # that the model was challenged, and evidence that can be edited afterwards is
-    # not evidence. A correction is a new note, as it would be in minutes.
-    "review_notes": {"label": "Review notes", "id_prefix": "RN", "fields": [
-        {"key": "stage", "label": "Stage", "type": "text", "required": True},
-        {"key": "text", "label": "Note", "type": "textarea", "required": True},
-        {"key": "kind", "label": "Kind", "type": "choice", "options": VALID_NOTE_KINDS},
-        # On an answering note: the challenge it answers. A challenge is Open
-        # until some later note points at it — derived, never stored, because
-        # storing it would mean editing the challenge to close it, and the whole
-        # point of this collection is that nothing in it is ever edited.
-        {"key": "resolves", "label": "Answers challenge", "type": "text", "hidden": True},
-        # Stamped from the signed-in identity, never typed.
-        {"key": "author", "label": "Author", "type": "text", "hidden": True},
-        {"key": "author_role", "label": "Role", "type": "text", "hidden": True},
-        {"key": "posted_at", "label": "Posted", "type": "text", "hidden": True},
-    ]},
-    # The reviewer's interim approvals, one row per stage agreed. Append-only by
-    # intent: it is the record of who agreed what, and when, as the review ran —
-    # the same reason the challenge threads will be. A stage approved twice
-    # (reopened, re-agreed) leaves both rows standing.
-    "review_progress": {"label": "Review progress", "id_prefix": "RP", "fields": [
-        {"key": "stage", "label": "Stage", "type": "text", "required": True},
-        {"key": "stage_label", "label": "Stage name", "type": "text"},
-        {"key": "status", "label": "Review status set", "type": "text"},
-        {"key": "note", "label": "Reviewer's note", "type": "text"},
-        {"key": "approved_by", "label": "Approved by", "type": "text"},
-        {"key": "approved_at", "label": "Approved at", "type": "text"},
     ]},
     "validation_questions": {"label": "Validation questions", "id_prefix": "VQ", "fields": [
         {"key": "short_label", "label": "Topic", "type": "text"},

@@ -27,7 +27,7 @@ from the signed-in identity rather than from whatever the caller claimed.
 """
 from __future__ import annotations
 
-from src.web.api_models_review import challenges, open_challenges
+from src.web.api_models_review_notes import challenges, open_challenges
 from tests.web.conftest import HEADERS
 
 def _register(client):

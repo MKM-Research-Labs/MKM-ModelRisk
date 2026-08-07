@@ -134,7 +134,7 @@ const Detail = {
     const tst = DocLinks.countIn(d.documents, this._specs.testing_doc_categories);
     const tabs = [
       ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
-      ["version_history", "Versions", n("version_history")], ["assumptions", "Assumptions", n("assumptions")],
+      ["version_history", "Versions", n("version_history")],
       ["dependencies", "Dependencies", n("dependencies")],
       ["connections", "Connections", null],
       ["raci_roles", "RACI", n("raci_roles")],

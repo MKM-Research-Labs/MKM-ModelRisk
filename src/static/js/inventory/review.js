@@ -31,7 +31,8 @@
 // challenge under each stage. The sign-off that files the report follows
 // (see docs/design/review-workflow.md).
 const REVIEW_STAGES = [
-  { key: "documents", n: 1, label: "Preliminary documents" },
+  { key: "documents", n: 0, label: "Preliminary documents" },
+  { key: "assumptions", n: 1, label: "Assumptions" },
   { key: "questions", n: 2, label: "The nine questions" },
   { key: "weaknesses", n: 3, label: "Model weaknesses" },
   { key: "limitations", n: 4, label: "Limitations of use" },
@@ -81,6 +82,7 @@ Object.assign(Detail, {
       const vq = d.validation_questions || [];
       return " (" + vq.filter((q) => q.status === "Addressed").length + "/" + vq.length + ")";
     }
+    if (key === "assumptions") return " (" + n("assumptions") + ")";
     if (key === "weaknesses") return " (" + n("model_weaknesses") + ")";
     if (key === "limitations") return " (" + n("limitations") + ")";
     return "";
@@ -109,6 +111,18 @@ Object.assign(Detail, {
       this._bindEdits();
       this._bindThread("documents");
       this._bindStageApproval("documents");
+      return;
+    }
+    if (this._reviewStage === "assumptions") {
+      box.innerHTML = '<p class="muted" style="font-size:12px">What the model takes to be true ' +
+        "for its results to hold &mdash; and what is watched, or done, if one stops holding. " +
+        "The sixth of the nine questions asks whether these are documented and justified, which " +
+        "is why they are agreed before the questions rather than after.</p>" +
+        this._collSection("assumptions", d) + this._thread("assumptions", d) +
+        this._stageApproval("assumptions", d);
+      this._bindCollections(["assumptions"]);
+      this._bindThread("assumptions");
+      this._bindStageApproval("assumptions");
       return;
     }
     if (this._reviewStage === "questions") {
@@ -148,11 +162,75 @@ Object.assign(Detail, {
       this._bindStageApproval("monitoring");
       return;
     }
-    // Sign-off is the next increment; say so plainly rather than showing an empty
-    // panel that looks like a feature that failed to load.
-    box.innerHTML = '<div class="section-header">Reviewer sign-off</div>' +
-      '<div class="empty">Not built yet. The reviewer\'s final commentary, the sign-off gate ' +
-      "and the Model Review Report the MRC receives land in a later increment.</div>";
+    box.innerHTML = this._signoffPanel(d);
+    this._bindThread("signoff");
+    this._bindSignoff();
+  },
+
+  // What stands between this review and its sign-off. Computed here from the same
+  // facts the endpoint uses, so the button says exactly why it is disabled and the
+  // server refuses for exactly those reasons.
+  _signoffBlockers(d) {
+    const agreed = new Set((d.review_progress || []).map((r) => r.stage));
+    const out = REVIEW_STAGES.filter((s) => s.key !== "signoff" && !agreed.has(s.key))
+      .map((s) => s.label + " not agreed");
+    const notes = d.review_notes || [];
+    const answered = new Set(notes.map((n) => n.resolves).filter(Boolean));
+    const open = notes.filter((n) => n.kind === "Challenge" && !answered.has(n.item_id));
+    if (open.length) {
+      out.push(open.length + " open challenge" + (open.length === 1 ? "" : "s") +
+        " (" + open.map((n) => n.item_id).join(", ") + ")");
+    }
+    return out;
+  },
+
+  // The filed report is served by document item, not by filename, so the link is
+  // built from the document this sign-off produced.
+  _reportLink(d, signoff) {
+    const doc = (d.documents || []).find((x) => x.filename === signoff.report_filename);
+    if (!doc) return "";
+    return '<a class="btn small" style="margin-top:6px" target="_blank" rel="noopener" href="/api/models/' +
+      esc(this._id) + "/documents/" + esc(doc.item_id) +
+      '/download">&darr; Model Review Report</a>';
+  },
+
+  _signoffPanel(d) {
+    const signed = (d.review_signoffs || []);
+    const history = signed.map((s) =>
+      '<div class="inforow"><div class="k">' + esc((s.signed_at || "").slice(0, 10)) +
+      '</div><div class="v"><b>' + esc(s.signed_by || "") + "</b>" +
+      '<div style="white-space:pre-wrap;margin-top:4px">' + esc(s.commentary || "") + "</div>" +
+      this._reportLink(d, s) + "</div></div>").join("");
+    const blockers = this._signoffBlockers(d);
+    const gate = blockers.length
+      ? '<div class="quorum-banner">The review is not finished: ' +
+        esc(blockers.join("; ")) + ".</div>"
+      : "";
+    const form = this._model.retired ? "" :
+      '<div class="field" style="margin-top:8px"><label for="rs-commentary">Final commentary</label>' +
+      '<textarea id="rs-commentary" rows="4" placeholder="What the reviewer concludes, in ' +
+      'their own words — this is printed in the report the committee reads"></textarea></div>' +
+      '<button class="btn small primary" id="rs-signoff"' +
+      (blockers.length ? " disabled" : "") + ">Sign off &amp; file the report&hellip;</button>";
+    return '<div class="section-header">Reviewer sign-off</div>' +
+      '<p class="muted" style="font-size:12px">Signing off files the Model Review Report ' +
+      "against this model &mdash; every stage, both sides of the nine questions, the registers " +
+      "and the record of challenge. The MRC receives that report and signs off the risk " +
+      "rating; it does not adjudicate the review.</p>" +
+      (history ? '<div class="section-header" style="margin-top:12px">Signed</div>' + history : "") +
+      gate + form + this._thread("signoff", d);
+  },
+
+  _bindSignoff() {
+    const btn = document.getElementById("rs-signoff");
+    if (!btn || btn.disabled) return;
+    btn.onclick = () => {
+      const commentary = val("rs-commentary");
+      if (!commentary) { App.toast("The sign-off needs your final commentary", "error"); return; }
+      App.amend("Sign off the review of " + this._id + " and file the report.", "POST",
+        "/api/models/" + this._id + "/review/sign-off", { commentary: commentary },
+        () => this.show(this._id, "review", { scroll: false }));
+    };
   },
 
   // The record of challenge: the exchange between owner and reviewer, under the

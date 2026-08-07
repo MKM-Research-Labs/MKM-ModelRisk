@@ -34,6 +34,10 @@ about to grow the sign-off and its report.
 # approval records is that the two of them agreed at that point, and who said so.
 REVIEW_STAGES = (
     {"key": "documents", "label": "Preliminary documents", "status": "Documents reviewed"},
+    # The assumptions come before the nine questions because the sixth question
+    # asks whether they are documented and justified: answering it means reading
+    # them, so the review reads them first.
+    {"key": "assumptions", "label": "Assumptions", "status": "Assumptions agreed"},
     {"key": "questions", "label": "The nine questions", "status": "Questions answered"},
     {"key": "weaknesses", "label": "Model weaknesses", "status": "Weaknesses agreed"},
     {"key": "limitations", "label": "Limitations of use", "status": "Limitations agreed"},
@@ -41,9 +45,7 @@ REVIEW_STAGES = (
 )
 REVIEW_STAGE_KEYS = tuple(stage["key"] for stage in REVIEW_STAGES)
 DEFAULT_REVIEW_STATUS = "Not started"
-# The status a signed-off review leaves behind. The sign-off itself is not built
-# yet; the value is named here so the vocabulary is complete and the workflow has
-# somewhere to finish.
+# The status a signed-off review leaves behind.
 SIGNED_OFF_REVIEW_STATUS = "Signed off"
 VALID_REVIEW_STATUSES = (
     (DEFAULT_REVIEW_STATUS,) + tuple(stage["status"] for stage in REVIEW_STAGES)
@@ -96,4 +98,54 @@ NOTE_ROLE_OTHER = "Participant"
 # Collections nobody may edit or delete, only add to. A challenge that could be
 # tidied away afterwards is not evidence of anything: the record of what was said
 # in a review has to be as fixed as the log it sits in.
-APPEND_ONLY_COLLECTIONS = ("review_notes",)
+# The sign-off joins the notes: an attestation that could be rewritten later
+# would not be an attestation.
+APPEND_ONLY_COLLECTIONS = ("review_notes", "review_signoffs")
+
+
+# --- What the review stores ---------------------------------------------------
+# The review's own collections live here rather than with the model's other
+# registers: they describe the process, not the model, and keeping them beside the
+# vocabulary they use means a change to the workflow is one file.
+REVIEW_COLLECTION_SPECS = {
+    # The owner/reviewer exchange, one row per note, scoped to the stage it was
+    # said under. Append-only (see APPEND_ONLY_COLLECTIONS): this is the evidence
+    # that the model was challenged, and evidence that can be edited afterwards is
+    # not evidence. A correction is a new note, as it would be in minutes.
+    "review_notes": {"label": "Review notes", "id_prefix": "RN", "fields": [
+        {"key": "stage", "label": "Stage", "type": "text", "required": True},
+        {"key": "text", "label": "Note", "type": "textarea", "required": True},
+        {"key": "kind", "label": "Kind", "type": "choice", "options": VALID_NOTE_KINDS},
+        # On an answering note: the challenge it answers. A challenge is Open
+        # until some later note points at it — derived, never stored, because
+        # storing it would mean editing the challenge to close it, and the whole
+        # point of this collection is that nothing in it is ever edited.
+        {"key": "resolves", "label": "Answers challenge", "type": "text", "hidden": True},
+        # Stamped from the signed-in identity, never typed.
+        {"key": "author", "label": "Author", "type": "text", "hidden": True},
+        {"key": "author_role", "label": "Role", "type": "text", "hidden": True},
+        {"key": "posted_at", "label": "Posted", "type": "text", "hidden": True},
+    ]},
+    # The reviewer's sign-off: the commentary, the moment, and the report it
+    # produced. Append-only — a second cycle adds a second row, and what was
+    # attested last time stands.
+    "review_signoffs": {"label": "Review sign-offs", "id_prefix": "RS", "fields": [
+        {"key": "commentary", "label": "Final commentary", "type": "textarea", "required": True},
+        {"key": "signed_by", "label": "Signed by", "type": "text", "hidden": True},
+        {"key": "signed_at", "label": "Signed at", "type": "text", "hidden": True},
+        {"key": "report_filename", "label": "Report file", "type": "text", "hidden": True},
+        {"key": "report_original_name", "label": "Report", "type": "text", "hidden": True},
+    ]},
+    # The reviewer's interim approvals, one row per stage agreed. Append-only by
+    # intent: it is the record of who agreed what, and when, as the review ran —
+    # the same reason the challenge threads will be. A stage approved twice
+    # (reopened, re-agreed) leaves both rows standing.
+    "review_progress": {"label": "Review progress", "id_prefix": "RP", "fields": [
+        {"key": "stage", "label": "Stage", "type": "text", "required": True},
+        {"key": "stage_label", "label": "Stage name", "type": "text"},
+        {"key": "status", "label": "Review status set", "type": "text"},
+        {"key": "note", "label": "Reviewer's note", "type": "text"},
+        {"key": "approved_by", "label": "Approved by", "type": "text"},
+        {"key": "approved_at", "label": "Approved at", "type": "text"},
+    ]},
+}
