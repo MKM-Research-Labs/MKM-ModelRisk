@@ -158,7 +158,11 @@ def delete_document(model_id: str, item_id: str):
 
 @models_bp.get("")
 def list_all():
-    return jsonify(list_models())
+    """The live inventory. ``?include_retired=1`` adds the hibernated models back —
+    the console asks for them only when somebody goes looking for one to reactivate,
+    so a retired model is not in the list, the tiles or any figure drawn from them."""
+    include_retired = request.args.get("include_retired") == "1"
+    return jsonify(list_models(include_retired=include_retired))
 
 
 @models_bp.get("/<model_id>/neighbourhood")

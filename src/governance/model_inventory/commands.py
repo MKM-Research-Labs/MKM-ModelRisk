@@ -212,7 +212,10 @@ def _guard_dependency(model_id: str, new_state: ModelState, config) -> None:
         raise DomainError("a model cannot depend on itself")
     other_edges = [
         edge
-        for other in list_models(config=config)
+        # The cycle guard reasons about the declared graph, which a hibernated
+        # model is still part of: a cycle hidden while it sleeps would come
+        # back the moment it was reactivated.
+        for other in list_models(config=config, include_retired=True)
         if other["model_id"] != model_id
         for edge in edges_for_model(
             other["model_id"],

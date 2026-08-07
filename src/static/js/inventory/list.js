@@ -24,8 +24,17 @@
 // clicking a Tier / RAG tile toggles the matching filter.
 
 const LIFECYCLE_STAGES = ["Development", "Validation", "Production", "Retired"];
+// Not a lifecycle stage but the natural place to ask for one: a hibernated model is
+// out of the estate and out of every count, so the only way to see one — to reactivate
+// it, say — is to ask. Picking it re-fetches with the retired models included.
+const HIBERNATED_FILTER = "Hibernated";
 
 const InventoryList = {
+  // Whether the list is currently asking for hibernated models. Read by the fetch
+  // in inventory.js, because choosing this filter changes what has to be fetched,
+  // not just what is shown.
+  wantsHibernated() { return this._filters && this._filters.lifecycle === HIBERNATED_FILTER; },
+
   _models: [],
   _onRow: null,
   _filters: null,
@@ -60,7 +69,10 @@ const InventoryList = {
   mount(models, onRow) {
     this._models = models.map((m) => ({ model_id: m.model_id, retired: m.retired, d: m.data || {} }));
     this._onRow = onRow;
-    this._filters = { q: "", tier: "", rag: "", owner: "", review: "", lifecycle: "" };
+    // Filters survive a re-mount. Choosing "Hibernated" re-fetches, and clearing
+    // the filters here would drop the very filter that asked for the reload —
+    // the list would come back showing everything, hibernated models included.
+    this._filters = this._filters || { q: "", tier: "", rag: "", owner: "", review: "", lifecycle: "" };
     // Default to the soonest next-review first, so the models needing attention
     // are at the top on load; unscheduled ("9999" sort key) fall to the bottom.
     // Any header click still re-sorts and toggles.
@@ -106,9 +118,15 @@ const InventoryList = {
   },
 
   // --- tiles ---
+  // Counted over the live estate only. A hibernated model is out of the estate, so
+  // it is out of every figure — including while the Hibernated filter is showing
+  // it, when it is on screen precisely because it is *not* part of the picture.
+  _live() { return this._models.filter((m) => !m.retired); },
+
   _tiles() {
-    const byTier = (t) => this._models.filter((m) => m.d.tier === t).length;
-    const byRag = (r) => this._models.filter((m) => m.d.rag_rating === r).length;
+    const live = this._live();
+    const byTier = (t) => live.filter((m) => m.d.tier === t).length;
+    const byRag = (r) => live.filter((m) => m.d.rag_rating === r).length;
     // The ratings tile counted a fixed Red / Amber / Green, so a division that has added a
     // rating (this estate's "Stop") had models it simply did not show. It lists whatever
     // the policy defines, in policy order, each count in its own colour.
@@ -117,7 +135,7 @@ const InventoryList = {
     // column and the Risk tab use: a model awaiting a decision, or approved under a
     // categorisation the division has since replaced, is not covered by a sign-off. Counting
     // the last historical outcome instead read 25/25 while the column beside it said Pending.
-    const approved = this._models.filter((m) => mrcState(m.d) === "Approved").length;
+    const approved = live.filter((m) => mrcState(m.d) === "Approved").length;
     const ragCount = (r) => '<span style="color:' + (r.colour || RAG_COLORS[r.name] ||
       "#9e9e9e") + '">' + byRag(r.name) + "</span>";
     const ragVal = ratings.map(ragCount).join(" / ");
@@ -127,11 +145,11 @@ const InventoryList = {
       (filter ? ' data-tile="' + filter + '"' : "") + '><div class="lbl">' + lbl +
       '</div><div class="val">' + val + "</div></div>";
     return '<div class="summary">' +
-      tile("Total Models", this._models.length, "#1976d2", "") +
+      tile("Total Models", live.length, "#1976d2", "") +
       this._mcBands().map((b) => tile(esc(b.name), byTier(b.score),
         b.colour || TIER_COLORS[b.score] || "#9e9e9e", "tier=" + b.score)).join("") +
       tile(esc(ragLabel), ragVal, "#388e3c", "") +
-      tile("Approved", approved + " / " + this._models.length, "#388e3c", "") +
+      tile("Approved", approved + " / " + live.length, "#388e3c", "") +
       "</div>";
   },
 
@@ -172,7 +190,7 @@ const InventoryList = {
       sel("mf-rag", f.rag, ["All ratings", ...this._ratings().map((r) => r.name)]) +
       sel("mf-owner", f.owner, ["All owners", ...owners]) +
       sel("mf-review", f.review, ["All reviews", "Overdue", "Due Soon", "On Track", "Not Scheduled"]) +
-      sel("mf-lifecycle", f.lifecycle, ["All lifecycle", ...LIFECYCLE_STAGES]) +
+      sel("mf-lifecycle", f.lifecycle, ["All lifecycle", ...LIFECYCLE_STAGES, HIBERNATED_FILTER]) +
       '<button class="btn small" id="mf-clear">Clear</button>' +
       '<span class="fcount" id="mf-count"></span>';
     this._wireFilters();
@@ -189,7 +207,15 @@ const InventoryList = {
     bind("mf-rag", "rag", "onchange");
     bind("mf-owner", "owner", "onchange");
     bind("mf-review", "review", "onchange");
-    bind("mf-lifecycle", "lifecycle", "onchange");
+    document.getElementById("mf-lifecycle").onchange = function () {
+      const el = document.getElementById("mf-lifecycle");
+      const was = self._filters.lifecycle === HIBERNATED_FILTER;
+      self._filters.lifecycle = el.value;
+      // Hibernated models are not in the list this page was drawn from, so
+      // switching into (or out of) that filter has to go back for the data.
+      if (was !== (el.value === HIBERNATED_FILTER)) { Inventory.loadList(); return; }
+      self._renderTable();
+    };
     document.getElementById("mf-clear").onclick = function () {
       self._filters = { q: "", tier: "", rag: "", owner: "", review: "", lifecycle: "" };
       self._renderFilters();
@@ -207,7 +233,9 @@ const InventoryList = {
       if (f.rag && m.d.rag_rating !== f.rag) return false;
       if (f.owner && m.d.owner !== f.owner) return false;
       if (f.review && reviewStatus(m.d.next_review_date) !== f.review) return false;
-      if (f.lifecycle && (m.d.lifecycle_stage || m.d.status) !== f.lifecycle) return false;
+      if (f.lifecycle === HIBERNATED_FILTER) {
+        if (!m.retired) return false;
+      } else if (f.lifecycle && (m.d.lifecycle_stage || m.d.status) !== f.lifecycle) return false;
       return true;
     });
     const col = this._columns.find((c) => c.key === this._sort.key);

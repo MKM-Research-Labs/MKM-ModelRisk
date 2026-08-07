@@ -147,7 +147,10 @@ const Inventory = {
     const nav = await MrcNav.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
-    const all = await App.get("/api/models");
+    // The live estate by default. Hibernated models are fetched only when somebody
+    // asks for them (the Hibernated lifecycle filter), so they are absent from the
+    // list, the tiles and every figure drawn from them until then.
+    const all = await App.get("/api/models" + (InventoryList.wantsHibernated() ? "?include_retired=1" : ""));
     const models = all.filter((m) => MrcNav.inScope(this._committees, this._ref, m.data));
     if (!models.length) {
       document.getElementById("m-summary").innerHTML = "";

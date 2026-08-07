@@ -99,7 +99,7 @@ def field_specs():
     so the component editor can narrow its model dropdown once a type is chosen
     rather than offering the whole inventory for every component.
     """
-    live = [m for m in list_models() if not m["retired"]]
+    live = list_models()
     models_by_type: dict[str, list[str]] = {}
     for model in live:
         models_by_type.setdefault(

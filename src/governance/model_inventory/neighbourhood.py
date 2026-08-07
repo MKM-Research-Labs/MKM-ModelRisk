@@ -65,7 +65,10 @@ def derive_neighbourhood(model_id: str, config=None) -> dict[str, Any] | None:
     by a common data source (a feed neighbour is already drawn as an edge, so it is
     not repeated here); each carries the ``shared`` source list that connects them.
     """
-    models = list_models(config=config)
+    # A model's own neighbourhood, including a hibernated one: this view has to
+    # render for the very model somebody is looking at, and a neighbour that has
+    # been retired is a fact about this model, not a gap to hide.
+    models = list_models(config=config, include_retired=True)
     by_id = {m["model_id"]: m for m in models}
     focus = by_id.get(model_id)
     if focus is None:
