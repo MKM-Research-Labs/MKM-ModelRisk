@@ -90,3 +90,51 @@ def test_approval_requires_confirmation(client):
 
 def test_approval_on_unknown_model_is_404(client):
     assert _approve(client, "documents", model_id="NOPE").status_code == 404
+
+
+def _verdict(client, item_id, verdict, comment="", model_id="M1"):
+    return client.post(
+        f"/api/models/{model_id}/review/question-verdict",
+        json={"item_id": item_id, "verdict": verdict, "comment": comment}, headers=HEADERS,
+    )
+
+
+def _first_question(client, model_id="M1"):
+    model = client.get(f"/api/models/{model_id}").get_json()
+    return model["data"]["validation_questions"][0]["item_id"]
+
+
+def test_reviewer_verdict_is_stamped_with_who_and_when(client):
+    """Who reviewed a question is stamped from the signed-in identity, never sent by
+    the console: an attribution the browser supplies is not evidence of anything."""
+    _register(client)
+    item_id = _first_question(client)
+    data = _verdict(client, item_id, "Challenged", "Benchmark is not comparable").get_json()["data"]
+    row = next(q for q in data["validation_questions"] if q["item_id"] == item_id)
+    assert row["reviewer_verdict"] == "Challenged"
+    assert row["reviewer_comment"] == "Benchmark is not comparable"
+    assert row["reviewed_by"] == HEADERS["X-Auth-Request-User"]
+    assert row["reviewed_at"]
+
+
+def test_owner_status_and_reviewer_verdict_are_kept_apart(client):
+    """A question can be Addressed by its owner and Challenged by its reviewer at the
+    same time — the disagreement is the review doing its job, and the record holds it."""
+    _register(client)
+    item_id = _first_question(client)
+    client.post(
+        f"/api/models/M1/collections/validation_questions/{item_id}",
+        json={"fields": {"status": "Addressed"}, "confirmed": True}, headers=HEADERS,
+    )
+    data = _verdict(client, item_id, "Challenged").get_json()["data"]
+    row = next(q for q in data["validation_questions"] if q["item_id"] == item_id)
+    assert (row["status"], row["reviewer_verdict"]) == ("Addressed", "Challenged")
+
+
+def test_unknown_verdict_is_400(client):
+    _register(client)
+    assert _verdict(client, _first_question(client), "Sort of").status_code == 400
+
+
+def test_verdict_on_unknown_model_is_404(client):
+    assert _verdict(client, "VQ-001", "Accepted", model_id="NOPE").status_code == 404

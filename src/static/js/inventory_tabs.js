@@ -25,56 +25,6 @@ function barColor(pct) {
 }
 
 const DetailTabs = {
-  validation(data, retired) {
-    const questions = data.validation_questions || [];
-    const counts = { "Addressed": 0, "Partially Addressed": 0, "Not Addressed": 0, "Not Applicable": 0 };
-    questions.forEach((q) => { if (counts[q.status] !== undefined) counts[q.status]++; });
-    const total = questions.length;
-    const pct = total ? Math.round((counts.Addressed / total) * 100) : 0;
-    const card = (lbl, v, color) =>
-      '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
-      lbl + '</div><div class="val">' + v + "</div></div>";
-    const statuses = ["Addressed", "Partially Addressed", "Not Addressed", "Not Applicable"];
-    const rows = questions.map(function (q, i) {
-      let statusCell, rationaleCell;
-      if (retired) {
-        statusCell = vqBadge(q.status);
-        rationaleCell = fieldDisplay(q.rationale);
-      } else {
-        const opts = statuses.map((o) =>
-          "<option" + (o === q.status ? " selected" : "") + ">" + o + "</option>").join("");
-        // data-vq-item drives auto-save: changing the status or leaving the
-        // rationale posts the row straight away (see _bindValidationSaves).
-        statusCell = '<select data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
-          '-status" style="width:100%">' + opts + "</select>";
-        // A three-line textarea (not a single-line input) so a full rationale is
-        // visible; it scrolls once the text runs past three lines.
-        rationaleCell = '<textarea data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
-          '-rationale" rows="3" style="width:100%;resize:vertical;overflow-y:auto">' +
-          esc(q.rationale || "") + "</textarea>";
-      }
-      return "<tr><td>" + (i + 1) + "</td><td><b>" + fieldDisplay(q.short_label) +
-        '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" + statusCell +
-        "</td><td>" + rationaleCell + "</td></tr>";
-    }).join("");
-    return '<p class="muted">The nine SR 26-2 questions every model owner should be able to answer. ' +
-      "Set the status and add a rationale &mdash; each change saves automatically.</p>" +
-      '<div class="summary">' + card("Addressed", counts.Addressed, "#388e3c") +
-      card("Partially", counts["Partially Addressed"], "#f57c00") +
-      card("Not Addressed", counts["Not Addressed"], "#d32f2f") +
-      card("N/A", counts["Not Applicable"], "#9e9e9e") + "</div>" +
-      '<div class="muted" style="margin-bottom:6px">Coverage: ' + counts.Addressed + "/" + total +
-      " (" + pct + "%)</div>" +
-      '<div class="progress"><div class="bar" style="width:' + pct + "%;background:" + barColor(pct) + '"></div></div>' +
-      // Fixed layout so the column widths below are enforced: Status sits compact
-      // on the left and the Rationale takes all the remaining space (there is no
-      // Save column any more).
-      '<table style="table-layout:fixed;width:100%"><colgroup><col style="width:4%">' +
-      '<col style="width:30%"><col style="width:12%"><col style="width:54%"></colgroup>' +
-      "<thead><tr><th>#</th><th>Question</th><th>Status</th><th>Rationale</th></tr>" +
-      "</thead><tbody>" + rows + "</tbody></table>";
-  },
-
   // The dimension names a division uses, from the risk-rating envelope. They fall back to
   // the built-in names only for a payload that predates the policy (never for a rename).
   axisLabels(hm) {

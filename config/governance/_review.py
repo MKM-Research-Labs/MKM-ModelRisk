@@ -60,3 +60,14 @@ VALID_REVIEW_TRIGGERS = (
 # checklist in front of the owner. A new version is the case where the model's
 # write-up, its sensitivities and its test evidence all go stale at once.
 NEW_VERSION_TRIGGER = "New version"
+
+# The reviewer's position on one of the nine questions. Distinct from the owner's
+# status: the owner says what the model does, the reviewer says whether that
+# answer stands. A question can be Addressed by its owner and Challenged by its
+# reviewer at the same time — that disagreement is the review doing its job, and
+# the record has to be able to hold it.
+DEFAULT_REVIEWER_VERDICT = "Not reviewed"
+VALID_REVIEWER_VERDICTS = (DEFAULT_REVIEWER_VERDICT, "Accepted", "Challenged")
+# The verdict that stands in the way of sign-off: a challenge is either answered
+# or it is a reason the review is not finished.
+CHALLENGED_VERDICT = "Challenged"

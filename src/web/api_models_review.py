@@ -30,17 +30,23 @@ from datetime import datetime, timezone
 
 from flask import jsonify
 
-from config.governance import REVIEW_STAGES
+from config.governance import REVIEW_STAGES, VALID_REVIEWER_VERDICTS
 from src.command import dispatch, require_confirmation
 from src.governance.model_inventory import get_model
 from src.governance.model_inventory.projection import rebuild_inventory_view
 from src.governance.model_inventory.commands import (add_collection_item,
+                                                     update_collection_item,
                                                      update_model_field)
 from src.web._helpers import context_from_request, json_body
 from src.web.api_models import models_bp
 
 REVIEW_PROGRESS = "review_progress"
+VALIDATION_QUESTIONS = "validation_questions"
 _STAGE_BY_KEY = {stage["key"]: stage for stage in REVIEW_STAGES}
+
+
+def _stamped_now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def approvals(model: dict) -> dict:
@@ -80,7 +86,7 @@ def approve_stage(model_id: str):
         "stage": stage["key"], "stage_label": stage["label"], "status": stage["status"],
         "note": (body.get("note") or "").strip(),
         "approved_by": ctx.principal.actor,
-        "approved_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "approved_at": _stamped_now(),
     }
     dispatch(
         "approve_review_stage", add_collection_item, context=ctx,
@@ -92,3 +98,37 @@ def approve_stage(model_id: str):
     )
     rebuild_inventory_view()
     return jsonify(get_model(model_id)), 201
+
+
+@models_bp.post("/<model_id>/review/question-verdict")
+def question_verdict(model_id: str):
+    """Record the reviewer's verdict on one of the nine questions.
+
+    The owner's status and the reviewer's verdict are separate answers to the same
+    question and may disagree — a question can be Addressed by its owner and
+    Challenged by its reviewer, which is the review doing its job. Who reviewed it
+    and when are stamped here rather than sent by the console: an attribution the
+    browser supplies is not evidence of anything.
+    """
+    model = get_model(model_id)
+    if model is None:
+        return jsonify({"error": "model not found"}), 404
+    body = json_body()
+    item_id = body.get("item_id")
+    verdict = body.get("verdict")
+    if verdict not in VALID_REVIEWER_VERDICTS:
+        allowed = ", ".join(VALID_REVIEWER_VERDICTS)
+        return jsonify({"error": f"reviewer verdict must be one of: {allowed}"}), 400
+    ctx = context_from_request(body)
+    fields = {
+        "reviewer_verdict": verdict,
+        "reviewer_comment": (body.get("comment") or "").strip(),
+        "reviewed_by": ctx.principal.actor,
+        "reviewed_at": _stamped_now(),
+    }
+    dispatch(
+        "record_reviewer_verdict", update_collection_item, context=ctx,
+        model_id=model_id, collection=VALIDATION_QUESTIONS, item_id=item_id, fields=fields,
+    )
+    rebuild_inventory_view()
+    return jsonify(get_model(model_id))

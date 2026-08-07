@@ -19,6 +19,7 @@
 # SOFTWARE.
 """Structured-collection field specs on a model (coding rule R1)."""
 from config.governance._inventory import VALID_RAG_RATINGS
+from config.governance._review import VALID_REVIEWER_VERDICTS
 
 # Closed value sets used by structured collections.
 VALID_IMPACT = ("Low", "Medium", "High")
@@ -134,6 +135,14 @@ COLLECTION_SPECS = {
         {"key": "status", "label": "Status", "type": "choice", "options": VALID_VQ_STATUSES},
         {"key": "rationale", "label": "Rationale", "type": "text"},
         {"key": "evidence", "label": "Evidence", "type": "text"},
+        # The reviewer's side of the same question. Stamped by the endpoint that
+        # records the verdict, never typed: an attribution the browser supplies is
+        # not evidence of anything.
+        {"key": "reviewer_verdict", "label": "Reviewer", "type": "choice",
+         "options": VALID_REVIEWER_VERDICTS},
+        {"key": "reviewer_comment", "label": "Reviewer comment", "type": "text"},
+        {"key": "reviewed_by", "label": "Reviewed by", "type": "text", "hidden": True},
+        {"key": "reviewed_at", "label": "Reviewed at", "type": "text", "hidden": True},
     ]},
     "version_history": {"label": "Versions", "id_prefix": "V", "fields": [
         {"key": "version", "label": "Version", "type": "text", "required": True},

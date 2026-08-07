@@ -26,10 +26,10 @@
 // scattered across three tabs and the Overview, which left nobody able to say how
 // far through a review actually was. The rail below is that answer.
 //
-// This is the first increment: the rail and the stages, each showing the work it
-// owns. Per-stage agreement, the reviewer's verdict on each question, the
-// owner/reviewer challenge threads and the sign-off that files the report all
-// follow (see docs/design/review-workflow.md).
+// Built so far: the rail, the stages, the owner's brief, the reviewer's interim
+// approval of each stage, and both sides of the nine questions. The owner/reviewer
+// challenge threads and the sign-off that files the report follow
+// (see docs/design/review-workflow.md).
 const REVIEW_STAGES = [
   { key: "documents", n: 1, label: "Preliminary documents" },
   { key: "questions", n: 2, label: "The nine questions" },
@@ -46,6 +46,8 @@ const REVIEW_BRIEF_FIELDS = ["review_trigger", "review_scope", "peer_reviewer",
 const NEW_VERSION_CHECKLIST = ["review_docs_updated", "review_sensitivities_updated",
   "review_test_docs_updated"];
 const NEW_VERSION_TRIGGER = "New version";
+// Mirrors config VALID_REVIEWER_VERDICTS (config/governance/_review.py).
+const REVIEWER_VERDICTS = ["Not reviewed", "Accepted", "Challenged"];
 
 Object.assign(Detail, {
   // Which stage is open. Held on Detail (not in the URL) so switching model tabs
@@ -65,9 +67,8 @@ Object.assign(Detail, {
       '<div id="review-stage" style="margin-top:12px"></div>';
   },
 
-  // What the stage has to show for itself so far — a count, or nothing where a
-  // count would mean nothing. Not a state: agreement comes in the next increment,
-  // and a badge that looked like one would be claiming more than it knows.
+  // What the stage has to show for itself: a tick once agreed, else a count of
+  // the work in it — or nothing, where a count would mean nothing.
   _stageBadge(key, d) {
     const n = (k) => (d[k] || []).length;
     // An agreed stage says so, in place of its count: once the reviewer has
@@ -110,9 +111,9 @@ Object.assign(Detail, {
       return;
     }
     if (this._reviewStage === "questions") {
-      box.innerHTML = DetailTabs.validation(d, this._model.retired) +
-        this._stageApproval("questions", d);
+      box.innerHTML = this._questionsTable(d) + this._stageApproval("questions", d);
       this._bindValidationSaves();
+      this._bindVerdictSaves();
       this._bindStageApproval("questions");
       return;
     }
@@ -147,6 +148,96 @@ Object.assign(Detail, {
     box.innerHTML = '<div class="section-header">Reviewer sign-off</div>' +
       '<div class="empty">Not built yet. The reviewer\'s final commentary, the sign-off gate ' +
       "and the Model Review Report the MRC receives land in a later increment.</div>";
+  },
+
+  // The nine questions, both sides. The owner says what the model does; the
+  // reviewer says whether that answer stands. They are shown on one row because
+  // the disagreement between them is the point — a question can be Addressed by
+  // its owner and Challenged by its reviewer, and a record that cannot hold that
+  // is not recording a review.
+  _questionsTable(d) {
+    const questions = d.validation_questions || [];
+    const statuses = ["Addressed", "Partially Addressed", "Not Addressed", "Not Applicable"];
+    const counts = { "Addressed": 0, "Partially Addressed": 0, "Not Addressed": 0, "Not Applicable": 0 };
+    questions.forEach((q) => { if (counts[q.status] !== undefined) counts[q.status]++; });
+    const challenged = questions.filter((q) => q.reviewer_verdict === "Challenged").length;
+    const accepted = questions.filter((q) => q.reviewer_verdict === "Accepted").length;
+    const total = questions.length;
+    const pct = total ? Math.round((counts.Addressed / total) * 100) : 0;
+    const card = (lbl, v, color) =>
+      '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
+      lbl + '</div><div class="val">' + v + "</div></div>";
+    const options = (list, current) => list.map((o) =>
+      "<option" + (o === current ? " selected" : "") + ">" + o + "</option>").join("");
+    const ownerSelect = (q) => '<select data-vq-item="' + esc(q.item_id) + '" id="vq-' +
+      esc(q.item_id) + '-status" style="width:100%">' + options(statuses, q.status) + "</select>";
+    const verdictSelect = (q) => '<select data-vq-verdict="' + esc(q.item_id) + '" id="vq-verdict-' +
+      esc(q.item_id) + '" style="width:100%">' +
+      options(REVIEWER_VERDICTS, q.reviewer_verdict || REVIEWER_VERDICTS[0]) + "</select>";
+    const rows = questions.map((q, i) => {
+      const readOnly = this._model.retired;
+      const owner = readOnly
+        ? vqBadge(q.status) + '<div class="muted">' + fieldDisplay(q.rationale) + "</div>"
+        : ownerSelect(q) +
+          '<textarea data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
+          '-rationale" rows="3" style="width:100%;resize:vertical;overflow-y:auto;margin-top:4px">' +
+          esc(q.rationale || "") + "</textarea>";
+      const stamp = q.reviewed_by
+        ? '<div class="muted" style="font-size:11px">' + esc(q.reviewed_by) + " &middot; " +
+          esc((q.reviewed_at || "").slice(0, 10)) + "</div>"
+        : "";
+      const reviewer = readOnly
+        ? fieldDisplay(q.reviewer_verdict) + '<div class="muted">' +
+          fieldDisplay(q.reviewer_comment) + "</div>" + stamp
+        : verdictSelect(q) +
+          '<textarea data-vq-verdict-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
+          '-comment" rows="3" placeholder="Reviewer\'s comment" ' +
+          'style="width:100%;resize:vertical;overflow-y:auto;margin-top:4px">' +
+          esc(q.reviewer_comment || "") + "</textarea>" + stamp;
+      return "<tr><td>" + (i + 1) + "</td><td><b>" + fieldDisplay(q.short_label) +
+        '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" +
+        owner + "</td><td>" + reviewer + "</td></tr>";
+    }).join("");
+    return '<p class="muted">The nine SR 26-2 questions. The owner sets a status and a ' +
+      "rationale; the reviewer accepts it or challenges it. Every change saves as you make " +
+      "it, and who reviewed what is stamped from the signed-in identity.</p>" +
+      '<div class="summary">' + card("Addressed", counts.Addressed, "#388e3c") +
+      card("Partially", counts["Partially Addressed"], "#f57c00") +
+      card("Not Addressed", counts["Not Addressed"], "#d32f2f") +
+      card("Accepted", accepted, "#1565c0") +
+      card("Challenged", challenged, "#8e24aa") + "</div>" +
+      '<div class="muted" style="margin-bottom:6px">Owner coverage: ' + counts.Addressed +
+      "/" + total + " (" + pct + "%)</div>" +
+      '<div class="progress"><div class="bar" style="width:' + pct + "%;background:" +
+      barColor(pct) + '"></div></div>' +
+      '<table style="table-layout:fixed;width:100%"><colgroup><col style="width:4%">' +
+      '<col style="width:28%"><col style="width:34%"><col style="width:34%"></colgroup>' +
+      "<thead><tr><th>#</th><th>Question</th><th>Owner</th><th>Reviewer</th></tr>" +
+      "</thead><tbody>" + rows + "</tbody></table>";
+  },
+
+  // The reviewer's verdict posts to its own endpoint, which stamps who and when.
+  // Sending those from here would make the attribution the browser's word.
+  _bindVerdictSaves() {
+    if (this._model.retired) return;
+    const self = this;
+    const save = async (itemId) => {
+      try {
+        const updated = await App.send(
+          "POST", "/api/models/" + self._id + "/review/question-verdict",
+          { item_id: itemId, verdict: val("vq-verdict-" + itemId),
+            comment: val("vq-" + itemId + "-comment") });
+        self._model = updated;
+        App.toast("Reviewer verdict recorded", "ok");
+        self._render();
+      } catch (e) {
+        App.toast(e.message, "error");
+      }
+    };
+    document.querySelectorAll("[data-vq-verdict], [data-vq-verdict-item]").forEach((el) => {
+      el.onchange = () => save(el.getAttribute("data-vq-verdict") ||
+        el.getAttribute("data-vq-verdict-item"));
+    });
   },
 
   // The three documents that go stale together when a model is re-versioned. The
