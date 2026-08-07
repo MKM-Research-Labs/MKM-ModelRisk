@@ -134,6 +134,14 @@ Full text in `docs/rules/coding_rules.md`.
   Use the named helpers (`append_event`, `read_stream`, `read_view`, …).
 - **R9** — test against a restored backup, never the live database (§1).
 
+**Authorship is gated (permissions P1).** Against a protected database, a change must be
+authored by somebody in Admin → People — matched on name or email — or the request is
+refused with 403. `system` and `ingest:*` pass; an empty People list stands the rule down.
+Policy is `config/permissions.py` (`ENFORCE_KNOWN_ACTORS`); the check lives in `authorize()`
+in `src/command/dispatch.py` and in `request_actor()` for upload paths. If a write returns
+403 saying the actor is not registered, that is this rule — send a real identity rather
+than turning it off.
+
 ---
 
 © 2022–2026 MKM Research Labs. Licensed under the MIT License.

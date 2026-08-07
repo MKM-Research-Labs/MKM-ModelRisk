@@ -99,8 +99,16 @@ control.
 
 Sequenced so nothing is enforced before it can be satisfied.
 
-- **P1 — Know who is real.** Reject an actor absent from the People list while `DB_NAME` is
-  protected. Closes the breach that prompted this. Small, and independently useful.
+- **P1 — Know who is real. DONE (2026-08-07).** `authorize()` in `src/command/dispatch.py`
+  is real: a change must be authored by a registered person. Matching is by name *or*
+  email, since the console sends a name and SSO sends an address. `config/permissions.py`
+  holds the policy — `ENFORCE_KNOWN_ACTORS` is `protected` (the real estate only), with
+  `always` for a hardened deployment and `never` as a documented escape hatch. The platform
+  actor and `ingest:*` producers pass; an empty People list stands the rule down so a fresh
+  install can register its first person. `request_actor()` carries the same check, because
+  document uploads call their command directly and would otherwise stay open. Refusals are
+  403 with the actor and the remedy named. Verified: the call that created ZZ1/ZZ2 is
+  refused, a registered person is unaffected, reads are not gated.
 - **P2 — Roles as data.** Add role assignment to the People record (a person may hold
   several); expose it in Admin → People. Events, so assignment is audited.
 - **P3 — Authorize, in report-only mode.** Implement `authorize()` but only *log* refusals,
@@ -113,9 +121,12 @@ Sequenced so nothing is enforced before it can be satisfied.
 
 ## 7. Decisions needed before P1
 
-1. **Is the SSO header trusted in production?** If a proxy authenticates it, P1 is a
-   defence-in-depth check. If not, verification has to move up a layer and that is a bigger
-   piece of work.
+1. **Is the SSO header trusted in production?** **Still open — P1 was built assuming it is
+   NOT.** So P1 narrows *who* can author (a registered person) but does not verify that the
+   caller is that person: anyone who can address the app can still send a registered name.
+   If a proxy authenticates and strips the header, that gap closes and P1 is the whole
+   control. If not, verification has to move up a layer — a separate, larger piece of work
+   that should be scoped before this is called finished.
 2. **What happens to events already authored by unknown actors?** They stay — the log is
    append-only. Proposal: surface them on the Audit tab as "unrecognised actor" so they can
    be explained rather than silently trusted.

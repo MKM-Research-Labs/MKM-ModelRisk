@@ -25,6 +25,7 @@ from flask import Flask, jsonify, request
 from src.command import ConfirmationRequired
 from src.database import run_migrations
 from src.governance.errors import DomainError
+from src.identity import UnrecognisedActor
 from src.governance.reference import (ensure_default_model_types,
                                       ensure_default_reference_lists)
 from src.ingest import SchemaValidationError
@@ -62,6 +63,13 @@ def _register_error_handlers(app: Flask) -> None:
     @app.errorhandler(SchemaValidationError)
     def _schema_validation_error(exc: SchemaValidationError):
         return jsonify({"error": str(exc), "details": exc.errors}), 422
+
+    # An unregistered identity may not author a change (permissions P1). 403 rather than
+    # 401: the caller is authenticated as far as the perimeter is concerned — the
+    # institution simply does not know who that is.
+    @app.errorhandler(UnrecognisedActor)
+    def _unrecognised_actor(exc: UnrecognisedActor):
+        return jsonify({"error": str(exc), "unrecognised_actor": True}), 403
 
 
 def create_app(run_db_migrations: bool = True) -> Flask:

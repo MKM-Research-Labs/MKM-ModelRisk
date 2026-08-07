@@ -116,9 +116,17 @@ def resolve_field(field: dict, options_by_list: dict | None = None) -> dict:
 
 
 def request_actor() -> str:
-    """The SSO actor for a non-JSON (e.g. multipart upload) request."""
-    from src.identity import resolve_principal
-    return resolve_principal(request.headers).actor
+    """The SSO actor for a non-JSON (e.g. multipart upload) request.
+
+    These paths — document uploads, logo and ToR replacement, item deletion — call their
+    command directly rather than through ``dispatch``, so they would sidestep the
+    known-actor rule that ``authorize`` applies. The check belongs wherever a change is
+    about to be authored, so it is applied here too.
+    """
+    from src.identity import assert_recognised, resolve_principal
+    actor = resolve_principal(request.headers).actor
+    assert_recognised(actor)
+    return actor
 
 
 def context_from_request(body: dict[str, Any]) -> CommandContext:

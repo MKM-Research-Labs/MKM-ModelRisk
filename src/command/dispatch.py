@@ -35,7 +35,7 @@ from typing import Any, Callable
 
 from config.commands import CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS
 from src.command._context import CommandContext
-from src.identity import Principal, resolve_principal
+from src.identity import Principal, assert_recognised, resolve_principal
 
 
 class ConfirmationRequired(RuntimeError):
@@ -47,8 +47,14 @@ class AuthorizationError(RuntimeError):
 
 
 def authorize(principal: Principal, command_name: str) -> None:
-    """Authorization hook. No-op today; the seam for future RBAC rules."""
-    return None
+    """May this principal run this command?
+
+    Phase P1 answers only "is the author somebody the institution registered". Every
+    mutating command passes through here, so a new endpoint cannot forget to ask — the
+    same reason R6 puts database access behind one door. Roles and segregation of duties
+    (docs/permissions_design.md P2-P5) extend this function; they do not add a second gate.
+    """
+    assert_recognised(principal.actor)
 
 
 def context_from_headers(
