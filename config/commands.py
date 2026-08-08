@@ -30,6 +30,8 @@ confirmation explicitly at their endpoints via ``require_confirmation``.
 """
 from __future__ import annotations
 
+from config.governance import REVIEW_QUESTION_LIST
+
 # Whole commands that always require confirmation. Retiring is significant and
 # effectively one-way — the subject becomes read-only — so both the model and the
 # product retire commands are gated, and the reason is recorded on the event.
@@ -42,6 +44,19 @@ CONFIRM_REQUIRED_COMMANDS = frozenset({
     "retire_product",
     "retire_client",
 })
+
+# Reference lists whose edits require confirmation, keyed by the command. Most
+# admin lists are working vocabulary — adding a data source or renaming a division
+# applies as you type it. The review questionnaire is not: it is the standard every
+# model is held to, it is copied onto each model at registration, and reordering it
+# changes what the next review asks first. So editing it is a deliberate act with a
+# recorded reason, like retiring a model, rather than a menu tweak.
+CONFIRM_REQUIRED_LISTS = {
+    "add_option": frozenset({REVIEW_QUESTION_LIST}),
+    "update_option": frozenset({REVIEW_QUESTION_LIST}),
+    "remove_option": frozenset({REVIEW_QUESTION_LIST}),
+    "move_option": frozenset({REVIEW_QUESTION_LIST}),
+}
 
 # Scalar-field edits that require confirmation, keyed by the field-update command.
 # Owner and risk rating are the significant model/product edits; a *meeting's*

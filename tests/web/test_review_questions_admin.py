@@ -146,3 +146,34 @@ def test_a_model_is_asked_them_in_the_order_they_are_listed(client):
     _move(client, items[1]["item_id"], "up")
     _register(client)
     assert [q["short_label"] for q in _questions(client)] == ["Second", "First"]
+
+
+def test_editing_the_questionnaire_needs_confirmation(client):
+    """The questionnaire is the standard every model is held to, not working
+    vocabulary: editing it is a deliberate act with a recorded reason, the way
+    retiring a model is. The other admin lists stay unGated."""
+    unconfirmed = client.post(
+        f"/api/reference/collections/{REVIEW_QUESTION_LIST}",
+        json={"fields": {"short_label": "Client impact", "question": "Who is harmed?"}},
+        headers=HEADERS)
+    assert unconfirmed.status_code == 409
+    assert not get_reference_lists()[REVIEW_QUESTION_LIST]
+
+    _add_question(client, "Client impact", "Who is harmed?")
+    item_id = get_reference_lists()[REVIEW_QUESTION_LIST][0]["item_id"]
+    for path, body in (
+        (f"/api/reference/collections/{REVIEW_QUESTION_LIST}/{item_id}",
+         {"fields": {"question": "Reworded?"}}),
+        (f"/api/reference/collections/{REVIEW_QUESTION_LIST}/{item_id}/move",
+         {"direction": "down"}),
+        (f"/api/reference/collections/{REVIEW_QUESTION_LIST}/{item_id}/delete", {}),
+    ):
+        assert client.post(path, json=body, headers=HEADERS).status_code == 409, path
+
+
+def test_the_other_admin_lists_are_not_gated(client):
+    """A data source or a division is working vocabulary — it applies as you type
+    it, and gating everything would make the confirmation meaningless."""
+    added = client.post("/api/reference/collections/vendor",
+                        json={"fields": {"value": "Moody's"}}, headers=HEADERS)
+    assert added.status_code in (200, 201)

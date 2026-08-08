@@ -33,7 +33,8 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from config.commands import CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS
+from config.commands import (CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS,
+                             CONFIRM_REQUIRED_LISTS)
 from src.command._context import CommandContext
 from src.identity import Principal, assert_recognised, resolve_principal
 
@@ -69,6 +70,9 @@ def _requires_confirmation(command_name: str, kwargs: dict[str, Any]) -> bool:
     """Whether this command needs the explicit confirmation step (rule R1 policy
     in ``config.commands``). Non-critical changes apply without a confirmation."""
     if command_name in CONFIRM_REQUIRED_COMMANDS:
+        return True
+    critical_lists = CONFIRM_REQUIRED_LISTS.get(command_name)
+    if critical_lists and kwargs.get("list_name") in critical_lists:
         return True
     critical_fields = CONFIRM_REQUIRED_FIELDS.get(command_name)
     return bool(critical_fields) and kwargs.get("field") in critical_fields
