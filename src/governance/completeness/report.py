@@ -77,7 +77,10 @@ def _headline(rows: list[dict], gaps: list[dict]) -> str:
     """The three numbers a committee reads before anything else."""
     models = [r for r in rows if r["entity_kind"] == "Model"]
     products = [r for r in rows if r["entity_kind"] == "Product"]
-    incomplete = [r for r in rows if r["completeness"] < COMPLETENESS_ACCEPTABLE_AT]
+    # Each record against its own division's threshold, not one number for the
+    # whole report — two divisions may have ratified different ones.
+    incomplete = [r for r in rows
+                  if r["completeness"] < r.get("acceptable_at", COMPLETENESS_ACCEPTABLE_AT)]
     critical = [g for g in gaps if g["band"] == "Critical"]
     broken = [g for g in gaps if g["kind"] == "document_broken"]
     return (

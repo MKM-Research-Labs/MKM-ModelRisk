@@ -118,6 +118,24 @@ BROKEN_DOC_ESCALATION = 1.15
 # Entity-level roll-up. A record is reported as materially incomplete once its
 # weighted completeness falls below this: a continuous score turned into a
 # statement the committee can act on.
+# The knobs a division may set for itself, with the firm-wide value each starts
+# from. They live on the division's risk policy (an "audit" section) because that
+# is what its MRC already ratifies, and because the audit already reads that policy
+# for the rating multipliers — splitting the audit's basis across two places would
+# leave nobody able to say what a score was computed against.
+#
+# The keys are the argument names the escalation helpers take, so the policy is
+# read straight into them without a translation table in between.
+AUDIT_POLICY_DEFAULTS = {
+    "acceptable_at": 0.85,
+    "conditional_at": 0.60,
+    "untiered_weight": UNTIERED_WEIGHT,
+    "unrated_multiplier": UNRATED_MULTIPLIER,
+    "event_pressure_per_event": EVENT_PRESSURE_PER_EVENT,
+    "event_pressure_cap": EVENT_PRESSURE_CAP,
+    "broken_doc_escalation": BROKEN_DOC_ESCALATION,
+}
+
 COMPLETENESS_ACCEPTABLE_AT = 0.85
 COMPLETENESS_CONDITIONAL_AT = 0.60
 

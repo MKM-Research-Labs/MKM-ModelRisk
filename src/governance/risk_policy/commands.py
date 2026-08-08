@@ -26,6 +26,7 @@ affect any model's rating.
 """
 from __future__ import annotations
 
+from config.governance import AUDIT_POLICY_DEFAULTS
 from src.database import Event, append_event
 from src.governance.errors import DomainError
 from src.governance.risk_policy._store import (
@@ -51,12 +52,41 @@ def _validate_band(band, where: str) -> None:
         raise DomainError(f"{where}: a band has no name")
 
 
+def _validate_audit(policy) -> None:
+    """The audit section, if present, holds numbers and nothing else.
+
+    Every key is optional — a division that has set two of them is audited on those
+    two and the firm-wide values for the rest — but a key that is present and not a
+    number would silently fall back at scoring time, which is the kind of quiet
+    wrongness a governance figure must not have.
+    """
+    audit = policy.get("audit")
+    if audit is None:
+        return
+    if not isinstance(audit, dict):
+        raise DomainError("the audit section must be an object")
+    for key, value in audit.items():
+        if key not in AUDIT_POLICY_DEFAULTS:
+            raise DomainError(f"unknown audit setting: {key}")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise DomainError(f"audit setting '{key}' must be a number")
+        if value < 0:
+            raise DomainError(f"audit setting '{key}' cannot be negative")
+    acceptable = audit.get("acceptable_at", AUDIT_POLICY_DEFAULTS["acceptable_at"])
+    conditional = audit.get("conditional_at", AUDIT_POLICY_DEFAULTS["conditional_at"])
+    if conditional > acceptable:
+        raise DomainError(
+            "the conditional threshold cannot sit above the acceptable one: a record "
+            "would be conditional and acceptable at the same score")
+
+
 def _validate_policy(policy) -> None:
     """Structural validation. Bands carry the full {name,colour,explanation,score} quad;
     the grid covers exactly Mission-Criticality × Materiality × Complexity and only
     references defined risk ratings."""
     if not isinstance(policy, dict):
         raise DomainError("risk policy must be an object")
+    _validate_audit(policy)
     dims = policy.get("dimensions")
     if not isinstance(dims, dict) or set(dims) != set(_DIMENSIONS):
         raise DomainError("risk policy needs dimensions: " + ", ".join(_DIMENSIONS))

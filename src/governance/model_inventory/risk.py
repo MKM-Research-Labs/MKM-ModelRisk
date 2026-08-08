@@ -158,4 +158,8 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dic
         # audit escalates on this, so a division's own multipliers drive its remediation.
         "rag_scores": {rating["name"]: rating["score"]
                        for rating in policy.get("risk_ratings", [])},
+        # What this division's committee has ratified for the completeness audit —
+        # thresholds and escalation factors. Absent keys fall back to the firm-wide
+        # values, so a division that has never touched them is scored as before.
+        "audit_policy": dict(policy.get("audit") or {}),
     }
