@@ -82,6 +82,25 @@ def remove_option(
     return _record(decision, version, actor, reason, config)
 
 
+def move_option(
+    *, list_name: str, item_id: str, direction: str, actor: str,
+    reason: str | None = None, config=None,
+) -> Event:
+    """Move a reference entry one place up or down its list.
+
+    Order is meaningful where a list is read in sequence — the review questionnaire
+    is asked in the order it is listed — and it is also the order every dropdown
+    offers. Recorded as an event like any other edit, so who reordered a list, and
+    when, is on the audit trail.
+    """
+    collections, version = load(config)
+    decision = coll.decide_move(
+        collections, REFERENCE_SPECS, collection=list_name, item_id=item_id,
+        direction=direction,
+    )
+    return _record(decision, version, actor, reason, config)
+
+
 def ensure_default_model_types(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
     """Seed the model-type list on a fresh install; return how many were added.
 

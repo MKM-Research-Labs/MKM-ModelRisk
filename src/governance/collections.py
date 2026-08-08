@@ -22,7 +22,8 @@
 A "collections" value is a ``dict[str, tuple[dict]]`` mapping a collection name
 (``assumptions``, ``agenda``, …) to its items, each item a dict carrying an
 ``item_id``. The same three events drive every collection on every aggregate:
-``CollectionItemAdded`` / ``CollectionItemUpdated`` / ``CollectionItemRemoved``.
+``CollectionItemAdded`` / ``CollectionItemUpdated`` / ``CollectionItemRemoved`` /
+``CollectionItemMoved`` (order is state, so changing it is an event too).
 
 This module is pure: ``fold`` rebuilds state from events; ``decide_*`` validate a
 command against the per-collection spec and return ``(event_type, payload)`` or
@@ -33,11 +34,16 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance import VALID_MOVE_DIRECTIONS
 from src.governance.errors import DomainError
 
 EVENT_ITEM_ADDED = "CollectionItemAdded"
 EVENT_ITEM_UPDATED = "CollectionItemUpdated"
 EVENT_ITEM_REMOVED = "CollectionItemRemoved"
+# Order is state, so changing it is an event like any other. Keeping the order in
+# the log rather than in a position field on each item means there is no second
+# copy of it to fall out of step, and the audit trail shows who reordered what.
+EVENT_ITEM_MOVED = "CollectionItemMoved"
 
 COLLECTION_EVENTS = (EVENT_ITEM_ADDED, EVENT_ITEM_UPDATED, EVENT_ITEM_REMOVED)
 
@@ -63,6 +69,15 @@ def fold(collections: dict[str, tuple], event_type: str, payload: dict[str, Any]
             for it in collections.get(collection, ())
         )
         return {**collections, collection: items}
+    if event_type == EVENT_ITEM_MOVED:
+        items = list(collections.get(collection, ()))
+        index = next((i for i, it in enumerate(items) if it["item_id"] == payload["item_id"]), None)
+        if index is None:
+            return {**collections, collection: tuple(items)}
+        swap = index - 1 if payload.get("direction") == "up" else index + 1
+        if 0 <= swap < len(items):
+            items[index], items[swap] = items[swap], items[index]
+        return {**collections, collection: tuple(items)}
     if event_type == EVENT_ITEM_REMOVED:
         items = tuple(
             it for it in collections.get(collection, ()) if it["item_id"] != payload["item_id"]
@@ -164,3 +179,25 @@ def decide_remove(
     # Retain the removed item's values so the audit trail can show what was lost.
     removed = {k: v for k, v in current.items() if k != "item_id"}
     return EVENT_ITEM_REMOVED, {"collection": collection, "item_id": item_id, "_removed": removed}
+
+
+def decide_move(
+    collections: dict, specs: dict, *, collection: str, item_id: str, direction: str
+) -> tuple[str, dict[str, Any]]:
+    """Move an item one place up or down its collection.
+
+    Refused at the ends rather than silently doing nothing: a caller that thinks it
+    reordered something and did not should be told so.
+    """
+    _spec(specs, collection)
+    if direction not in VALID_MOVE_DIRECTIONS:
+        raise DomainError(f"direction must be one of: {', '.join(VALID_MOVE_DIRECTIONS)}")
+    items = list(collections.get(collection, ()))
+    index = next((i for i, it in enumerate(items) if it["item_id"] == item_id), None)
+    if index is None:
+        raise DomainError(f"unknown item: {item_id}")
+    swap = index - 1 if direction == "up" else index + 1
+    if not 0 <= swap < len(items):
+        raise DomainError(f"{item_id} is already {'first' if direction == 'up' else 'last'}")
+    return EVENT_ITEM_MOVED, {"collection": collection, "item_id": item_id,
+                              "direction": direction}

@@ -155,10 +155,15 @@ const Reference = {
     const cols = spec.fields.filter((f) => !f.hidden);
     const head = cols.map((f) => "<th>" + esc(f.label) + "</th>").join("") + "<th></th>";
     const body = items.length
-      ? items.map((it) =>
+      ? items.map((it, i) =>
           '<tr id="rlrow-' + esc(it.item_id) + '">' +
           cols.map((f) => "<td>" + fieldDisplay(it[f.key]) + "</td>").join("") +
-          '<td class="rowact"><button class="btn small" data-ed="' + esc(spec.key) + "|" + esc(it.item_id) +
+          '<td class="rowact">' +
+          '<button class="edit-btn" data-mv="up|' + esc(it.item_id) + '" title="Move up"' +
+          (i === 0 ? " disabled" : "") + ">\u2191</button>" +
+          '<button class="edit-btn" data-mv="down|' + esc(it.item_id) + '" title="Move down"' +
+          (i === items.length - 1 ? " disabled" : "") + ">\u2193</button> " +
+          '<button class="btn small" data-ed="' + esc(spec.key) + "|" + esc(it.item_id) +
           '">Edit</button> <button class="btn small danger" data-rm="' + esc(spec.key) + "|" + esc(it.item_id) +
           '">Remove</button></td></tr>').join("")
       : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">None yet.</td></tr>';
@@ -188,6 +193,15 @@ const Reference = {
       const id = btn.getAttribute("data-rm").split("|")[1];
       btn.onclick = () => App.amend("Remove " + id + ".", "POST",
         "/api/reference/collections/" + spec.key + "/" + id + "/delete", {}, () => this.render());
+    });
+    container.querySelectorAll("[data-mv]").forEach((btn) => {
+      if (btn.disabled) return;
+      const [direction, id] = btn.getAttribute("data-mv").split("|");
+      // Reordering is an edit to what every dropdown offers, so it is confirmed and
+      // recorded like the others rather than treated as a display preference.
+      btn.onclick = () => App.amend("Move " + id + " " + direction + ".", "POST",
+        "/api/reference/collections/" + spec.key + "/" + id + "/move",
+        { direction: direction }, () => this.render());
     });
     container.querySelectorAll("[data-ed]").forEach((btn) => {
       const id = btn.getAttribute("data-ed").split("|")[1];

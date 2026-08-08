@@ -96,3 +96,53 @@ def test_an_empty_list_still_registers_a_model_with_the_shipped_set(client):
     assert not get_reference_lists()[REVIEW_QUESTION_LIST]
     _register(client)
     assert len(_questions(client)) == len(SR262_QUESTIONS)
+
+
+def _move(client, item_id, direction):
+    return client.post(
+        f"/api/reference/collections/{REVIEW_QUESTION_LIST}/{item_id}/move",
+        json={"direction": direction, "confirmed": True}, headers=HEADERS,
+    )
+
+
+def _topics(client):
+    return [q["short_label"] for q in
+            client.get("/api/reference").get_json()["data"][REVIEW_QUESTION_LIST]]
+
+
+def test_questions_can_be_reordered(client):
+    """The list is the order the questions are asked in, so it has to be settable —
+    a house standard does not necessarily open where SR 26-2 opens."""
+    for topic in ("First", "Second", "Third"):
+        _add_question(client, topic, f"The {topic.lower()} question?")
+    items = client.get("/api/reference").get_json()["data"][REVIEW_QUESTION_LIST]
+
+    assert _move(client, items[2]["item_id"], "up").status_code == 200
+    assert _topics(client) == ["First", "Third", "Second"]
+    _move(client, items[0]["item_id"], "down")
+    assert _topics(client) == ["Third", "First", "Second"]
+
+
+def test_a_move_off_either_end_is_refused(client):
+    """Told, rather than silently doing nothing: a caller that thinks it reordered
+    something and did not should hear about it."""
+    _add_question(client, "Only", "The only question?")
+    item_id = client.get("/api/reference").get_json()["data"][REVIEW_QUESTION_LIST][0]["item_id"]
+    assert _move(client, item_id, "up").status_code == 400
+    assert "already first" in _move(client, item_id, "up").get_json()["error"]
+    assert "already last" in _move(client, item_id, "down").get_json()["error"]
+
+
+def test_a_nonsense_direction_is_refused(client):
+    _add_question(client, "Only", "The only question?")
+    item_id = client.get("/api/reference").get_json()["data"][REVIEW_QUESTION_LIST][0]["item_id"]
+    assert _move(client, item_id, "sideways").status_code == 400
+
+
+def test_a_model_is_asked_them_in_the_order_they_are_listed(client):
+    for topic in ("First", "Second"):
+        _add_question(client, topic, f"The {topic.lower()} question?")
+    items = client.get("/api/reference").get_json()["data"][REVIEW_QUESTION_LIST]
+    _move(client, items[1]["item_id"], "up")
+    _register(client)
+    assert [q["short_label"] for q in _questions(client)] == ["Second", "First"]

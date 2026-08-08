@@ -25,7 +25,8 @@ from flask import Blueprint, jsonify, request, send_file
 from config.governance import REFERENCE_SPECS
 from src.command import dispatch
 from src.files import UploadError, save_upload, upload_path
-from src.governance.reference import add_option, get_reference_lists, remove_option, update_option
+from src.governance.reference import (add_option, get_reference_lists, move_option,
+                                      remove_option, update_option)
 from src.web._helpers import (
     context_from_request,
     json_body,
@@ -80,6 +81,22 @@ def remove(list_name: str, item_id: str):
     dispatch(
         "remove_option", remove_option, context=context_from_request(body),
         list_name=list_name, item_id=item_id,
+    )
+    return jsonify(get_reference_lists())
+
+
+@reference_bp.post("/collections/<list_name>/<item_id>/move")
+def move(list_name: str, item_id: str):
+    """Move one entry up or down its list.
+
+    Reordering is an edit to a list the estate reads in order — the review
+    questionnaire is asked in it, and every dropdown offers it — so it goes through
+    the same recorded path as any other change rather than being a display setting.
+    """
+    body = json_body()
+    dispatch(
+        "move_option", move_option, context=context_from_request(body),
+        list_name=list_name, item_id=item_id, direction=body.get("direction"),
     )
     return jsonify(get_reference_lists())
 

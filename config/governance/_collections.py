@@ -35,6 +35,11 @@ VALID_VQ_STATUSES = (
     "Addressed", "Partially Addressed", "Not Addressed", "Not Applicable",
 )
 VALID_DEPENDENCY_DIRECTIONS = ("upstream", "downstream")
+# Which way an item moves when its order is changed. Order is meaningful in some
+# collections — the review questionnaire is asked in the order it is listed — so it
+# is changed by a recorded move rather than by a position field somebody has to
+# keep consistent.
+VALID_MOVE_DIRECTIONS = ("up", "down")
 # The per-model collection of declared model-to-model dependencies. Named once so
 # the derivation (which reads it to build the 'string of pearls') and the
 # declaration-time acyclicity guard agree on the key.
