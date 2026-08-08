@@ -210,6 +210,13 @@ def _render_user_guide(dest):
         # pandoc's LaTeX uses \tightlist, which its standalone template defines;
         # a fragment does not, so provide it here.
         + "\\providecommand{\\tightlist}{\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}\n"
+        # A markdown table becomes a longtable, and an uncaptioned one is wrapped in
+        # \def\LTcaptype{none} so the table counter is not stepped. longtable then steps
+        # a counter of that name, which nothing defines — so the guide compiled only
+        # while it contained no tables, and generating the reports began failing with
+        # "No counter 'none' defined" the day one was added. Defining the counter is
+        # what pandoc's own template amounts to: it exists to be thrown away.
+        + "\\newcounter{none}\n"
         + "\\begin{document}\n"
         + front_matter("User Guide", "Model risk governance console", org_name=org,
                        date=as_of, logo=bool(assets), toc=True)
