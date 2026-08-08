@@ -31,6 +31,7 @@ from src.governance.reference import (ensure_default_model_types,
                                       ensure_default_review_questions)
 from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
+from src.web.api_artefacts import artefacts_bp
 from src.web.api_audit_reports import audit_reports_bp
 from src.web.api_client import client_bp
 from src.web.api_documents import documents_bp
@@ -105,6 +106,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(reference_bp)
     app.register_blueprint(risk_policy_bp)
     app.register_blueprint(documents_bp)
+    app.register_blueprint(artefacts_bp)
     app.register_blueprint(audit_bp)
     app.register_blueprint(audit_reports_bp)
     app.register_blueprint(ingest_bp)

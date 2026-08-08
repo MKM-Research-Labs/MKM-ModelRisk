@@ -180,6 +180,16 @@ def serve_report(filename: str):
     return send_from_directory(OUTPUT_DIR, filename, as_attachment=as_attachment)
 
 
+def _render_user_guide_docx(dest):
+    """The same guide as an editable Word document. An adopter's own people mark a guide
+    up and hand it back; a PDF cannot be worked on, so both forms are published from the
+    one markdown source rather than diverging as two hand-kept documents."""
+    if shutil.which("pandoc") is None:
+        return
+    subprocess.run(["pandoc", str(USER_GUIDE_MD), "-o", str(dest)],
+                   check=True, capture_output=True, text=True)
+
+
 def _render_user_guide(dest):
     """Publish the user guide as a PDF in the shared house style (skipped if pandoc
     or tectonic is absent). The markdown body is converted to a LaTeX fragment and
@@ -239,6 +249,7 @@ def generate():
     # Machine-readable __init__ audit export sits next to the PDFs.
     write_init_audit_json(report, OUTPUT_DIR)
     _render_user_guide(OUTPUT_DIR / "user_guide.pdf")
+    _render_user_guide_docx(OUTPUT_DIR / "user_guide.docx")
     # Run the suites in the background; coverage/JUnit/Test Report land when done.
     _start_coverage_refresh(OUTPUT_DIR)
     return jsonify(_catalogue())

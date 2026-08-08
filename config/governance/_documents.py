@@ -85,6 +85,15 @@ DOC_CATEGORIES = (tuple(c for c in DOC_TAB_CATEGORIES if c not in DOC_TAB_GROUPS
                   + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
                   + REVIEW_DOC_CATEGORIES)
 
+# --- Artefacts: what the institution ISSUES ---------------------------------
+# The Documents tab's second panel. Filed per division, plus a company-wide shelf for
+# what belongs to the institution rather than to one division (the user guide, a
+# firm-wide standard). The kinds are what an adopter files here in practice; they label
+# a tile, so an unfamiliar one is a wording change, not a schema change.
+COMPANY_WIDE_SHELF = "Company-wide"
+ARTEFACT_KINDS = ("Terms of Reference", "Presentation", "Policy", "Guide", "Template",
+                  "Other")
+
 # --- Ongoing monitoring -----------------------------------------------------
 # The artefacts an adopting institution's portfolio generator leaves behind, and
 # the label each carries in the monitoring document's activity table. These

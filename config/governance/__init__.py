@@ -87,6 +87,8 @@ from config.governance._completeness_scoring import (
     UNTIERED_WEIGHT,
 )
 from config.governance._documents import (
+    ARTEFACT_KINDS,
+    COMPANY_WIDE_SHELF,
     DOC_CATEGORIES,
     NO_PORTFOLIO_STATEMENT,
     NO_SOURCE_STATEMENT,
@@ -198,6 +200,7 @@ from config.governance._reference import (
 )
 
 __all__ = [
+    "ARTEFACT_KINDS", "COMPANY_WIDE_SHELF",
     "CLIENT_COLLECTION_SPECS", "CLIENT_CONTACTS", "CLIENT_DEPARTMENTS",
     "CLIENT_DIVISIONS", "CLIENT_EDITABLE_FIELDS", "CLIENT_FIELD_CHOICES",
     "CLIENT_FIELD_SPECS", "CLIENT_ID_PREFIX", "CLIENT_LINKS", "CLIENT_PACKS",

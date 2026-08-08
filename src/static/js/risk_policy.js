@@ -122,13 +122,12 @@ const RiskEditor = {
       esc(this._dimName("complexity")) + " table per " +
       esc(this._dimName("mission_criticality")) + " band. Pick each cell\'s rating." +
       '</p><div id="rp-grids"></div></section>' +
-      '<div class="section-header" style="margin-top:18px">Risk Policy document</div>' +
-      '<p class="muted" style="font-size:11px">The division\'s formal written Risk Policy ' +
-      "(PDF or Word) — a separate document from the categorisation configured above, sent to " +
-      "the MRC alongside it.</p>" +
-      '<div class="row" style="align-items:center;gap:10px"><span id="rp-doc-current"></span>' +
-      '<input type="file" id="rp-doc-file" accept=".pdf,.doc,.docx">' +
-      '<button class="btn small" id="rp-doc-upload">Upload</button></div>';
+      // The written policy document now lives on Documents -> Artefacts, filed on its
+      // division's shelf with the rest of what that division issues. This tab configures
+      // the categorisation; it is no longer also a filing cabinet.
+      '<p class="muted" style="font-size:11px;margin-top:18px">The division\'s formal ' +
+      "written Risk Policy document is filed under Documents &rarr; Artefacts, on the " +
+      esc(this._division) + " shelf.</p>";
     document.getElementById("rp-div").onchange = (e) => {
       this._division = e.target.value; this._load();
     };
@@ -139,7 +138,6 @@ const RiskEditor = {
     this._drawDims();
     this._drawRatings();
     this._drawGrids();
-    this._drawDocument();
     this._showSub();
   },
 
@@ -153,32 +151,6 @@ const RiskEditor = {
     this._box.querySelectorAll("[data-rp]").forEach((s) => {
       s.hidden = s.getAttribute("data-rp") !== active;
     });
-  },
-
-  _drawDocument() {
-    const el = document.getElementById("rp-doc-current");
-    if (el) {
-      el.innerHTML = this._document
-        ? '<a href="/api/risk-policy/' + encodeURIComponent(this._division) +
-          '/document" target="_blank">↓ ' + esc(this._document.original_name) + "</a>"
-        : '<span class="muted">None uploaded.</span>';
-    }
-    const btn = document.getElementById("rp-doc-upload");
-    if (btn) btn.onclick = () => this._uploadDocument();
-  },
-
-  _uploadDocument() {
-    const file = document.getElementById("rp-doc-file");
-    if (!file.files.length) { App.toast("Choose a file first", "error"); return; }
-    const form = new FormData();
-    form.append("file", file.files[0]);
-    fetch("/api/risk-policy/" + encodeURIComponent(this._division) + "/document", {
-      method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
-    }).then(async (res) => {
-      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "upload failed"); }
-      App.toast("Policy document uploaded", "ok");
-      this._load();
-    }).catch((e) => App.toast(e.message, "error"));
   },
 
   _drawStatus() {

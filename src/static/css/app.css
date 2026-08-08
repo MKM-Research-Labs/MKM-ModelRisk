@@ -118,6 +118,15 @@ th.sortable:hover { color: var(--accent); }
 .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
 .inforow .edit-btn { margin-left: 8px; }
 .inforow .editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1; }
+/* Artefact tiles: what the institution issues, shown as cards rather than a table —
+   a ToR or a presentation is a thing you pick up, not a row you scan. */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+.tile .tile-kind { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.tile .tile-title { font-weight: 700; font-size: 13px; word-break: break-word; }
+.tile .tile-note { font-size: 11px; color: var(--muted); flex: 1; }
+.tile .tile-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
 /* A field shown but not editable here — granted by another process. */
 .ro { font-size: 12px; padding: 6px 0; color: var(--text); }
 /* Which risk policy a subject's Risk tab is showing (mirrors the Admin state chip). */
