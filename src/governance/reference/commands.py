@@ -24,7 +24,8 @@ from typing import Any
 
 from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
                                DEFAULT_MODEL_TYPES, DEFAULT_VENDORS,
-                               MODEL_TYPE_LIST, REFERENCE_SPECS, VENDOR_LIST)
+                               MODEL_TYPE_LIST, REFERENCE_SPECS,
+                               REVIEW_QUESTION_LIST, SR262_QUESTIONS, VENDOR_LIST)
 from config.identity import SYSTEM_ACTOR
 from src.database import Event, append_event
 from src.governance import collections as coll
@@ -107,6 +108,23 @@ _DEFAULT_SIMPLE_LISTS = {
     DATA_SOURCE_LIST: DEFAULT_DATA_SOURCES,
     VENDOR_LIST: DEFAULT_VENDORS,
 }
+
+
+def ensure_default_review_questions(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the review questionnaire on a fresh install; return how many were added.
+
+    The nine SR 26-2 questions are the starting point, not the definition: an
+    adopter rewords them, drops what does not apply and adds its own. Same rule as
+    the other lists — this seeds a vacuum and never reconciles a curated one, so a
+    questionnaire somebody has since edited is not quietly restored at a restart.
+    """
+    collections, _ = load(config)
+    if collections.get(REVIEW_QUESTION_LIST):
+        return 0
+    for question in SR262_QUESTIONS:
+        add_option(list_name=REVIEW_QUESTION_LIST, fields=dict(question), actor=actor,
+                   reason="Seed the SR 26-2 review questions on first run", config=config)
+    return len(SR262_QUESTIONS)
 
 
 def ensure_default_reference_lists(*, actor: str = SYSTEM_ACTOR, config=None) -> int:

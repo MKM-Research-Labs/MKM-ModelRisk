@@ -39,9 +39,17 @@ CODEBASE_LIST = "codebase"
 DATA_SOURCE_LIST = "data_source"
 VENDOR_LIST = "vendor"
 
+# The question set a review works through. Held as an admin list rather than in
+# code because it is the institution's questionnaire: an adopter under a different
+# regulator, or with its own house standard, has to be able to reword a question,
+# drop one that does not apply and add its own. Seeded from SR 26-2 on a fresh
+# install and copied onto each model at registration, so a model always keeps the
+# questions it was actually asked even after the set is later edited.
+REVIEW_QUESTION_LIST = "review_questions"
+
 REFERENCE_LISTS = (
     "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,
-    MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people",
+    MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
 )
 
 # What a model type means to a Product's bindings. A Product binds one analytics
@@ -202,5 +210,12 @@ REFERENCE_SPECS = {
          "readonly": True},
         {"key": "division", "label": "Division", "type": "text", "reference": "division"},
         {"key": "line_of_business", "label": "Line of Business", "type": "text", "reference": "line_of_business"},
+    ]},
+    # The review questionnaire. ``short_label`` is the topic the console shows in
+    # bold above the question itself, exactly as a model's own copy does.
+    REVIEW_QUESTION_LIST: {"label": "Review questions", "id_prefix": "RQ",
+                           "display": "short_label", "fields": [
+        {"key": "short_label", "label": "Topic", "type": "text", "required": True},
+        {"key": "question", "label": "Question", "type": "textarea", "required": True},
     ]},
 }

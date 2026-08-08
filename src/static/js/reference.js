@@ -36,6 +36,10 @@ const Reference = {
     ["model_type", "Model Type"], ["vendor", "Vendor"],
     // The per-division risk policy: dimensions, ratings and the generated grids.
     ["risk", "Risk"],
+    // The questionnaire every review works through. Its own tab rather than a row
+    // among the reference lists: it is the institution's own standard, and the
+    // review workflow is built around it.
+    ["review_questions", "Review"],
     // Institution-specific wording that is not a reference list — what the
     // generated PDFs say (classification, author, legal notice).
     ["misc", "Misc"],
@@ -79,6 +83,14 @@ const Reference = {
       return;
     }
     if (!spec) { container.innerHTML = '<div class="empty">This section has moved.</div>'; return; }
+    if (this._tab === "review_questions") {
+      this._renderList(container, spec, res.data[this._tab] || [],
+        "The questions every review works through, asked of each model in this order. A " +
+        "model is copied the list as it stands when it is registered and keeps its own " +
+        "answers, so editing here changes what the <em>next</em> review asks — it never " +
+        "rewrites an answer already given.");
+      return;
+    }
     this._renderList(container, spec, res.data[this._tab] || []);
   },
 
@@ -139,7 +151,7 @@ const Reference = {
   // A plain reference list rendered as a table with a working add form and
   // inline edit / remove per row (via the confirm-to-amend flow). Selectors
   // mirror the shared Collections module so the e2e helpers can drive both.
-  _renderList(container, spec, items) {
+  _renderList(container, spec, items, intro) {
     const cols = spec.fields.filter((f) => !f.hidden);
     const head = cols.map((f) => "<th>" + esc(f.label) + "</th>").join("") + "<th></th>";
     const body = items.length
@@ -157,6 +169,7 @@ const Reference = {
       inputControl("add-" + spec.key + "-" + f.key, f) + "</div>").join("");
     container.innerHTML =
       '<div class="section-header">' + esc(spec.label) + "</div>" +
+      (intro ? '<p class="muted" style="font-size:12px">' + intro + "</p>" : "") +
       "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
       '<div class="row" style="margin-top:8px">' + addInputs +
       '<button class="btn small" data-add="' + esc(spec.key) + '">Add&hellip;</button></div>';

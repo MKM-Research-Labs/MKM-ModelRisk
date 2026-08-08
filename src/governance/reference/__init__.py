@@ -21,8 +21,10 @@
 from src.governance.reference._store import get_reference_lists, model_type_roles
 from src.governance.reference.commands import (add_option, ensure_default_model_types,
                                               ensure_default_reference_lists,
+    ensure_default_review_questions,
                                               remove_option, update_option)
 
 __all__ = ["get_reference_lists", "model_type_roles", "add_option",
            "ensure_default_model_types", "ensure_default_reference_lists",
+    "ensure_default_review_questions",
            "remove_option", "update_option"]

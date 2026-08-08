@@ -40,7 +40,7 @@ def test_lists_empty_initially():
         "model_type": [], "codebase": [],
         "people": [], "division": [], "line_of_business": [],
         "calculating_agent": [], "mrc": [],
-        "data_source": [], "vendor": [],
+        "data_source": [], "vendor": [], "review_questions": [],
     }
 
 
