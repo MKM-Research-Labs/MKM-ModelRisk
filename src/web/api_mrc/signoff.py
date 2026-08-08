@@ -39,8 +39,26 @@ from src.web.api_mrc._bp import mrc_bp
 from src.web.api_mrc._quorum import is_quorate
 
 
+def _review_received(record: dict) -> str:
+    """What the minute says about the review the committee was given, if any.
+
+    The committee signs off the risk rating; the Model Review Report is the
+    evidence in front of it when it does. Naming the report — and who signed it,
+    and when — is what makes the minute show the rating was granted on a basis,
+    rather than leaving a reader to hope one existed.
+    """
+    signoffs = (record.get("data") or {}).get("review_signoffs") or []
+    if not signoffs:
+        return ""
+    latest = signoffs[-1]
+    signed_at = (latest.get("signed_at") or "")[:10]
+    return (" MRC received the Model Review Report signed off by "
+            f"{latest.get('signed_by') or 'the reviewer'}"
+            f"{' on ' + signed_at if signed_at else ''}.")
+
+
 def _minute_text(signoff_kind: str, subject, subject_id: str, owner_bit: str,
-                 next_review) -> tuple[str, str]:
+                 next_review, review_bit: str = "") -> tuple[str, str]:
     """The title + wording recording what the committee ratified."""
     if signoff_kind == "retire":
         return (
@@ -66,7 +84,7 @@ def _minute_text(signoff_kind: str, subject, subject_id: str, owner_bit: str,
         f"Sign-off approved — {subject_id}",
         f"MRC has reviewed the sign-off request from the {subject.kind} owner"
         f"{owner_bit} and has granted approval and has set a date of next review "
-        f"on {next_review or 'not set'}.",
+        f"on {next_review or 'not set'}." + review_bit,
     )
 
 
@@ -76,7 +94,8 @@ def _auto_minute(ctx, meeting_id: str, meeting: dict, subject, subject_id: str,
     without re-typing. The wording reflects what was actually ratified."""
     owner = (record["data"] or {}).get("owner")
     owner_bit = f" ({owner})" if owner else ""
-    title, text = _minute_text(signoff_kind, subject, subject_id, owner_bit, next_review)
+    title, text = _minute_text(signoff_kind, subject, subject_id, owner_bit, next_review,
+                               _review_received(record))
     fields = {"title": title, "text": text, subject.id_key: subject_id}
     chair = meeting["data"].get("chair")
     if chair:

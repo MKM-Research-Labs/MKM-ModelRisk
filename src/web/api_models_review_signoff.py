@@ -29,7 +29,7 @@ from datetime import date
 
 from flask import jsonify
 
-from config.governance import (REVIEW_DOC_CATEGORIES, REVIEW_STAGES,
+from config.governance import (REVIEW_REPORT_CATEGORY, REVIEW_STAGES,
                                SIGNED_OFF_REVIEW_STATUS)
 from src.command import dispatch, require_confirmation
 from src.governance.documents import add_document, model_scope
@@ -46,8 +46,6 @@ from src.web.api_models_review import approvals, _stamped_now
 from src.web.api_models_review_notes import open_challenges
 
 REVIEW_SIGNOFFS = "review_signoffs"
-# The review's own working papers, and where its signed report is filed.
-REVIEW_DOC_CATEGORY = REVIEW_DOC_CATEGORIES[0]
 
 
 def signoff_blockers(data: dict, approvals_by_stage: dict) -> list[str]:
@@ -112,7 +110,7 @@ def sign_off(model_id: str):
     filename = f"{model_id}_model_review_report_{as_of}.pdf"
     meta = add_document(
         aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id, scope=model_scope(model_id),
-        category=REVIEW_DOC_CATEGORY, filename=filename, data=pdf,
+        category=REVIEW_REPORT_CATEGORY, filename=filename, data=pdf,
         description=f"Model Review Report signed off {as_of}", actor=ctx.principal.actor,
     )
     dispatch(

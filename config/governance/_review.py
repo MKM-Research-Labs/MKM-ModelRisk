@@ -48,6 +48,11 @@ REVIEW_STAGES = (
 )
 REVIEW_STAGE_KEYS = tuple(stage["key"] for stage in REVIEW_STAGES)
 DEFAULT_REVIEW_STATUS = "Not started"
+# A new cycle is recorded, never a reset: the stage register is append-only, so
+# starting a review writes a marker row and the stages agreed *before* it belong
+# to the review that has already been signed off. The previous cycle stays
+# readable — its approvals, its notes and its filed report are the history.
+CYCLE_START_STAGE = "cycle-start"
 # The status a signed-off review leaves behind.
 SIGNED_OFF_REVIEW_STATUS = "Signed off"
 VALID_REVIEW_STATUSES = (

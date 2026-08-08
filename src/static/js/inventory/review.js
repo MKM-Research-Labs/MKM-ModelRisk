@@ -53,6 +53,8 @@ const NEW_VERSION_CHECKLIST = ["review_docs_updated", "review_sensitivities_upda
 const NEW_VERSION_TRIGGER = "New version";
 // Mirrors config VALID_REVIEWER_VERDICTS (config/governance/_review.py).
 const REVIEWER_VERDICTS = ["Not reviewed", "Accepted", "Challenged"];
+// Mirrors config VALID_REVIEW_TRIGGERS (config/governance/_review.py).
+const REVIEW_TRIGGERS = ["Periodic", "New version", "Owner change", "MRC directed"];
 
 Object.assign(Detail, {
   // Which stage is open. Held on Detail (not in the URL) so switching model tabs
@@ -181,6 +183,7 @@ Object.assign(Detail, {
     box.innerHTML = this._signoffPanel(d);
     this._bindThread("signoff");
     this._bindSignoff();
+    this._bindCycle();
   },
 
   // What stands between this review and its sign-off. Computed here from the same
@@ -228,13 +231,44 @@ Object.assign(Detail, {
       'their own words — this is printed in the report the committee reads"></textarea></div>' +
       '<button class="btn small primary" id="rs-signoff"' +
       (blockers.length ? " disabled" : "") + ">Sign off &amp; file the report&hellip;</button>";
-    return '<div class="section-header">Reviewer sign-off</div>' +
+    return this._nextCycle(d) + '<div class="section-header">Reviewer sign-off</div>' +
       '<p class="muted" style="font-size:12px">Signing off files the Model Review Report ' +
       "against this model &mdash; every stage, both sides of the nine questions, the registers " +
       "and the record of challenge. The MRC receives that report and signs off the risk " +
       "rating; it does not adjudicate the review.</p>" +
       (history ? '<div class="section-header" style="margin-top:12px">Signed</div>' + history : "") +
       gate + form + this._thread("signoff", d);
+  },
+
+  // Once a review is signed off, the tab's job is to start the next one — and to
+  // say why it is happening, because what a reviewer should look at differs
+  // between a periodic review, a new version, a change of owner and a direction
+  // from the committee.
+  _nextCycle(d) {
+    const signed = (d.review_signoffs || []).length;
+    const started = (d.review_progress || []).filter((r) => r.stage === "cycle-start").length;
+    if (!signed || this._model.retired) return "";
+    if (started > signed - 1 && d.review_status !== "Signed off") return "";
+    return '<div class="section-header">Start the next review</div>' +
+      '<p class="muted" style="font-size:12px">This review is signed off. Starting another ' +
+      "clears the stages for the new one &mdash; nothing is erased: the approvals, the " +
+      "record of challenge and the report just signed stay on the model.</p>" +
+      '<div class="row" style="align-items:center">' +
+      '<select id="rc-trigger">' + REVIEW_TRIGGERS.map((x) =>
+        "<option>" + esc(x) + "</option>").join("") + "</select>" +
+      '<input id="rc-note" placeholder="Why now (optional)" style="flex:1">' +
+      '<button class="btn small" id="rc-start">Start a review&hellip;</button></div>';
+  },
+
+  _bindCycle() {
+    const btn = document.getElementById("rc-start");
+    if (!btn) return;
+    btn.onclick = () => {
+      App.amend("Start a new review of " + this._id + ".", "POST",
+        "/api/models/" + this._id + "/review/start-cycle",
+        { trigger: val("rc-trigger"), note: val("rc-note") },
+        () => { this._reviewStage = "documents"; this.show(this._id, "review", { scroll: false }); });
+    };
   },
 
   _bindSignoff() {

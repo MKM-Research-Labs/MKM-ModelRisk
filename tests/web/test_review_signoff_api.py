@@ -110,7 +110,9 @@ def test_signing_off_records_the_attestation_and_files_the_report(client):
     assert signed["signed_at"] and signed["report_filename"]
     assert data["review_status"] == "Signed off"
 
-    filed = [d for d in data["documents"] if d["category"] == "Review"]
+    # Filed apart from the reviewer's working papers: what the committee is given
+    # is the signed report, and only that is a document anybody should be tabling.
+    filed = [d for d in data["documents"] if d["category"] == "Model Review Report"]
     assert len(filed) == 1
     assert filed[0]["filename"] == signed["report_filename"]
     served = client.get(f"/api/models/M1/documents/{filed[0]['item_id']}/download")
