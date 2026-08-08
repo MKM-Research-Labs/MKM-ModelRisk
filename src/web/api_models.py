@@ -24,7 +24,8 @@ from datetime import date
 
 from flask import Blueprint, jsonify, request
 
-from config.governance import COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPECS, REGISTER_FIELDS
+from config.governance import (COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPECS,
+                               REGISTER_FIELDS, VALID_REVIEW_TRIGGERS)
 from src.files import UploadError, upload_path
 from src.governance.documents import (add_document, find_document, model_scope,
                                       remove_document)
@@ -100,6 +101,10 @@ def field_specs():
         "groups": _grouped_specs(reference_options()),
         "register": list(REGISTER_FIELDS),
         "collections": _collection_specs(),
+        # Why a review is being run. The server validates against this list, so the
+        # console has to offer the same one — served rather than copied, or the two
+        # drift and a legitimate trigger starts being refused.
+        "review_triggers": list(VALID_REVIEW_TRIGGERS),
         **document_specs(),
     })
 

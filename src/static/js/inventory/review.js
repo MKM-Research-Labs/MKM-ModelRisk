@@ -53,8 +53,11 @@ const NEW_VERSION_CHECKLIST = ["review_docs_updated", "review_sensitivities_upda
 const NEW_VERSION_TRIGGER = "New version";
 // Mirrors config VALID_REVIEWER_VERDICTS (config/governance/_review.py).
 const REVIEWER_VERDICTS = ["Not reviewed", "Accepted", "Challenged"];
-// Mirrors config VALID_REVIEW_TRIGGERS (config/governance/_review.py).
-const REVIEW_TRIGGERS = ["Periodic", "New version", "Owner change", "MRC directed"];
+// Why a review is being run comes from the server's specs (VALID_REVIEW_TRIGGERS in
+// config/governance/_review.py), which is also what the start-cycle endpoint validates
+// against. Copying the list here meant an adopter adding a trigger got it refused by a
+// console still offering the old four. The fallback covers a spec that has not loaded.
+const REVIEW_TRIGGERS_FALLBACK = ["Periodic", "New version", "Owner change", "MRC directed"];
 
 Object.assign(Detail, {
   // Which stage is open. Held on Detail (not in the URL) so switching model tabs
@@ -254,7 +257,8 @@ Object.assign(Detail, {
       "clears the stages for the new one &mdash; nothing is erased: the approvals, the " +
       "record of challenge and the report just signed stay on the model.</p>" +
       '<div class="row" style="align-items:center">' +
-      '<select id="rc-trigger">' + REVIEW_TRIGGERS.map((x) =>
+      '<select id="rc-trigger">' +
+      ((this._specs || {}).review_triggers || REVIEW_TRIGGERS_FALLBACK).map((x) =>
         "<option>" + esc(x) + "</option>").join("") + "</select>" +
       '<input id="rc-note" placeholder="Why now (optional)" style="flex:1">' +
       '<button class="btn small" id="rc-start">Start a review&hellip;</button></div>';
