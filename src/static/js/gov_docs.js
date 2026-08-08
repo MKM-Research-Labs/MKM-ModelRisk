@@ -25,10 +25,21 @@ function parseModelTypes(str) {
   return (str || "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+// Two panels, because the tab holds two different kinds of thing. Bibliography is the
+// external reference material this governance framework is built on — papers, standards,
+// regulatory texts — which is everything filed here to date. Artefacts is for what the
+// institution itself produces; what belongs there is still being decided, so it is an
+// empty panel rather than a guess at a schema.
+const GOV_DOC_PANELS = [
+  { key: "bibliography", label: "Bibliography" },
+  { key: "artefacts", label: "Artefacts" },
+];
+
 const GovDocs = {
   _docs: [],
   _types: [],
   _filter: "",
+  _panel: "bibliography",
 
   async render() {
     const [docs, settings] = await Promise.all([
@@ -39,8 +50,11 @@ const GovDocs = {
     this._types = parseModelTypes(settings.fields.document_model_types);
     this._filter = "";
     document.getElementById("tab-documents").innerHTML = this._shell();
-    this._renderRows();
-    this._bindShell();
+    if (this._panel === "bibliography") {
+      this._renderRows();
+      this._bindShell();
+    }
+    this._bindPanels();
   },
 
   _chip(label, on, attrs) {
@@ -70,13 +84,33 @@ const GovDocs = {
     ).join("");
   },
 
+  _panelTabs() {
+    return '<div class="dtabs">' + GOV_DOC_PANELS.map((p) =>
+      '<button class="dtab' + (this._panel === p.key ? " active" : "") +
+      '" data-gdpanel="' + p.key + '">' + esc(p.label) +
+      (p.key === "bibliography" ? " (" + this._docs.length + ")" : "") +
+      "</button>").join("") + "</div>";
+  },
+
+  _bindPanels() {
+    document.querySelectorAll("[data-gdpanel]").forEach((btn) => {
+      btn.onclick = () => { this._panel = btn.getAttribute("data-gdpanel"); this.render(); };
+    });
+  },
+
   _shell() {
+    if (this._panel === "artefacts") {
+      return '<div class="card"><h3>Documents</h3>' + this._panelTabs() +
+        '<div class="empty" style="margin-top:12px">Artefacts are not defined yet. ' +
+        "Nothing is filed here — the reference material is under Bibliography.</div></div>";
+    }
     const opts = ['<option value="">All model types</option>']
       .concat(this._types.map((t) => '<option value="' + esc(t) + '">' + esc(t) + "</option>"))
       .join("");
-    return '<div class="card"><h3>Documents (' + this._docs.length + ")</h3>" +
-      '<p class="muted">External reference material, tagged by model type. ' +
-      "Manage the type list in Admin &rsaquo; MRC settings.</p>" +
+    return '<div class="card"><h3>Documents</h3>' + this._panelTabs() +
+      '<p class="muted" style="margin-top:10px">The external reference material this ' +
+      "framework is built on, tagged by model type. Manage the type list in " +
+      "Admin &rsaquo; MRC settings.</p>" +
       // Upload row
       '<div class="row" style="align-items:center;margin-bottom:6px"><input type="file" id="gd-file">' +
       '<button class="btn small primary" id="gd-upload">Upload</button></div>' +
