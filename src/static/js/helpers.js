@@ -96,6 +96,15 @@ const Policy = {
     const dim = p && p.dimensions && p.dimensions[key];
     return (dim && dim.label) || null;
   },
+  // What to call a dimension, always. A division renames one and every screen that
+  // asks follows; nothing anywhere else may spell out "Materiality" or "Complexity",
+  // because the day a division renames one, every such spelling becomes a lie. Where
+  // no policy has been drafted yet the key itself is humanised — derived from the
+  // structure rather than a name somebody typed into the source.
+  dimensionName(key, division) {
+    return this.dimensionLabel(key, division) ||
+      key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  },
   // Mission-Criticality bands as {value: score, label: name} for a select — the model
   // stores the score, but the owner picks by the admin-defined band name.
   missionOptions(division) {
@@ -287,8 +296,9 @@ function mrcStatusBadge(data) {
     "Rating moved": "The MRC approved " + approvedRating + "; the heatmap now says " +
       (Policy.gridRating(data.tier, data.materiality, data.complexity, data.division) || "—") +
       ". Request sign-off for the rating it now carries.",
-    "Not placed": "Materiality or Complexity is unset, so this is not on the heatmap and " +
-      "there is no rating to sign off.",
+    "Not placed": Policy.dimensionName("materiality", data.division) + " or " +
+      Policy.dimensionName("complexity", data.division).toLowerCase() +
+      " is unset, so this is not on the heatmap and there is no rating to sign off.",
   };
   const title = hints[state] ? ' title="' + esc(hints[state]) + '"' : "";
   return '<span style="color:' + (MRC_STATE_COLORS[state] || "#9e9e9e") +

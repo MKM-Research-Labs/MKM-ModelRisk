@@ -32,6 +32,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.files import HIDDEN_DOC_EXTENSIONS
+from src.governance.risk_policy.naming import field_label
 from config.governance import (PRODUCT_COLLECTION_SPECS, PRODUCT_COMPONENTS,
                                PRODUCT_FIELD_SPECS)
 from src.files import extension
@@ -97,7 +98,7 @@ def _groups() -> dict[str, list[str]]:
 
 
 def _field_group(data: dict, title: str, keys: list[str], extra: list) -> str:
-    rows = [[PRODUCT_FIELD_SPECS[k].get("label", k), _value(data, k)] for k in keys] + extra
+    rows = [[field_label(k, PRODUCT_FIELD_SPECS[k].get("label", k), data.get("division") or ""), _value(data, k)] for k in keys] + extra
     return _section(title, _para_table(["Field", "Value"], rows, [0.28, 0.72], caption=title))
 
 

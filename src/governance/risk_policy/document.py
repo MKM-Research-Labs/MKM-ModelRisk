@@ -20,8 +20,9 @@
 """The Risk Categorisation document: one PDF of a division's proposed categorisation.
 
 Generated for the division's MRC to ratify — the three dimensions, the overall risk
-ratings (each with its colour, explanation and score) and the generated Materiality x
-Complexity grids per Mission-Criticality band — in the shared LaTeX house style.
+ratings (each with its colour, explanation and score) and the generated
+risk grids — in the shared LaTeX house style, under the division's own names for
+its dimensions.
 
 This is DISTINCT from the division's Risk Policy document, which is the formal written
 policy uploaded separately (see the ``document`` on the risk-policy store); the two are
@@ -49,8 +50,18 @@ _STATUS_SUBTITLE = {
     "approved": "Approved policy",
     "seed": "Firm-wide seed policy",
 }
-_DIMENSIONS = [("mission_criticality", "Mission Criticality"),
-               ("materiality", "Materiality"), ("complexity", "Complexity")]
+# The three dimensions are structural — one grid per band of the first, across the
+# other two. What a division CALLS them is its own, and is read from the policy
+# being published: a document that spelled them out here would keep printing the
+# old name the day a division renamed one, which is exactly the moment the
+# document matters most.
+_DIMENSION_KEYS = ("mission_criticality", "materiality", "complexity")
+
+
+def _dim_label(policy: dict, key: str) -> str:
+    """What this policy calls one of its dimensions."""
+    dim = (policy.get("dimensions") or {}).get(key) or {}
+    return dim.get("label") or key.replace("_", " ").capitalize()
 
 
 def _hex(colour) -> str:
@@ -86,10 +97,12 @@ def _grid_cell(rating: str, colour) -> str:
 
 
 def _grids(policy: dict) -> str:
-    """One Materiality (rows, high at top) x Complexity (columns) table per Mission-
-    Criticality band; each cell is its assigned risk rating in the rating's colour."""
+    """One table per band of the first dimension, the second down the rows (high at
+    top) and the third across the columns; each cell is its assigned risk rating in
+    the rating's colour. Every heading is the division's own name for the dimension."""
     mat = [b["name"] for b in policy["dimensions"]["materiality"]["bands"]]
     comp = [b["name"] for b in policy["dimensions"]["complexity"]["bands"]]
+    mat_label, comp_label = _dim_label(policy, "materiality"), _dim_label(policy, "complexity")
     colour = {r["name"]: r.get("colour") for r in policy["risk_ratings"]}
     out = ""
     for band in policy["dimensions"]["mission_criticality"]["bands"]:
@@ -103,7 +116,8 @@ def _grids(policy: dict) -> str:
             for a in reversed(mat))
         table = ("\\begin{center}\\begin{tabular}{l" + "c" * len(comp) + "}\n\\toprule\n"
                  + head + "\n\\midrule\n" + rows + "\\bottomrule\n\\end{tabular}\\end{center}\n")
-        out += _subsection(mc, "Materiality (rows) $\\times$ Complexity (columns).\\par\\medskip\n" + table)
+        out += _subsection(mc, _esc(mat_label) + " (rows) $\\times$ " + _esc(comp_label)
+                           + " (columns).\\par\\medskip\n" + table)
     return out
 
 
@@ -129,7 +143,7 @@ def build_policy_document_tex(division: str, detail: dict, settings: dict, *,
     dims = "".join(
         _band_table(policy["dimensions"][key]["bands"], "Score",
                     _esc(policy["dimensions"][key]["label"]) + " bands")
-        for key, _label in _DIMENSIONS)
+        for key in _DIMENSION_KEYS)
     dims_section = _section(
         "Risk dimensions",
         "A model is placed by three dimensions. Each is an ordered set of bands.\n" + dims)
@@ -142,8 +156,10 @@ def build_policy_document_tex(division: str, detail: dict, settings: dict, *,
 
     grids_section = _section(
         "Risk tables",
-        "One Materiality $\\times$ Complexity table per Mission-Criticality band, mapping "
-        "each cell to an overall risk rating.\n" + _grids(policy))
+        "One " + _esc(_dim_label(policy, "materiality")) + " $\\times$ "
+        + _esc(_dim_label(policy, "complexity")) + " table per "
+        + _esc(_dim_label(policy, "mission_criticality")) + " band, mapping each cell "
+        "to an overall risk rating.\n" + _grids(policy))
 
     doc_note = ""
     if detail.get("document"):

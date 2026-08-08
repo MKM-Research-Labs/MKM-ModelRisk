@@ -118,8 +118,10 @@ const RiskEditor = {
       "can carry. The score is the completeness-audit escalation multiplier.</p>" +
       '<div id="rp-ratings"></div></section>' +
       '<section data-rp="grids"><p class="muted" style="font-size:11px">Generated from the ' +
-      "dimensions — one Materiality × Complexity table per Mission-Criticality band. Pick each " +
-      'cell\'s rating.</p><div id="rp-grids"></div></section>' +
+      "dimensions — one " + esc(this._dimName("materiality")) + " × " +
+      esc(this._dimName("complexity")) + " table per " +
+      esc(this._dimName("mission_criticality")) + " band. Pick each cell\'s rating." +
+      '</p><div id="rp-grids"></div></section>' +
       '<div class="section-header" style="margin-top:18px">Risk Policy document</div>' +
       '<p class="muted" style="font-size:11px">The division\'s formal written Risk Policy ' +
       "(PDF or Word) — a separate document from the categorisation configured above, sent to " +
@@ -191,14 +193,21 @@ const RiskEditor = {
     el.innerHTML = (map[this._state] || [""])[0];
   },
 
+  // The three dimensions are structural — the heatmap is one grid per band of the
+  // first, across the other two — but what they are CALLED is the division's, and is
+  // read from the policy being edited. Nothing here spells a dimension out.
   _dimKeys() {
-    return [["mission_criticality", "Mission Criticality"], ["materiality", "Materiality"],
-            ["complexity", "Complexity"]];
+    return ["mission_criticality", "materiality", "complexity"];
+  },
+
+  _dimName(key) {
+    const dim = (this._policy.dimensions || {})[key] || {};
+    return dim.label || key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
   },
 
   _drawDims() {
     const host = document.getElementById("rp-dims");
-    host.innerHTML = this._dimKeys().map(([key]) => {
+    host.innerHTML = this._dimKeys().map((key) => {
       const dim = this._policy.dimensions[key];
       return '<div class="dim" data-dim="' + key + '" style="border:1px solid var(--line);' +
         'border-radius:8px;padding:12px 14px;margin-bottom:12px">' +
@@ -360,13 +369,13 @@ const RiskEditor = {
         return '<td class="hcell" style="background:' + bg + '"><select data-mc="' + esc(mc) +
           '" data-cell="' + esc(a + "|" + c) + '">' + opts(rag) + "</select></td>";
       }).join("") + "</tr>").join("");
-    const mcLabel = p.dimensions.mission_criticality.label || "Mission Criticality";
+    const mcLabel = this._dimName("mission_criticality");
     const bands = p.dimensions.mission_criticality.bands;
     document.getElementById("rp-grids").innerHTML =
       '<p class="muted" style="font-size:11px;margin:0 0 12px">' + bands.length +
       " tables — one per " + esc(mcLabel) + " band (rows = " +
-      esc(p.dimensions.materiality.label || "Materiality") + ", columns = " +
-      esc(p.dimensions.complexity.label || "Complexity") + ").</p>" +
+      esc(this._dimName("materiality")) + ", columns = " +
+      esc(this._dimName("complexity")) + ").</p>" +
       '<div style="display:flex;flex-wrap:wrap;gap:22px">' +
       bands.map((b) =>
         '<div><div class="grid-cap" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +

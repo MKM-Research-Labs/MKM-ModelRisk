@@ -198,6 +198,19 @@ MODEL_FIELD_SPECS = {
     },
 }
 
+# Which record field carries which risk dimension, and which field justifies it.
+# The three dimensions are structural, so this mapping is too — but nothing here
+# says what a dimension is CALLED. That is the division's policy's to say, and any
+# surface showing a dimension asks the policy rather than spelling it out, so a
+# rename reaches every screen and every document at once.
+RISK_DIMENSION_FIELDS = {
+    "tier": "mission_criticality", "materiality": "materiality", "complexity": "complexity",
+}
+RISK_RATIONALE_FIELDS = {
+    "tier_rationale": "mission_criticality", "materiality_rationale": "materiality",
+    "complexity_rationale": "complexity",
+}
+
 # Human-readable tier descriptors (shown next to the tier badge).
 # Three tiers by criticality (Tier 4/5 are not used).
 TIER_LABELS = {1: "Mission critical", 2: "Important", 3: "Not important"}
