@@ -26,7 +26,7 @@
 // using its last approved (or the firm-wide seed) policy until the MRC signs the draft off.
 const RiskEditor = {
   _division: null, _divisions: [], _policy: null, _state: "seed", _box: null,
-  _sub: "dimensions",   // active sub-tab: dimensions | ratings | grids
+  _sub: "dimensions",   // active sub-tab: dimensions | ratings | grids | audit
 
   async render(container) {
     this._box = container;
@@ -110,7 +110,8 @@ const RiskEditor = {
       "using the last approved (or firm-wide seed) policy until the committee signs it off.</p>" +
       // Three sub-tabs, matching the Admin mockup: Dimensions | Risk Ratings | Risk Tables.
       '<div class="dtabs" id="rp-subtabs">' + sub("dimensions", "Dimensions") +
-      sub("ratings", "Risk Ratings") + sub("grids", "Risk Tables") + "</div>" +
+      sub("ratings", "Risk Ratings") + sub("grids", "Risk Tables") +
+      sub("audit", "Audit") + "</div>" +
       '<section data-rp="dimensions"><p class="muted" style="font-size:11px">Each dimension ' +
       "is an ordered set of bands — set each band's name, colour, explanation and score, and " +
       'add or remove bands as the division needs.</p><div id="rp-dims"></div></section>' +
@@ -122,6 +123,7 @@ const RiskEditor = {
       esc(this._dimName("complexity")) + " table per " +
       esc(this._dimName("mission_criticality")) + " band. Pick each cell\'s rating." +
       '</p><div id="rp-grids"></div></section>' +
+      '<section data-rp="audit"><div id="rp-audit"></div></section>' +
       // The written policy document now lives on Documents -> Artefacts, filed on its
       // division's shelf with the rest of what that division issues. This tab configures
       // the categorisation; it is no longer also a filing cabinet.
@@ -138,6 +140,10 @@ const RiskEditor = {
     this._drawDims();
     this._drawRatings();
     this._drawGrids();
+    // The audit panel edits the same draft and saves through the same path, so it
+    // reaches the MRC with the rest of the policy rather than as a setting of its own.
+    RiskPolicyAudit.render(document.getElementById("rp-audit"), this._policy,
+                           () => this._save());
     this._showSub();
   },
 
