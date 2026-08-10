@@ -75,10 +75,14 @@ def _grouped_specs(options_by_list: dict[str, list]):
             by_name[spec["group"]] = group
             groups.append(group)
         resolved = resolve_field({**spec, "key": key}, options_by_list)
-        group["fields"].append(
-            {"key": resolved["key"], "label": resolved["label"],
-             "type": resolved["type"], "options": resolved["options"]}
-        )
+        field = {"key": resolved["key"], "label": resolved["label"],
+                 "type": resolved["type"], "options": resolved["options"]}
+        # What each option is shown as, where a status vocabulary separates the word
+        # a record stores from the word a screen shows. Carried only when the two
+        # differ, so every other field's payload is unchanged.
+        if resolved.get("option_labels"):
+            field["option_labels"] = resolved["option_labels"]
+        group["fields"].append(field)
     return groups
 
 

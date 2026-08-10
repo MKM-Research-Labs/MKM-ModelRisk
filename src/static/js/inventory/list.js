@@ -63,7 +63,8 @@ const InventoryList = {
     { key: "mrc", label: "MRC Status", sortVal: (m) => mrcState(m.d),
       cell: (m) => mrcStatusBadge(m.d) },
     { key: "lifecycle", label: "Lifecycle", sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || m.d.status || "").toLowerCase(),
-      cell: (m) => m.retired ? '<span class="pill">retired</span>' : fieldDisplay(m.d.lifecycle_stage || m.d.status) },
+      cell: (m) => m.retired ? '<span class="pill">retired</span>'
+        : optionLabel(Inventory.specByKey("lifecycle_stage"), m.d.lifecycle_stage || m.d.status) },
   ],
 
   mount(models, onRow) {
@@ -167,12 +168,31 @@ const InventoryList = {
   },
 
   // --- filters ---
+  // The stages the estate actually uses, from the division's vocabulary, falling
+  // back to the shipped words before it has been seeded.
+  _lifecycleValues() {
+    const spec = typeof Inventory !== "undefined" && Inventory.specByKey
+      ? Inventory.specByKey("lifecycle_stage") : null;
+    return (spec && spec.options && spec.options.length) ? spec.options : LIFECYCLE_STAGES;
+  },
+
+  // What each stage is shown as, where the institution has renamed one.
+  _lifecycleLabels() {
+    const spec = typeof Inventory !== "undefined" && Inventory.specByKey
+      ? Inventory.specByKey("lifecycle_stage") : null;
+    return (spec && spec.option_labels) || {};
+  },
+
   _renderFilters() {
     const owners = [...new Set(this._models.map((m) => m.d.owner).filter(Boolean))].sort();
     const f = this._filters;
-    const sel = (id, cur, opts) =>
+    // ``shown`` maps a stored value to what it is displayed as, for the filters
+    // whose vocabulary the institution has renamed. Without it the lifecycle filter
+    // would offer the word on record rather than the word on every other screen.
+    const sel = (id, cur, opts, shown) =>
       '<select id="' + id + '"><option value="">' + opts[0] + "</option>" +
-      opts.slice(1).map((o) => '<option' + (o === cur ? " selected" : "") + ">" + esc(o) + "</option>").join("") +
+      opts.slice(1).map((o) => '<option value="' + esc(o) + '"' + (o === cur ? " selected" : "") +
+        ">" + esc((shown && shown[o]) || o) + "</option>").join("") +
       "</select>";
     // The criticality filter offers band NAMES but still filters on the stored score, so
     // the option's value and its label differ — hence its own builder.
@@ -190,7 +210,8 @@ const InventoryList = {
       sel("mf-rag", f.rag, ["All ratings", ...this._ratings().map((r) => r.name)]) +
       sel("mf-owner", f.owner, ["All owners", ...owners]) +
       sel("mf-review", f.review, ["All reviews", "Overdue", "Due Soon", "On Track", "Not Scheduled"]) +
-      sel("mf-lifecycle", f.lifecycle, ["All lifecycle", ...LIFECYCLE_STAGES, HIBERNATED_FILTER]) +
+      sel("mf-lifecycle", f.lifecycle, ["All lifecycle", ...this._lifecycleValues(), HIBERNATED_FILTER],
+          this._lifecycleLabels()) +
       '<button class="btn small" id="mf-clear">Clear</button>' +
       '<span class="fcount" id="mf-count"></span>';
     this._wireFilters();

@@ -26,7 +26,9 @@ from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
                                DEFAULT_MODEL_TYPES, DEFAULT_VENDORS,
                                MODEL_TYPE_LIST, REFERENCE_SPECS,
                                REVIEW_QUESTION_LIST, SR262_QUESTIONS,
-                               STANDING_AGENDA, STANDING_AGENDA_LIST, VENDOR_LIST)
+                               STANDING_AGENDA, STANDING_AGENDA_LIST,
+                               LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES,
+                               VENDOR_LIST)
 from config.identity import SYSTEM_ACTOR
 from src.database import Event, append_event
 from src.governance import collections as coll
@@ -161,6 +163,22 @@ def ensure_default_standing_agenda(*, actor: str = SYSTEM_ACTOR, config=None) ->
         add_option(list_name=STANDING_AGENDA_LIST, fields=dict(item), actor=actor,
                    reason="Seed the standing agenda on first run", config=config)
     return len(STANDING_AGENDA)
+
+
+def ensure_default_lifecycle_stages(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the lifecycle vocabulary on a fresh install; return how many were added.
+
+    Each stage is seeded with its stored value EQUAL to the word records already
+    carry, and its label the same. That is what makes this migration-free: nothing
+    in the estate moves, and renaming a stage afterwards edits only the label.
+    """
+    collections, _ = load(config)
+    if collections.get(LIFECYCLE_STAGE_LIST):
+        return 0
+    for stage in VALID_LIFECYCLE_STAGES:
+        add_option(list_name=LIFECYCLE_STAGE_LIST, fields={"value": stage, "label": stage},
+                   actor=actor, reason="Seed the lifecycle stages on first run", config=config)
+    return len(VALID_LIFECYCLE_STAGES)
 
 
 def ensure_default_reference_lists(*, actor: str = SYSTEM_ACTOR, config=None) -> int:

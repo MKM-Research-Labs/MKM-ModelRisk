@@ -23,6 +23,7 @@ Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 from __future__ import annotations
 
+from config.governance._inventory import LIFECYCLE_STAGE_LIST
 from config.governance._mrc import STANDING_AGENDA_ROLES
 from config.permissions import ROLES
 
@@ -55,10 +56,19 @@ REVIEW_QUESTION_LIST = "review_questions"
 # always shows the agenda it was actually given.
 STANDING_AGENDA_LIST = "standing_agenda"
 
+# (LIFECYCLE_STAGE_LIST is defined in _inventory, beside the field it serves.)
+# A status vocabulary: the words a record can carry for its lifecycle. Two columns,
+# and the difference between them is the whole point. ``value`` is what the record
+# STORES and what the code matches on; ``label`` is what a screen shows. Renaming a
+# status therefore edits the label and moves nothing in the estate — the stable
+# value is seeded to today's word, so nothing has to be migrated for this to work,
+# and a record set to "Production" years ago still reads correctly under whatever
+# the division calls that stage now.
+
 REFERENCE_LISTS = (
     "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,
     MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
-    STANDING_AGENDA_LIST,
+    STANDING_AGENDA_LIST, LIFECYCLE_STAGE_LIST,
 )
 
 # What a model type means to a Product's bindings. A Product binds one analytics
@@ -238,5 +248,13 @@ REFERENCE_SPECS = {
         {"key": "title", "label": "Item", "type": "text", "required": True},
         {"key": "description", "label": "Description", "type": "textarea"},
         {"key": "kind", "label": "Role", "type": "choice", "options": STANDING_AGENDA_ROLES},
+    ]},
+    # A status vocabulary (see LIFECYCLE_STAGE_LIST). ``value`` is stored on the
+    # record and matched by code; ``label`` is shown. An adopter renames the label.
+    LIFECYCLE_STAGE_LIST: {"label": "Lifecycle stages", "id_prefix": "LC",
+                           "display": "label", "value_key": "value", "fields": [
+        {"key": "label", "label": "Shown as", "type": "text", "required": True},
+        {"key": "value", "label": "Stored as", "type": "text", "required": True,
+         "immutable": True},
     ]},
 }

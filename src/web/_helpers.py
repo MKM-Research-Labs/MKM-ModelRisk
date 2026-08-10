@@ -85,15 +85,44 @@ def reference_options() -> dict[str, list]:
     dropdown of registered model ids.
     """
     lists = get_reference_lists()
+    # A list with a ``value_key`` is a status vocabulary: the record stores one word
+    # and the screen shows another. The options stay the STORED values — that is what
+    # a dropdown must submit and what the code matches on — and the labels travel
+    # beside them, so a rename changes what is shown without moving anything stored.
     options = {
-        name: [item[REFERENCE_SPECS[name].get("display", "value")] for item in items]
+        name: [item[_option_key(name)] for item in items if item.get(_option_key(name))]
         for name, items in lists.items()
     }
     options["model_inventory"] = [m["model_id"] for m in list_models()]
     return options
 
 
-def resolve_field(field: dict, options_by_list: dict | None = None) -> dict:
+def _option_key(name: str) -> str:
+    """Which field of a reference item a record stores. A status vocabulary names it
+    explicitly; every other list stores the same thing it displays."""
+    spec = REFERENCE_SPECS.get(name, {})
+    return spec.get("value_key") or spec.get("display", "value")
+
+
+def reference_option_labels() -> dict[str, dict]:
+    """``{list: {stored value: shown label}}`` for the status vocabularies.
+
+    Only lists that separate the two appear here, so a field with no entry is
+    displayed exactly as it is stored — which is every other dropdown in the app.
+    """
+    labels = {}
+    for name, items in get_reference_lists().items():
+        spec = REFERENCE_SPECS.get(name, {})
+        if not spec.get("value_key"):
+            continue
+        shown = spec.get("display", "value")
+        labels[name] = {item[spec["value_key"]]: item.get(shown) or item[spec["value_key"]]
+                        for item in items if item.get(spec["value_key"])}
+    return labels
+
+
+def resolve_field(field: dict, options_by_list: dict | None = None,
+                  labels_by_list: dict | None = None) -> dict:
     """Promote a field's reference to a choice dropdown when the referenced list
     has values; otherwise keep its native type and any static options.
 
@@ -111,6 +140,16 @@ def resolve_field(field: dict, options_by_list: dict | None = None) -> dict:
         "key": field["key"], "label": field["label"], "type": field_type,
         "options": options, "required": bool(field.get("required")),
     }
+    # What each stored value is shown as, where the two differ. Absent for every
+    # ordinary list, so those render exactly as before.
+    if reference:
+        shown = (labels_by_list or reference_option_labels()).get(reference)
+        if shown:
+            resolved["option_labels"] = dict(shown)
+    # Set once and never after: the console shows it but must not offer it for
+    # editing, and must not send it back — the domain would refuse the whole edit.
+    if field.get("immutable"):
+        resolved["immutable"] = True
     # Carry the hidden flag through so the UI can skip internal fields (e.g. the
     # agenda escalation back-pointers) in tables and add forms.
     if field.get("hidden"):

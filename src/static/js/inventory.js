@@ -30,7 +30,11 @@ function inputControl(id, spec, division) {
     else if (POLICY_DIMENSION_FIELD[spec.key]) {
       options = Policy.dimensionBandNames(POLICY_DIMENSION_FIELD[spec.key], division) || options;
     }
-    const opts = ["", ...options].map((o) => "<option>" + esc(o) + "</option>").join("");
+    // A status vocabulary submits the STORED value and shows the label beside it,
+    // so renaming a status changes every screen without moving anything on record.
+    const shown = spec.option_labels || {};
+    const opts = ["", ...options].map((o) =>
+      '<option value="' + esc(o) + '">' + esc(shown[o] || o) + "</option>").join("");
     return '<select id="' + id + '">' + opts + "</select>";
   }
   if (spec.type === "tier") {

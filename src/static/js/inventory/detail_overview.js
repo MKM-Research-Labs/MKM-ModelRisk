@@ -139,7 +139,9 @@ Object.assign(Detail, {
   _row(key, d) {
     const f = this.specByKey(key);
     if (!f) return "";
-    let value = fieldDisplay(d[key]);
+    // Through the spec, so a status vocabulary shows its label rather than the
+    // word the record stores.
+    let value = optionLabel(f, d[key]);
     if (key === "review_status") {
       // Set by the review workflow (each interim approval carries it forward), so
       // it is not typed here — it links to the tab that moves it instead.

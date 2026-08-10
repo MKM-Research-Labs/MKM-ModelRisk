@@ -44,6 +44,9 @@ const Reference = {
     // because they are the same kind of thing: a standard the institution sets,
     // copied onto each record it applies to.
     ["standing_agenda", "Agenda"],
+    // The words a model's lifecycle can carry. Shown-as is the division's to
+    // change; stored-as is what every record already holds and never moves.
+    ["lifecycle_stage", "Lifecycle"],
     // Institution-specific wording that is not a reference list — what the
     // generated PDFs say (classification, author, legal notice).
     ["misc", "Misc"],
@@ -87,6 +90,14 @@ const Reference = {
       return;
     }
     if (!spec) { container.innerHTML = '<div class="empty">This section has moved.</div>'; return; }
+    if (this._tab === "lifecycle_stage") {
+      this._renderList(container, spec, res.data[this._tab] || [],
+        "The stages a model moves through. <b>Shown as</b> is what every screen " +
+        "displays and is yours to change. <b>Stored as</b> is the word the records " +
+        "themselves carry, fixed once the stage exists — renaming a stage therefore " +
+        "changes what is shown without moving anything on record.");
+      return;
+    }
     if (this._tab === "standing_agenda") {
       this._renderList(container, spec, res.data[this._tab] || [],
         "The running order every meeting is seeded with. A meeting is copied the list " +
@@ -228,11 +239,12 @@ const Reference = {
     const row = document.getElementById("rlrow-" + item.item_id);
     row.innerHTML = '<td colspan="' + (cols.length + 1) + '"><div class="row">' +
       cols.map((f) => '<div class="field"><label>' + esc(f.label) + "</label>" +
-        (f.readonly ? '<div class="ro">' + fieldDisplay(item[f.key]) + "</div>"
-                    : inputControl("ce-" + f.key, f)) + "</div>").join("") +
+        (f.readonly || f.immutable
+          ? '<div class="ro">' + fieldDisplay(item[f.key]) + "</div>"
+          : inputControl("ce-" + f.key, f)) + "</div>").join("") +
       '<button class="btn small primary" id="ce-save">Save&hellip;</button>' +
       '<button class="btn small" id="ce-cancel">Cancel</button></div></td>';
-    cols.filter((f) => !f.readonly).forEach((f) => {
+    cols.filter((f) => !f.readonly && !f.immutable).forEach((f) => {
       const el = document.getElementById("ce-" + f.key);
       const current = item[f.key];
       if (current === null || current === undefined) return;
@@ -248,7 +260,7 @@ const Reference = {
     document.getElementById("ce-cancel").onclick = () => this.render();
     document.getElementById("ce-save").onclick = () => {
       const fields = {};
-      cols.filter((f) => !f.readonly).forEach((f) => {
+      cols.filter((f) => !f.readonly && !f.immutable).forEach((f) => {
         const v = val("ce-" + f.key);
         if (v !== "" || Array.isArray(v)) fields[f.key] = v;
       });

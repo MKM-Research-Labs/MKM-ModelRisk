@@ -115,6 +115,14 @@ def _validate(
         # A readonly field is written by one sanctioned path and no other — a person's
         # ratified roles are granted by their MRC, so the generic edit screen must not be
         # able to set them, whatever it sends.
+        # An immutable field is set when the item is created and never afterwards
+        # (adds validate with require_required, updates do not): a status
+        # vocabulary's stored value is what every record already holds, so editing
+        # it would orphan them all. The label beside it is what changes.
+        if field_spec.get("immutable") and not require_required:
+            raise DomainError(
+                f"{field_spec['label']} cannot be changed once set — records already "
+                "carry it. Edit what it is shown as instead")
         if field_spec.get("readonly") and not allow_readonly:
             raise DomainError(
                 f"{field_spec['label']} is not set directly — it is recorded by the "

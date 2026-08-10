@@ -37,6 +37,10 @@ VALID_VALIDATION_STATUSES = (
 )
 VALID_MATERIALITY = ("Low", "Medium", "High")
 VALID_COMPLEXITY = ("Low", "Medium", "High")
+# The admin vocabulary behind the lifecycle field. Named here, beside the field
+# that uses it, because the reference specs import from this module and not the
+# other way round.
+LIFECYCLE_STAGE_LIST = "lifecycle_stage"
 VALID_LIFECYCLE_STAGES = ("Development", "Validation", "Production", "Retired")
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 TIER_MIN = 1
@@ -122,6 +126,7 @@ MODEL_FIELD_SPECS = {
     "lifecycle_stage": {
         "label": "Lifecycle stage", "type": "choice",
         "options": VALID_LIFECYCLE_STAGES, "group": "Governance",
+        "reference": LIFECYCLE_STAGE_LIST,
     },
     "version": {"label": "Version", "type": "text", "group": "Governance"},
     "validation_status": {

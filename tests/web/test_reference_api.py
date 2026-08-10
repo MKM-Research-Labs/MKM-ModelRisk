@@ -57,11 +57,11 @@ def test_get_reference_empty(client):
                            "calculating_agent": [], "data_source": [], "mrc": [],
                            "model_type": [], "vendor": [], "codebase": [],
                            "people": [], "review_questions": [],
-                           "standing_agenda": []}
+                           "standing_agenda": [], "lifecycle_stage": []}
     assert [c["key"] for c in res["collections"]] == [
         "division", "line_of_business", "mrc", "calculating_agent", "data_source",
         "model_type", "vendor", "codebase", "people", "review_questions",
-        "standing_agenda"]
+        "standing_agenda", "lifecycle_stage"]
 
 
 def test_mrc_tor_fields_are_hidden_in_specs(client):

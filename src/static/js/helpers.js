@@ -138,6 +138,15 @@ const Policy = {
 };
 
 // Display a scalar value, or an em dash when empty.
+// What a stored value is shown as. A status vocabulary separates the two — the
+// record holds "Production" while the division may call that stage something else
+// — so anything displaying a field's value asks its spec first.
+function optionLabel(spec, value) {
+  const shown = spec && spec.option_labels;
+  if (!shown || value === null || value === undefined || value === "") return fieldDisplay(value);
+  return fieldDisplay(shown[value] || value);
+}
+
 function fieldDisplay(value) {
   if (value === null || value === undefined || value === "") return '<span class="muted">—</span>';
   // A multi-value field (a person's roles) reads as a list, not as "a,b,c".
