@@ -19,7 +19,9 @@
 // SOFTWARE.
 
 // The handoff editor: the field lineage + compatibility note on one chain edge.
-// Opened from the Model Chain screen. Declaring the handoff is idempotent (POST
+// Opened by clicking an arrow — either on the whole-estate Model Chain screen or on
+// a model's own Connections tab, which is why the host element is a parameter and
+// not a constant. Declaring the handoff is idempotent (POST
 // returns the existing one), so opening an edge that has no handoff yet creates it.
 // A field lineage row is a pair: the provider's (giver's) field mapped to the
 // consumer's (receiver's) field, so compatibility is stated field by field.
@@ -43,19 +45,23 @@ function _fieldCell(name, type, units) {
 const Handoffs = {
   _hid: null,
   _onChange: null,   // called after any mutation so the chain can refresh counts
+  // Which element the panel renders into. The Chain screen has one host; a model's
+  // Connections tab opens the same editor from its own arrows, into its own.
+  _host: "chain-handoff",
 
-  // Open (declaring if needed) the handoff on from->to, into #chain-handoff.
-  async open(fromModel, toModel, onChange) {
+  // Open (declaring if needed) the handoff on from->to, into the host element.
+  async open(fromModel, toModel, onChange, hostId) {
     this._onChange = onChange;
+    this._host = hostId || "chain-handoff";
     const h = await App.send("POST", "/api/handoffs", { from_model: fromModel, to_model: toModel });
     this._hid = h.handoff_id;
     this._render(h);
-    document.getElementById("chain-handoff").scrollIntoView({ block: "nearest" });
+    document.getElementById(this._host).scrollIntoView({ block: "nearest" });
   },
 
   close() {
     this._hid = null;
-    const box = document.getElementById("chain-handoff");
+    const box = document.getElementById(this._host);
     if (box) box.innerHTML = "";
     // Refresh the chain/edges table on close, so its counts and statuses catch
     // up — doing it per-edit would re-render the panel and shut this editor.
@@ -99,7 +105,7 @@ const Handoffs = {
     const side = (specs) => specs.map((f) =>
       '<div class="field"><label>' + esc(f.label) + "</label>" +
       '<input id="fl-' + f.key + '" placeholder="' + esc(f.ph) + '"></div>').join("");
-    document.getElementById("chain-handoff").innerHTML =
+    document.getElementById(this._host).innerHTML =
       '<div class="card" style="margin-top:14px">' +
       '<div class="row" style="align-items:center;justify-content:space-between">' +
       "<h3>Handoff &mdash; " + esc(d.from_model) + " &rarr; " + esc(d.to_model) + "</h3>" +

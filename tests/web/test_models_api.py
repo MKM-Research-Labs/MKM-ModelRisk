@@ -62,7 +62,12 @@ def test_chain_derives_the_string_of_pearls_from_declared_dependencies(client):
     assert _declare_dep(client, "A", "downstream", "B").status_code == 201
     chain = client.get("/api/models/chain").get_json()
     assert {n["model_id"] for n in chain["nodes"]} == {"A", "B"}
-    assert chain["links"] == [{"from": "A", "to": "B"}]
+    assert [(link["from"], link["to"]) for link in chain["links"]] == [("A", "B")]
+    # Each edge carries what the handoff on it says crosses it, so the graph can
+    # label the arrow. Nothing is declared here, so it reads as an empty draft.
+    assert chain["links"][0]["handoff"] == {
+        "declared": False, "field_count": 0, "status": None,
+    }
 
 
 def test_neighbourhood_reports_feeds_and_terminal_flag(client):
@@ -77,6 +82,43 @@ def test_neighbourhood_reports_feeds_and_terminal_flag(client):
 
     a = client.get("/api/models/A/neighbourhood").get_json()
     assert a["focus"]["terminal"] is False and a["focus"]["is_source"] is True
+
+
+def test_neighbourhood_edge_names_the_model_that_declared_it(client):
+    """An edge can be declared from either end, so the graph has to say which model
+    holds the item — withdrawing it means editing that model, not the one on screen."""
+    _register(client, model_id="A", name="Storm")
+    _register(client, model_id="B", name="Pricer")
+    _declare_dep(client, "A", "downstream", "B")  # declared on A, drawn on both
+
+    edge = client.get("/api/models/B/neighbourhood").get_json()["feeds"]["upstream"][0]["edge"]
+    assert (edge["from"], edge["to"]) == ("A", "B")
+    assert edge["declared_by"] == [{"model_id": "A", "item_id": "DEP-001"}]
+
+
+def test_neighbourhood_edge_reports_what_crosses_it(client):
+    """The arrow carries the handoff's field count and sign-off state."""
+    _register(client, model_id="A", name="Storm")
+    _register(client, model_id="B", name="Pricer")
+    _declare_dep(client, "A", "downstream", "B")
+
+    undeclared = client.get("/api/models/B/neighbourhood").get_json()
+    assert undeclared["feeds"]["upstream"][0]["edge"]["handoff"] == {
+        "declared": False, "field_count": 0, "status": None,
+    }
+
+    client.post("/api/handoffs", json={"from_model": "A", "to_model": "B", "confirmed": True},
+                headers=HEADERS)
+    client.post(
+        "/api/handoffs/A~B/collections/field_lineage",
+        json={"fields": {"provider_field": "surge_m", "consumer_field": "surge_in"},
+              "confirmed": True},
+        headers=HEADERS,
+    )
+    declared = client.get("/api/models/B/neighbourhood").get_json()
+    assert declared["feeds"]["upstream"][0]["edge"]["handoff"] == {
+        "declared": True, "field_count": 1, "status": "Draft",
+    }
 
 
 def test_neighbourhood_unknown_model_is_404(client):

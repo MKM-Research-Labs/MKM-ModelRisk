@@ -35,6 +35,7 @@ from src.files import UploadError, upload_path
 from src.governance.documents import (
     add_document, find_document, product_scope as _product_scope, remove_document,
 )
+from src.governance.model_handoff import annotate_links
 from src.governance.model_inventory import list_models
 from src.governance.product import (
     add_collection_item,
@@ -148,6 +149,7 @@ def model_map(product_id: str):
     result = derive_product_map(product_id)
     if result is None:
         return jsonify({"error": "Product not found"}), 404
+    annotate_links(result["links"])
     return jsonify(result)
 
 

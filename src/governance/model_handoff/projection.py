@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance import ACTIVE_SIGNOFF_REQUEST_STATUS, SIGNOFF_REQUESTS_COLLECTION
 from src.database import read_all, read_view, replace_view
 from src.governance.model_handoff._state import apply, initial_state
 from src.governance.model_handoff.commands import AGGREGATE_TYPE, handoff_id
@@ -70,3 +71,17 @@ def get_handoff_for_edge(from_model: str, to_model: str, config=None) -> dict[st
 def list_handoffs(config=None) -> list[dict[str, Any]]:
     """Return every declared handoff, ordered by id."""
     return read_view(_VIEW, _COLUMNS, order_by="handoff_id", config=config)
+
+
+def derive_status(data: dict[str, Any]) -> str:
+    """Derived lifecycle: approved once the MRC has stamped it, pending while a
+    request is in the queue, else a draft the owner is still filling in.
+
+    Read-side only — no event carries it. It lives here rather than on a route so
+    the API and the neighbourhood graph label an edge the same way.
+    """
+    if data.get("mrc_signoff_meeting"):
+        return "Approved"
+    active = [r for r in (data.get(SIGNOFF_REQUESTS_COLLECTION) or [])
+              if r.get("status") in ACTIVE_SIGNOFF_REQUEST_STATUS]
+    return "Pending sign-off" if active else "Draft"
