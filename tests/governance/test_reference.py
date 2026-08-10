@@ -41,6 +41,7 @@ def test_lists_empty_initially():
         "people": [], "division": [], "line_of_business": [],
         "calculating_agent": [], "mrc": [],
         "data_source": [], "vendor": [], "review_questions": [],
+            "standing_agenda": [],
     }
 
 

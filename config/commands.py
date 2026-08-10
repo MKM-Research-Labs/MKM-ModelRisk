@@ -30,7 +30,7 @@ confirmation explicitly at their endpoints via ``require_confirmation``.
 """
 from __future__ import annotations
 
-from config.governance import REVIEW_QUESTION_LIST
+from config.governance import REVIEW_QUESTION_LIST, STANDING_AGENDA_LIST
 
 # Whole commands that always require confirmation. Retiring is significant and
 # effectively one-way — the subject becomes read-only — so both the model and the
@@ -51,11 +51,12 @@ CONFIRM_REQUIRED_COMMANDS = frozenset({
 # model is held to, it is copied onto each model at registration, and reordering it
 # changes what the next review asks first. So editing it is a deliberate act with a
 # recorded reason, like retiring a model, rather than a menu tweak.
+_GOVERNED_LISTS = frozenset({REVIEW_QUESTION_LIST, STANDING_AGENDA_LIST})
 CONFIRM_REQUIRED_LISTS = {
-    "add_option": frozenset({REVIEW_QUESTION_LIST}),
-    "update_option": frozenset({REVIEW_QUESTION_LIST}),
-    "remove_option": frozenset({REVIEW_QUESTION_LIST}),
-    "move_option": frozenset({REVIEW_QUESTION_LIST}),
+    "add_option": _GOVERNED_LISTS,
+    "update_option": _GOVERNED_LISTS,
+    "remove_option": _GOVERNED_LISTS,
+    "move_option": _GOVERNED_LISTS,
 }
 
 # Scalar-field edits that require confirmation, keyed by the field-update command.

@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import STANDING_AGENDA
+from config.governance import STANDING_AGENDA, STANDING_AGENDA_LIST
 from src.database import Event, append_event, read_stream
 from src.governance.mrc import _rules
 from src.governance.mrc._state import MeetingState, apply, initial_state
@@ -79,8 +79,27 @@ def seed_standing_agenda(
             meeting_id=meeting_id, collection="agenda", fields=dict(item),
             actor=actor, reason=reason, config=config,
         )
-        for item in STANDING_AGENDA
+        for item in _standing_items(config)
     ]
+
+
+def _standing_items(config) -> list[dict]:
+    """The running order a meeting is seeded with.
+
+    The committee's own agenda (Admin > Agenda), falling back to the shipped order
+    only where none has been recorded — a fresh database before the first-run seed,
+    or one whose list has been emptied. A meeting keeps the agenda it was given, so
+    editing the list changes the NEXT meeting and never rewrites one already held.
+    """
+    from src.governance.reference import get_reference_lists
+    try:
+        recorded = get_reference_lists(config=config).get(STANDING_AGENDA_LIST) or []
+    except Exception:
+        recorded = []
+    items = [{"title": row.get("title") or "", "description": row.get("description") or "",
+              "kind": row.get("kind") or ""}
+             for row in recorded if (row.get("title") or "").strip()]
+    return items or [dict(item) for item in STANDING_AGENDA]
 
 
 def update_meeting_field(

@@ -23,6 +23,7 @@ Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 from __future__ import annotations
 
+from config.governance._mrc import STANDING_AGENDA_ROLES
 from config.permissions import ROLES
 
 # Order: the Division/Line of Business org tree first, then the MRC committees
@@ -47,9 +48,17 @@ VENDOR_LIST = "vendor"
 # questions it was actually asked even after the set is later edited.
 REVIEW_QUESTION_LIST = "review_questions"
 
+# The running order every meeting is seeded with. A committee's agenda is its own —
+# an adopter rewords it, drops an item that does not apply to it and adds
+# its own standing business. Held as an admin list for the same reason as the
+# questionnaire, and copied onto each meeting when it is scheduled, so a meeting
+# always shows the agenda it was actually given.
+STANDING_AGENDA_LIST = "standing_agenda"
+
 REFERENCE_LISTS = (
     "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,
     MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
+    STANDING_AGENDA_LIST,
 )
 
 # What a model type means to a Product's bindings. A Product binds one analytics
@@ -217,5 +226,17 @@ REFERENCE_SPECS = {
                            "display": "short_label", "fields": [
         {"key": "short_label", "label": "Topic", "type": "text", "required": True},
         {"key": "question", "label": "Question", "type": "textarea", "required": True},
+    ]},
+    # A standing agenda item. ``kind`` is the item's ROLE and drives the bespoke
+    # panel a meeting renders for it (rollcall, the previous minutes, the sign-off
+    # review, the completeness audit, AOB), so it is picked from the roles the
+    # console knows how to draw rather than typed. Leave it blank for an item that
+    # is just business the committee always takes: those render as ordinary agenda
+    # items, which is exactly what they are.
+    STANDING_AGENDA_LIST: {"label": "Standing agenda", "id_prefix": "SA",
+                           "display": "title", "fields": [
+        {"key": "title", "label": "Item", "type": "text", "required": True},
+        {"key": "description", "label": "Description", "type": "textarea"},
+        {"key": "kind", "label": "Role", "type": "choice", "options": STANDING_AGENDA_ROLES},
     ]},
 }

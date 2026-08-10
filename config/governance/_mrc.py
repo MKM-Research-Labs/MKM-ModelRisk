@@ -293,3 +293,6 @@ STANDING_AGENDA = (
     {"kind": "aob", "title": "Any Other Business (AOB)", "description": ""},
 )
 STANDING_AGENDA_KINDS = frozenset(item["kind"] for item in STANDING_AGENDA)
+# The same roles in the order a meeting runs them, for the Admin picker: a set has
+# no order, and a dropdown that shuffled between page loads would be its own bug.
+STANDING_AGENDA_ROLES = tuple(dict.fromkeys(item["kind"] for item in STANDING_AGENDA))

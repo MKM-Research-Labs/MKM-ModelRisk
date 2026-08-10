@@ -25,7 +25,8 @@ from typing import Any
 from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
                                DEFAULT_MODEL_TYPES, DEFAULT_VENDORS,
                                MODEL_TYPE_LIST, REFERENCE_SPECS,
-                               REVIEW_QUESTION_LIST, SR262_QUESTIONS, VENDOR_LIST)
+                               REVIEW_QUESTION_LIST, SR262_QUESTIONS,
+                               STANDING_AGENDA, STANDING_AGENDA_LIST, VENDOR_LIST)
 from config.identity import SYSTEM_ACTOR
 from src.database import Event, append_event
 from src.governance import collections as coll
@@ -144,6 +145,22 @@ def ensure_default_review_questions(*, actor: str = SYSTEM_ACTOR, config=None) -
         add_option(list_name=REVIEW_QUESTION_LIST, fields=dict(question), actor=actor,
                    reason="Seed the SR 26-2 review questions on first run", config=config)
     return len(SR262_QUESTIONS)
+
+
+def ensure_default_standing_agenda(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the standing agenda on a fresh install; return how many were added.
+
+    The shipped running order is where a committee starts, not what it is stuck
+    with. Same rule as the other lists — seeds a vacuum, never reconciles a curated
+    one — so an agenda somebody has reworded is not restored at the next restart.
+    """
+    collections, _ = load(config)
+    if collections.get(STANDING_AGENDA_LIST):
+        return 0
+    for item in STANDING_AGENDA:
+        add_option(list_name=STANDING_AGENDA_LIST, fields=dict(item), actor=actor,
+                   reason="Seed the standing agenda on first run", config=config)
+    return len(STANDING_AGENDA)
 
 
 def ensure_default_reference_lists(*, actor: str = SYSTEM_ACTOR, config=None) -> int:

@@ -28,7 +28,8 @@ from src.governance.errors import DomainError
 from src.identity import UnrecognisedActor
 from src.governance.reference import (ensure_default_model_types,
                                       ensure_default_reference_lists,
-                                      ensure_default_review_questions)
+                                      ensure_default_review_questions,
+                                      ensure_default_standing_agenda)
 from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
 from src.web.api_artefacts import artefacts_bp
@@ -87,6 +88,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
         # fields; seed their defaults on a fresh database for the same reason.
         ensure_default_reference_lists()
         ensure_default_review_questions()
+        ensure_default_standing_agenda()
         # Read-models are derived caches maintained incrementally on writes; if one
         # drifts out of sync with the event log (e.g. after a restore or a data-dir
         # migration, where no command runs to refresh it) intact records render

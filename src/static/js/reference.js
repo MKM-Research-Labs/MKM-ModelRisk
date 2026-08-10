@@ -40,6 +40,10 @@ const Reference = {
     // among the reference lists: it is the institution's own standard, and the
     // review workflow is built around it.
     ["review_questions", "Review"],
+    // The running order every meeting is seeded with. Beside the questionnaire
+    // because they are the same kind of thing: a standard the institution sets,
+    // copied onto each record it applies to.
+    ["standing_agenda", "Agenda"],
     // Institution-specific wording that is not a reference list — what the
     // generated PDFs say (classification, author, legal notice).
     ["misc", "Misc"],
@@ -83,6 +87,16 @@ const Reference = {
       return;
     }
     if (!spec) { container.innerHTML = '<div class="empty">This section has moved.</div>'; return; }
+    if (this._tab === "standing_agenda") {
+      this._renderList(container, spec, res.data[this._tab] || [],
+        "The running order every meeting is seeded with. A meeting is copied the list " +
+        "as it stands when it is scheduled and keeps its own agenda, so editing here " +
+        "changes the <em>next</em> meeting — it never rewrites one already held. " +
+        "<b>Role</b> is what the console draws for the item (a rollcall, the previous " +
+        "minutes, the sign-off review); leave it blank for business the committee " +
+        "always takes, which renders as an ordinary agenda item.");
+      return;
+    }
     if (this._tab === "review_questions") {
       this._renderList(container, spec, res.data[this._tab] || [],
         "The questions every review works through, asked of each model in this order. A " +
