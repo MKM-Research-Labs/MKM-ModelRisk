@@ -41,6 +41,7 @@ VALID_COMPLEXITY = ("Low", "Medium", "High")
 # that uses it, because the reference specs import from this module and not the
 # other way round.
 LIFECYCLE_STAGE_LIST = "lifecycle_stage"
+VALIDATION_STATUS_LIST = "validation_status"
 VALID_LIFECYCLE_STAGES = ("Development", "Validation", "Production", "Retired")
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 TIER_MIN = 1
@@ -132,6 +133,7 @@ MODEL_FIELD_SPECS = {
     "validation_status": {
         "label": "Validation status", "type": "choice",
         "options": VALID_VALIDATION_STATUSES, "group": "Governance",
+        "reference": VALIDATION_STATUS_LIST,
     },
     # Where the review has got to. Set by the review workflow's interim approvals,
     # not typed here (see config/governance/_review.py).

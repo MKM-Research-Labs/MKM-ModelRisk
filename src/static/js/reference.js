@@ -44,9 +44,9 @@ const Reference = {
     // because they are the same kind of thing: a standard the institution sets,
     // copied onto each record it applies to.
     ["standing_agenda", "Agenda"],
-    // The words a model's lifecycle can carry. Shown-as is the division's to
-    // change; stored-as is what every record already holds and never moves.
-    ["lifecycle_stage", "Lifecycle"],
+    // Every status vocabulary on one tab: shown-as is the institution's to change,
+    // stored-as is what the records already hold and never moves.
+    ["vocabulary", "Vocabulary"],
     // Institution-specific wording that is not a reference list — what the
     // generated PDFs say (classification, author, legal notice).
     ["misc", "Misc"],
@@ -62,6 +62,26 @@ const Reference = {
       btn.onclick = () => { this._tab = btn.getAttribute("data-atab"); this.render(); };
     });
     await this._renderBody(document.getElementById("admin-body"));
+  },
+
+  // The status vocabularies, in the order a record meets them. Each is an ordinary
+  // reference list; what they have in common is the two columns, so they are shown
+  // together rather than as six tabs nobody would find.
+  _VOCABULARIES: ["lifecycle_stage", "validation_status", "impact_level",
+                  "priority_level", "remediation_status", "vq_status"],
+
+  _renderVocabularies(container, res) {
+    container.innerHTML =
+      '<p class="muted">The words the console shows for a record\'s status. ' +
+      "<b>Shown as</b> is yours to change; <b>stored as</b> is the word the records " +
+      "themselves carry and the code matches on, fixed once an entry exists. Renaming " +
+      "therefore changes every screen without moving anything on record.</p>" +
+      this._VOCABULARIES.map((key) => '<div id="voc-' + key + '"></div>').join("");
+    this._VOCABULARIES.forEach((key) => {
+      const spec = res.collections.find((c) => c.key === key);
+      if (!spec) return;
+      this._renderList(document.getElementById("voc-" + key), spec, res.data[key] || []);
+    });
   },
 
   async _renderBody(container) {
@@ -82,6 +102,7 @@ const Reference = {
       return;
     }
     const res = await App.get("/api/reference");
+    if (this._tab === "vocabulary") { this._renderVocabularies(container, res); return; }
     const spec = res.collections.find((c) => c.key === this._tab);
     // MRC committees are entities with a drill-in detail (fields + per-committee
     // Terms of Reference); the scope field reacts to the committee's level.
@@ -90,14 +111,6 @@ const Reference = {
       return;
     }
     if (!spec) { container.innerHTML = '<div class="empty">This section has moved.</div>'; return; }
-    if (this._tab === "lifecycle_stage") {
-      this._renderList(container, spec, res.data[this._tab] || [],
-        "The stages a model moves through. <b>Shown as</b> is what every screen " +
-        "displays and is yours to change. <b>Stored as</b> is the word the records " +
-        "themselves carry, fixed once the stage exists — renaming a stage therefore " +
-        "changes what is shown without moving anything on record.");
-      return;
-    }
     if (this._tab === "standing_agenda") {
       this._renderList(container, spec, res.data[this._tab] || [],
         "The running order every meeting is seeded with. A meeting is copied the list " +
@@ -182,7 +195,7 @@ const Reference = {
     const body = items.length
       ? items.map((it, i) =>
           '<tr id="rlrow-' + esc(it.item_id) + '">' +
-          cols.map((f) => "<td>" + fieldDisplay(it[f.key]) + "</td>").join("") +
+          cols.map((f) => "<td>" + optionLabel(f, it[f.key]) + "</td>").join("") +
           '<td class="rowact">' +
           '<button class="edit-btn" data-mv="up|' + esc(it.item_id) + '" title="Move up"' +
           (i === 0 ? " disabled" : "") + ">\u2191</button>" +

@@ -23,6 +23,14 @@ from config.governance._review import (REVIEW_COLLECTION_SPECS,
                                        VALID_REVIEWER_VERDICTS)
 
 # Closed value sets used by structured collections.
+# Status vocabularies held as admin lists (see LIFECYCLE_STAGE_LIST in _inventory
+# for the shape): the record stores a stable value, a screen shows a label, and
+# only the label is the institution's to change.
+IMPACT_LIST = "impact_level"
+PRIORITY_LIST = "priority_level"
+REMEDIATION_STATUS_LIST = "remediation_status"
+VQ_STATUS_LIST = "vq_status"
+
 VALID_IMPACT = ("Low", "Medium", "High")
 VALID_PRIORITY = ("Low", "Medium", "High")
 VALID_REMEDIATION_STATUS = ("Open", "In Progress", "Closed")
@@ -108,13 +116,15 @@ COLLECTION_SPECS = {
     **REVIEW_COLLECTION_SPECS,
     "assumptions": {"label": "Assumptions", "id_prefix": "AS", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
-        {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT},
+        {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT,
+         "reference": IMPACT_LIST},
         {"key": "monitoring", "label": "Monitoring", "type": "text"},
         {"key": "mitigation", "label": "Mitigation", "type": "text"},
     ]},
     "limitations": {"label": "Limitations", "id_prefix": "LM", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
-        {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT},
+        {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT,
+         "reference": IMPACT_LIST},
         {"key": "monitoring_trigger", "label": "Monitoring trigger", "type": "text"},
         {"key": "compensating_control", "label": "Compensating control", "type": "text"},
     ]},
@@ -122,12 +132,14 @@ COLLECTION_SPECS = {
     # / compensating control), sitting alongside it on the Limitations tab.
     "model_weaknesses": {"label": "Model weaknesses", "id_prefix": "MW", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
-        {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT},
+        {"key": "impact", "label": "Impact", "type": "choice", "options": VALID_IMPACT,
+         "reference": IMPACT_LIST},
     ]},
     "validation_questions": {"label": "Validation questions", "id_prefix": "VQ", "fields": [
         {"key": "short_label", "label": "Topic", "type": "text"},
         {"key": "question", "label": "Question", "type": "text", "required": True},
-        {"key": "status", "label": "Status", "type": "choice", "options": VALID_VQ_STATUSES},
+        {"key": "status", "label": "Status", "type": "choice", "options": VALID_VQ_STATUSES,
+         "reference": VQ_STATUS_LIST},
         {"key": "rationale", "label": "Rationale", "type": "text"},
         {"key": "evidence", "label": "Evidence", "type": "text"},
         # The reviewer's side of the same question. Stamped by the endpoint that
@@ -151,9 +163,11 @@ COLLECTION_SPECS = {
     "remediation_steps": {"label": "Remediation", "id_prefix": "RM", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
         {"key": "owner", "label": "Owner", "type": "text", "reference": "people"},
-        {"key": "priority", "label": "Priority", "type": "choice", "options": VALID_PRIORITY},
+        {"key": "priority", "label": "Priority", "type": "choice", "options": VALID_PRIORITY,
+         "reference": PRIORITY_LIST},
         {"key": "due_date", "label": "Due date", "type": "date"},
-        {"key": "status", "label": "Status", "type": "choice", "options": VALID_REMEDIATION_STATUS},
+        {"key": "status", "label": "Status", "type": "choice", "options": VALID_REMEDIATION_STATUS,
+         "reference": REMEDIATION_STATUS_LIST},
     ]},
     "change_history": {"label": "Change history", "id_prefix": "CH", "fields": [
         {"key": "version", "label": "Version", "type": "text", "required": True},

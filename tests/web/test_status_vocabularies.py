@@ -19,8 +19,9 @@
 # SOFTWARE.
 """Renaming a status must not move anything a record already holds.
 
-The lifecycle vocabulary is the first of the status lists, and the pattern for the
-rest: a record stores a stable value, a screen shows a label, and only the label is
+Six vocabularies — the lifecycle stages, validation statuses, impact levels,
+priorities, remediation statuses and review-answer statuses — all the same shape: a
+record stores a stable value, a screen shows a label, and only the label is
 editable. Seeding the value to the word records already carry is what makes this
 free of migration — nothing in the estate has to be rewritten for it to work, and a
 model set to "Production" years ago still reads correctly under whatever the
@@ -28,8 +29,9 @@ institution calls that stage now.
 """
 from __future__ import annotations
 
-from config.governance import LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES
-from src.governance.reference import (ensure_default_lifecycle_stages,
+from config.governance import (LIFECYCLE_STAGE_LIST, STATUS_VOCABULARIES,
+                               VALID_LIFECYCLE_STAGES, VQ_STATUS_LIST)
+from src.governance.reference import (ensure_default_status_vocabularies,
                                       get_reference_lists)
 from tests.web.conftest import HEADERS
 
@@ -48,16 +50,21 @@ def _spec(client):
 
 
 def test_the_seed_stores_the_words_records_already_carry():
-    """The migration-free part: value equals the word in the estate today."""
-    assert ensure_default_lifecycle_stages() == len(VALID_LIFECYCLE_STAGES)
-    seeded = get_reference_lists()[LIFECYCLE_STAGE_LIST]
+    """The migration-free part: every value equals the word in the estate today."""
+    added = ensure_default_status_vocabularies()
+    assert added == sum(len(words) for _l, _p, words, _h in STATUS_VOCABULARIES.values())
+    lists = get_reference_lists()
+    for name, (_label, _prefix, words, _hint) in STATUS_VOCABULARIES.items():
+        assert [i["value"] for i in lists[name]] == list(words), name
+        assert [i["label"] for i in lists[name]] == list(words), name
+    seeded = lists[LIFECYCLE_STAGE_LIST]
     assert [s["value"] for s in seeded] == list(VALID_LIFECYCLE_STAGES)
     assert [s["label"] for s in seeded] == list(VALID_LIFECYCLE_STAGES)
-    assert ensure_default_lifecycle_stages() == 0
+    assert ensure_default_status_vocabularies() == 0
 
 
 def test_renaming_a_stage_changes_what_is_shown_not_what_is_stored(client):
-    ensure_default_lifecycle_stages()
+    ensure_default_status_vocabularies()
     client.post("/api/models",
                 json={"model_id": "M1", "name": "Alpha", "confirmed": True,
                       "fields": {"lifecycle_stage": "Production"}}, headers=HEADERS)
@@ -74,7 +81,7 @@ def test_renaming_a_stage_changes_what_is_shown_not_what_is_stored(client):
 
 def test_the_stored_value_cannot_be_edited(client):
     """Records already carry it; editing it would orphan every one of them."""
-    ensure_default_lifecycle_stages()
+    ensure_default_status_vocabularies()
     stage = _stages(client)[0]
     response = client.post(
         f"/api/reference/collections/{LIFECYCLE_STAGE_LIST}/{stage['item_id']}",
@@ -84,7 +91,7 @@ def test_the_stored_value_cannot_be_edited(client):
 
 
 def test_a_stage_the_institution_adds_is_offered(client):
-    ensure_default_lifecycle_stages()
+    ensure_default_status_vocabularies()
     client.post(f"/api/reference/collections/{LIFECYCLE_STAGE_LIST}",
                 json={"fields": {"value": "Decommissioning", "label": "Winding down"},
                       "confirmed": True}, headers=HEADERS)
@@ -97,3 +104,26 @@ def test_before_the_list_is_seeded_the_shipped_words_still_stand(client):
     """A database that has never been seeded still offers a usable dropdown."""
     assert not get_reference_lists()[LIFECYCLE_STAGE_LIST]
     assert list(_spec(client)["options"]) == list(VALID_LIFECYCLE_STAGES)
+
+
+def test_a_renamed_review_answer_still_counts_as_addressed(client):
+    """The completeness audit matches on the stored value, so renaming what a
+    reviewer sees cannot quietly change whether a question counts as answered."""
+    ensure_default_status_vocabularies()
+    addressed = next(i for i in get_reference_lists()[VQ_STATUS_LIST]
+                     if i["value"] == "Addressed")
+    client.post(f"/api/reference/collections/{VQ_STATUS_LIST}/{addressed['item_id']}",
+                json={"fields": {"label": "Satisfied"}, "confirmed": True}, headers=HEADERS)
+    client.post("/api/models",
+                json={"model_id": "M9", "name": "Alpha", "confirmed": True}, headers=HEADERS)
+    # Every question answered, so any remaining shortfall would be the audit failing
+    # to recognise the stored value rather than a half-finished questionnaire.
+    for question in client.get("/api/models/M9").get_json()["data"]["validation_questions"]:
+        client.post(f"/api/models/M9/collections/validation_questions/{question['item_id']}",
+                    json={"fields": {"status": "Addressed"}, "confirmed": True},
+                    headers=HEADERS)
+
+    from src.governance.completeness.scan import scan
+    row = next(r for r in scan("2026-08-10") if r["entity_id"] == "M9")
+    unanswered = [g for g in row["gaps"] if g["key"] == "validation_questions"]
+    assert not unanswered, "the audit reads the stored value, not the label"

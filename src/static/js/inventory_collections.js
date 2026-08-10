@@ -60,7 +60,9 @@ const Collections = {
       return '<td><input data-upd="' + c.key + "|" + esc(item.item_id) + "|" + f.key +
         '" value="' + esc(item[f.key] || "") + '" style="width:100%"></td>';
     }
-    return "<td>" + fieldDisplay(item[f.key]) + "</td>";
+    // Through the spec, so a status vocabulary shows its label rather than the
+    // word the row stores.
+    return "<td>" + optionLabel(f, item[f.key]) + "</td>";
   },
 
   _row(c, item, retired, autosave) {

@@ -23,7 +23,13 @@ Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 from __future__ import annotations
 
-from config.governance._inventory import LIFECYCLE_STAGE_LIST
+from config.governance._collections import (IMPACT_LIST, PRIORITY_LIST,
+                                            REMEDIATION_STATUS_LIST, VALID_IMPACT,
+                                            VALID_PRIORITY, VALID_REMEDIATION_STATUS,
+                                            VALID_VQ_STATUSES, VQ_STATUS_LIST)
+from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES,
+                                          VALID_VALIDATION_STATUSES,
+                                          VALIDATION_STATUS_LIST)
 from config.governance._mrc import STANDING_AGENDA_ROLES
 from config.permissions import ROLES
 
@@ -65,11 +71,41 @@ STANDING_AGENDA_LIST = "standing_agenda"
 # and a record set to "Production" years ago still reads correctly under whatever
 # the division calls that stage now.
 
+# Every status vocabulary, and the words it ships with. Each is a list whose items
+# carry a stable ``value`` (what a record stores, and what the code matches on) and
+# a ``label`` (what a screen shows). Seeding the value to today's word is what makes
+# these free of migration: nothing in the estate moves when a label is renamed.
+STATUS_VOCABULARIES = {
+    LIFECYCLE_STAGE_LIST: ("Lifecycle stages", "LC", VALID_LIFECYCLE_STAGES,
+                           "The stages a model moves through."),
+    VALIDATION_STATUS_LIST: ("Validation statuses", "VS", VALID_VALIDATION_STATUSES,
+                             "How far a model has got through validation."),
+    IMPACT_LIST: ("Impact levels", "IM", VALID_IMPACT,
+                  "How much an assumption, limitation or weakness matters."),
+    PRIORITY_LIST: ("Priorities", "PR", VALID_PRIORITY,
+                    "How urgent a remediation step is."),
+    REMEDIATION_STATUS_LIST: ("Remediation statuses", "RS", VALID_REMEDIATION_STATUS,
+                              "Where a remediation step has got to."),
+    VQ_STATUS_LIST: ("Review answer statuses", "VQ", VALID_VQ_STATUSES,
+                     "How completely a review question has been answered."),
+}
+
+# The shape every one of them takes. ``value`` is immutable once the entry exists:
+# records already carry it, and editing it would orphan every one of them.
+def _status_vocabulary_spec(label: str, prefix: str) -> dict:
+    return {"label": label, "id_prefix": prefix, "display": "label", "value_key": "value",
+            "fields": [
+                {"key": "label", "label": "Shown as", "type": "text", "required": True},
+                {"key": "value", "label": "Stored as", "type": "text", "required": True,
+                 "immutable": True},
+            ]}
+
+
 REFERENCE_LISTS = (
     "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,
     MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
-    STANDING_AGENDA_LIST, LIFECYCLE_STAGE_LIST,
-)
+    STANDING_AGENDA_LIST,
+) + tuple(STATUS_VOCABULARIES)
 
 # What a model type means to a Product's bindings. A Product binds one analytics
 # engine and one market-data source, and it picks each from the inventory filtered
@@ -249,12 +285,9 @@ REFERENCE_SPECS = {
         {"key": "description", "label": "Description", "type": "textarea"},
         {"key": "kind", "label": "Role", "type": "choice", "options": STANDING_AGENDA_ROLES},
     ]},
-    # A status vocabulary (see LIFECYCLE_STAGE_LIST). ``value`` is stored on the
-    # record and matched by code; ``label`` is shown. An adopter renames the label.
-    LIFECYCLE_STAGE_LIST: {"label": "Lifecycle stages", "id_prefix": "LC",
-                           "display": "label", "value_key": "value", "fields": [
-        {"key": "label", "label": "Shown as", "type": "text", "required": True},
-        {"key": "value", "label": "Stored as", "type": "text", "required": True,
-         "immutable": True},
-    ]},
 }
+
+REFERENCE_SPECS.update({
+    name: _status_vocabulary_spec(label, prefix)
+    for name, (label, prefix, _words, _hint) in STATUS_VOCABULARIES.items()
+})

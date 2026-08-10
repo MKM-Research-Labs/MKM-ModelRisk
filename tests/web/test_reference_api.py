@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import io
 
+from config.governance import REFERENCE_LISTS
 from tests.web.conftest import HEADERS
 
 
@@ -52,16 +53,11 @@ def _add_person(client, name):
 
 
 def test_get_reference_empty(client):
+    """Every list is served, and empty, before anything is seeded — derived from the
+    config so that adding a list is not also an edit to an assertion about it."""
     res = client.get("/api/reference").get_json()
-    assert res["data"] == {"division": [], "line_of_business": [],
-                           "calculating_agent": [], "data_source": [], "mrc": [],
-                           "model_type": [], "vendor": [], "codebase": [],
-                           "people": [], "review_questions": [],
-                           "standing_agenda": [], "lifecycle_stage": []}
-    assert [c["key"] for c in res["collections"]] == [
-        "division", "line_of_business", "mrc", "calculating_agent", "data_source",
-        "model_type", "vendor", "codebase", "people", "review_questions",
-        "standing_agenda", "lifecycle_stage"]
+    assert res["data"] == {name: [] for name in REFERENCE_LISTS}
+    assert [c["key"] for c in res["collections"]] == list(REFERENCE_LISTS)
 
 
 def test_mrc_tor_fields_are_hidden_in_specs(client):

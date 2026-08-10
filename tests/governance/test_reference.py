@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import pytest
 
+from config.governance import REFERENCE_LISTS
+
 from src.governance.errors import DomainError
 from src.governance.reference import (add_option, ensure_default_reference_lists,
                                       get_reference_lists, remove_option, update_option)
@@ -36,13 +38,10 @@ def test_update_option_edits_fields():
 
 
 def test_lists_empty_initially():
-    assert get_reference_lists() == {
-        "model_type": [], "codebase": [],
-        "people": [], "division": [], "line_of_business": [],
-        "calculating_agent": [], "mrc": [],
-        "data_source": [], "vendor": [], "review_questions": [],
-            "standing_agenda": [], "lifecycle_stage": [],
-    }
+    """Every reference list exists and is empty before anything is seeded. Derived
+    from the config rather than copied into the test, so adding a list does not
+    mean editing an assertion that says nothing about behaviour."""
+    assert get_reference_lists() == {name: [] for name in REFERENCE_LISTS}
 
 
 def test_add_menu_value_generates_id_and_appears():
