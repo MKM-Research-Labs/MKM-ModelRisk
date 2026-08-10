@@ -231,6 +231,46 @@ textarea { box-sizing: border-box; }
 .chain-edge-hit { stroke: transparent; stroke-width: 12; }
 .chain-edge-line { stroke: #94a3b8; stroke-width: 1.5; transition: stroke 0.1s ease, stroke-width 0.1s ease; }
 .chain-edge:hover .chain-edge-line { stroke: var(--accent); stroke-width: 2.5; }
+/* The neighbourhood canvas is also where declarations are made (see
+   inventory/neighbourhood_edit.js). Bands and handles stay invisible at rest, so
+   the picture is unchanged until a drag starts. */
+.nbhd-tray { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fbfcfe; }
+.nbhd-tray-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.nbhd-filter { margin-left: auto; padding: 3px 8px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; width: 160px; }
+.nbhd-tray-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; }
+.nbhd-tray-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); width: 92px; flex: none; padding-top: 4px; }
+.nbhd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.nbhd-chip { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 600; cursor: grab; border: 1.5px solid; user-select: none; touch-action: none; }
+.nbhd-chip:active { cursor: grabbing; }
+.nbhd-chip-model { background: #e3f2fd; border-color: #1976d2; color: #0d47a1; }
+.nbhd-chip-source { background: #fef3c7; border-color: #d97706; color: #92400e; }
+.nbhd-ghost { position: fixed; z-index: 9999; pointer-events: none; padding: 3px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 600; background: #e3f2fd; border: 1.5px solid #1976d2; color: #0d47a1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
+.nbhd-band { display: none; }
+.nbhd-canvas.nbhd-drop .nbhd-band { display: block; }
+.nbhd-band rect { fill: #eef2ff; fill-opacity: 0.82; stroke: #6366f1; stroke-width: 1.5; stroke-dasharray: 6 4; }
+.nbhd-band text { fill: #4338ca; font-weight: 600; }
+.nbhd-band.drop-over rect { fill-opacity: 0.95; stroke-width: 2.5; }
+.graph-handle { fill: #fff; stroke: #1976d2; stroke-width: 1.5; opacity: 0; cursor: crosshair; touch-action: none; }
+.nbhd-node:hover .graph-handle, .chain-node:hover .graph-handle,
+.graph-wiring .graph-handle { opacity: 1; }
+.wire-target rect { stroke-width: 3.5; filter: brightness(0.96); }
+/* The rubber line ends under the pointer, so it would otherwise win the
+   hit-test against the very node the wire is being dropped on. */
+.graph-rubber { pointer-events: none; }
+/* Staging a model onto the estate chain: the whole canvas is the drop target. */
+.chain-canvas.chain-staging { border-style: dashed; border-color: #6366f1; }
+.chain-canvas.chain-staging.drop-over { background: #f5f6ff; border-width: 2px; }
+/* Arrows carry the handoff, so they are clickable like the chain's. */
+.nbhd-edge { cursor: pointer; }
+.nbhd-hit { stroke: transparent; stroke-width: 14; }
+/* Drawn over the arrows, so the label carries a white halo to stay readable. */
+.nbhd-edge-label { fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.nbhd-edge:hover .nbhd-edge-label { fill: var(--accent); font-weight: 600; }
+/* On the whole-estate chain many edges converge on the same few nodes and their
+   midpoints collide, so there the label is a hover reveal rather than always on.
+   A model's own canvas holds a handful of edges and keeps them permanently. */
+.chain-edge .nbhd-edge-label { opacity: 0; transition: opacity 0.1s ease; }
+.chain-edge:hover .nbhd-edge-label { opacity: 1; fill: var(--accent); font-weight: 600; }
 .chain-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .chain-item { display: flex; align-items: baseline; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: #fff; }
 .chain-item:hover { border-color: var(--accent); background: #f7fbff; }

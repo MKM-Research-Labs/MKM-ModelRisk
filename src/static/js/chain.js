@@ -18,15 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// The Model Chain ("string of pearls"): a read-only visualisation of the model
-// dependency graph, derived from what each model declares on its Dependencies
-// tab. Edges point in the direction data flows (producer -> consumer). The graph
-// is guaranteed acyclic by the declaration-time guard, so longest-path layering
-// always terminates.
+// The Model Chain ("string of pearls"): the whole estate's dependency graph,
+// derived from what each model declares on its Connections tab. Edges point in the
+// direction data flows (producer -> consumer). The graph is guaranteed acyclic by
+// the declaration-time guard, so longest-path layering always terminates.
+//
+// Every registered model is already a node here, so there is no tray to drag from
+// as there is on a model's own canvas: connecting two models means dragging from
+// one node's handle onto another (GraphWire). Each arrow carries what the handoff
+// says crosses it, and opens that handoff when clicked.
 const BOX_W = 130, BOX_H = 42, COL_GAP = 34, ROW_GAP = 52, PAD = 20;
 
 const Chain = {
   _tab: "chain",
+  // Models pulled onto the canvas from the tray but not yet wired to anything.
+  // View state only — nothing is recorded until an edge is declared, and a model
+  // drops out of here the moment it has one.
+  _staged: {},
 
   async render() {
     const [chain, handoffs] = await Promise.all([
@@ -46,6 +54,9 @@ const Chain = {
     this._chainNodes = nodes.filter((n) => inChain.has(n.model_id));
     this._terminal = this._chainNodes.filter((n) => !n.retired && !hasDownstream[n.model_id]);
     this._hibernated = nodes.filter((n) => n.retired);
+    // A staged model that has since been wired is now in the chain on its own
+    // merit, so it stops being staged rather than being drawn twice.
+    inChain.forEach((id) => { delete this._staged[id]; });
     this._draw();
   },
 
@@ -69,10 +80,34 @@ const Chain = {
     document.getElementById("tab-chain").innerHTML =
       '<div class="card"><h3>Model Chain</h3>' +
       '<p class="muted">The string of pearls, derived from every model\'s declared ' +
-      "dependencies. Arrows run producer &rarr; consumer. Declare links on a model\'s " +
-      "Dependencies tab.</p>" + bar + body + "</div>" +
+      "dependencies. Arrows run producer &rarr; consumer. Hover an arrow to see what " +
+      "crosses it; click it to open the handoff. Drag a model&rsquo;s handle onto another " +
+      "to declare a feed.</p>" + bar + body + "</div>" +
       '<div id="chain-handoff"></div>';
     this._bind();
+  },
+
+  // Models with no declared dependency are in no chain, so the graph does not draw
+  // them — which would leave no way to wire one in from here. The tray brings one
+  // onto the canvas; that is a view-only staging, not a declaration. Wiring its
+  // handle to another model is what declares something, and the direction is then
+  // unambiguous because you chose which end you dragged from.
+  _unconnected() {
+    const drawn = {};
+    this._chainNodes.forEach((n) => { drawn[n.model_id] = true; });
+    return (this._chain.nodes || []).filter((n) => !drawn[n.model_id] && !n.retired);
+  },
+
+  _tray() {
+    const spare = this._unconnected();
+    if (!spare.length) return "";
+    const chips = spare.map((n) =>
+      '<span class="nbhd-chip nbhd-chip-model" data-value="' + esc(n.model_id) + '">' +
+      esc(n.model_id) + "</span>").join("");
+    return '<div class="nbhd-tray"><div class="nbhd-tray-head"><b>Not in any chain</b> ' +
+      '<span class="muted" style="font-size:11.5px">drag one onto the canvas, then drag ' +
+      "its handle onto the model it feeds</span></div>" +
+      '<div class="nbhd-chips">' + chips + "</div></div>";
   },
 
   _chainBody() {
@@ -81,10 +116,13 @@ const Chain = {
       '<span><span class="chain-swatch" style="background:#e3f2fd;border-color:#1976d2"></span> model in the chain</span>' +
       '<span><span class="chain-swatch" style="background:#e0f2f1;border-color:#00897b"></span> terminal output (no downstream)</span>' +
       '<span><span class="chain-swatch" style="background:#f5f5f5;border-color:#bbb"></span> hibernated</span>' +
+      '<span><span class="chain-swatch" style="background:#fff;border-color:#6366f1"></span> staged (not yet connected)</span>' +
       "</div>";
-    // The graph shows only models that are in a chain (in at least one edge).
-    const graph = { nodes: this._chainNodes, links: this._chain.links || [] };
-    return legend + '<div class="chain-canvas" style="overflow:auto">' + this._svg(graph) + "</div>" +
+    // The graph shows models in a chain, plus any staged from the tray.
+    const staged = (this._chain.nodes || []).filter((n) => this._staged[n.model_id]);
+    const graph = { nodes: this._chainNodes.concat(staged), links: this._chain.links || [] };
+    return this._tray() + legend +
+      '<div class="chain-canvas" style="overflow:auto">' + this._svg(graph) + "</div>" +
       this._edges(this._chain, this._byId);
   },
 
@@ -105,7 +143,10 @@ const Chain = {
       b.onclick = () => { this._tab = b.getAttribute("data-ctab"); this._draw(); };
     });
     document.querySelectorAll("[data-open]").forEach((row) => {
-      row.onclick = async () => {
+      row.onclick = async (ev) => {
+        // The handle is a drag affordance, not a link — a click that started
+        // there must not also navigate away mid-gesture.
+        if (ev.target.closest && ev.target.closest(".graph-handle")) return;
         const id = row.getAttribute("data-open");
         await Nav.show("inventory");
         // Always land on Overview: Detail remembers the last tab it showed.
@@ -113,6 +154,48 @@ const Chain = {
       };
     });
     this._bindEdges();
+    this._bindHandles();
+    this._bindTray();
+  },
+
+  // Dropping a chip anywhere on the canvas stages that model. No write happens
+  // here — staging only puts it where its handle can be dragged.
+  _bindTray() {
+    const host = document.getElementById("tab-chain");
+    if (!host) return;
+    const canvas = host.querySelector(".chain-canvas");
+    host.querySelectorAll(".nbhd-tray .nbhd-chip").forEach((chip) => {
+      chip.onpointerdown = (ev) => GraphWire.startChip(ev, {
+        chip: chip, host: host, canvas: canvas, dropClass: "chain-staging",
+        target: (e) => {
+          const el = document.elementFromPoint(e.clientX, e.clientY);
+          return el && el.closest ? el.closest(".chain-canvas") : null;
+        },
+        onDrop: (value) => { this._staged[value] = true; this._draw(); },
+      });
+    });
+  },
+
+  // Dragging one node's handle onto another declares that the first feeds the
+  // second, recorded on the producer as a downstream dependency — the same edge
+  // the chain would derive from the consumer declaring it upstream.
+  _bindHandles() {
+    const host = document.getElementById("tab-chain");
+    if (!host) return;
+    const svg = host.querySelector("svg");
+    host.querySelectorAll(".graph-handle").forEach((handle) => {
+      const node = handle.closest("[data-node]");
+      handle.onpointerdown = (ev) => GraphWire.start(ev, {
+        host: host, svg: svg, canvas: host.querySelector(".chain-canvas"),
+        from: handle.getAttribute("data-handle"),
+        x0: parseFloat(node.getAttribute("data-x")) + BOX_W,
+        y0: parseFloat(node.getAttribute("data-y")) + BOX_H / 2,
+        onConnect: (from, to) => App.amend(
+          "Declare the dependency " + from + " → " + to + ".", "POST",
+          "/api/models/" + encodeURIComponent(from) + "/collections/dependencies",
+          { fields: { direction: "downstream", model_id: to } }, () => this.render()),
+      });
+    });
   },
 
   // Each edge, with its handoff's field-lineage count, and a button to open the
@@ -210,17 +293,26 @@ const Chain = {
         "<title>" + esc(l.from) + " → " + esc(l.to) + " — open handoff</title>" +
         '<line class="chain-edge-hit" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"/>' +
         '<line class="chain-edge-line" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
-        '" marker-end="url(#chain-arrow)"/></g>';
+        '" marker-end="url(#chain-arrow)"/>' +
+        // What crosses this edge, worded by GraphWire so the per-model canvas and
+        // this one cannot say it differently.
+        '<text class="nbhd-edge-label" x="' + ((x1 + x2) / 2 + 6) + '" y="' + ((y1 + y2) / 2) +
+        '" font-size="9.5">' + esc(GraphWire.label(l.handoff)) + "</text></g>";
     }).join("");
     const boxes = nodes.map((n) => {
       const p = pos[n.model_id];
       let fill = "#e3f2fd", stroke = "#1976d2";
       if (!hasDownstream[n.model_id]) { fill = "#e0f2f1"; stroke = "#00897b"; }
+      // A staged model is on the canvas but in no chain yet — drawn hollow so it
+      // never reads as a declaration that has already been made.
+      if (this._staged[n.model_id]) { fill = "#fff"; stroke = "#6366f1"; }
       if (n.retired) { fill = "#f5f5f5"; stroke = "#bbb"; }
       // The whole node is a click target onto that model's Overview; the title
       // gives the same affordance on hover for anyone using a pointer.
-      return '<g class="chain-node" data-open="' + esc(n.model_id) + '">' +
-        "<title>" + esc(n.model_id) + " — open this model</title>" +
+      return '<g class="chain-node" data-open="' + esc(n.model_id) + '" data-node="' +
+        esc(n.model_id) + '" data-x="' + p.x + '" data-y="' + p.y + '">' +
+        "<title>" + esc(n.model_id) + " — open this model, or drag the handle onto " +
+        "another model to declare a feed</title>" +
         '<rect x="' + p.x + '" y="' + p.y + '" width="' + BOX_W + '" height="' + BOX_H +
         '" rx="7" fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"' +
         (n.retired ? ' stroke-dasharray="4 3"' : "") + "/>" +
@@ -228,14 +320,16 @@ const Chain = {
         '" text-anchor="middle" font-size="11" font-weight="700" fill="#1f2937">' + esc(n.model_id) + "</text>" +
         '<text x="' + (p.x + BOX_W / 2) + '" y="' + (p.y + 31) +
         '" text-anchor="middle" font-size="9.5" fill="#4b5563">' + esc(this._short(n.name)) + "</text>" +
-        "</g>";
+        '<circle class="graph-handle" data-handle="' + esc(n.model_id) + '" cx="' + (p.x + BOX_W) +
+        '" cy="' + (p.y + BOX_H / 2) + '" r="5"><title>Drag onto another model to ' +
+        "declare that this one feeds it</title></circle></g>";
     }).join("");
     return '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + " " + height +
       '" xmlns="http://www.w3.org/2000/svg"><defs>' +
       '<marker id="chain-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" ' +
       'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#94a3b8" ' +
       'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>' +
-      edges + boxes + "</svg>";
+      edges + boxes + '<g class="graph-rubber"></g></svg>';
   },
 
   _short(name) {

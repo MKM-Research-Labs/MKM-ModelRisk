@@ -28,7 +28,9 @@ from src.governance.model_handoff.commands import (
     update_collection_item,
     update_handoff_field,
 )
+from src.governance.model_handoff.annotate import annotate_links, annotate_neighbourhood
 from src.governance.model_handoff.projection import (
+    derive_status,
     get_handoff,
     get_handoff_for_edge,
     list_handoffs,
@@ -44,6 +46,9 @@ __all__ = [
     "remove_collection_item",
     "handoff_id",
     "split_handoff_id",
+    "annotate_links",
+    "annotate_neighbourhood",
+    "derive_status",
     "get_handoff",
     "get_handoff_for_edge",
     "list_handoffs",

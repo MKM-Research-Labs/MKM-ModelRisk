@@ -41,18 +41,19 @@ from src.governance.model_inventory.projection import list_models
 _DOWNSTREAM = "downstream"
 
 
+def _edge(model_id: str, item: dict[str, Any]) -> Edge | None:
+    """The directed edge one ``dependencies`` item declares, or ``None`` if it names
+    no related model. The single place the direction vocabulary is read."""
+    related = item.get("model_id")
+    if not related:
+        return None
+    return (model_id, related) if item.get("direction") == _DOWNSTREAM else (related, model_id)
+
+
 def edges_for_model(model_id: str, dependency_items) -> list[Edge]:
     """The directed edges one model's ``dependencies`` items contribute."""
-    edges: list[Edge] = []
-    for item in dependency_items:
-        related = item.get("model_id")
-        if not related:
-            continue
-        if item.get("direction") == _DOWNSTREAM:
-            edges.append((model_id, related))
-        else:
-            edges.append((related, model_id))
-    return edges
+    edges = (_edge(model_id, item) for item in dependency_items)
+    return [edge for edge in edges if edge is not None]
 
 
 def _model_id(model: dict[str, Any]) -> str:
@@ -71,6 +72,23 @@ def all_edges(config=None) -> list[Edge]:
         for edge in edges_for_model(_model_id(model), _dependencies(model)):
             seen.setdefault(edge, None)
     return list(seen)
+
+
+def declarations_by_edge(config=None) -> dict[Edge, list[dict[str, Any]]]:
+    """Every declared edge with its provenance: which model's ``dependencies`` item
+    put it there, so a screen can offer to edit or withdraw it.
+
+    An edge may be declared from either end, and a reciprocal pair collapses to one
+    edge with two entries — withdrawing it means removing both.
+    """
+    out: dict[Edge, list[dict[str, Any]]] = {}
+    for model in list_models(config=config):
+        mid = _model_id(model)
+        for item in _dependencies(model):
+            edge = _edge(mid, item)
+            if edge is not None:
+                out.setdefault(edge, []).append({"model_id": mid, "item_id": item.get("item_id")})
+    return out
 
 
 def derive_chain(config=None) -> dict[str, Any]:

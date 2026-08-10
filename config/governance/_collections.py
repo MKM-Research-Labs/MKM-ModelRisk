@@ -89,6 +89,10 @@ VALID_EVENT_REVIEW_STATUS = ("Pending", "Received")
 # attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
 # MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
 VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Rejected", "Withdrawn")
+# The subset that is still in flight — raised and not yet settled either way. A
+# subject with one of these in its queue reads as "pending sign-off" rather than
+# as a draft, wherever that lifecycle is derived.
+ACTIVE_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached")
 # What a sign-off request asks the committee to ratify. One queue serves them all
 # so a committee has a single approvals list rather than one per decision type.
 # "rag" proposes a new risk rating; "retire" hibernates the subject (it drops out

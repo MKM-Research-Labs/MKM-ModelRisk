@@ -29,6 +29,7 @@ from config.governance import (COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPE
 from src.files import UploadError, upload_path
 from src.governance.documents import (add_document, find_document, model_scope,
                                       remove_document)
+from src.governance.model_handoff import annotate_links, annotate_neighbourhood
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import meeting_items_for_model
@@ -180,13 +181,15 @@ def model_neighbourhood(model_id: str):
     result = derive_neighbourhood(model_id)
     if result is None:
         return jsonify({"error": "model not found"}), 404
-    return jsonify(result)
+    return jsonify(annotate_neighbourhood(result))
 
 
 @models_bp.get("/chain")
 def model_chain():
     """The 'string of pearls' derived from every model's declared dependencies."""
-    return jsonify(derive_chain())
+    chain = derive_chain()
+    annotate_links(chain["links"])
+    return jsonify(chain)
 
 
 @models_bp.get("/<model_id>")

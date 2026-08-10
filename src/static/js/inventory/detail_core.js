@@ -127,8 +127,10 @@ const Detail = {
     const tabs = [
       ["overview", "Overview", null],
       ["version_history", "Versions", n("version_history")],
-      ["dependencies", "Dependencies", n("dependencies")],
-      ["connections", "Connections", null],
+      // Dependencies and Connections were two halves of one subject — a table of
+      // declared feeds, and the picture those declarations draw. One tab now: the
+      // graph you wire, with both registers beneath it.
+      ["connections", "Connections", n("dependencies") + n("data_sources")],
       ["raci_roles", "RACI", n("raci_roles")],
       ["review", "Review", cov],
       ["risk", "Risk Rating", null],
@@ -155,14 +157,19 @@ const Detail = {
     if (this._tab === "connections") {
       box.innerHTML =
         '<p class="muted" style="font-size:12px;margin-bottom:10px">This model\'s neighbourhood: ' +
-        "what feeds it, what it feeds, and the models it shares a data source with. Declare feeds on " +
-        "the Dependencies tab; declare data sources below. Click any model to re-centre.</p>" +
+        "what feeds it, what it feeds, and the models it shares a data source with. Drag a model or " +
+        "a data source from the tray onto the canvas to connect it, or drag from a node’s handle " +
+        "onto another node. Click an arrow to state what crosses it; click a model to re-centre.</p>" +
         '<div id="nbhd-host"></div>' +
+        '<div id="nbhd-handoff"></div>' +
+        '<p class="muted" style="font-size:12px;margin-top:16px">The declarations behind the picture. ' +
+        "Every feed drawn above is one of these rows, on this model or on the model at the other end.</p>" +
+        this._collSection("dependencies", d) +
         '<p class="muted" style="font-size:12px;margin-top:16px">The feeds this model pulls its inputs ' +
         "from. Any model that draws on the same source is linked to it above.</p>" +
         this._collSection("data_sources", d);
       Neighbourhood.render(this._id, "nbhd-host");
-      this._bindCollections(["data_sources"]);
+      this._bindCollections(["dependencies", "data_sources"]);
       return;
     }
     if (this._tab === "risk") {

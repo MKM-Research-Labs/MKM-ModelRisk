@@ -112,8 +112,12 @@ const ProductMap = {
     const routes = []; let vc = 0;
     links.forEach((l) => {
       const r1 = rank[l.from], r2 = rank[l.to];
-      if (r2 - r1 <= 1) { routes.push([l.from, l.to]); return; }
+      // Each route is one link, drawn as a single path (with virtual waypoints
+      // when it skips layers). Carrying the link along is what lets the drawn
+      // path say what the handoff declares crosses it.
+      if (r2 - r1 <= 1) { const direct = [l.from, l.to]; direct.link = l; routes.push(direct); return; }
       const chain = [l.from];
+      chain.link = l;
       for (let r = r1 + 1; r < r2; r++) {
         const vid = "__v" + (vc++);
         (layers[r] = layers[r] || []).push(vid);
@@ -176,7 +180,15 @@ const ProductMap = {
         const c = coord[id];
         return i === 0 ? { x: c.cx, y: c.bottom } : i === ch.length - 1 ? { x: c.cx, y: c.top } : { x: c.cx, y: c.cy };
       });
-      return '<path d="' + vPath(pts) + '" fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#pmap-arrow)"/>';
+      // The label sits at the middle of the route, worded by GraphWire so this map,
+      // the estate chain and a model's own canvas all say it the same way.
+      const a = pts[Math.floor((pts.length - 1) / 2)], b = pts[Math.ceil((pts.length - 1) / 2)];
+      const label = ch.link
+        ? '<text class="nbhd-edge-label" x="' + ((a.x + b.x) / 2 + 6) + '" y="' +
+          ((a.y + b.y) / 2) + '" font-size="9.5">' + esc(GraphWire.label(ch.link.handoff)) + "</text>"
+        : "";
+      return '<path d="' + vPath(pts) + '" fill="none" stroke="#94a3b8" stroke-width="1.5" ' +
+        'marker-end="url(#pmap-arrow)"/>' + label;
     }).join("");
     const supplyEdges = srcP.map((sp) => (sp.s.models || []).map((id) => {
       const c = coord[id]; if (!c) return "";
