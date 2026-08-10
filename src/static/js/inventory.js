@@ -63,7 +63,9 @@ function inputControl(id, spec, division) {
       Math.min((spec.options || []).length, 6) + '">' + opts + "</select>";
   }
   if (spec.type === "date") return '<input id="' + id + '" type="date">';
-  if (spec.type === "textarea") return '<textarea id="' + id + '" rows="4"></textarea>';
+  if (spec.type === "textarea") {
+    return '<textarea id="' + id + '" rows="4" style="width:100%;resize:vertical"></textarea>';
+  }
   return '<input id="' + id + '">';
 }
 

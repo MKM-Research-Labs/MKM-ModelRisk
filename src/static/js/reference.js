@@ -207,8 +207,13 @@ const Reference = {
       : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">None yet.</td></tr>';
     // A readonly field (a person's ratified roles) is recorded by the process that
     // grants it, so it is shown in the table but never offered as an input.
+    // A prose field takes the width that is going. The add row is a flex row, so a
+    // textarea sized by its rows attribute alone sat in a small box with the rest of
+    // the line empty beside it — on the review questions, the field holding the
+    // longest text on the screen was the narrowest thing on it.
     const addInputs = cols.filter((f) => !f.readonly).map((f) =>
-      '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
+      '<div class="field"' + (f.type === "textarea" ? ' style="flex:1;min-width:280px"' : "") +
+      "><label>" + esc(f.label) + (f.required ? " *" : "") + "</label>" +
       inputControl("add-" + spec.key + "-" + f.key, f) + "</div>").join("");
     container.innerHTML =
       '<div class="section-header">' + esc(spec.label) + "</div>" +
