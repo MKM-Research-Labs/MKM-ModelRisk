@@ -126,7 +126,7 @@ const Detail = {
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
     const tabs = [
       ["overview", "Overview", null],
-      ["version_history", "Versions", n("version_history")],
+      ["version_history", "Versions", null],
       ["dependencies", "Dependencies", n("dependencies")],
       ["connections", "Connections", null],
       ["raci_roles", "RACI", n("raci_roles")],
