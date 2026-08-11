@@ -32,6 +32,7 @@ from config.governance import (
     DOC_CATEGORY_SATISFIED_BY,
     EXEMPT_DOC_CATEGORIES,
     PLACEHOLDER_VALUES,
+    RULE_SPECS,
     BROKEN_DOC_ESCALATION,
     COLLECTION_CRITICALITY,
     COMPLETENESS_ACCEPTABLE_AT,
@@ -62,8 +63,9 @@ SCOPE = (
     "This report covers every model on the inventory and every product on the "
     "product register as at the report date. It reports what the governance "
     "record does not hold: scalar fields left unrecorded, collections left "
-    "empty or part-worked, and documentation categories with no retrievable "
-    "file. It is a completeness audit and not a validation opinion -- a field "
+    "empty or part-worked, documentation categories with no retrievable file, "
+    "and the governance rules a record breaches with the answers it does hold. "
+    "It is a completeness audit and not a validation opinion -- a field "
     "that is populated is reported as populated, and nothing here asserts that "
     "what it holds is correct. Findings are framed against " + AUDIT_BASIS + "."
 )
@@ -91,6 +93,14 @@ METHOD = (
     "covered by a broader evidence pack is closed by that pack rather than "
     "demanded again in its own right. Every exclusion is listed in the "
     "appendix, with the reason for it.\n\n"
+    "Not every finding is an absence. A \\emph{rule} finding is raised where the "
+    "answers a record holds contradict each other -- at present, where a "
+    "record's peer reviewer is its own owner. No completeness score can see "
+    "this: both fields are populated, so the record reads as fully governed on "
+    "them, while the assurance it asserts is one it does not have. Rules are "
+    "listed in the appendix, and each is scored on the same scale as an absence "
+    "so that it ranks against the rest of the estate rather than sitting in "
+    "an annex of its own.\n\n"
     "One class of \\emph{apparent} presence is treated as absence. A field "
     "holding a placeholder -- \"TBD\", \"N/A\", a dash -- reads to the "
     "register as filled and to a person as empty. Scoring it as recorded would "
@@ -182,6 +192,11 @@ def appendix() -> str:
             _criticality_rows(COLLECTION_CRITICALITY, DEFAULT_COLLECTION_CRITICALITY,
                               sorted(COLLECTION_CRITICALITY)),
             [0.7, 0.3], caption="Collection criticality")),
+        _subsection("Governance rules", _para_table(
+            ["Rule", "Raised when", "Weight"],
+            [[spec["label"], spec["detail"], f"{spec['criticality']:.2f}"]
+             for _key, spec in sorted(RULE_SPECS.items())],
+            [0.25, 0.55, 0.2], caption="Governance rules")),
         _subsection("Documentation criticality", _para_table(
             ["Category", "Weight"],
             _criticality_rows(DOC_CRITICALITY, DEFAULT_DOC_CRITICALITY,

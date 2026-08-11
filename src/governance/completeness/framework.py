@@ -1,0 +1,193 @@
+# Copyright (c) 2022-2026 MKM Research Labs.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Counting the estate against an enterprise framework's clauses.
+
+The clause list, its citations and its wording are configuration
+(``config.governance._frameworks``); this module is only the counting. The split
+is the point: an adopter re-points the audit at their own framework by editing
+data, and the arithmetic that says "17 of 20 models carry this" does not move.
+
+A clause is never reported as evidenced because the platform *can* hold the
+record. It is evidenced because the estate *does*: the probe counts records, and
+a capability nobody has populated reads as Not evidenced. An assessor is owed the
+second number, not the first.
+
+Where a clause has no applicable record at all -- no models on the register, or a
+clause that only bites on records the estate does not currently have -- the
+result is Not evidenced with the population said out loud. That is a deliberate
+choice against the flattering reading: an audit can only evidence a clause from
+records, and "nothing needed it" is a claim the reader should see and challenge
+rather than one this report should make silently on the estate's behalf.
+"""
+from __future__ import annotations
+
+from datetime import date
+
+from config.governance import (
+    COVERAGE_ABSENT,
+    COVERAGE_EVIDENCED,
+    COVERAGE_EVIDENCED_AT,
+    COVERAGE_OUTSIDE,
+    COVERAGE_PARTIAL,
+    FRAMEWORK_COVERAGE,
+    TREATABLE_RATINGS,
+)
+from src.governance.completeness._gaps import _recorded
+from src.governance.completeness.review_programme import model_state
+from src.identity import same_person
+
+# Clause outcomes declared in the clause table rather than counted. Each is a
+# statement about the platform, not about the estate, so no number can move it:
+# a clause nothing could evidence is not made truer by a well-kept register.
+DECLARED = {
+    "institution": COVERAGE_OUTSIDE,
+    "absent": COVERAGE_ABSENT,
+    "partial": COVERAGE_PARTIAL,
+}
+
+
+def _data(model: dict) -> dict:
+    return model.get("data") or {}
+
+
+def _filled(data: dict, *fields: str) -> bool:
+    """Whether every named scalar field holds an answer rather than a placeholder."""
+    return all(_recorded(data.get(field)) for field in fields)
+
+
+def _any_entries(data: dict, *collections: str) -> bool:
+    """Whether any of the named collections holds at least one entry."""
+    return any(data.get(name) for name in collections)
+
+
+def _independent(data: dict) -> bool:
+    """A reviewer who is recorded and is not the owner.
+
+    The check an assessor makes first and the register cannot currently fail: a
+    model reviewed by the person who owns it has been through a process, but not
+    an independent one, and the record does not distinguish the two by itself.
+    """
+    reviewer = data.get("peer_reviewer")
+    return _recorded(reviewer) and not same_person(reviewer, data.get("owner"))
+
+
+def _in_date(data: dict, as_of: str) -> bool:
+    """A review scheduled and not yet overdue at the report date."""
+    due = data.get("next_review_date")
+    if not _recorded(due):
+        return False
+    try:
+        return date.fromisoformat(str(due)) >= date.fromisoformat(str(as_of))
+    except ValueError:
+        return False
+
+
+def _reviewed(model: dict) -> bool:
+    """A review under way or signed off, read through the programme's own rules so
+    the coverage table and the review section cannot disagree about what counts."""
+    state = model_state(model)
+    return bool(state["started"] or state["signed_off"])
+
+
+def _share(estate: dict, predicate, applies=None) -> tuple[int, int]:
+    """How many of the applicable models carry the evidence."""
+    population = [_data(m) for m in estate["models"]]
+    if applies is not None:
+        population = [d for d in population if applies(d)]
+    return sum(1 for d in population if predicate(d)), len(population)
+
+
+# Each probe takes the estate and returns (records carrying the evidence, records
+# the clause applies to). A population of zero is reported, not hidden.
+PROBES = {
+    "inventory": lambda e: (len(e["models"]), len(e["models"])),
+    "identification": lambda e: _share(
+        e, lambda d: _any_entries(d, "assumptions", "limitations", "model_weaknesses")),
+    "analysis": lambda e: _share(
+        e, lambda d: _filled(d, "tier", "materiality", "complexity")),
+    "evaluation": lambda e: _share(e, lambda d: _filled(d, "rag_rating")),
+    "criteria": lambda e: _share(
+        e, lambda d: _recorded(d.get("division")) and d.get("division") in e["ratified"]),
+    "accountability": lambda e: _share(e, lambda d: _filled(d, "owner")),
+    "independence": lambda e: _share(e, _independent),
+    "committee": lambda e: _share(
+        e, lambda d: _filled(d, "mrc_signoff_date") or _any_entries(d, "signoff_history")),
+    "challenge": lambda e: _share(
+        e, lambda d: _any_entries(d, "review_notes", "signoff_history")),
+    "change": lambda e: _share(e, lambda d: _any_entries(d, "version_history")),
+    "monitoring": lambda e: _share(e, lambda d: _in_date(d, e["as_of"])),
+    "treatment": lambda e: _share(
+        e, lambda d: _any_entries(d, "remediation_steps"),
+        applies=lambda d: d.get("rag_rating") in TREATABLE_RATINGS),
+    "review": lambda e: (sum(1 for m in e["models"] if _reviewed(m)), len(e["models"])),
+    # Both are properties of this report over the records it audited: every
+    # audited record is scored, banded, given a target date and printed here.
+    "prioritisation": lambda e: (len(e["rows"]), len(e["rows"])),
+    "reporting": lambda e: (len(e["rows"]), len(e["rows"])),
+}
+
+
+def _state(met: int, total: int) -> str:
+    if not total or not met:
+        return COVERAGE_ABSENT
+    return COVERAGE_EVIDENCED if met / total >= COVERAGE_EVIDENCED_AT else COVERAGE_PARTIAL
+
+
+def _measured(probe: str, estate: dict, note: str) -> dict:
+    met, total = PROBES[probe](estate)
+    if not total:
+        return {"state": COVERAGE_ABSENT, "met": 0, "total": 0,
+                "evidence": "No applicable record on the register. " + note}
+    return {"state": _state(met, total), "met": met, "total": total,
+            "evidence": f"{met} of {total}. {note}"}
+
+
+def coverage(rows: list[dict], models: list[dict], as_of: str,
+             ratified=()) -> list[dict]:
+    """Every clause of every configured framework, with its evidence.
+
+    ``rows`` are the audited records (models and products), ``models`` the
+    inventory the probes count over, and ``ratified`` the divisions whose risk
+    policy their committee has actually approved -- a division still running on
+    the firm-wide seed default has criteria, but not criteria it has adopted.
+    """
+    estate = {"rows": rows, "models": models, "as_of": as_of,
+              "ratified": set(ratified)}
+    out = []
+    for framework, clauses in FRAMEWORK_COVERAGE:
+        for ref, title, probe, note in clauses:
+            result = ({"state": DECLARED[probe], "met": 0, "total": 0, "evidence": note}
+                      if probe in DECLARED else _measured(probe, estate, note))
+            out.append({"framework": framework, "ref": ref, "title": title,
+                        "probe": probe, **result})
+    return out
+
+
+def tally(clauses: list[dict], framework: str | None = None) -> dict:
+    """Clause counts by outcome, for one framework or across all of them."""
+    scoped = [c for c in clauses if framework is None or c["framework"] == framework]
+    counts = {}
+    for clause in scoped:
+        counts[clause["state"]] = counts.get(clause["state"], 0) + 1
+    counts["clauses"] = len(scoped)
+    return counts
+
+
+__all__ = ["coverage", "tally", "PROBES", "DECLARED", "TREATABLE_RATINGS"]

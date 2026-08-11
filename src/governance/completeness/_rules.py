@@ -64,6 +64,8 @@ from src.governance.completeness._gaps import (
     _field_gaps,
     _held_categories,
     _recorded,
+    _rule_gaps,
+    _rules_carried,
 )
 
 
@@ -149,11 +151,14 @@ def _action(gap: dict, entity_kind: str) -> str:
     template_key = gap["kind"]
     if gap.get("partial"):
         template_key = "collection_partial"
+    # A rule carries its own instruction: each is breached in its own way, and a
+    # generic "correct the {item}" leaves an owner with nothing to do.
+    template = gap.get("template") or REMEDIATION_ACTIONS[template_key]
     # Labels keep the case they were authored with. Lower-casing them reads more
     # naturally mid-sentence for most fields but mangles the acronyms -- "record
     # rag rating", "record mrc sign-off" -- and an instruction an owner has to
     # decode is worse than one with a capital in the middle of it.
-    return REMEDIATION_ACTIONS[template_key].format(
+    return template.format(
         item=gap["label"], entity=entity_kind.lower(),
         detail=gap.get("detail", ""))
 
@@ -185,7 +190,8 @@ def audit_entity(
 
     raw = (_field_gaps(data, field_specs)
            + _collection_gaps(data, collection_specs)
-           + _document_gaps(data, doc_categories, available))
+           + _document_gaps(data, doc_categories, available)
+           + _rule_gaps(data))
 
     gaps = []
     for gap in raw:
@@ -241,6 +247,7 @@ def _carried(data: dict, field_specs: dict, collection_specs: dict,
     # closed by a broader pack is credited through that pack. Crediting a
     # category the register does not require would let a record climb above the
     # threshold on evidence nobody asked it to produce.
+    total += _rules_carried(data)
     retrievable, _ = _held_categories(data, available)
     for category in doc_categories:
         if category in EXEMPT_DOC_CATEGORIES:

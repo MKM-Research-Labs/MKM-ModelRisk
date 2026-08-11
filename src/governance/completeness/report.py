@@ -40,9 +40,10 @@ from config.governance import (
     SEVERITY_BANDS,
 )
 from src.governance.completeness._method import appendix, method_section
+from src.governance.completeness.framework_report import framework_section
 from src.governance.completeness.review_programme import programme
 from src.governance.model_inventory import list_models
-from src.governance.completeness.scan import findings, scan
+from src.governance.completeness.scan import findings, ratified_divisions, scan
 from src.governance.latex import (_para_table, _section, _subsection, front_matter,
                                   history_page, logo_asset, preamble)
 from src.governance.mrc import pack
@@ -59,6 +60,7 @@ KIND_LABELS = {
     "collection": "Collection empty or part-worked",
     "document": "Documentation never uploaded",
     "document_broken": "Documentation recorded but file absent",
+    "rule": "Record breaches a governance rule",
 }
 
 
@@ -228,8 +230,14 @@ def _review_programme(models: list) -> str:
 
 
 def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
-                           logo: bool = False, models: list | None = None) -> str:
-    """LaTeX source for the completeness audit."""
+                           logo: bool = False, models: list | None = None,
+                           ratified=()) -> str:
+    """LaTeX source for the completeness audit.
+
+    ``ratified`` are the divisions whose risk policy their committee has approved;
+    the framework-coverage section reads it, and an empty one reports the criteria
+    clause as unevidenced rather than guessing.
+    """
     org = settings.get("fields", {}).get("org_name", "")
     gaps = findings(rows)
     return (
@@ -248,6 +256,7 @@ def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
         + _section("Findings by record",
                    "".join(_dossier(row) for row in rows))
         + _review_programme(models or [])
+        + framework_section(rows, models or [], as_of, ratified)
         + appendix()
         + "\\end{document}\n"
     )
@@ -263,5 +272,6 @@ def render_completeness_pdf(settings: dict, as_of: str, rows=None, models=None) 
     rows = scan(as_of) if rows is None else rows
     models = list_models() if models is None else models
     return pack.compile_tex(
-        build_completeness_tex(rows, settings, as_of, logo=bool(assets), models=models),
+        build_completeness_tex(rows, settings, as_of, logo=bool(assets), models=models,
+                               ratified=ratified_divisions(models)),
         assets)
