@@ -103,6 +103,15 @@ MIGRATION_APP_PASSWORD_TOKEN = "{{app_password}}"
 # carry one), so it must look like one before it goes anywhere near a statement.
 ROLE_NAME_PATTERN = r"[A-Za-z_][A-Za-z0-9_]*"
 
+# Key for the PostgreSQL advisory lock the migration runner holds while it works,
+# so that only one process migrates a given database at a time. It matters now
+# that the console is served by several gunicorn workers: without it, two
+# processes starting together both read the same migration as pending, both
+# execute its DDL, and the loser dies on the schema_migrations primary key — a
+# worker that crashes on boot with nothing to explain it. The value is arbitrary
+# but must be stable and unshared; advisory locks live in one cluster-wide space.
+MIGRATION_LOCK_KEY = 4113220106
+
 
 # Databases that hold real, non-disposable data. The test suite's teardown
 # fixtures TRUNCATE the event log between tests; pointed at one of these they

@@ -34,7 +34,8 @@ from pathlib import Path
 
 from config import DatabaseConfig
 from config.database import (MIGRATION_APP_PASSWORD_TOKEN,
-                             MIGRATION_APP_USER_TOKEN, ROLE_NAME_PATTERN)
+                             MIGRATION_APP_USER_TOKEN, MIGRATION_LOCK_KEY,
+                             ROLE_NAME_PATTERN)
 from config.paths import MIGRATIONS_DIR as _MIGRATIONS_DIR
 from src.database._connection import owner_connection
 
@@ -76,11 +77,19 @@ def render(sql_text: str, config: DatabaseConfig) -> str:
 
 
 def run_migrations(config=None) -> list[str]:
-    """Apply any pending migrations; return the versions newly applied."""
+    """Apply any pending migrations; return the versions newly applied.
+
+    Safe to call from several processes at once — which the gunicorn worker
+    model makes a real possibility. The advisory lock is taken before the
+    applied set is read, so a second caller waits for the first to commit and
+    then finds nothing left to do, rather than racing it into a duplicate
+    apply. It is transaction-scoped: it releases when this block commits.
+    """
     newly_applied: list[str] = []
     cfg = config or DatabaseConfig.from_env()
     with owner_connection(cfg) as conn:
         with conn.cursor() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", (MIGRATION_LOCK_KEY,))
             _ensure_table(cur)
             done = _applied_versions(cur)
             for path in migration_files():

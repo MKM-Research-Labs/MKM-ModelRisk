@@ -85,12 +85,17 @@ fi
 # --- 5. Run ----------------------------------------------------------------
 if [ "$RUN_APP" = "1" ]; then
   step "Starting MKM-ModelRisk on http://${WEB_HOST:-127.0.0.1}:${WEB_PORT:-5015}"
-  exec python model.py
+  # gunicorn, not the Flask development server: several workers, no debugger.
+  # Settings live in gunicorn.conf.py, which is picked up from the repo root.
+  exec python -m gunicorn --config gunicorn.conf.py wsgi:application
 fi
 step "Setup complete"
 cat <<EOF
 To start the app:
   source .venv/bin/activate
-  python model.py
+  gunicorn --config gunicorn.conf.py wsgi:application
 Then open http://${WEB_HOST:-127.0.0.1}:${WEB_PORT:-5015}
+
+For local development instead — auto-reloading, one process, debugger on:
+  python model.py
 EOF

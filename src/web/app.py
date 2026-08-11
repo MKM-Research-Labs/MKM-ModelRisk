@@ -23,14 +23,8 @@ from __future__ import annotations
 from flask import Flask, jsonify, request
 
 from src.command import ConfirmationRequired
-from src.database import run_migrations
 from src.governance.errors import DomainError
 from src.identity import UnrecognisedActor
-from src.governance.reference import (ensure_default_model_types,
-                                      ensure_default_reference_lists,
-                                      ensure_default_review_questions,
-                                      ensure_default_status_vocabularies,
-                                      ensure_default_standing_agenda)
 from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
 from src.web.api_artefacts import artefacts_bp
@@ -54,7 +48,7 @@ from src.web.api_ingest import ingest_bp
 from src.web.api_reference import reference_bp
 from src.web.api_risk_policy import risk_policy_bp
 from src.web.views import views_bp
-from src.web._startup import reconcile_read_models
+from src.web._startup import bootstrap
 
 
 def _register_error_handlers(app: Flask) -> None:
@@ -79,25 +73,16 @@ def _register_error_handlers(app: Flask) -> None:
 
 
 def create_app(run_db_migrations: bool = True) -> Flask:
-    """Build the Flask app. Applies DB migrations unless told not to."""
+    """Build the Flask app. Applies DB migrations unless told not to.
+
+    ``run_db_migrations`` covers all the one-time startup work — migrations, the
+    seeded admin defaults, and the read-model rebuild (see
+    ``src/web/_startup.py``). Pass ``False`` when something else has already
+    done it: the test suites do, and so does ``wsgi.py``, where the gunicorn
+    master bootstraps once before forking rather than every worker racing.
+    """
     if run_db_migrations:
-        run_migrations()
-        # Model types are admin-managed, but an empty list degrades the field to
-        # free text — so a fresh database is given the defaults once.
-        ensure_default_model_types()
-        # Data source + vendor lists back the model's data_sources / vendor
-        # fields; seed their defaults on a fresh database for the same reason.
-        ensure_default_reference_lists()
-        ensure_default_review_questions()
-        ensure_default_standing_agenda()
-        ensure_default_status_vocabularies()
-        # Read-models are derived caches maintained incrementally on writes; if one
-        # drifts out of sync with the event log (e.g. after a restore or a data-dir
-        # migration, where no command runs to refresh it) intact records render
-        # blank. Recompute them from the log on startup so a stale cache self-heals
-        # instead of masquerading as data loss. Rewrites only cache tables, never
-        # the log; set REBUILD_VIEWS_ON_STARTUP=0 to skip. See src/web/_startup.py.
-        reconcile_read_models()
+        bootstrap()
     # Front-end assets live under src/static and src/templates (coding rule R7).
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
     app.register_blueprint(views_bp)

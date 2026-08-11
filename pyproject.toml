@@ -10,6 +10,9 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "flask>=3.0",
     "jsonschema>=4.0",
+    # Serves the console (gunicorn.conf.py). POSIX only — it needs fcntl — so on
+    # Windows this is skipped and `python model.py` remains the way to run it.
+    'gunicorn>=23.0; sys_platform != "win32"',
 ]
 
 [project.optional-dependencies]

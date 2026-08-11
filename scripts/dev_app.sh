@@ -25,6 +25,11 @@ export DB_NAME="${SCRATCH_DB:-mkm_modelrisk_scratch}"
 export WEB_PORT="${WEB_PORT:-5016}"
 export WEB_HOST="${WEB_HOST:-127.0.0.1}"
 
+# No backup schedule from the verification app. backup_db.sh takes its credentials
+# from .env, so it would dump the LIVE database while this app serves a scratch
+# copy — a schedule the estate's real app is already keeping.
+export BACKUP_ENABLED=0
+
 for name in $PROTECTED; do
   [ "$DB_NAME" = "$name" ] && {
     echo "REFUSING TO START: DB_NAME is '$DB_NAME', which holds the real estate." >&2
@@ -41,7 +46,9 @@ for name in $PROTECTED; do
 done
 
 echo "Verification app: http://$WEB_HOST:$WEB_PORT   database: $RESOLVED" >&2
-exec "$PY" -c "
-from src.web import create_app
-create_app().run(host='$WEB_HOST', port=$WEB_PORT, debug=False, use_reloader=False)
-"
+
+# Served by gunicorn, exactly as the real thing is, so what is verified here is
+# what ships — including the WSGI startup path (one bootstrap in the master, then
+# the fork). Settings come from gunicorn.conf.py, which reads WEB_HOST/WEB_PORT
+# exported above.
+exec "$PY" -m gunicorn --config gunicorn.conf.py wsgi:application
