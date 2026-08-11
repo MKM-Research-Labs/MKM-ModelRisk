@@ -17,58 +17,34 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Application entry point.
+"""Development entry point — the auto-reloading Werkzeug server.
 
-Run the governance console with ``python model.py`` (applies DB migrations on
-startup). ``app`` is exposed at module level so a WSGI server can serve it too,
-e.g. ``gunicorn model:app``. ``python model.py phys`` populates the instance from
-the PhysicalRisk model inventory (demo seed) instead of starting the server.
+``python model.py`` runs the console for local work: one process, debug on,
+reloading as you edit. ``python model.py phys`` populates the instance from the
+PhysicalRisk model inventory (demo seed) instead of starting the server.
+
+This is not how the console is served for real. That is gunicorn against
+``wsgi:application`` — see ``gunicorn.conf.py`` and ``scripts/start.sh``. The app
+object is the same one, built in the same place (``wsgi.py``), so the two entry
+points cannot drift apart; what differs is the server in front of it and, with
+it, the debugger, the reloader and the single process.
 """
 from __future__ import annotations
 
 import os
 import sys
 
-from config.paths import BACKUP_SCRIPT
 from config.web import WEB_HOST, WEB_PORT
-from src.web import create_app
-
-app = create_app()
-
-
-def _start_backup_scheduler():  # pragma: no cover
-    """Dump the database at startup and every hour while the app runs.
-
-    In-app rather than a system scheduler: macOS blocks a background LaunchAgent
-    from reading the repo under ~/Documents, but the app inherits the launching
-    shell's permissions, so the backup script runs cleanly here. The thread is a
-    daemon (dies with the process) and each run is best-effort — a failed or
-    skipped backup (DB down, SSD unmounted) never disturbs the request loop.
-    """
-    import subprocess
-    import threading
-    import time
-
-    interval = int(os.environ.get("BACKUP_INTERVAL_SECONDS", "3600"))
-
-    def loop():
-        time.sleep(20)  # let migrations settle before the first snapshot
-        while True:
-            try:
-                subprocess.run(["bash", str(BACKUP_SCRIPT)], timeout=300, check=False)
-            except Exception:
-                pass
-            time.sleep(interval)
-
-    threading.Thread(target=loop, daemon=True, name="db-backup").start()
-
+from wsgi import application as app  # noqa: F401 — re-exported for `gunicorn model:app`
 
 if __name__ == "__main__":  # pragma: no cover
     if sys.argv[1:2] == ["phys"]:
         from scripts.migrate_phys import main as seed_phys
         raise SystemExit(seed_phys())
     # Only in the reloader's worker child (WERKZEUG_RUN_MAIN), so the backup runs
-    # once, not twice, under debug's auto-reloader.
+    # once, not twice, under debug's auto-reloader. Under gunicorn this is the
+    # master's job instead — see on_starting in gunicorn.conf.py.
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        _start_backup_scheduler()
+        from src.web._backup import start_backup_scheduler
+        start_backup_scheduler()
     app.run(host=WEB_HOST, port=WEB_PORT, debug=True)

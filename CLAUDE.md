@@ -95,8 +95,9 @@ Tests do not prove a screen. For anything visible, restore the scratch DB, serve
 5016, and check it — never ask the user to look for you.
 
 - **Template caching:** with `debug=False` Jinja caches `index.html`, so a **new `<script>`
-  tag is not picked up until Flask restarts**. Static JS/CSS are fine (`asset_version`
-  busts the browser cache).
+  tag is not picked up until the server restarts**. Static JS/CSS are fine
+  (`asset_version` busts the browser cache). `dev_app.sh` serves under gunicorn, so
+  restart it — or `kill -HUP` the master to recycle the workers.
 - **Many UI surfaces are hand-curated, not spec-driven.** Adding a field to config is not
   enough — wire it into the relevant detail lists, the Admin tab bar, and the register form.
 - If screenshots come back blank and `document.body.getBoundingClientRect().width === 0`,
