@@ -111,6 +111,22 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None) -> list[dict
     return rows
 
 
+def scoped_models(model_ids=None, config=None) -> list[dict[str, Any]]:
+    """The inventory the report's estate-wide sections read, under the same scope
+    rule as ``scan``: ``None`` is the whole estate, an empty sequence is nothing.
+
+    It exists so the two cannot diverge. A committee-scoped audit that scoped its
+    findings but not its inventory would print one table counting the committee's
+    records beside another counting the firm's, with nothing on the page to say
+    which was which.
+    """
+    models = list_models(config=config)
+    if model_ids is None:
+        return models
+    wanted = set(model_ids)
+    return [m for m in models if m["model_id"] in wanted]
+
+
 def ratified_divisions(models: list[dict], config=None) -> set:
     """The divisions whose risk policy their own committee has actually approved.
 

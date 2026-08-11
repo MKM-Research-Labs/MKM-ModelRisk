@@ -103,7 +103,10 @@ def run_completeness_audit(meeting_id: str):
     as_of = date.today().isoformat()
     rows = scan(as_of, model_ids=model_ids, product_ids=product_ids)
     try:
-        pdf = render_completeness_pdf(get_settings(), as_of, rows=rows)
+        # Both halves scoped to the committee: the findings by ``rows``, and the
+        # inventory the estate-wide sections read by ``model_ids``.
+        pdf = render_completeness_pdf(get_settings(), as_of, rows=rows,
+                                      model_ids=model_ids)
     except TectonicNotFound as exc:
         # Optional system dependency missing: surface an actionable 503 rather
         # than a 500, mirroring the global Audit Reports endpoint.

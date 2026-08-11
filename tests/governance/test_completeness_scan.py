@@ -26,6 +26,7 @@ import pytest
 
 from src.governance.completeness.report import (
     build_completeness_tex, render_completeness_pdf)
+from src.governance.completeness.scan import scoped_models
 from src.governance.completeness.scan import (
     MODEL_KIND, _retrievable, product_scope, scan)
 from src.governance.model_inventory import rebuild_inventory_view, register_model
@@ -176,3 +177,17 @@ def test_appendix_lists_the_placeholder_values():
     printed = _plain(appendix())
     for value in PLACEHOLDER_VALUES:
         assert value in printed, value
+
+
+def test_scoped_models_follows_the_same_rule_as_the_findings_scan():
+    """A committee audit that scoped its findings but not its inventory would put
+    the committee's records and the firm's in one report with nothing to tell
+    them apart. None is the whole estate; an empty sequence is nothing."""
+    every = scoped_models()
+    assert [m["model_id"] for m in scoped_models(None)] == [m["model_id"] for m in every]
+    assert scoped_models([]) == []
+    if every:
+        wanted = every[0]["model_id"]
+        assert [m["model_id"] for m in scoped_models([wanted])] == [wanted]
+    # An id nobody has registered scopes to nothing rather than falling back.
+    assert scoped_models(["MODEL-THAT-DOES-NOT-EXIST"]) == []
