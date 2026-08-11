@@ -136,7 +136,8 @@ def _supersede_open_requests(ctx: CommandContext, subject: Subject, subject_id: 
 
 def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
                   target_mrc: str, kind: str = "rag", proposed_rag: str | None = None,
-                  note: str | None = None) -> dict | None:
+                  note: str | None = None, from_owner: str | None = None,
+                  to_owner: str | None = None) -> dict | None:
     """Queue a sign-off request on the subject and attach it if a meeting exists.
 
     ``kind`` is what the committee is being asked to ratify (see
@@ -151,6 +152,13 @@ def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
         fields["proposed_rag"] = proposed_rag
     if note:
         fields["note"] = note
+    # An owner ratification carries both names: the committee is ratifying a
+    # change, and a request that named only the new owner would not say what
+    # changed.
+    if from_owner is not None:
+        fields["from_owner"] = from_owner
+    if to_owner is not None:
+        fields["to_owner"] = to_owner
     subject.add_item(ctx, subject_id, REQUESTS, fields)
     subject.rebuild()
     refreshed = subject.get(subject_id) or {"data": {}}
@@ -161,8 +169,13 @@ def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
     return subject.get(subject_id)
 
 
-def agenda_title(signoff_kind: str, subject_id: str, proposed_rag: str | None) -> str:
+def agenda_title(signoff_kind: str, subject_id: str, proposed_rag: str | None,
+                 request_item: dict | None = None) -> str:
     """How the decision reads on the committee's agenda."""
+    if signoff_kind == "owner":
+        moved = request_item or {}
+        return (f"Model owner: {subject_id} — {moved.get('from_owner') or 'unassigned'}"
+                f" → {moved.get('to_owner') or 'unassigned'}")
     if signoff_kind == "retire":
         return f"Retire (hibernate): {subject_id}"
     if signoff_kind == "reactivate":
@@ -179,7 +192,7 @@ def attach_request(ctx: CommandContext, subject: Subject, subject_id: str,
     proposed = request_item.get("proposed_rag")
     signoff_kind = request_item.get("kind") or "rag"
     fields = {
-        "title": agenda_title(signoff_kind, subject_id, proposed),
+        "title": agenda_title(signoff_kind, subject_id, proposed, request_item),
         subject.agenda_id_field: subject_id,
         "signoff_kind": signoff_kind,
         "status": "Pending",
@@ -187,6 +200,9 @@ def attach_request(ctx: CommandContext, subject: Subject, subject_id: str,
     # Only a rating decision carries a proposed rating.
     if proposed:
         fields["proposed_rag"] = proposed
+    for key in ("from_owner", "to_owner"):
+        if request_item.get(key):
+            fields[key] = request_item[key]
     dispatch(
         "add_collection_item", _mrc_add, context=ctx,
         meeting_id=meeting_id, collection="agenda", fields=fields,

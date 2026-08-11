@@ -19,6 +19,10 @@
 # SOFTWARE.
 """Structured-collection field specs on a model (coding rule R1)."""
 from config.governance._inventory import VALID_RAG_RATINGS
+from config.governance._signoff_collections import (  # noqa: F401 (re-export)
+    SIGNOFF_COLLECTION_SPECS, SIGNOFF_COLLECTIONS, SIGNOFF_HISTORY_COLLECTION,
+    SIGNOFF_REQUESTS_COLLECTION, VALID_SIGNOFF_KINDS, VALID_SIGNOFF_OUTCOME,
+    VALID_SIGNOFF_REQUEST_STATUS)
 from config.governance._review import (REVIEW_COLLECTION_SPECS,
                                        VALID_REVIEWER_VERDICTS)
 
@@ -88,35 +92,16 @@ VALID_EVENT_REVIEW_STATUS = ("Pending", "Received")
 # A queued sign-off request (owner-raised) as it moves from raised to
 # attached-to-a-meeting. "Pending" = raised, awaiting a meeting of the target
 # MRC; "Attached" = pulled onto a meeting agenda; "Withdrawn" = cancelled.
-VALID_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached", "Completed", "Rejected", "Withdrawn")
 # The subset that is still in flight — raised and not yet settled either way. A
 # subject with one of these in its queue reads as "pending sign-off" rather than
 # as a draft, wherever that lifecycle is derived.
 ACTIVE_SIGNOFF_REQUEST_STATUS = ("Pending", "Attached")
-# What a sign-off request asks the committee to ratify. One queue serves them all
-# so a committee has a single approvals list rather than one per decision type.
-# "rag" proposes a new risk rating; "retire" hibernates the subject (it drops out
-# of the active inventory); "reactivate" brings a hibernated subject back.
-VALID_SIGNOFF_KINDS = ("rag", "retire", "reactivate", "handoff")
-# Named once so the domain rules and the routing agree on it. A hibernated
-# subject is read-only *except* for this queue: a reactivate request has to be
-# raised on the very subject it would bring back, so exempting it is what keeps
-# hibernation reversible rather than a one-way trip.
-SIGNOFF_REQUESTS_COLLECTION = "signoff_requests"
-SIGNOFF_HISTORY_COLLECTION = "signoff_history"
-# The committee's own machinery: the queue it works and the record of what it
-# decided. Both are exempt from a subject's read-only-when-hibernated rule —
-# a decision must be recordable even when it is the decision that hibernated the
-# subject, and a reactivate is raised and minuted on a subject that is still
-# hibernated at the time.
-SIGNOFF_COLLECTIONS = (SIGNOFF_REQUESTS_COLLECTION, SIGNOFF_HISTORY_COLLECTION)
-# The committee's decision on a sign-off request.
-VALID_SIGNOFF_OUTCOME = ("Approved", "Rejected", "Revoked")
 
 # Structured collections on a model: arrays of items. Each item is built from the
 # field specs below; ``id_prefix`` seeds generated item ids (e.g. AS-001). One
 # generic add/update/remove command set serves every collection.
 COLLECTION_SPECS = {
+    **SIGNOFF_COLLECTION_SPECS,
     **REVIEW_COLLECTION_SPECS,
     "assumptions": {"label": "Assumptions", "id_prefix": "AS", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
@@ -208,40 +193,6 @@ COLLECTION_SPECS = {
         {"key": "consumer_type", "label": "Consumer type", "type": "text"},
         {"key": "consumer_units", "label": "Consumer units", "type": "text"},
         {"key": "note", "label": "Mapping / compatibility note", "type": "text"},
-    ]},
-    # W4c — audit of the decisions the MRC took. One entry per decision; each
-    # records what was decided, which meeting rubber-stamped it, and — for a
-    # rating decision — where the rating came from and went to. ``kind`` mirrors
-    # the request it settles, so the rating fields are only meaningful for "rag".
-    SIGNOFF_HISTORY_COLLECTION: {"label": "Sign-off history", "id_prefix": "SO", "fields": [
-        {"key": "date", "label": "Date", "type": "date", "required": True},
-        {"key": "kind", "label": "Kind", "type": "choice",
-         "options": VALID_SIGNOFF_KINDS, "required": True},
-        {"key": "outcome", "label": "Outcome", "type": "choice", "options": VALID_SIGNOFF_OUTCOME},
-        {"key": "from_rating", "label": "From", "type": "choice", "options": VALID_RAG_RATINGS},
-        {"key": "to_rating", "label": "To", "type": "choice", "options": VALID_RAG_RATINGS},
-        {"key": "meeting_id", "label": "Meeting", "type": "text"},
-        {"key": "next_review_date", "label": "Next review", "type": "date"},
-        {"key": "note", "label": "Note", "type": "text"},
-    ]},
-    # The owner-raised sign-off queue: a request is routed to the model's
-    # responsible MRC (``target_mrc``) and waits as Pending until a meeting of
-    # that committee is scheduled, at which point it is pulled onto the agenda
-    # and marked Attached (recording the meeting + agenda item it landed on).
-    # One queue carries every kind of decision the committee ratifies, so
-    # ``kind`` says what is being asked and the kind-specific fields (e.g.
-    # ``proposed_rag`` for a rating) are only meaningful for that kind.
-    SIGNOFF_REQUESTS_COLLECTION: {"label": "Sign-off requests", "id_prefix": "SR", "fields": [
-        {"key": "kind", "label": "Kind", "type": "choice",
-         "options": VALID_SIGNOFF_KINDS, "required": True},
-        {"key": "proposed_rag", "label": "Proposed RAG", "type": "choice",
-         "options": VALID_RAG_RATINGS},
-        {"key": "target_mrc", "label": "Target MRC", "type": "text"},
-        {"key": "status", "label": "Status", "type": "choice",
-         "options": VALID_SIGNOFF_REQUEST_STATUS},
-        {"key": "meeting_id", "label": "Meeting", "type": "text"},
-        {"key": "agenda_item_id", "label": "Agenda item", "type": "text"},
-        {"key": "note", "label": "Note", "type": "text"},
     ]},
     # W4b — Operational Failure Events: post-mortems of incidents touching the
     # model, with RACI (Responsible / Accountable / Consulted / Informed). The

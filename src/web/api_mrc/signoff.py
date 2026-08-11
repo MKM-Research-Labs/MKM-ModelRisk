@@ -60,6 +60,13 @@ def _review_received(record: dict) -> str:
 def _minute_text(signoff_kind: str, subject, subject_id: str, owner_bit: str,
                  next_review, review_bit: str = "") -> tuple[str, str]:
     """The title + wording recording what the committee ratified."""
+    if signoff_kind == "owner":
+        return (
+            f"Model owner ratified — {subject_id}",
+            f"MRC has reviewed the change of {subject.kind} owner for {subject_id} and "
+            "has ratified the appointment. The new owner answers for the model from "
+            "the date of the change, which the record already shows.",
+        )
     if signoff_kind == "retire":
         return (
             f"Retire ratified — {subject_id}",
@@ -174,12 +181,21 @@ def _decide_signoff(meeting_id: str, item_id: str, *, outcome: str):
             subject.set_field(ctx, subject_id, "rag_rating", proposed_rag)
         # "handoff" carries no field to snap — approving it is recorded by the
         # MRC sign-off stamp below, which is what makes the handoff "Approved".
+        # "owner" carries none either: the new owner took the model when the change
+        # was made, because a model cannot sit unowned while a committee meets. What
+        # the approval settles is whether the appointment stands.
     history_fields = {"kind": signoff_kind, "meeting_id": meeting_id, "outcome": outcome}
     # The rating fields only mean anything for a rating decision.
     if signoff_kind == "rag":
         history_fields["to_rating"] = proposed_rag
         if from_rating:
             history_fields["from_rating"] = from_rating
+    # An owner decision records the change it ratified, so the history says who
+    # handed the model to whom rather than merely that something was approved.
+    if signoff_kind == "owner":
+        for key in ("from_owner", "to_owner"):
+            if item.get(key):
+                history_fields[key] = item[key]
     if meeting_date:
         history_fields["date"] = meeting_date
     if next_review:

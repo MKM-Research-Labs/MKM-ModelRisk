@@ -30,7 +30,7 @@ from config.governance._collections import (IMPACT_LIST, PRIORITY_LIST,
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES,
                                           VALID_VALIDATION_STATUSES,
                                           VALIDATION_STATUS_LIST)
-from config.governance._mrc import STANDING_AGENDA_ROLES
+from config.governance._standing_agenda import STANDING_AGENDA_ROLES
 from config.permissions import ROLES
 
 # Order: the Division/Line of Business org tree first, then the MRC committees

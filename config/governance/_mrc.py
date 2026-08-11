@@ -163,6 +163,10 @@ MRC_COLLECTION_SPECS = {
          "options": VALID_SIGNOFF_KINDS, "hidden": True},
         {"key": "proposed_rag", "label": "Proposed RAG",
          "type": "choice", "options": VALID_RAG_RATINGS, "hidden": True},
+        # An owner ratification: who it was and who it now is, so the committee
+        # reads the change on the agenda item rather than opening the model.
+        {"key": "from_owner", "label": "Previous owner", "type": "text", "hidden": True},
+        {"key": "to_owner", "label": "New owner", "type": "text", "hidden": True},
         # Phase MRC-4: back-pointers on an escalation-child item — the child
         # (on the parent MRC's meeting) knows which item it was escalated from.
         # Not shown on the add form.
@@ -262,37 +266,3 @@ MRC_COLLECTION_SPECS = {
         {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
     ]},
 }
-
-# The standing agenda seeded onto every new MRC meeting, in running order (AOB
-# always last). Each item's ``kind`` drives the bespoke per-item UI renderer and
-# marks it as a template item, so generic agenda replay (the demo seeder) skips
-# these to avoid duplicating what the seeding helper already adds.
-STANDING_AGENDA = (
-    {"kind": "rollcall", "title": "Rollcall and Confirmation of Quorum",
-     "description": "Confirm attendance in the participants panel; the meeting "
-                    "may proceed only once quorate."},
-    {"kind": "minutes_signoff", "title": "Sign-off of the previous MRM minutes",
-     "description": "Proposed by the chair."},
-    {"kind": "review_signoff", "title": "Review model sign-off",
-     "description": "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."},
-    {"kind": "review_analysis", "title": "Review model analysis",
-     "description": "Model analyses are reviewed in the Models tab (Analysis) — "
-                    "confirmation to proceed and any actions."},
-    {"kind": "completeness_audit", "title": "Governance completeness audit",
-     "description": "Run and review the completeness audit for the models and "
-                    "products in scope for this committee; record the committee's "
-                    "notes on the outcome."},
-    # Who sits on this committee, and what they are allowed to be. A person's roles
-    # decide who may own, validate and approve, so granting them is the committee's
-    # decision rather than an administrator's — the same reasoning that sends the risk
-    # policy here rather than letting Admin set it directly.
-    {"kind": "membership", "title": "Committee membership and roles",
-     "description": "Ratify proposed changes to who sits on this committee and the "
-                    "roles they hold. Proposed in Admin -> People; a role takes effect "
-                    "only once ratified here."},
-    {"kind": "aob", "title": "Any Other Business (AOB)", "description": ""},
-)
-STANDING_AGENDA_KINDS = frozenset(item["kind"] for item in STANDING_AGENDA)
-# The same roles in the order a meeting runs them, for the Admin picker: a set has
-# no order, and a dropdown that shuffled between page loads would be its own bug.
-STANDING_AGENDA_ROLES = tuple(dict.fromkeys(item["kind"] for item in STANDING_AGENDA))

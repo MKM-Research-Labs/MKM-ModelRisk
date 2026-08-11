@@ -46,6 +46,7 @@ from src.governance.model_inventory import (
     update_collection_item,
     update_model_field,
 )
+from src.web._owner_ratification import set_model_field
 from src.web._helpers import (
     context_from_request,
     json_body,
@@ -253,11 +254,10 @@ def register():
 @models_bp.post("/<model_id>/field")
 def update_field(model_id: str):
     body = json_body()
-    dispatch(
-        "update_model_field", update_model_field, context=context_from_request(body),
-        model_id=model_id, field=body.get("field"), value=body.get("value"),
-    )
-    rebuild_inventory_view()
+    # An owner change carries a committee ratification with it (see
+    # _owner_ratification): the write is the same, what follows it is not.
+    set_model_field(context_from_request(body), model_id,
+                    field=body.get("field"), value=body.get("value"))
     return jsonify(get_model(model_id))
 
 

@@ -142,6 +142,17 @@ Object.assign(Detail, {
     // Through the spec, so a status vocabulary shows its label rather than the
     // word the record stores.
     let value = optionLabel(f, d[key]);
+    // The owner takes the model as soon as they are named, but the appointment is
+    // the committee's to ratify — so the record shows the new name and says the
+    // sign-off is outstanding rather than pretending the change is settled.
+    if (key === "owner") {
+      const pending = pendingOwnerRatification(d);
+      if (pending) {
+        value += ' <span class="badge" style="background:#f57c00" title="' +
+          esc((pending.from_owner || "unassigned") + " → " + (pending.to_owner || "unassigned")) +
+          '">MRC sign-off outstanding</span>';
+      }
+    }
     if (key === "review_status") {
       // Set by the review workflow (each interim approval carries it forward), so
       // it is not typed here — it links to the tab that moves it instead.

@@ -148,9 +148,6 @@ from config.governance._mrc import (
     MRC_SETTINGS_SPECS,
     REVIEW_DUE_SOON_DAYS,
     REVIEW_UPCOMING_DAYS,
-    STANDING_AGENDA,
-    STANDING_AGENDA_KINDS,
-    STANDING_AGENDA_ROLES,
     VALID_ACTION_STATUSES,
     VALID_AGENDA_STATUS,
     VALID_FREQUENCY,
@@ -179,6 +176,9 @@ from config.governance._review import (
     VALID_REVIEW_STATUSES,
     VALID_REVIEW_TRIGGERS,
 )
+from config.governance._standing_agenda import (STANDING_AGENDA,
+                                               STANDING_AGENDA_KINDS,
+                                               STANDING_AGENDA_ROLES)
 from config.governance._product import (
     PRODUCT_BINDINGS,
     PRODUCT_COMPONENTS,

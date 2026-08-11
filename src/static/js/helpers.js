@@ -141,6 +141,16 @@ const Policy = {
 // What a stored value is shown as. A status vocabulary separates the two — the
 // record holds "Production" while the division may call that stage something else
 // — so anything displaying a field's value asks its spec first.
+// The undecided owner ratification on a record, if there is one. Mirrors
+// _owner_ratification.pending_owner_request on the server: the newest owner
+// request decides, and only while it is still queued or on an agenda.
+function pendingOwnerRatification(data) {
+  const requests = ((data || {}).signoff_requests || []).filter((r) => r.kind === "owner");
+  const latest = requests[requests.length - 1];
+  if (!latest) return null;
+  return (latest.status === "Pending" || latest.status === "Attached") ? latest : null;
+}
+
 function optionLabel(spec, value) {
   const shown = spec && spec.option_labels;
   if (!shown || value === null || value === undefined || value === "") return fieldDisplay(value);

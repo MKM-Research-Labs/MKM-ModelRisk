@@ -24,7 +24,8 @@
 // What a sign-off item is about, and which Approvals tab it belongs on. Written
 // once: the subject was previously spelled out at every call site, so adding a
 // third kind meant finding all of them.
-const SUBJECT_LABEL = { model: "model", product: "product", handoff: "handoff" };
+const SUBJECT_LABEL = { model: "model", product: "product", handoff: "handoff",
+                        owner: "model owner" };
 
 function subjectOf(item) {
   return item.subject_model_id || item.subject_product_id || item.subject_handoff_id || "";
@@ -42,7 +43,12 @@ Object.assign(MeetingDetail, {
   // sign-offs like any other: an owner raises them and the committee ratifies them.
   _signoffItems(kind) {
     const items = ((this._meeting.data || {}).agenda || []).filter(subjectOf);
-    return kind ? items.filter((a) => subjectKind(a) === kind) : items;
+    if (!kind) return items;
+    // "owner" is a kind of DECISION, not a kind of subject: an owner ratification
+    // is raised on a model, so it would otherwise sit among that model's rating
+    // sign-offs, which is a different question for the committee to answer.
+    if (kind === "owner") return items.filter((a) => this._signoffKind(a) === "owner");
+    return items.filter((a) => subjectKind(a) === kind && this._signoffKind(a) !== "owner");
   },
 
   // What the committee is being asked to ratify. Items raised before the queue
@@ -60,6 +66,10 @@ Object.assign(MeetingDetail, {
     }
     if (kind === "reactivate") {
       return '<span class="badge" style="background:var(--accent)">Reactivate</span>';
+    }
+    if (kind === "owner") {
+      return '<span class="muted">' + esc(item.from_owner || "unassigned") + "</span> &rarr; <b>" +
+        esc(item.to_owner || "unassigned") + "</b>";
     }
     return "&rarr; " + ragBadge(item.proposed_rag);
   },
@@ -102,7 +112,8 @@ Object.assign(MeetingDetail, {
         '" data-sgtab="' + k + '">' + label + " (" + n + ")</button>";
     };
     return '<div class="dtabs" style="margin-bottom:8px">' +
-      btn("model", "Models") + btn("product", "Products") + btn("handoff", "Handoffs") + "</div>";
+      btn("model", "Models") + btn("product", "Products") + btn("handoff", "Handoffs") +
+      btn("owner", "Model Owner") + "</div>";
   },
 
   _approvalsSection() {
@@ -131,6 +142,13 @@ Object.assign(MeetingDetail, {
       return approve
         ? "Ratify reactivating " + subj + " — it returns to the active inventory."
         : "Reject the reactivate request for " + subj + " — it stays hibernated.";
+    }
+    if (kind === "owner") {
+      const moved = (item.from_owner || "unassigned") + " → " + (item.to_owner || "unassigned");
+      return approve
+        ? "Ratify the change of model owner for " + subj + " (" + moved + ")."
+        : "Reject the change of model owner for " + subj + " (" + moved +
+          ") — the model keeps the new owner, and the appointment stays unratified.";
     }
     return approve
       ? "Sign off " + subj + " &rarr; " + item.proposed_rag + " and set its rating."
