@@ -75,16 +75,18 @@ pytest tests/e2e -m e2e
 **not** a pass — that exit code is the shell's. Always read the final line:
 `PASS: 0 gated finding(s)` or `FINDINGS: N gated finding(s)`.
 
-**Known-red at HEAD (verified 2026-08-07 on `main`) — 6 tests. Do not chase these:**
+**Known-red at HEAD (verified 2026-08-11 on `main`) — 3 tests. Do not chase these:**
 
 ```
 tests/audit/test_audit_large_files.py::test_source_tree_within_limit
-tests/governance/test_monitoring.py::test_document_reports_an_empty_estate_without_claiming_activity
-tests/governance/test_monitoring.py::test_document_reports_observed_portfolio_activity
-tests/governance/test_monitoring.py::test_document_names_a_catchment_that_holds_no_portfolio
 tests/web/test_product_api.py::test_raci_roles_collection_on_a_product
 tests/web/test_product_risk_api.py::test_validation_and_events_collections_are_available
 ```
+
+This list shrinks as well as grows: the three `tests/governance/test_monitoring.py`
+failures that sat here from 2026-08-07 now pass. Treat it the same way as the audit
+baseline below — as a claim with a date on it, not a standing fact. A stale entry costs
+more than a missing one, because it excuses a real regression.
 
 The audit's own gate sits at **3 findings** — three over-long source files, verified
 2026-08-11 on `main`:
