@@ -24,7 +24,9 @@ from src.governance.completeness.report import (
     build_completeness_tex,
     render_completeness_pdf,
 )
-from src.governance.completeness.scan import findings, scan
+from src.governance.completeness.framework import coverage, tally
+from src.governance.completeness.framework_report import framework_section
+from src.governance.completeness.scan import findings, ratified_divisions, scan
 from src.governance.completeness._rules import (
     audit_entity,
     band,
@@ -35,7 +37,8 @@ from src.governance.completeness._rules import (
 )
 
 __all__ = [
-    "audit_entity", "band", "build_completeness_tex", "event_pressure",
-    "findings", "rag_multiplier", "render_completeness_pdf", "scan",
-    "staleness", "tier_weight",
+    "audit_entity", "band", "build_completeness_tex", "coverage",
+    "event_pressure", "findings", "framework_section", "rag_multiplier",
+    "ratified_divisions", "render_completeness_pdf", "scan", "staleness",
+    "tally", "tier_weight",
 ]

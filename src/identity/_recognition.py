@@ -44,6 +44,23 @@ def _normalise(value: str) -> str:
     return " ".join(str(value or "").split()).casefold()
 
 
+def same_person(one: str, other: str) -> bool:
+    """Whether two recorded identities name the same person.
+
+    Matched on the normalised string, not against the People register: a record
+    may name somebody who has since left it, and "are these two the same person"
+    has to stay answerable when neither is registered. Two blanks are not a
+    match — an unrecorded owner and an unrecorded reviewer are two absences, and
+    the absences are already reported in their own right.
+
+    It cannot catch an alias. Somebody recorded as "R. Ellis" in one field and
+    "Rob Ellis" in the other reads as two people here, so this establishes that a
+    breach *is* a breach and never that a record is clean.
+    """
+    left = _normalise(one)
+    return bool(left) and left == _normalise(other)
+
+
 def enforcement_applies(database_name: str | None = None) -> bool:
     """Whether the known-actor rule is in force for the database in use."""
     if ENFORCE_KNOWN_ACTORS == "never":

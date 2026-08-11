@@ -47,6 +47,17 @@ ENFORCE_KNOWN_ACTORS = os.environ.get("ENFORCE_KNOWN_ACTORS", "protected")
 # Scoping machine actors to append-only is phase P6, not this rule.
 MACHINE_ACTOR_PREFIX = "ingest:"
 
+# Segregation of duties: a model's peer reviewer may not be its own owner. A review by
+# the person who owns the model is a review, but not an independent one, and the record
+# cannot tell the two apart by itself -- both fields are populated, so the completeness
+# score reads the model as governed. It is the first thing an external assessor checks
+# (ISO 31000 5.4.3, COSO ERM principle 2).
+#
+# Set "never" for an adopter mid-migration whose estate cannot yet satisfy it; existing
+# breaches are reported by the completeness audit either way, and enforcement here only
+# refuses the write that would create or keep one, so no record is ever locked shut.
+ENFORCE_REVIEWER_INDEPENDENCE = os.environ.get("ENFORCE_REVIEWER_INDEPENDENCE", "always")
+
 # An institution with no People registered yet cannot be locked out of registering the
 # first one — a fresh install has an empty list and a protected database name. While the
 # list is empty the rule stands down; the first person added closes it.

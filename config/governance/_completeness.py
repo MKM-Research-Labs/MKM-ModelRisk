@@ -134,6 +134,34 @@ FIELD_CRITICALITY = {
 }
 
 # ---------------------------------------------------------------------------
+# Rules: findings about what a record HOLDS, not about what it lacks.
+# ---------------------------------------------------------------------------
+# Every other finding in this audit is an absence. A rule finding is a
+# contradiction between answers that are both present, which no completeness
+# score can see: a model whose peer reviewer is its own owner has both fields
+# filled in and scores as fully governed on them. It is also the first record an
+# external assessor pulls, so an audit that cannot raise it is reporting the
+# estate as better governed than it is.
+#
+# ``template`` is the instruction, held with the rule rather than in
+# REMEDIATION_ACTIONS: each rule is breached in its own way and a generic
+# "correct the {item}" tells an owner nothing.
+REVIEWER_INDEPENDENCE = "reviewer_independence"
+
+RULE_SPECS = {
+    REVIEWER_INDEPENDENCE: {
+        "label": "Reviewer independence",
+        "detail": "the peer reviewer is the record's own owner",
+        # Above validation_date and below owner: a review that was not independent
+        # is worth less than no review at all is worth chasing, because the record
+        # asserts an assurance it does not have.
+        "criticality": 0.85,
+        "template": "Name a peer reviewer for the {entity} other than its owner, "
+                    "or record why the owner's review is treated as independent.",
+    },
+}
+
+# ---------------------------------------------------------------------------
 # Collections.
 # ---------------------------------------------------------------------------
 # Collections where empty is a legitimate steady state rather than a gap. An
