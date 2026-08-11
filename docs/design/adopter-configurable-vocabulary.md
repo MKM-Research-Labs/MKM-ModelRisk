@@ -1,6 +1,6 @@
 # Design: what an adopting institution must be able to rename
 
-**Status:** Survey — 2026-08-08, nothing built from it yet
+**Status:** Tier 1 built (2026-08-08 to 08-10); Tier 2 outstanding
 **Area:** config/governance, risk policy, completeness audit
 
 ## Why this exists
@@ -32,7 +32,7 @@ The risk dimensions are now right, and are the pattern to copy:
 - What is *structural* stays in config: which field carries which dimension
   (`RISK_DIMENSION_FIELDS`), and the fact that there are three of them.
 
-## The trap, before anything is built
+## The trap, and how it was resolved
 
 The dimensions were straightforward because a record stores a **band name** and the
 label lives in the policy. Most of what follows stores the displayed word itself —
@@ -49,18 +49,37 @@ Choosing neither is worse than leaving the value hardcoded: records end up holdi
 a value that is no longer in the list, and every filter and count quietly
 disagrees with the record.
 
-## Tier 1 — vocabulary an adopter will hit
+**What was done (2026-08-10):** option 1, with the key seeded to the word records
+already carried — so `"Production"` is both the stored value and the starting label.
+That gives the stable key without a migration: nothing in the estate had to be
+rewritten, and renaming edits the label alone. The stored value is immutable once an
+entry exists, enforced in the domain, because records already carry it.
 
-| What | Where | Note |
+## Tier 1 — vocabulary an adopter will hit — **BUILT**
+
+All of the below are now admin lists, each seeded with the shipped words and edited
+under Admin. The status vocabularies store a stable value and show a label, so a
+rename moves nothing on record; the questionnaire and the standing agenda are copied
+onto each record when it is created, so editing them changes only what comes next.
+Editing either of those two is confirm-to-amend.
+
+| What | Now edited at | Shape |
 |---|---|---|
-| **The nine questions** | `SR262_QUESTIONS` (`_inventory.py`), seeded at registration | An adopter with its own questionnaire, or another regulator's, cannot change the wording or the count. Seed-only — existing models keep what they were given — so it behaves like the reference lists that are already admin-editable. The centre of the review workflow. |
-| **The standing agenda** | `STANDING_AGENDA` (`_mrc.py`), seeded onto every meeting | A committee's own running order, in code. `kind` drives bespoke per-item UI, so what is editable is the title, the description, and which optional items appear — not the kinds. |
-| **Lifecycle stages** | `VALID_LIFECYCLE_STAGES` — Development / Validation / Production / Retired | Field value and a Models-list filter. Stored verbatim; needs the migration choice above. |
-| **Validation statuses** | `VALID_VALIDATION_STATUSES` — Initial / Pending / Validated | As above. |
-| **Impact / Priority / Remediation status** | `VALID_IMPACT`, `VALID_PRIORITY`, `VALID_REMEDIATION_STATUS` | On assumptions, limitations, weaknesses and remediation. The same class as the risk bands; left behind when risk moved to policy. |
-| **Validation-question statuses** | `VALID_VQ_STATUSES` | The completeness audit keys off "Addressed", but already names it in `COLLECTION_ANSWERED` rather than inlining it — so the renaming path is open. |
+| **The nine questions** | Admin → Review | Seeded from SR 26-2, copied onto each model at registration; a model keeps the questions it was asked. Confirm-to-amend. |
+| **The standing agenda** | Admin → Agenda | Seeded from the shipped order, copied onto each meeting when scheduled. The item's `kind` stays fixed — it drives the panel a meeting draws. Confirm-to-amend. |
+| **Lifecycle stages** | Admin → Vocabulary | Stable value + label. |
+| **Validation statuses** | Admin → Vocabulary | Stable value + label. |
+| **Impact / Priority / Remediation status** | Admin → Vocabulary | Stable value + label, three lists. |
+| **Validation-question statuses** | Admin → Vocabulary | Stable value + label. The completeness audit still matches the stored "Addressed", so renaming what a reviewer sees cannot change whether the estate looks complete. |
 
-## Tier 2 — numbers that are policy, not platform
+Every list is reorderable, and order is an event (`CollectionItemMoved`) rather than
+a position field, so there is no second copy of it to fall out of step.
+
+## Tier 2 — numbers that are policy, not platform — **PART BUILT**
+
+The completeness audit's thresholds and escalation factors are done: they sit on the
+division's risk policy (Admin → Risk → Audit), ratified by the same MRC, with the
+firm-wide values as the fallback. Everything else below is still a fixed constant.
 
 **The completeness audit's scoring basis** (`_completeness_scoring.py`, `_completeness.py`)
 is the largest single item: `TIER_WEIGHTS`, `RAG_MULTIPLIERS`, `UNRATED_MULTIPLIER`,
@@ -90,13 +109,17 @@ still one estate's own file names.
 themselves. These describe how the platform works, not what an institution calls
 things; making them editable would let an adopter break the machinery.
 
-## Suggested order
+## What was done, and what remains
 
-1. **The nine questions** — self-contained, seed-only, no migration, highest
-   adopter value.
-2. **The completeness scoring** — largest, and the one with a regulatory audience.
-3. **The small vocabularies as one batch**, once the key-versus-rename decision is
-   made, so they all follow the same rule.
+1. ~~The nine questions~~ — Admin → Review.
+2. ~~The completeness scoring~~ — Admin → Risk → Audit, per division.
+3. ~~The small vocabularies~~ — Admin → Vocabulary, plus Admin → Agenda for the
+   standing agenda. The key-versus-rename question was settled by seeding each
+   stable value to the word records already carried, so no migration was needed.
+
+**Remaining:** cadence (review and MRC frequencies, the "due soon" window), document
+categories, RACI defaults, participant statuses, the client vocabulary, and the
+monitoring estate's file names and statements.
 
 ## How to stop it recurring
 

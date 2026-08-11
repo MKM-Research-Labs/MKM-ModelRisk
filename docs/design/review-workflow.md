@@ -1,6 +1,6 @@
 # Design: the model review as a workflow, ending in a signed report
 
-**Status:** Agreed — 2026-08-06, not yet built
+**Status:** Built — agreed 2026-08-06, complete on main 2026-08-08
 **Area:** Model inventory / Review & Validation / MRC
 
 ## Decision
@@ -113,6 +113,8 @@ append-only sign-offs are the history of previous cycles.
   they follow.
 
 ## Build order
+
+All six steps are done. Kept below as the record of how it was staged.
 
 1. Review tab shell — stage rail, stage states, and the moves (questions, weaknesses,
    limitations in; Assumptions tab left clean).
