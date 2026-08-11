@@ -42,8 +42,8 @@ from config.governance import (
 from src.governance.completeness._method import appendix, method_section
 from src.governance.completeness.framework_report import framework_section
 from src.governance.completeness.review_programme import programme
-from src.governance.model_inventory import list_models
-from src.governance.completeness.scan import findings, ratified_divisions, scan
+from src.governance.completeness.scan import (findings, ratified_divisions, scan,
+                                              scoped_models)
 from src.governance.latex import (_para_table, _section, _subsection, front_matter,
                                   history_page, logo_asset, preamble)
 from src.governance.mrc import pack
@@ -262,15 +262,22 @@ def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
     )
 
 
-def render_completeness_pdf(settings: dict, as_of: str, rows=None, models=None) -> bytes:
+def render_completeness_pdf(settings: dict, as_of: str, rows=None, models=None,
+                            model_ids=None) -> bytes:
     """Scan the registers and compile the completeness audit to PDF bytes.
 
-    ``models`` backs the review-programme section, which reports on the inventory
-    rather than on the findings — the same records, read for a different question.
+    ``models`` backs the review-programme and framework-coverage sections, which
+    report on the inventory rather than on the findings — the same records, read
+    for a different question.
+
+    ``model_ids`` scopes that inventory the way ``scan`` scopes the findings, and
+    a caller that scopes one must scope the other: a committee audit whose
+    findings covered its own models while its coverage table counted the firm's
+    would put two populations in one report with nothing to tell them apart.
     """
     assets = logo_asset(settings)
     rows = scan(as_of) if rows is None else rows
-    models = list_models() if models is None else models
+    models = scoped_models(model_ids) if models is None else models
     return pack.compile_tex(
         build_completeness_tex(rows, settings, as_of, logo=bool(assets), models=models,
                                ratified=ratified_divisions(models)),
