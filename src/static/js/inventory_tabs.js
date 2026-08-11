@@ -172,13 +172,16 @@ const DetailTabs = {
         '<div class="dz-text"><b>Pending MRC sign-off</b>' +
         '<p class="muted">Proposed <b>' + esc(pending.proposed_rag) + "</b> " + detail + ".</p></div></div>";
     }
-    // Once the MRC has signed the current rating off, offer to revoke it (which
-    // keeps the rating but returns the subject to needing sign-off).
+    // A signed-off rating states its position and offers nothing to undo. There is
+    // no unsigning a committee decision: a rating changes by re-classifying the
+    // model, which moves the heatmap, which asks the MRC to sign off the new cell —
+    // and that request appears below on its own.
     if (rating.signed_off) {
       return '<div class="dz-row" style="border:1px solid #388e3c;background:#e8f5e9;padding:10px 14px;border-radius:6px;margin:8px 0">' +
         '<div class="dz-text"><b>MRC signed off — ' + esc(proposed) + "</b>" +
-        '<p class="muted">This rating has current MRC sign-off. Revoking keeps the rating but returns it to needing sign-off.</p></div>' +
-        '<div class="dz-action"><button class="btn small danger" id="revoke-signoff">Revoke sign-off&hellip;</button></div></div>';
+        '<p class="muted">This rating has current MRC sign-off. To change it, revise the ' +
+        "classification above; the heatmap moves and the new cell is sent to the MRC for " +
+        "sign-off.</p></div></div>";
     }
     // Nothing to sign off until the owner has placed the model on the heatmap.
     if (!proposed) return "";

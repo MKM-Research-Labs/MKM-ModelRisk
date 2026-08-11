@@ -246,13 +246,6 @@ Object.assign(Detail, {
         { proposed_rag: proposed },
         () => self.show(self._id, "risk"));
     };
-    const revoke = document.getElementById("revoke-signoff");
-    if (revoke) revoke.onclick = function () {
-      App.amend("Revoke the MRC sign-off for " + self._id +
-        " — the rating is kept but returns to needing sign-off.",
-        "POST", "/api/models/" + self._id + "/revoke-signoff", {},
-        () => self.show(self._id, "risk"));
-    };
   },
 
   // Both buttons raise a request for the MRC rather than changing the model:

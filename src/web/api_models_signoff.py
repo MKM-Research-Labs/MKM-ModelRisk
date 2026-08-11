@@ -38,7 +38,7 @@ from src.governance.mrc import get_meeting, matching_mrc
 from src.governance.reference import get_reference_lists
 from src.command import require_confirmation
 from src.web._helpers import context_from_request, json_body
-from src.web._signoff_routing import MODEL_SUBJECT, REQUESTS, _newest, raise_signoff, revoke_signoff
+from src.web._signoff_routing import MODEL_SUBJECT, REQUESTS, _newest, raise_signoff
 from src.web.api_models import models_bp
 
 
@@ -148,19 +148,3 @@ def request_reactivate(model_id: str):
     """Owner asks the MRC to ratify bringing a hibernated model back."""
     return _request_lifecycle_change(model_id, kind="reactivate", expect_retired=True)
 
-
-@models_bp.post("/<model_id>/revoke-signoff")
-def revoke_model_signoff(model_id: str):
-    """Revoke a granted MRC sign-off — the rating is kept but no longer approved,
-    so the model returns to needing sign-off. Records a Revoked history entry."""
-    model = get_model(model_id)
-    if model is None:
-        return jsonify({"error": "model not found"}), 404
-    risk = compute_risk_rating(model["data"] or {}, as_of=date.today().isoformat())
-    if not risk.get("signed_off"):
-        return jsonify({"error": "model is not currently signed off"}), 400
-    body = json_body()
-    ctx = context_from_request(body)
-    require_confirmation("revoke_signoff", ctx)
-    revoke_signoff(ctx, MODEL_SUBJECT, model_id, note=body.get("note") or body.get("reason"))
-    return jsonify(get_model(model_id))

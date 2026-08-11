@@ -19,7 +19,7 @@
 # SOFTWARE.
 """Confirm-to-amend policy: only important changes still require confirmation
 (register model/product, retire product, owner/risk changes, meeting Status, and
-MRC sign-off / reject / revoke). Everything else applies without confirmation."""
+MRC sign-off / reject). Everything else applies without confirmation."""
 from __future__ import annotations
 
 from tests.web.conftest import HEADERS
@@ -138,5 +138,5 @@ def test_signoff_reject_requires_confirmation(client):
     assert r.status_code == 409
 
 # Revoke-signoff uses the same require_confirmation gate (covered above via
-# approve/reject); its confirmed path is exercised by the revoke tests in
+# approve/reject); its confirmed path is exercised by the sign-off tests in
 # test_models_signoff / test_product_signoff.

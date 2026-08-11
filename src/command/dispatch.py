@@ -80,7 +80,7 @@ def _requires_confirmation(command_name: str, kwargs: dict[str, Any]) -> bool:
 
 def require_confirmation(command_name: str, context: CommandContext) -> None:
     """Explicit confirm gate for composed operations (MRC sign-off / reject /
-    revoke, close meeting) that run several sub-commands rather than one
+    close meeting) that run several sub-commands rather than one
     dispatched command. Raises before any of them mutate."""
     if not context.confirmed:
         raise ConfirmationRequired(

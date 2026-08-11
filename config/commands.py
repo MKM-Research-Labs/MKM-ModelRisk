@@ -24,7 +24,7 @@ Everything not named here applies immediately — no confirmation dialog, no
 recorded change reason. The confirmation is enforced server-side in
 ``src.command.dispatch`` so the client cannot bypass it.
 
-Composed MRC decisions — sign-off approve / reject / revoke and closing a meeting
+Composed MRC decisions — sign-off approve / reject and closing a meeting
 — run several sub-commands rather than one dispatched command, so they enforce
 confirmation explicitly at their endpoints via ``require_confirmation``.
 """

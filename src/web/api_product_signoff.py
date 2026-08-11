@@ -37,7 +37,6 @@ from src.web._signoff_routing import (
     REQUESTS,
     _newest,
     raise_signoff,
-    revoke_signoff,
 )
 from src.web.api_product import product_bp
 
@@ -109,19 +108,3 @@ def product_request_signoff(product_id: str):
                   proposed_rag=proposed_rag, target_mrc=mrc["value"], note=json_body().get("note"))
     return jsonify(get_product(product_id)), 201
 
-
-@product_bp.post("/<product_id>/revoke-signoff")
-def product_revoke_signoff(product_id: str):
-    """Revoke a granted MRC sign-off on a product — keeps the RAG rating but
-    returns the product to needing sign-off. Records a Revoked history entry."""
-    product = get_product(product_id)
-    if product is None:
-        return jsonify({"error": "Product not found"}), 404
-    risk = compute_risk_rating(product["data"] or {}, as_of=date.today().isoformat())
-    if not risk.get("signed_off"):
-        return jsonify({"error": "product is not currently signed off"}), 400
-    body = json_body()
-    ctx = context_from_request(body)
-    require_confirmation("revoke_signoff", ctx)
-    revoke_signoff(ctx, PRODUCT_SUBJECT, product_id, note=body.get("note") or body.get("reason"))
-    return jsonify(get_product(product_id))
