@@ -86,8 +86,18 @@ tests/web/test_product_api.py::test_raci_roles_collection_on_a_product
 tests/web/test_product_risk_api.py::test_validation_and_events_collections_are_available
 ```
 
-The audit's own gate sits at **2 findings** (two over-long source files). Anything beyond
-these is yours — diff against `main` before assuming otherwise, since the list moves.
+The audit's own gate sits at **3 findings** — three over-long source files, verified
+2026-08-11 on `main`:
+
+```
+384  src/governance/client/pack.py
+326  src/web/api_mrc/lifecycle.py
+301  src/web/api_models.py
+```
+
+Anything beyond these is yours — diff against `main` before assuming otherwise, since the
+list moves. It moved most recently at `e9a6280`, which pushed `api_models.py` to 301: one
+line over, and the reason this baseline was 2 for a while after it was really 3.
 
 ## 4. Verifying a UI change
 
