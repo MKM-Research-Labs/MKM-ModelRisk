@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import io
 
+from config.governance import DEFAULT_RACI
 from src.files import upload_path
 from tests.web.conftest import HEADERS
 
@@ -234,8 +235,12 @@ def test_raci_roles_collection_on_a_product(client):
         headers=HEADERS,
     )
     assert resp.status_code == 201
-    role = resp.get_json()["data"]["raci_roles"][0]
-    assert role["role"] == "Operations Lead" and role["raci"] == "Responsible"
+    # Registration scaffolds the four DEFAULT_RACI accountabilities, so an added
+    # role lands after them — find it by name rather than assuming it is first.
+    roles = resp.get_json()["data"]["raci_roles"]
+    assert len(roles) == len(DEFAULT_RACI) + 1
+    role = next(r for r in roles if r["role"] == "Operations Lead")
+    assert role["raci"] == "Responsible"
 
 
 def test_raci_role_rejects_an_invalid_raci_code(client):

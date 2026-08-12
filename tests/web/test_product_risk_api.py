@@ -70,14 +70,24 @@ def test_decisions_and_actions_endpoints_empty_by_default(client):
     assert client.get("/api/products/none/decisions").status_code == 404
 
 
-def test_validation_and_events_collections_are_available(client):
+def test_the_event_log_is_on_a_product_but_validation_questions_are_not(client):
+    """A Product validates through its component models, so the SR 26-2
+    questionnaire stays model-level; the operational-event log is product-level
+    because the impact of a failure lands on the product."""
     _model(client)
     _product(client)
     specs = client.get("/api/products/fields").get_json()
     keys = {c["key"] for c in specs["collections"]}
-    assert {"validation_questions", "operational_failure_events"} <= keys
-    # And a validation question can be recorded on a product.
+    assert "operational_failure_events" in keys
+    assert "validation_questions" not in keys
+    # And the omission is enforced, not merely undisplayed.
     resp = client.post("/api/products/P1/collections/validation_questions",
                        json={"fields": {"question": "Backtested?", "status": "Addressed"},
+                             "confirmed": True}, headers=HEADERS)
+    assert resp.status_code == 400
+    # An operational failure event, however, is recorded on the product.
+    resp = client.post("/api/products/P1/collections/operational_failure_events",
+                       json={"fields": {"date": "2026-08-11",
+                                        "description": "Overnight job failed"},
                              "confirmed": True}, headers=HEADERS)
     assert resp.status_code in (200, 201)
