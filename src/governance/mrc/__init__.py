@@ -36,6 +36,7 @@ from src.governance.mrc.projection import (
     list_meetings_enriched,
     matching_mrc,
     meeting_items_for_model,
+    outstanding_actions_for_committee,
     rebuild_meeting_view,
 )
 
@@ -55,5 +56,6 @@ __all__ = [
     "list_meetings_enriched",
     "matching_mrc",
     "meeting_items_for_model",
+    "outstanding_actions_for_committee",
     "rebuild_meeting_view",
 ]

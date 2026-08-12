@@ -136,7 +136,13 @@ def _validate(
         if field_spec["type"] == "multichoice":
             if not isinstance(value, list):
                 raise DomainError(f"{field_spec['label']} must be a list of values")
-            unknown = [v for v in value if v not in field_spec["options"]]
+            # A reference-backed multichoice draws its options from an admin-managed
+            # list the domain does not hold — an action's owners come from the people
+            # directory, which changes without the code moving. Shape is checked here;
+            # membership is the reference list's business, exactly as it already is for
+            # a reference-backed single choice.
+            options = field_spec.get("options")
+            unknown = [v for v in value if v not in options] if options else []
             if unknown:
                 allowed = ", ".join(field_spec["options"])
                 raise DomainError(

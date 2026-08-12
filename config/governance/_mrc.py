@@ -81,7 +81,32 @@ MRC_SETTINGS_DEFAULTS = {
 # --- Model Risk Committee (MRC) meetings ---
 VALID_MEETING_STATUSES = ("Scheduled", "Completed")
 DEFAULT_MEETING_STATUS = "Scheduled"
-VALID_ACTION_STATUSES = ("Open", "Closed")
+# An agreed action is open the moment the committee agrees it — nobody minutes an
+# action that is already closed, so the form should not ask.
+DEFAULT_ACTION_STATUS = "Open"
+# The owner asks; the committee decides. An owner who believes an action is done moves
+# it here, and it stays here until an MRC ratifies the closure — the same shape as a
+# proposed role or a draft risk policy. Nobody settles their own obligation.
+REQUESTED_CLOSURE_ACTION_STATUS = "Closure requested"
+# The one status that settles an action. Named so that "what is still outstanding"
+# is decided in one place: the model's MRC linkage and the committee's own review of
+# actions must not disagree about whether an action still counts.
+CLOSED_ACTION_STATUS = "Closed"
+VALID_ACTION_STATUSES = (DEFAULT_ACTION_STATUS, REQUESTED_CLOSURE_ACTION_STATUS,
+                         CLOSED_ACTION_STATUS)
+# An action outlives the meeting that agreed it: it is worked between meetings and
+# closed at a later one, so these two fields stay editable after the meeting is sealed.
+# Everything else about an action — its wording, its owners, the model it concerns — is
+# part of what the committee is recorded as having agreed, and seals with the minutes.
+# Nothing already issued changes: the minutes PDF is generated once, at close.
+ACTION_LIVE_FIELDS = ("status", "updates")
+# Named once so the rule that gates closure, the API that ratifies it and the read
+# views all agree on which collection carries the committee's actions.
+ACTIONS_COLLECTION = "actions"
+# Where an update's supporting file is stored. Evidence stays with the action rather
+# than being filed on the model: a model-side documentation category would make the
+# completeness audit expect closure evidence on every model on the register.
+ACTION_EVIDENCE_SCOPE = "action_evidence"
 # Phase MRC-4: an agenda item can be "Escalated" instead of Completed when the
 # chair can't approve a sign-off and passes it up to a higher-tier MRC.
 VALID_AGENDA_STATUS = ("Pending", "Completed", "Escalated", "Rejected")
@@ -258,11 +283,18 @@ MRC_COLLECTION_SPECS = {
         {"key": "date", "label": "Date", "type": "date"},
         {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
     ]},
+    # An agreed action starts from the model it concerns: the model is picked first
+    # because that is what the owner tick-boxes default from. An action may be owned
+    # by more than one person, so ``owner`` holds a list (a bare string from before
+    # this change still reads as a single owner). There is no target date — progress
+    # is recorded as dated updates against the action, the same shape a product-owned
+    # action already uses.
     "actions": {"label": "Actions", "id_prefix": "A", "fields": [
-        {"key": "description", "label": "Action", "type": "text", "required": True},
-        {"key": "owner", "label": "Owner", "type": "text"},
-        {"key": "target_date", "label": "Target date", "type": "date"},
-        {"key": "status", "label": "Status", "type": "choice", "options": VALID_ACTION_STATUSES},
         {"key": "model_id", "label": "Model", "type": "text", "reference": "model_inventory"},
+        {"key": "description", "label": "Action", "type": "text", "required": True},
+        {"key": "owner", "label": "Owners", "type": "multichoice", "reference": "people"},
+        {"key": "status", "label": "Status", "type": "choice", "options": VALID_ACTION_STATUSES,
+         "default": DEFAULT_ACTION_STATUS},
+        {"key": "updates", "label": "Updates", "type": "text", "hidden": True},
     ]},
 }

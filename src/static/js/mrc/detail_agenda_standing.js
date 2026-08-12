@@ -69,6 +69,7 @@ Object.assign(MeetingDetail, {
         esc(item.item_id) + '">' + label + "</button>";
     if (kind === "review_signoff") return this._agendaShell(item, idx, this._signoffStatusList(), complete("Mark reviewed"));
     if (kind === "review_analysis") return this._agendaShell(item, idx, this._analysisStatusList(), complete("Mark reviewed"));
+    if (kind === "actions_review") return this._actionsReviewCard(item, idx, done);
     if (kind === "completeness_audit") return this._completenessAuditCard(item, idx, done);
     if (kind === "membership") return this._membershipCard(item, idx, done);
     return this._agendaShell(item, idx,   // aob
@@ -254,6 +255,19 @@ Object.assign(MeetingDetail, {
         "; quorum confirmed by the secretary" + (d.secretary ? " (" + d.secretary + ")" : "") + "." };
     if (kind === "minutes") return { title: "Previous minutes signed off",
       text: "The minutes of the previous MRM were reviewed and signed off." };
+    if (kind === "actions_review") {
+      const rows = this._outstandingActions() || [];
+      const requested = closureRequestedActions(rows).length;
+      return { title: "Outstanding actions reviewed",
+        text: "The committee reviewed the " + rows.length + " action(s) outstanding across " +
+          "this committee" + (requested ? ", including " + requested + " awaiting closure" : "") +
+          ". Closures granted at this meeting are minuted separately." };
+    }
+    // Without its own branch this fell through to the AOB default below, and
+    // ratifying the committee's membership was minuted as "any other business".
+    if (kind === "membership") return { title: "Committee membership and roles reviewed",
+      text: "The committee reviewed the proposed changes to its membership and the roles " +
+        "its members hold. Each change ratified or declined is minuted separately." };
     if (kind === "review_signoff") return { title: "Model sign-offs reviewed",
       text: "The committee reviewed the model risk-rating sign-offs tabled at this meeting (see the Models tab, Approvals)." };
     if (kind === "review_analysis") return { title: "Model analyses reviewed",

@@ -48,9 +48,11 @@ def test_full_meeting_lifecycle_stream():
     update_meeting_field(meeting_id="MTG1", field="location", value="Room A", actor="a")
     add_collection_item(meeting_id="MTG1", collection="agenda", fields={"title": "Review"}, actor="a")
     add_collection_item(meeting_id="MTG1", collection="actions",
-                        fields={"description": "Follow up", "owner": "bob"}, actor="a")
+                        fields={"description": "Follow up", "owner": ["bob"]}, actor="a")
+    # Closed rather than "Closure requested", so the stream covers the ratification
+    # path — the one writer allowed to settle an action.
     update_collection_item(meeting_id="MTG1", collection="actions", item_id="A-001",
-                           fields={"status": "Closed"}, actor="bob")
+                           fields={"status": "Closed"}, actor="bob", ratifying=True)
     remove_collection_item(meeting_id="MTG1", collection="agenda", item_id="AG-001", actor="a")
     types = [e.event_type for e in read_stream(aggregate_type=AGGREGATE_TYPE, aggregate_id="MTG1")]
     assert types == [

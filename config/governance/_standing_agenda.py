@@ -35,6 +35,14 @@ STANDING_AGENDA = (
                     "may proceed only once quorate."},
     {"kind": "minutes_signoff", "title": "Sign-off of the previous MRM minutes",
      "description": "Proposed by the chair."},
+    # Straight after the minutes, because the first thing a committee does once it has
+    # accepted the record is ask what it is still owed. Lists every action outstanding
+    # across this committee, and those whose owners have asked for closure — the
+    # closures themselves are granted under Signoff, next to the model-owner changes.
+    {"kind": "actions_review", "title": "Review of outstanding actions",
+     "description": "Review every action still outstanding across this committee, and "
+                    "ratify the closures owners have requested (Signoff -> Action "
+                    "closures). Confirm once the committee has reviewed them all."},
     {"kind": "review_signoff", "title": "Review model sign-off",
      "description": "Risk-rating sign-offs are reviewed in the Models tab (Approvals)."},
     {"kind": "review_analysis", "title": "Review model analysis",
@@ -55,6 +63,11 @@ STANDING_AGENDA = (
     {"kind": "aob", "title": "Any Other Business (AOB)", "description": ""},
 )
 STANDING_AGENDA_KINDS = frozenset(item["kind"] for item in STANDING_AGENDA)
+# The item a meeting closes on. Named rather than inferred from "whatever is last",
+# because a committee may drop it from its own running order — and then business
+# raised from the floor belongs at the end, not in front of whatever happens to sit
+# there. Taken from the shipped order so the two cannot drift apart.
+CLOSING_AGENDA_KIND = STANDING_AGENDA[-1]["kind"]
 # The same roles in the order a meeting runs them, for the Admin picker: a set has
 # no order, and a dropdown that shuffled between page loads would be its own bug.
 STANDING_AGENDA_ROLES = tuple(dict.fromkeys(item["kind"] for item in STANDING_AGENDA))
