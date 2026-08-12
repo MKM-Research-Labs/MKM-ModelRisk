@@ -30,7 +30,7 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e._flows import confirm, open_admin_subtab, open_app
+from tests.e2e._flows import maybe_confirm, open_admin_subtab, open_app
 
 pytestmark = pytest.mark.e2e
 
@@ -53,7 +53,10 @@ def _add_committee(page: Page, fields: dict[str, str]) -> str:
         else:
             page.fill(selector, value)
     page.click("#cadd")
-    confirm(page)
+    # A committee is an option on the "mrc" reference list, and that list is
+    # working vocabulary rather than a governed one — so the add applies without
+    # a dialog. maybe_confirm reads that from the policy instead of assuming.
+    maybe_confirm(page, "add_option", list_key="mrc")
     row = page.locator("tr.clickable", has_text=fields["value"]).first
     expect(row).to_be_visible()
     return row.get_attribute("data-cid")
@@ -71,7 +74,7 @@ def _edit_field(page: Page, key: str, value: str, *, choice: bool = False) -> No
     else:
         page.fill("#ced-input", value)
     page.click("#ced-save")
-    confirm(page)
+    maybe_confirm(page, "update_option", list_key="mrc")
 
 
 def _seed_person(page: Page, base_url: str, name: str, **fields) -> None:
@@ -113,7 +116,7 @@ def test_committee_edit_chair(page: Page, base_url: str):
     page.click("[data-med='chair']")
     page.select_option("#med-input", "David Kerr Kelly")
     page.click("#med-save")
-    confirm(page)
+    maybe_confirm(page, "update_option", list_key="mrc")
     expect(page.locator("#mrow-chair .v")).to_contain_text("David Kerr Kelly")
 
 
@@ -128,7 +131,7 @@ def test_committee_edit_voting_members(page: Page, base_url: str):
     page.check("input.mem-chk[value='Sofia Castro']")
     page.check("input.mem-chk[value='Marcus Reid']")
     page.click("#med-save")
-    confirm(page)
+    maybe_confirm(page, "update_option", list_key="mrc")
     row = page.locator("#mrow-voting_members .v")
     expect(row).to_contain_text("Sofia Castro")
     expect(row).to_contain_text("Marcus Reid")
@@ -172,7 +175,7 @@ def test_committee_archive(page: Page, base_url: str):
     item_id = _add_committee(page, _COMPANY_MRC)
     _open_detail(page, item_id)
     page.click("#carch")
-    confirm(page)
+    maybe_confirm(page, "update_option", list_key="mrc")
     row = page.locator(f"tr.clickable[data-cid='{item_id}']")
     expect(row).to_be_visible()
     expect(row).to_have_class("clickable muted")

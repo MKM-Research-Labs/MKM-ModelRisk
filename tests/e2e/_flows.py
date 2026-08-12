@@ -22,7 +22,8 @@ from __future__ import annotations
 
 from playwright.sync_api import Page, expect
 
-from config.commands import CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS
+from config.commands import (CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS,
+                             CONFIRM_REQUIRED_LISTS)
 
 
 def open_app(page: Page, base_url: str) -> Page:
@@ -54,16 +55,25 @@ def confirm(page: Page) -> None:
     expect(page.locator("#confirm-overlay")).to_be_hidden()
 
 
-def maybe_confirm(page: Page, command: str, field: str | None = None) -> None:
+def maybe_confirm(page: Page, command: str, field: str | None = None,
+                  list_key: str | None = None) -> None:
     """Accept the confirm modal only when the policy actually demands one.
 
-    Only the commands/fields named in ``config.commands`` are gated; everything
-    else applies immediately with no dialog. Deriving that here — rather than
-    assuming every mutation confirms — keeps these flows in lockstep with the
-    policy, so a change to it can never silently rot the suite again.
+    Only the commands/fields/lists named in ``config.commands`` are gated;
+    everything else applies immediately with no dialog. Deriving that here —
+    rather than assuming every mutation confirms — keeps these flows in lockstep
+    with the policy, so a change to it can never silently rot the suite again.
+
+    Three things can gate a change, and a caller passes whichever applies:
+    the command itself (registering, retiring), the particular field being set
+    (``owner``, ``rag_rating``), or the reference list being edited — most admin
+    lists are working vocabulary, but the governed ones are held to the standard
+    of a deliberate, recorded act.
     """
     gated = command in CONFIRM_REQUIRED_COMMANDS or (
         field is not None and field in CONFIRM_REQUIRED_FIELDS.get(command, frozenset())
+    ) or (
+        list_key is not None and list_key in CONFIRM_REQUIRED_LISTS.get(command, frozenset())
     )
     if gated:
         confirm(page)
@@ -101,6 +111,19 @@ def open_model(page: Page, model_id: str) -> None:
 
 def open_detail_tab(page: Page, dtab: str) -> None:
     page.click(f"[data-dtab='{dtab}']")
+
+
+def open_review_stage(page: Page, stage: str) -> None:
+    """Open a model's Review tab and select one stage of the review.
+
+    A model's assumptions, weaknesses, limitations of use, remediation and the
+    nine questions are no longer tabs of their own: they are stages of a single
+    review, walked in order and each signed off by the reviewer. They used to be
+    scattered across three tabs and the Overview, which left nobody able to say
+    how far through a review a model actually was.
+    """
+    page.click("[data-dtab='review']")
+    page.click(f"[data-rstage='{stage}']")
 
 
 def open_admin_subtab(page: Page, atab: str) -> None:
@@ -149,6 +172,26 @@ def edit_model_field(page: Page, key: str, value: str, *, choice: bool = False) 
     expect(page.locator("#ed-input")).to_have_count(0)
 
 
+def set_risk_dimension(page: Page, key: str, value: str) -> None:
+    """Set one risk dimension (materiality, complexity, tier) on the Risk Rating tab.
+
+    A dimension is not a plain choice field and cannot be driven with
+    ``select_option``: it is picked from the division's risk bands, rendered as
+    radio swatches carrying the admin's name and explanation for each band and
+    backed by a hidden ``#ed-input``. So the band is clicked, by its own label,
+    rather than selected from a menu.
+
+    Open the Risk Rating tab before calling this — the dimensions live there,
+    alongside the heatmap they feed, not on the Overview.
+    """
+    page.click(f"[data-edit='{key}']")
+    page.click(f"label.bandopt:has(input[value='{value}'])")
+    page.click("#ed-save")
+    maybe_confirm(page, "update_model_field", key)
+    # Settle the async re-render, as edit_model_field does.
+    expect(page.locator("#ed-input")).to_have_count(0)
+
+
 def edit_product_field(page: Page, key: str, value: str, *, choice: bool = False) -> None:
     """Edit one scalar field on a Product's overview tab.
 
@@ -175,9 +218,16 @@ def edit_collection_item(page: Page, list_key: str, item_id: str, fields: dict[s
     maybe_confirm(page, "update_collection_item")
 
 
-def remove_collection_item(page: Page, list_key: str, item_id: str) -> None:
+def remove_collection_item(page: Page, list_key: str, item_id: str,
+                           command: str = "remove_collection_item") -> None:
+    """Remove one entry, confirming only if the policy gates that removal.
+
+    The same control serves a model's collections and the Admin reference lists,
+    which are different commands under the hood — pass
+    ``command="remove_option"`` for a reference list so the right policy is read.
+    """
     page.click(f"[data-rm='{list_key}|{item_id}']")
-    confirm(page)
+    maybe_confirm(page, command, list_key=list_key)
 
 
 def set_mrc_setting(page: Page, key: str, value: str) -> None:
@@ -189,4 +239,4 @@ def set_mrc_setting(page: Page, key: str, value: str) -> None:
     else:
         page.fill(selector, value)
     page.click("#set-save")
-    confirm(page)
+    maybe_confirm(page, "set_mrc_setting", key)

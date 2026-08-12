@@ -32,8 +32,8 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e._flows import (add_collection_item, confirm, maybe_confirm, open_app,
-                              open_tab, register_model)
+from tests.e2e._flows import (add_collection_item, confirm, maybe_confirm,
+                              open_admin_subtab, open_app, open_tab, register_model)
 
 pytestmark = pytest.mark.e2e
 
@@ -198,3 +198,57 @@ def test_product_retire(page: Page, base_url: str):
     page.click("#product-retire")
     confirm(page)
     expect(page.locator("tr.clickable[data-id='Product-E2E-008']")).to_contain_text("retired")
+
+
+def test_events_counter_reflects_recent_event(page: Page, base_url: str):
+    """Adding an event bumps the past-year counter on the Risk Rating tab.
+
+    The counter is deliberately product-only: operational failures are a
+    production concern and production is where a Product lives, so a model's Risk
+    tab does not carry one (``DetailTabs.risk(..., showEvents)``).
+    """
+    open_app(page, base_url)
+    _register_product(page, "Product-E2E-EV-01", "Events Counter Product")
+    _open_product(page, "Product-E2E-EV-01")
+    page.click("[data-ptab='risk']")
+    events_card = page.locator(".scard", has_text="Events (past 365 days)")
+    expect(events_card).to_contain_text("0")
+    # Add a recent event, then re-open the Risk tab.
+    page.click("[data-ptab='operational_failure_events']")
+    add_collection_item(
+        page, "operational_failure_events",
+        {"date": "2026-06-01", "description": "Recent incident"},
+    )
+    page.click("[data-ptab='risk']")
+    expect(events_card).to_contain_text("1")
+
+
+def test_events_tab_records_a_post_mortem_with_raci(page: Page, base_url: str):
+    """W4b: Operational Failure Events captures an incident with the RACI legs.
+
+    Held on the Product: an operational failure happens in production, and it is
+    the Product that runs there. A model carries the collection in its data but
+    renders no screen for it.
+    """
+    open_app(page, base_url)
+    # Seed a Person so the People-referenced RACI fields render as choices.
+    open_admin_subtab(page, "people")
+    add_collection_item(page, "people", {"name": "Lena Okafor"})
+    _register_product(page, "Product-E2E-EV2", "Swaption")
+    _open_product(page, "Product-E2E-EV2")
+    page.click("[data-ptab='operational_failure_events']")
+    add_collection_item(
+        page, "operational_failure_events",
+        {"date": "2026-05-12", "description": "Curve flipped sign on illiquid tenor",
+         "remediation": "Rolled back to prior dataset; root cause under investigation",
+         "responsible": "Lena Okafor",
+         "informed_client": "No", "informed_senior_mgmt": "Yes"},
+    )
+    # An event row is edited in place, so what happened and when it happened are
+    # input values rather than cell text — assert the value, not the rendering.
+    # The RACI legs are selects, whose chosen option does read as text.
+    expect(page.locator("#pt-content input[data-upd$='|description']").first).to_have_value(
+        "Curve flipped sign on illiquid tenor")
+    expect(page.locator("#pt-content input[data-upd$='|date']").first).to_have_value("2026-05-12")
+    expect(page.locator("#pt-content")).to_contain_text("Lena Okafor")
+    expect(page.locator("[data-ptab='operational_failure_events']")).to_contain_text("(1)")

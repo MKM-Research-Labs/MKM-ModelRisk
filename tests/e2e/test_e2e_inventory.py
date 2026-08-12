@@ -23,6 +23,7 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page, expect
 
+from config.governance import TIER_LABELS
 from tests.e2e._flows import (
     confirm,
     edit_model_field,
@@ -30,6 +31,7 @@ from tests.e2e._flows import (
     open_model,
     open_tab,
     register_model,
+    set_risk_dimension,
 )
 
 pytestmark = pytest.mark.e2e
@@ -47,7 +49,8 @@ def test_open_model_shows_detail_tabs(page: Page, base_url: str):
     register_model(page, "MKM-E2E-002", "Storm Intensity")
     open_model(page, "MKM-E2E-002")
     expect(page.locator(".dtabs")).to_contain_text("Risk Rating")
-    expect(page.locator(".dtabs")).to_contain_text("Validation")
+    # The questionnaire tab is named for the act, not one outcome of it.
+    expect(page.locator(".dtabs")).to_contain_text("Review")
 
 
 def test_edit_field_records_amendment(page: Page, base_url: str):
@@ -81,7 +84,9 @@ def test_edit_materiality_choice(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-E2E-006", "EAD Model")
     open_model(page, "MKM-E2E-006")
-    edit_model_field(page, "materiality", "High", choice=True)
+    # A risk dimension is set on the Risk Rating tab, beside the heatmap it feeds.
+    page.click("[data-dtab='risk']")
+    set_risk_dimension(page, "materiality", "High")
     expect(page.locator("#row-materiality")).to_contain_text("High")
 
 
@@ -146,18 +151,17 @@ def test_risk_heatmap_reflects_materiality_and_complexity(page: Page, base_url: 
     open_app(page, base_url)
     register_model(page, "MKM-E2E-HM-01", "Heatmap Model")
     open_model(page, "MKM-E2E-HM-01")
-    edit_model_field(page, "materiality", "High", choice=True)
-    expect(page.locator("#row-materiality")).to_contain_text("High")
-    edit_model_field(page, "complexity", "Low", choice=True)
-    expect(page.locator("#row-complexity")).to_contain_text("Low")
+    # Both dimensions are set on the Risk Rating tab, alongside the heatmap.
     page.click("[data-dtab='risk']")
+    set_risk_dimension(page, "materiality", "High")
+    expect(page.locator("#row-materiality")).to_contain_text("High")
+    set_risk_dimension(page, "complexity", "Low")
+    expect(page.locator("#row-complexity")).to_contain_text("Low")
     # High Materiality × Low Complexity → Amber per the config lookup.
     banner = page.locator("#dt-content .riskbanner")
     expect(banner).to_contain_text("Amber")
     expect(banner).to_contain_text("High")
     expect(banner).to_contain_text("Low")
-    # The events counter renders (zero for a fresh model).
-    expect(page.locator("#dt-content")).to_contain_text("Events (past 365 days)")
 
 
 def test_risk_tab_shows_the_heatmap_not_a_second_score(page: Page, base_url: str):
@@ -172,23 +176,17 @@ def test_risk_tab_shows_the_heatmap_not_a_second_score(page: Page, base_url: str
     expect(body).not_to_contain_text("Composite Score")
 
 
-def test_events_counter_reflects_recent_event(page: Page, base_url: str):
-    """Adding an event bumps the past-year counter on the Risk Rating tab."""
+def test_model_risk_tab_carries_no_events_counter(page: Page, base_url: str):
+    """The past-year counter is product-only: a failure lands on what runs in
+    production. Asserted so the split stays deliberate; the counter itself is
+    covered by the product suite's test_events_counter_reflects_recent_event.
+    """
     open_app(page, base_url)
     register_model(page, "MKM-X1-EV-01", "Events Counter Model")
     open_model(page, "MKM-X1-EV-01")
     page.click("[data-dtab='risk']")
-    expect(page.locator("#dt-content")).to_contain_text("Events (past 365 days)")
-    # Add a recent event, then re-open the Risk tab.
-    page.click("[data-dtab='operational_failure_events']")
-    from tests.e2e._flows import add_collection_item
-    add_collection_item(
-        page, "operational_failure_events",
-        {"date": "2026-06-01", "description": "Recent incident"},
-    )
-    page.click("[data-dtab='risk']")
-    events_card = page.locator(".scard", has_text="Events (past 365 days)")
-    expect(events_card).to_contain_text("1")
+    expect(page.locator("#dt-content")).to_contain_text("HEATMAP RATING")
+    expect(page.locator("#dt-content")).not_to_contain_text("Events (past")
 
 
 def test_signoff_history_renders_on_risk_tab(page: Page, base_url: str):
@@ -261,6 +259,10 @@ def test_hibernated_model_is_read_only_but_can_be_asked_back(page: Page, base_ur
     register_model(page, "MKM-X2-RET", "Legacy Model")
     _hibernate_via_mrc(page, base_url, "MKM-X2-RET")
     open_app(page, base_url)               # reload so the list reflects it
+    # Hibernated models leave the live estate; the lifecycle filter is the way
+    # back. This is the only model registered, so the live list is empty here —
+    # the filter bar must still render or it would be unreachable.
+    page.select_option("#mf-lifecycle", "Hibernated")
     open_model(page, "MKM-X2-RET")
     # No edit pencils on any Overview row.
     page.click("[data-dtab='overview']")
@@ -307,12 +309,15 @@ def test_per_model_audit_tab_shows_recorded_events(page: Page, base_url: str):
 
 
 def test_inventory_summary_tiles_render(page: Page, base_url: str):
-    """The stat tiles (total, per-tier, review buckets, assessed) all render."""
+    """The stat tiles (total, per-tier, RAG spread, approved) all render.
+
+    Tier tiles are labelled with what a tier means (``TIER_LABELS``), so they read
+    as the estate's risk profile rather than as an internal coding.
+    """
     open_app(page, base_url)
     register_model(page, "MKM-TILE-01", "Tile Model")
     summary = page.locator("#m-summary")
-    for label in ["Total Models", "Tier 1", "Tier 2", "Tier 3",
-                  "Overdue", "Due Soon", "Assessed"]:
+    for label in ["Total Models", *TIER_LABELS.values(), "R / A / G", "Approved"]:
         expect(summary).to_contain_text(label)
 
 
@@ -321,9 +326,12 @@ def test_inventory_sort_by_id_toggles(page: Page, base_url: str):
     open_app(page, base_url)
     register_model(page, "MKM-SORT-A", "Alpha")
     register_model(page, "MKM-SORT-B", "Bravo")
-    # Default: ascending by ID, so A is first.
+    # The list arrives ID-ordered but with no column selected, so the first click
+    # adopts model_id ascending (order unchanged) and the second reverses it.
     expect(page.locator("#m-table tbody tr").first).to_have_attribute("data-id", "MKM-SORT-A")
-    page.click("#m-table th[data-sort='model_id']")   # reverse
+    page.click("#m-table th[data-sort='model_id']")   # select: ascending
+    expect(page.locator("#m-table tbody tr").first).to_have_attribute("data-id", "MKM-SORT-A")
+    page.click("#m-table th[data-sort='model_id']")   # toggle: descending
     expect(page.locator("#m-table tbody tr").first).to_have_attribute("data-id", "MKM-SORT-B")
 
 
