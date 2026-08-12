@@ -59,6 +59,53 @@ def test_build_tex_includes_logo_org_and_sections():
     assert tex.strip().endswith("\\end{document}")
 
 
+SIGNOFF_MEETING = {"meeting_id": "MTG1", "data": {
+    "title": "Q2 MRC", "date": "2026-02-16",
+    "agenda": [
+        {"title": "Rollcall", "kind": "rollcall", "status": "Completed"},
+        {"title": "Risk rating sign-off: MKM-EF-001", "subject_model_id": "MKM-EF-001",
+         "signoff_kind": "rag", "proposed_rag": "Green", "status": "Pending"},
+        {"title": "Model owner: MKM-PF-001", "subject_model_id": "MKM-PF-001",
+         "signoff_kind": "owner", "from_owner": "MKM Research Labs",
+         "to_owner": "David K Kelly", "status": "Pending"},
+        {"title": "Retire: MKM-OLD-001", "subject_model_id": "MKM-OLD-001",
+         "signoff_kind": "retire", "status": "Pending"},
+        {"title": "Any Other Business", "kind": "aob", "status": "Completed"},
+    ],
+}}
+
+
+def test_the_agenda_lists_the_running_order_not_the_routed_signoffs():
+    """A sign-off is answered in its own section; printing it in both put every one
+    in the pack twice and buried the order the meeting actually ran."""
+    tex = build_tex(SIGNOFF_MEETING, {"fields": {}})
+    agenda = tex[tex.index("section{Agenda}"):tex.index("Sign-offs")]
+    assert "Rollcall" in agenda and "Any Other Business" in agenda
+    assert "MKM-EF-001" not in agenda and "MKM-PF-001" not in agenda
+    # Numbering closes up rather than leaving gaps where the sign-offs were.
+    assert "1 & Rollcall" in agenda and "2 & Any Other Business" in agenda
+
+
+def test_every_routed_signoff_reaches_the_pack_not_just_the_rating_ones():
+    """A change of owner and a retirement carry no proposed RAG. Filtering on one
+    would drop them from the record entirely now the agenda no longer repeats them."""
+    tex = build_tex(SIGNOFF_MEETING, {"fields": {}})
+    signoffs = tex[tex.index("Sign-offs"):]
+    assert "MKM-EF-001" in signoffs and "Green" in signoffs
+    assert "MKM-PF-001" in signoffs and "MKM Research Labs -> David K Kelly" in signoffs
+    assert "MKM-OLD-001" in signoffs and "Retire" in signoffs
+
+
+def test_a_meeting_with_no_ordinary_agenda_items_omits_the_agenda_table():
+    meeting = {"meeting_id": "MTG1", "data": {
+        "title": "Q2", "date": "2026-02-16",
+        "agenda": [{"title": "Sign-off", "subject_model_id": "M1",
+                    "signoff_kind": "rag", "proposed_rag": "Green"}]}}
+    tex = build_tex(meeting, {"fields": {}})
+    assert "section{Agenda}" not in tex
+    assert "M1" in tex          # still on the record, under Sign-offs
+
+
 def test_actions_table_reads_both_owner_shapes():
     """A pack is reprinted from the event log, so it meets actions agreed before an
     action could have several owners (a bare string) beside ones that have a list."""
