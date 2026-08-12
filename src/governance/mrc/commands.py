@@ -124,12 +124,16 @@ def add_collection_item(
 
 def update_collection_item(
     *, meeting_id: str, collection: str, item_id: str, fields: dict[str, Any],
-    actor: str, reason: str | None = None, config=None,
+    actor: str, reason: str | None = None, config=None, ratifying: bool = False,
 ) -> Event:
-    """Update fields of an existing meeting collection item."""
+    """Update fields of an existing meeting collection item.
+
+    ``ratifying`` is passed only by the committee's closure path, the one writer
+    allowed to settle an action (see ``_rules._require_closure_is_ratified``).
+    """
     state, version = _load(meeting_id, config)
     decision = _rules.decide_update_item(
-        state, collection=collection, item_id=item_id, fields=fields
+        state, collection=collection, item_id=item_id, fields=fields, ratifying=ratifying
     )
     return _record(meeting_id, decision, version, actor, reason, config)
 

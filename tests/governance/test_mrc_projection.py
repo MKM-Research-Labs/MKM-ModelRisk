@@ -26,8 +26,10 @@ from src.governance.mrc import (
     get_meeting,
     list_meetings,
     meeting_items_for_model,
+    outstanding_actions_for_committee,
     rebuild_meeting_view,
     schedule_meeting,
+    update_collection_item,
     update_meeting_field,
 )
 
@@ -151,3 +153,113 @@ def test_get_meeting_enriched_folds_org_scope_into_data():
     assert m["data"]["mrc"] == "MRC-DIV"
     assert m["data"]["division"] == "Markets"
     assert m["data"]["chair"] == "Priya"
+
+
+def test_outstanding_actions_span_one_committee_only():
+    """An action belongs to the committee that agreed it, not to every meeting."""
+    schedule_meeting(meeting_id="A1", title="Alpha Q1", date="2026-01-05",
+                     fields={"mrc": "MRC-A"}, actor="a")
+    schedule_meeting(meeting_id="A2", title="Alpha Q2", date="2026-04-05",
+                     fields={"mrc": "MRC-A"}, actor="a")
+    schedule_meeting(meeting_id="B1", title="Beta Q1", date="2026-02-05",
+                     fields={"mrc": "MRC-B"}, actor="a")
+    add_collection_item(meeting_id="A1", collection="actions",
+                        fields={"description": "Owed to Alpha"}, actor="a")
+    add_collection_item(meeting_id="B1", collection="actions",
+                        fields={"description": "Owed to Beta"}, actor="a")
+    # Closed via the ratification path, the only writer of that status, and then
+    # absent from the register — that is what "outstanding" means.
+    add_collection_item(meeting_id="A1", collection="actions",
+                        fields={"description": "Already done"}, actor="a")
+    update_collection_item(meeting_id="A1", collection="actions", item_id="A-002",
+                           fields={"status": "Closed"}, actor="a", ratifying=True)
+    rebuild_meeting_view()
+
+    rows = outstanding_actions_for_committee("A2")
+    assert [r["description"] for r in rows] == ["Owed to Alpha"]
+    assert rows[0]["meeting_id"] == "A1" and rows[0]["meeting_date"] == "2026-01-05"
+
+
+def test_outstanding_actions_of_an_unassigned_meeting_stand_alone():
+    """A meeting with no committee must not adopt every other unassigned meeting's
+    actions — the join is on the committee, and a blank is not a committee."""
+    schedule_meeting(meeting_id="L1", title="Loose one", date="2026-01-05", actor="a")
+    schedule_meeting(meeting_id="L2", title="Loose two", date="2026-02-05", actor="a")
+    add_collection_item(meeting_id="L1", collection="actions",
+                        fields={"description": "Owed on L1"}, actor="a")
+    rebuild_meeting_view()
+
+    assert outstanding_actions_for_committee("L2") == []
+    assert [r["description"] for r in outstanding_actions_for_committee("L1")] == ["Owed on L1"]
+
+
+def test_outstanding_actions_of_an_unknown_meeting_is_empty():
+    assert outstanding_actions_for_committee("nope") == []
+
+
+def _standing(kind, title=None):
+    return {"kind": kind, "title": title or kind}
+
+
+def test_agenda_runs_standing_items_in_template_order():
+    """A standing item backfilled onto a meeting already on the record is appended,
+    and must still run where the committee's agenda puts it."""
+    from src.governance.mrc.projection import _ordered_agenda
+    agenda = [_standing("rollcall"), _standing("minutes_signoff"), _standing("aob"),
+              _standing("actions_review")]
+    refs = {"standing_agenda": [_standing("rollcall"), _standing("minutes_signoff"),
+                                _standing("actions_review"), _standing("aob")]}
+    assert [i["kind"] for i in _ordered_agenda(agenda, refs)] == [
+        "rollcall", "minutes_signoff", "actions_review", "aob"]
+
+
+def test_non_standing_business_runs_before_the_closing_item():
+    """Business raised after a meeting was seeded must not end up after the chair has
+    closed it — whatever order it was added in."""
+    from src.governance.mrc.projection import _ordered_agenda
+    review = {"title": "Event review — PRD-1", "subject_product_id": "PRD-1"}
+    adhoc = {"title": "Raised from the floor"}
+    # AOB seeded before either was added, so insertion order alone would run it early.
+    agenda = [_standing("rollcall"), _standing("aob"), review, adhoc,
+              _standing("minutes_signoff")]
+    refs = {"standing_agenda": [_standing("rollcall"), _standing("minutes_signoff"),
+                                _standing("aob")]}
+    ordered = _ordered_agenda(agenda, refs)
+    assert [i.get("kind") or i["title"] for i in ordered] == [
+        "rollcall", "minutes_signoff", "Event review — PRD-1", "Raised from the floor",
+        "aob"]
+
+
+def test_non_standing_business_keeps_the_order_it_was_raised_in():
+    from src.governance.mrc.projection import _ordered_agenda
+    first = {"title": "First raised"}
+    second = {"title": "Second raised"}
+    ordered = _ordered_agenda([_standing("aob"), first, second, _standing("rollcall")],
+                              {"standing_agenda": [_standing("rollcall"), _standing("aob")]})
+    assert [i.get("kind") or i["title"] for i in ordered] == [
+        "rollcall", "First raised", "Second raised", "aob"]
+
+
+def test_agenda_ordering_falls_back_to_the_shipped_order():
+    """A database with no curated agenda list still runs the shipped order."""
+    from src.governance.mrc.projection import _ordered_agenda
+    agenda = [_standing("aob"), _standing("rollcall")]
+    assert [i["kind"] for i in _ordered_agenda(agenda, {})] == ["rollcall", "aob"]
+
+
+def test_a_lone_standing_item_is_left_where_it_is():
+    """Nothing to put it in order against, so nothing moves."""
+    from src.governance.mrc.projection import _ordered_agenda
+    agenda = [{"title": "Ad hoc"}, _standing("rollcall")]
+    assert _ordered_agenda(agenda, {}) == agenda
+
+
+def test_an_item_a_committee_curated_without_a_kind_keeps_its_place():
+    """A committee may put its own item first in its running order. It looks exactly
+    like an item raised from the floor here, so neither may be reordered."""
+    from src.governance.mrc.projection import _ordered_agenda
+    curated = {"title": "Regulatory horizon"}
+    agenda = [curated, _standing("rollcall"), _standing("minutes_signoff")]
+    refs = {"standing_agenda": [curated, _standing("rollcall"), _standing("minutes_signoff")]}
+    assert [i.get("kind") or i["title"] for i in _ordered_agenda(agenda, refs)] == [
+        "Regulatory horizon", "rollcall", "minutes_signoff"]

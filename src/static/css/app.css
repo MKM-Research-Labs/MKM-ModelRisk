@@ -56,6 +56,14 @@ main { padding: 20px; max-width: 1180px; margin: 0 auto; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field label { color: var(--muted); font-size: 11px; }
 input, select, textarea { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; background: #fff; color: var(--text); }
+/* A tick-box in a list of them (an action's owners): the box sits beside its name.
+   Beats `.field label` on specificity deliberately — inside a field these are values
+   to pick from, not more field captions, so they must not render muted. */
+.field label.tickbox, .tickbox { display: inline-flex; align-items: center; gap: 5px; margin: 0 12px 4px 0; font-size: 12px; color: var(--text); }
+.tickbox input { padding: 0; }
+/* An action's update history: the note reads across, the status it moved to sits
+   at the right, so the column of badges is scannable down the history. */
+#mact-list .prow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
 /* Read-only org-scope values in the register modal — look like a disabled field. */
 .reg-scope { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: #f4f5f7; color: var(--muted); min-height: 34px; box-sizing: border-box; display: flex; align-items: center; }
 

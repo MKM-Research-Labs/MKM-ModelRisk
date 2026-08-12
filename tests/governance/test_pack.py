@@ -59,6 +59,60 @@ def test_build_tex_includes_logo_org_and_sections():
     assert tex.strip().endswith("\\end{document}")
 
 
+def test_actions_table_reads_both_owner_shapes():
+    """A pack is reprinted from the event log, so it meets actions agreed before an
+    action could have several owners (a bare string) beside ones that have a list."""
+    meeting = {"meeting_id": "MTG1", "data": {
+        "title": "Q2 MRC", "date": "2026-02-16",
+        "actions": [
+            {"item_id": "A-001", "description": "Validate", "owner": "DK", "status": "Open"},
+            {"item_id": "A-002", "description": "Backtest", "model_id": "MKM-BRF-001",
+             "owner": ["Ada", "Grace"], "status": "Open"},
+        ],
+    }}
+    tex = build_tex(meeting, {"fields": {}})
+    assert "Owners" in tex and "Target" not in tex
+    assert "DK" in tex and "Ada, Grace" in tex and "MKM-BRF-001" in tex
+
+
+def test_minutes_carry_the_analysis_outcome_and_the_committees_note():
+    """A record of who presented is not minutes. What the committee concluded — the
+    outcome, the basis it let the presenter proceed on, and its discussion — is."""
+    meeting = {"meeting_id": "MTG1", "data": {
+        "title": "Q2 MRC", "date": "2026-02-16",
+        "models_in_scope": [{
+            "model_id": "MKM-BRF-001", "presenter": "David K Kelly",
+            "analysis_status": "Proceed", "proceed_basis": "Subject to the Q3 backtest",
+            "analysis_note": "The committee questioned the 2026 flood set coverage.",
+        }],
+    }}
+    tex = build_tex(meeting, {"fields": {}})
+    assert "Proceed" in tex and "Subject to the Q3 backtest" in tex
+    assert "Analysis Discussion" in tex
+    assert "questioned the 2026 flood set coverage" in tex
+
+
+def test_minutes_list_the_actions_carried_forward():
+    meeting = {"meeting_id": "MTG2", "data": {"title": "Q3 MRC", "date": "2026-05-16"}}
+    carried = [
+        {"item_id": "A-001", "description": "Re-run the backtest", "owner": ["Ada"],
+         "status": "Open", "model_id": "MKM-BRF-001", "meeting_id": "MTG1"},
+        {"item_id": "A-002", "description": "Raised today", "owner": ["Grace"],
+         "status": "Open", "meeting_id": "MTG2"},
+    ]
+    tex = build_tex(meeting, {"fields": {}}, carried_forward=carried)
+    assert "Actions Carried Forward" in tex
+    assert "Re-run the backtest" in tex and "MTG1" in tex
+    # An action agreed at this meeting is still owed at its close, and says so
+    # rather than repeating the meeting's own id back at the reader.
+    assert "this meeting" in tex
+
+
+def test_minutes_omit_the_carried_forward_section_when_nothing_is_owed():
+    meeting = {"meeting_id": "MTG2", "data": {"title": "Q3 MRC", "date": "2026-05-16"}}
+    assert "Actions Carried Forward" not in build_tex(meeting, {"fields": {}})
+
+
 def test_build_tex_includes_completeness_audit_and_notes():
     """Once the completeness audit has been run, the minutes carry its outcome and
     the committee's notes."""
@@ -182,8 +236,9 @@ def test_render_pack_pulls_remediations_from_inventory(monkeypatch):
     """render_pack_pdf reaches into the inventory projection for open steps."""
     captured = _stub_compile(monkeypatch)
     monkeypatch.setattr("src.governance.mrc.pack.build_tex",
-                        lambda meeting, settings, logo, remediations_by_model:
-                        (captured.update(remediations=remediations_by_model) or "tex"))
+                        lambda meeting, settings, logo, remediations_by_model, carried_forward:
+                        (captured.update(remediations=remediations_by_model,
+                                         carried=carried_forward) or "tex"))
     monkeypatch.setattr("src.governance.model_inventory.get_model",
                         lambda mid: {"data": {"remediation_steps": [
                             {"item_id": "RM-1", "description": "Fix", "status": "Open"},
@@ -194,3 +249,6 @@ def test_render_pack_pulls_remediations_from_inventory(monkeypatch):
     assert list(captured["remediations"].keys()) == ["MDL-X"]
     # Closed steps are filtered out — only Open / In Progress flow into the pack.
     assert [s["item_id"] for s in captured["remediations"]["MDL-X"]] == ["RM-1"]
+    # The outstanding-action register is collected the same way — from the projection,
+    # so the pack shows what the rest of the platform shows.
+    assert captured["carried"] == []

@@ -62,13 +62,14 @@ const Detail = {
     this._id = modelId;
     this._specs = await Inventory.specs();
     // Fetch the independent reads in parallel so a re-render settles quickly.
-    const [model, risk, mrc, audit, decisions, presentations] = await Promise.all([
+    const [model, risk, mrc, audit, decisions, presentations, actions] = await Promise.all([
       App.get("/api/models/" + modelId),
       App.get("/api/models/" + modelId + "/risk-rating"),
       App.get("/api/models/" + modelId + "/mrc"),
       App.get("/api/audit"),
       App.get("/api/models/" + modelId + "/decisions"),
       App.get("/api/models/" + modelId + "/analysis-presentations"),
+      App.get("/api/models/" + modelId + "/actions"),
     ]);
     this._model = model;
     this._risk = risk;
@@ -76,6 +77,7 @@ const Detail = {
     this._audit = audit.filter((e) => e.aggregate_id === modelId);
     this._decisions = decisions;
     this._analysisPresentations = presentations;
+    this._mrcActions = actions;
     if (tab) this._tab = tab;
     this._render();
     if (!opts || opts.scroll !== false) {
@@ -134,8 +136,10 @@ const Detail = {
       ["raci_roles", "RACI", n("raci_roles")],
       ["review", "Review", cov],
       ["risk", "Risk Rating", null],
-      ["decisions", "MRC linkage",
-        (d.signoff_history || []).length + this._decisions.length],
+      // Outstanding actions count here too: the badge should say there is something
+      // still owed to the committee, not only how much history the tab holds.
+      ["decisions", "MRC linkage", (d.signoff_history || []).length +
+        this._decisions.length + outstandingActions(this._mrcActions).length],
       ["docs", "Docs", DocLinks.countIn(d.documents, (this._specs.doc_tab_categories || [])
         .concat(this._specs.testing_doc_categories || []))],
       // Audit is the final tab — the complete, read-only record of every change,
@@ -286,9 +290,22 @@ const Detail = {
             paper + "</div></div>";
         }).join("")
       : '<div class="empty">No analysis presented to an MRC yet.</div>';
-    return '<p class="muted">The model&rsquo;s MRC record — granted rating sign-offs, the meetings ' +
-      "its analysis was presented at, plus decisions linked from meetings (read-only, sourced from " +
-      "the meeting log).</p>" +
+    // What the committee is still owed on this model, ahead of the historical record:
+    // an outstanding action is the live obligation, so it leads rather than sitting
+    // under the decisions that are already taken.
+    const outstanding = outstandingActions(this._mrcActions);
+    const settled = (this._mrcActions || []).length - outstanding.length;
+    const settledNote = settled
+      ? '<p class="muted" style="font-size:11px">' + settled + " closed action" +
+        (settled === 1 ? "" : "s") + " not shown — the meeting that agreed each one still " +
+        "holds it.</p>"
+      : "";
+    return '<p class="muted">The model&rsquo;s MRC record — actions still outstanding, granted ' +
+      "rating sign-offs, the meetings its analysis was presented at, plus decisions linked from " +
+      "meetings (read-only, sourced from the meeting log).</p>" +
+      '<div class="section-header">MRC actions outstanding</div>' +
+      DetailTabs.linkedItems("Actions outstanding", outstanding,
+                             ["description", "owner", "status"]) + settledNote +
       soSection +
       '<div class="section-header">Analysis presented to the MRC</div>' + presSection +
       '<div class="section-header">Decisions</div>' +

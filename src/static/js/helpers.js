@@ -378,6 +378,25 @@ function openRemediationCount(steps) {
   return (steps || []).filter((s) => s.status !== CLOSED_REMEDIATION_STATUS).length;
 }
 
+// Mirrors config CLOSED_ACTION_STATUS and REQUESTED_CLOSURE_ACTION_STATUS.
+const CLOSED_ACTION_STATUS = "Closed";
+const REQUESTED_CLOSURE_ACTION_STATUS = "Closure requested";
+
+// The MRC actions still owed on a model. An action closed at a later meeting stops
+// counting as outstanding, but stays on the meeting that agreed it — the committee's
+// record is the meeting, and this view only answers "what is still owed?".
+// A requested closure is still outstanding: the owner has asked, and until the
+// committee ratifies it the obligation stands.
+function outstandingActions(actions) {
+  return (actions || []).filter((a) => a.status !== CLOSED_ACTION_STATUS);
+}
+
+// Those an owner has asked the committee to close. Listed beside the outstanding ones
+// at the meeting, because ratifying them is the decision the committee actually takes.
+function closureRequestedActions(actions) {
+  return (actions || []).filter((a) => a.status === REQUESTED_CLOSURE_ACTION_STATUS);
+}
+
 // Human-readable file size.
 function fmtSize(bytes) {
   if (bytes === null || bytes === undefined) return "—";

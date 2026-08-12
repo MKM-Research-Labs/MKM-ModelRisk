@@ -22,6 +22,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance import (
+    ACTIONS_COLLECTION, CLOSED_ACTION_STATUS, CLOSING_AGENDA_KIND, STANDING_AGENDA,
+    STANDING_AGENDA_LIST)
 from src.database import read_all, read_view, replace_view
 from src.governance.mrc._state import apply, initial_state
 from src.governance.mrc.commands import AGGREGATE_TYPE
@@ -62,16 +65,59 @@ def list_meetings(config=None) -> list[dict[str, Any]]:
     return read_view(_VIEW, _COLUMNS, order_by="meeting_id", config=config)
 
 
+def _standing_order(refs: dict[str, list]) -> list[str]:
+    """The kinds a committee runs, in the order it runs them (Admin > Agenda)."""
+    kinds = [r.get("kind") for r in (refs.get(STANDING_AGENDA_LIST) or []) if r.get("kind")]
+    return kinds or [item["kind"] for item in STANDING_AGENDA]
+
+
+def _ordered_agenda(agenda: list[dict], refs: dict[str, list]) -> list[dict]:
+    """The agenda in the order the committee actually runs it.
+
+    A standing item that reaches a meeting after it was scheduled — a newly shipped
+    one, backfilled onto meetings already on the record — is appended, so without
+    this it would run last however the committee orders its agenda. Sorting at read
+    time rather than rewriting the stored agenda keeps the event log as the record of
+    what was actually added, and means the console and the minutes cannot disagree:
+    both read through here.
+
+    Deliberately narrow. Standing items are put into the committee's template order,
+    but only among the positions they already occupy, and everything else is left
+    exactly where it is: an event review, a routed sign-off, an item raised from the
+    floor — and, importantly, an item the committee curated into its own running order
+    without giving it a kind, which is indistinguishable from a floor item here and
+    must not be dragged out of the place its committee chose for it.
+
+    The one thing that does move is the closing item, which is put last whatever was
+    added after it was seeded — a meeting does not continue past the point the chair
+    closes it.
+    """
+    order = _standing_order(refs)
+    ordered = list(agenda)
+    slots = [i for i, item in enumerate(ordered) if (item.get("kind") or "") in order]
+    if len(slots) > 1:
+        standing = sorted((ordered[i] for i in slots), key=lambda it: order.index(it["kind"]))
+        for slot, item in zip(slots, standing):
+            ordered[slot] = item
+    closing = [i for i in ordered if (i.get("kind") or "") == CLOSING_AGENDA_KIND]
+    if closing:
+        ordered = [i for i in ordered if (i.get("kind") or "") != CLOSING_AGENDA_KIND] + closing
+    return ordered
+
+
 def _enrich(meeting: dict | None, refs: dict[str, list]) -> dict | None:
-    """Overlay the derived org scope onto a meeting from its bound MRC."""
+    """Overlay the derived org scope onto a meeting, and run its agenda in order."""
     if meeting is None:
         return None
-    mrc_value = (meeting["data"] or {}).get("mrc")
-    if not mrc_value:
-        return meeting
-    derived = derive_org_scope(mrc_value, refs)
-    if derived:
-        meeting["data"] = {**meeting["data"], **derived}
+    data = meeting["data"] or {}
+    if data.get("agenda"):
+        data = {**data, "agenda": _ordered_agenda(data["agenda"], refs)}
+    mrc_value = data.get("mrc")
+    if mrc_value:
+        derived = derive_org_scope(mrc_value, refs)
+        if derived:
+            data = {**data, **derived}
+    meeting["data"] = data
     return meeting
 
 
@@ -163,6 +209,43 @@ def matching_mrc(
     if company:
         return company, "Company"
     return None, None
+
+
+def outstanding_actions_for_committee(
+    meeting_id: str, config=None
+) -> list[dict[str, Any]]:
+    """Every action still owed across the committee ``meeting_id`` belongs to.
+
+    An action is agreed at one meeting and answered at a later one, so "what is still
+    outstanding" is a question about the committee rather than about any single
+    meeting — which is what the standing review item, and the actions carried forward
+    into the minutes, both need. Oldest first: a review of outstanding actions starts
+    with whatever has been owed longest.
+
+    A meeting with no committee against it stands alone rather than matching every
+    other unassigned meeting.
+    """
+    meetings = list_meetings(config)
+    current = next((m for m in meetings if m.get("meeting_id") == meeting_id), None)
+    if current is None:
+        return []
+    committee = (current.get("data") or {}).get("mrc")
+    peers = ([m for m in meetings if (m.get("data") or {}).get("mrc") == committee]
+             if committee else [current])
+    results: list[dict[str, Any]] = []
+    for meeting in peers:
+        data = meeting.get("data") or {}
+        for action in data.get(ACTIONS_COLLECTION) or []:
+            if action.get("status") == CLOSED_ACTION_STATUS:
+                continue
+            results.append({
+                **action,
+                "meeting_id": meeting["meeting_id"],
+                "meeting_title": data.get("title"),
+                "meeting_date": data.get("date"),
+            })
+    results.sort(key=lambda a: (a.get("meeting_date") or "", a.get("item_id") or ""))
+    return results
 
 
 def meeting_items_for_model(

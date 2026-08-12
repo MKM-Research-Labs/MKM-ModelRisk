@@ -106,27 +106,37 @@ Object.assign(MeetingDetail, {
   // count sits on each tab: an empty one still has to be visibly empty.
   _approvalSubtabs() {
     const current = this._approvalKind || "model";
-    const btn = (k, label) => {
-      const n = this._signoffItems(k).length;
+    const btn = (k, label, count) => {
+      const n = count === undefined ? this._signoffItems(k).length : count;
       return '<button class="dtab' + (k === current ? " active" : "") +
         '" data-sgtab="' + k + '">' + label + " (" + n + ")</button>";
     };
     return '<div class="dtabs" style="margin-bottom:8px">' +
       btn("model", "Models") + btn("product", "Products") + btn("handoff", "Handoffs") +
-      btn("owner", "Model Owner") + "</div>";
+      btn("owner", "Model Owner") +
+      // Beside the model-owner changes: both are things an owner raises and the
+      // committee ratifies, rather than a rating it grants.
+      btn("closure", "Action closures", this._closureRequests().length) + "</div>";
   },
 
   _approvalsSection() {
     const kind = this._approvalKind || "model";
-    const items = this._signoffItems(kind);
-    const rows = items.length
-      ? items.map((it) => this._signoffRow(it)).join("")
-      : '<div class="empty">No ' + SUBJECT_LABEL[kind] + " sign-offs routed to this meeting.</div>";
+    // Closures are not agenda items — they are actions carried across the committee's
+    // meetings — so they bring their own rows rather than going through _signoffRow.
+    const rows = kind === "closure" ? this._closureSignoffRows() : this._signoffRowsFor(kind);
     return '<div class="section-header">Approvals — MRC sign-offs</div>' +
       '<p class="muted" style="font-size:12px">Owner-raised requests routed to this committee — ' +
-      "risk-rating sign-offs, retirements, reactivations and handoff compatibility. " +
+      "risk-rating sign-offs, retirements, reactivations, handoff compatibility, and the " +
+      "closure of actions their owners believe are done. " +
       "Approving carries out the decision and records a minute.</p>" +
       this._approvalSubtabs() + rows;
+  },
+
+  _signoffRowsFor(kind) {
+    const items = this._signoffItems(kind);
+    return items.length
+      ? items.map((it) => this._signoffRow(it)).join("")
+      : '<div class="empty">No ' + SUBJECT_LABEL[kind] + " sign-offs routed to this meeting.</div>";
   },
 
   // The decision, in words, for the confirm dialog + audit trail.
@@ -174,5 +184,6 @@ Object.assign(MeetingDetail, {
       });
     decide("data-agapprove", "approve-signoff", true);
     decide("data-agreject", "reject-signoff", false);
+    this._bindClosureSignoffs();
   },
 });

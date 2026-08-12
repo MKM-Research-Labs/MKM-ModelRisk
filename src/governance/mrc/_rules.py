@@ -23,11 +23,15 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (
+    ACTION_LIVE_FIELDS,
+    ACTIONS_COLLECTION,
+    CLOSED_ACTION_STATUS,
     CLOSED_MEETING_STATUS,
     DEFAULT_MEETING_STATUS,
     MEETING_FIELD_SPECS,
     MEETING_FIELDS,
     MRC_COLLECTION_SPECS,
+    REQUESTED_CLOSURE_ACTION_STATUS,
     VALID_MEETING_STATUSES,
 )
 from src.governance import collections as coll
@@ -52,6 +56,39 @@ def _require_open(state: MeetingState) -> None:
         raise DomainError(
             "meeting is closed and cannot be amended; raise the correction at the "
             "next meeting")
+
+
+def _is_live_action_update(collection: str, fields: dict[str, Any]) -> bool:
+    """Is this the working record of an action rather than the minuted record of one?
+
+    An action is agreed at one meeting, worked between meetings and closed at a later
+    one, so its status and update history have to stay writable after the meeting that
+    raised it is sealed — otherwise a committee could never close what it agreed. What
+    was AGREED (the wording, the owners, the model) is part of the minuted record and
+    seals with it. The filed minutes PDF is rendered once at close and never
+    regenerated, so nothing already issued to the committee changes either way.
+    """
+    return (collection == ACTIONS_COLLECTION and bool(fields)
+            and set(fields) <= set(ACTION_LIVE_FIELDS))
+
+
+def _require_closure_is_ratified(
+    collection: str, fields: dict[str, Any], ratifying: bool
+) -> None:
+    """An action is closed by the committee, not by whoever owns it.
+
+    The owner records progress and, when they believe it is done, moves the action to
+    "Closure requested"; the closed status is written only by the ratification path.
+    Without this the same control that records progress would also settle the
+    obligation, and an outstanding action could leave the register without the
+    committee ever seeing it. Enforced here so it holds for the API too.
+    """
+    if ratifying or collection != ACTIONS_COLLECTION:
+        return
+    if fields.get("status") == CLOSED_ACTION_STATUS:
+        raise DomainError(
+            f"an action is closed by the committee: set it to "
+            f"'{REQUESTED_CLOSURE_ACTION_STATUS}' and the MRC ratifies the closure")
 
 
 def _validate_field(field: str, value: Any) -> None:
@@ -99,16 +136,24 @@ def decide_add_item(
 ) -> tuple[str, dict[str, Any]]:
     _require_exists(state)
     _require_open(state)
+    # Agreeing an action already closed would settle it without the committee ever
+    # ratifying it — the same hole as closing one directly, through the add form.
+    _require_closure_is_ratified(collection, fields, ratifying=False)
     return coll.decide_add(
         state.collections, MRC_COLLECTION_SPECS, collection=collection, fields=fields
     )
 
 
 def decide_update_item(
-    state: MeetingState, *, collection: str, item_id: str, fields: dict[str, Any]
+    state: MeetingState, *, collection: str, item_id: str, fields: dict[str, Any],
+    ratifying: bool = False,
 ) -> tuple[str, dict[str, Any]]:
+    """``ratifying`` is passed only by the committee's own closure path — see
+    ``_require_closure_is_ratified``."""
     _require_exists(state)
-    _require_open(state)
+    if not _is_live_action_update(collection, fields):
+        _require_open(state)
+    _require_closure_is_ratified(collection, fields, ratifying)
     return coll.decide_update(
         state.collections, MRC_COLLECTION_SPECS,
         collection=collection, item_id=item_id, fields=fields,

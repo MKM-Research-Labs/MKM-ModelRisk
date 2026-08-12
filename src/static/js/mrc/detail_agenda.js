@@ -29,16 +29,12 @@ Object.assign(MeetingDetail, {
       (it) => !subjectOf(it));
   },
 
-  // Standing items in a fixed order, then manual items, then AOB last.
-  _orderedAgenda() {
-    const order = { rollcall: 0, minutes_signoff: 1, review_signoff: 2, review_analysis: 3,
-      completeness_audit: 4, aob: 100 };
-    const rank = (it) => {
-      const k = this._agendaKind(it);
-      return k in order ? order[k] : 50;   // manual items sit between reviews and AOB
-    };
-    return this._agendaItems().slice().sort((a, b) => rank(a) - rank(b));
-  },
+  // The running order comes from the server, which sorts against the committee's own
+  // agenda list (Admin > Agenda) — so the console and the minutes cannot disagree, and
+  // a committee that reorders its agenda is obeyed. This used to be a rank map here,
+  // which meant every newly shipped standing item had to be remembered in two places:
+  // it never was, so `membership` had been ranking as a manual item.
+  _orderedAgenda() { return this._agendaItems(); },
 
   _agendaLocked() { return (this._meeting.data || {}).agenda_locked === "true"; },
 

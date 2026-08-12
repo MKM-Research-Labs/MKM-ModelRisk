@@ -134,7 +134,10 @@ def resolve_field(field: dict, options_by_list: dict | None = None,
     options = list(field.get("options", []))
     reference = field.get("reference")
     if reference and options_by_list.get(reference):
-        field_type = "choice"
+        # A reference decides where the options come from, not how many may be
+        # picked: a multi-valued field (an action's owners) keeps its own type and
+        # only borrows the list.
+        field_type = "multichoice" if field_type == "multichoice" else "choice"
         options = options_by_list[reference]
     resolved = {
         "key": field["key"], "label": field["label"], "type": field_type,
@@ -163,6 +166,10 @@ def resolve_field(field: dict, options_by_list: dict | None = None,
     # it (a person's ratified roles) rather than typed on this screen.
     if field.get("readonly"):
         resolved["readonly"] = True
+    # What the add form starts on where a blank is not the sensible opening value
+    # (an agreed action is Open). Config decides it, not the screen (coding rule R1).
+    if field.get("default"):
+        resolved["default"] = field["default"]
     return resolved
 
 

@@ -132,12 +132,36 @@ def test_add_missing_required():
 
 
 def test_update_item_changes_status():
-    state, _ = _add(_scheduled(), "actions", {"description": "Do X", "owner": "bob"})
+    state, _ = _add(_scheduled(), "actions", {"description": "Do X", "owner": ["bob"]})
     event_type, payload = decide_update_item(
-        state, collection="actions", item_id="A-001", fields={"status": "Closed"}
+        state, collection="actions", item_id="A-001", fields={"status": "Closure requested"}
+    )
+    state = apply(state, event_type, payload)
+    assert state.collections["actions"][0]["status"] == "Closure requested"
+
+
+def test_only_the_ratification_path_closes_an_action():
+    """An owner records progress; the committee settles the obligation."""
+    state, _ = _add(_scheduled(), "actions", {"description": "Do X", "owner": ["bob"]})
+    with pytest.raises(DomainError):
+        decide_update_item(state, collection="actions", item_id="A-001",
+                           fields={"status": "Closed"})
+    event_type, payload = decide_update_item(
+        state, collection="actions", item_id="A-001", fields={"status": "Closed"},
+        ratifying=True,
     )
     state = apply(state, event_type, payload)
     assert state.collections["actions"][0]["status"] == "Closed"
+
+
+def test_the_closure_rule_does_not_touch_other_collections():
+    """Only actions carry the rule — a decision or an agenda item is unaffected."""
+    state, _ = _add(_scheduled(), "decisions", {"description": "Approved"})
+    event_type, payload = decide_update_item(
+        state, collection="decisions", item_id="D-001", fields={"description": "Approved (a)"}
+    )
+    assert apply(state, event_type, payload).collections["decisions"][0]["description"] \
+        == "Approved (a)"
 
 
 def test_update_item_requires_meeting():
