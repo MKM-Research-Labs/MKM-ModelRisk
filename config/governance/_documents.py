@@ -28,8 +28,28 @@
 # Sensitivity sits beside Core Documentation rather than inside Analysis: it is an
 # adjunct to the model's own write-up — how the model responds as its inputs move —
 # where Analysis is the wider work done about the model.
-DOC_TAB_CATEGORIES = ("Core Documentation", "Sensitivity", "Analysis", "Monitoring",
-                      "History")
+# Testing sits between Analysis and Monitoring: it is part of the documentation
+# somebody reads about a model, not a separate concern with its own tab. It is a
+# GROUP rather than a category — the evidence is filed under four categories (the
+# overall pack plus one per test type) and they belong together on one panel.
+TESTING_TAB_LABEL = "Testing"
+# The Review tab lists the SIGNED reports a review produces — the issued document, not
+# the reviewer's working papers, which stay beside the stage that produced them. It is a
+# group for the same reason Testing is: the tab is called "Review", nothing is filed under
+# that name here, and the panel resolves to the report category.
+REVIEW_TAB_LABEL = "Review"
+DOC_TAB_CATEGORIES = ("Core Documentation", "Sensitivity", "Analysis", TESTING_TAB_LABEL,
+                      REVIEW_TAB_LABEL, "Monitoring", "History")
+
+# The Review tab's first stage: the preliminary pack a reviewer works from, and
+# whatever else the review generates as it runs. Offered beside the stage it
+# belongs to rather than on the Docs tab, exactly as the testing evidence is, so
+# a document is listed where the work that produced it happened — never twice.
+# The signed output is filed apart from the working papers: the committee is given
+# the report, not the reviewer's drafts, and only one of the two is a document
+# anybody should be tabling.
+REVIEW_REPORT_CATEGORY = "Model Review Report"
+REVIEW_DOC_CATEGORIES = ("Review", REVIEW_REPORT_CATEGORY)
 
 # Generated Model Risk Documents, filed under History. The document is rendered
 # from the inventory as it stood at the moment it was issued, so a filed copy is
@@ -40,7 +60,8 @@ HISTORY_DOC_CATEGORY = "History"
 # The categories the MRC can table for review against a model in scope. The paper
 # lives on the model and is referenced from the meeting, so a committee always
 # reviews the document the model actually holds rather than a copy of it.
-MRC_REVIEWABLE_CATEGORIES = ("Sensitivity", "Analysis", "Test Results")
+MRC_REVIEWABLE_CATEGORIES = ("Sensitivity", "Analysis", "Test Results",
+                             REVIEW_REPORT_CATEGORY)
 
 # The Testing sub-tab of Docs. "Test Results" is the overall evidence pack; the other
 # three back the in-context upload panel beside each unit / integration / benchmark
@@ -52,7 +73,28 @@ TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", "Benc
 # the model's Risk Rating tab — so they are not offered as standalone Docs categories.
 EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
 
-DOC_CATEGORIES = DOC_TAB_CATEGORIES + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
+# Which of the Docs tabs is a group, and over what. The label is not itself a
+# category — nothing is ever filed under "Testing" — so anything counting or
+# listing documents has to resolve the group to its real categories first.
+# The Review panel lists every report a review has issued, the way History lists every
+# Model Risk Document: the sign-off stage links the current one, and this is the archive.
+DOC_TAB_GROUPS = {TESTING_TAB_LABEL: TESTING_DOC_CATEGORIES,
+                  REVIEW_TAB_LABEL: (REVIEW_REPORT_CATEGORY,)}
+
+# Every category a document can actually carry. The group label is excluded on
+# purpose: it names a panel, not a filing place.
+DOC_CATEGORIES = (tuple(c for c in DOC_TAB_CATEGORIES if c not in DOC_TAB_GROUPS)
+                  + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
+                  + REVIEW_DOC_CATEGORIES)
+
+# --- Artefacts: what the institution ISSUES ---------------------------------
+# The Documents tab's second panel. Filed per division, plus a company-wide shelf for
+# what belongs to the institution rather than to one division (the user guide, a
+# firm-wide standard). The kinds are what an adopter files here in practice; they label
+# a tile, so an unfamiliar one is a wording change, not a schema change.
+COMPANY_WIDE_SHELF = "Company-wide"
+ARTEFACT_KINDS = ("Terms of Reference", "Presentation", "Policy", "Guide", "Template",
+                  "Other")
 
 # --- Ongoing monitoring -----------------------------------------------------
 # The artefacts an adopting institution's portfolio generator leaves behind, and

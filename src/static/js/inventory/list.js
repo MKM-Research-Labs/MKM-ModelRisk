@@ -24,8 +24,17 @@
 // clicking a Tier / RAG tile toggles the matching filter.
 
 const LIFECYCLE_STAGES = ["Development", "Validation", "Production", "Retired"];
+// Not a lifecycle stage but the natural place to ask for one: a hibernated model is
+// out of the estate and out of every count, so the only way to see one — to reactivate
+// it, say — is to ask. Picking it re-fetches with the retired models included.
+const HIBERNATED_FILTER = "Hibernated";
 
 const InventoryList = {
+  // Whether the list is currently asking for hibernated models. Read by the fetch
+  // in inventory.js, because choosing this filter changes what has to be fetched,
+  // not just what is shown.
+  wantsHibernated() { return this._filters && this._filters.lifecycle === HIBERNATED_FILTER; },
+
   _models: [],
   _onRow: null,
   _filters: null,
@@ -40,7 +49,9 @@ const InventoryList = {
       cell: (m) => fieldDisplay(m.d.name) },
     { key: "tier", label: "Criticality", sortVal: (m) => m.d.tier || 99,
       cell: (m) => tierBadge(m.d.tier, m.d.division) },
-    { key: "rag", label: "RAG", sortVal: (m) => ragOrder(m.d.rag_rating, m.d.division),
+    // "RAG" named the old fixed Red/Amber/Green scale; a division defines its own ratings
+    // now (this estate has added "Stop"), so the column is named for what it holds.
+    { key: "rag", label: "Risk Rating", sortVal: (m) => ragOrder(m.d.rag_rating, m.d.division),
       cell: (m) => ragBadge(m.d.rag_rating, m.d.division) },
     { key: "owner", label: "Owner", sortVal: (m) => (m.d.owner || "").toLowerCase(),
       cell: (m) => fieldDisplay(m.d.owner) },
@@ -49,21 +60,26 @@ const InventoryList = {
     // The derived review status (On Track / Overdue) is no longer a column — it
     // only re-stated the Next Review date beside it. The Overdue / Due Soon tiles
     // and the review filter still surface it as a portfolio-health signal.
-    { key: "mrc", label: "MRC Status", sortVal: (m) => mrcOutcome(m.d),
+    { key: "mrc", label: "MRC Status", sortVal: (m) => mrcState(m.d),
       cell: (m) => mrcStatusBadge(m.d) },
     { key: "lifecycle", label: "Lifecycle", sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || m.d.status || "").toLowerCase(),
-      cell: (m) => m.retired ? '<span class="pill">retired</span>' : fieldDisplay(m.d.lifecycle_stage || m.d.status) },
+      cell: (m) => m.retired ? '<span class="pill">retired</span>'
+        : optionLabel(Inventory.specByKey("lifecycle_stage"), m.d.lifecycle_stage || m.d.status) },
   ],
 
   mount(models, onRow) {
     this._models = models.map((m) => ({ model_id: m.model_id, retired: m.retired, d: m.data || {} }));
     this._onRow = onRow;
-    this._filters = { q: "", tier: "", rag: "", owner: "", review: "", lifecycle: "" };
+    // Filters survive a re-mount. Choosing "Hibernated" re-fetches, and clearing
+    // the filters here would drop the very filter that asked for the reload —
+    // the list would come back showing everything, hibernated models included.
+    this._filters = this._filters || { q: "", tier: "", rag: "", owner: "", review: "", lifecycle: "" };
     // Default to the soonest next-review first, so the models needing attention
     // are at the top on load; unscheduled ("9999" sort key) fall to the bottom.
     // Any header click still re-sorts and toggles.
     this._sort = { key: "next", dir: 1 };
-    document.getElementById("m-summary").innerHTML = this._tiles();
+    document.getElementById("m-summary").innerHTML = this._tiles() +
+      policyDraftNotice(this._models.map((m) => m.d.division));
     this._wireTiles();
     document.getElementById("m-list").innerHTML =
       '<div id="m-filters" class="filters"></div><div id="m-table"></div>';
@@ -90,25 +106,51 @@ const InventoryList = {
     return byScore.size ? [...byScore.values()] : seed();
   },
 
+  // The risk ratings the tiles and the filter offer, resolved exactly like the bands above:
+  // the scoped division's, or the union across the divisions on the list under "All".
+  _ratings() {
+    const scoped = (typeof MrcNav !== "undefined" && MrcNav.state) ? MrcNav.state.div : null;
+    const of = (division) => Policy.ratings(division) || [];
+    if (scoped) return of(scoped).length ? of(scoped) : of(null);
+    const byName = new Map();
+    [...new Set(this._models.map((m) => m.d.division).filter(Boolean))].forEach((division) =>
+      of(division).forEach((r) => { if (!byName.has(r.name)) byName.set(r.name, r); }));
+    return byName.size ? [...byName.values()] : of(null);
+  },
+
   // --- tiles ---
+  // Counted over the live estate only. A hibernated model is out of the estate, so
+  // it is out of every figure — including while the Hibernated filter is showing
+  // it, when it is on screen precisely because it is *not* part of the picture.
+  _live() { return this._models.filter((m) => !m.retired); },
+
   _tiles() {
-    const byTier = (t) => this._models.filter((m) => m.d.tier === t).length;
-    const byRag = (r) => this._models.filter((m) => m.d.rag_rating === r).length;
-    // Approved = models whose latest MRC sign-off outcome is an approval.
-    const approved = this._models.filter((m) => mrcOutcome(m.d) === "Approved").length;
-    // R/A/G breakdown, each count coloured to its rating.
-    const ragCount = (r) => '<span style="color:' + RAG_COLORS[r] + '">' + byRag(r) + "</span>";
-    const ragVal = ragCount("Red") + " / " + ragCount("Amber") + " / " + ragCount("Green");
+    const live = this._live();
+    const byTier = (t) => live.filter((m) => m.d.tier === t).length;
+    const byRag = (r) => live.filter((m) => m.d.rag_rating === r).length;
+    // The ratings tile counted a fixed Red / Amber / Green, so a division that has added a
+    // rating (this estate's "Stop") had models it simply did not show. It lists whatever
+    // the policy defines, in policy order, each count in its own colour.
+    const ratings = this._ratings();
+    // Approved = models whose CURRENT MRC state is an approval, the same rule the status
+    // column and the Risk tab use: a model awaiting a decision, or approved under a
+    // categorisation the division has since replaced, is not covered by a sign-off. Counting
+    // the last historical outcome instead read 25/25 while the column beside it said Pending.
+    const approved = live.filter((m) => mrcState(m.d) === "Approved").length;
+    const ragCount = (r) => '<span style="color:' + (r.colour || RAG_COLORS[r.name] ||
+      "#9e9e9e") + '">' + byRag(r.name) + "</span>";
+    const ragVal = ratings.map(ragCount).join(" / ");
+    const ragLabel = ratings.map((r) => r.name.charAt(0)).join(" / ");
     const tile = (lbl, val, color, filter) =>
       '<div class="scard" style="border-left-color:' + color + '"' +
       (filter ? ' data-tile="' + filter + '"' : "") + '><div class="lbl">' + lbl +
       '</div><div class="val">' + val + "</div></div>";
     return '<div class="summary">' +
-      tile("Total Models", this._models.length, "#1976d2", "") +
+      tile("Total Models", live.length, "#1976d2", "") +
       this._mcBands().map((b) => tile(esc(b.name), byTier(b.score),
         b.colour || TIER_COLORS[b.score] || "#9e9e9e", "tier=" + b.score)).join("") +
-      tile("R / A / G", ragVal, "#388e3c", "") +
-      tile("Approved", approved + " / " + this._models.length, "#388e3c", "") +
+      tile(esc(ragLabel), ragVal, "#388e3c", "") +
+      tile("Approved", approved + " / " + live.length, "#388e3c", "") +
       "</div>";
   },
 
@@ -126,12 +168,31 @@ const InventoryList = {
   },
 
   // --- filters ---
+  // The stages the estate actually uses, from the division's vocabulary, falling
+  // back to the shipped words before it has been seeded.
+  _lifecycleValues() {
+    const spec = typeof Inventory !== "undefined" && Inventory.specByKey
+      ? Inventory.specByKey("lifecycle_stage") : null;
+    return (spec && spec.options && spec.options.length) ? spec.options : LIFECYCLE_STAGES;
+  },
+
+  // What each stage is shown as, where the institution has renamed one.
+  _lifecycleLabels() {
+    const spec = typeof Inventory !== "undefined" && Inventory.specByKey
+      ? Inventory.specByKey("lifecycle_stage") : null;
+    return (spec && spec.option_labels) || {};
+  },
+
   _renderFilters() {
     const owners = [...new Set(this._models.map((m) => m.d.owner).filter(Boolean))].sort();
     const f = this._filters;
-    const sel = (id, cur, opts) =>
+    // ``shown`` maps a stored value to what it is displayed as, for the filters
+    // whose vocabulary the institution has renamed. Without it the lifecycle filter
+    // would offer the word on record rather than the word on every other screen.
+    const sel = (id, cur, opts, shown) =>
       '<select id="' + id + '"><option value="">' + opts[0] + "</option>" +
-      opts.slice(1).map((o) => '<option' + (o === cur ? " selected" : "") + ">" + esc(o) + "</option>").join("") +
+      opts.slice(1).map((o) => '<option value="' + esc(o) + '"' + (o === cur ? " selected" : "") +
+        ">" + esc((shown && shown[o]) || o) + "</option>").join("") +
       "</select>";
     // The criticality filter offers band NAMES but still filters on the stored score, so
     // the option's value and its label differ — hence its own builder.
@@ -145,10 +206,12 @@ const InventoryList = {
     document.getElementById("m-filters").innerHTML =
       '<input id="mf-q" placeholder="Search id or name…" value="' + esc(f.q) + '">' +
       tierSel +
-      sel("mf-rag", f.rag, ["All RAG", "Green", "Amber", "Red"]) +
+      // Policy order, so a division's own ratings (and only those) are offered.
+      sel("mf-rag", f.rag, ["All ratings", ...this._ratings().map((r) => r.name)]) +
       sel("mf-owner", f.owner, ["All owners", ...owners]) +
       sel("mf-review", f.review, ["All reviews", "Overdue", "Due Soon", "On Track", "Not Scheduled"]) +
-      sel("mf-lifecycle", f.lifecycle, ["All lifecycle", ...LIFECYCLE_STAGES]) +
+      sel("mf-lifecycle", f.lifecycle, ["All lifecycle", ...this._lifecycleValues(), HIBERNATED_FILTER],
+          this._lifecycleLabels()) +
       '<button class="btn small" id="mf-clear">Clear</button>' +
       '<span class="fcount" id="mf-count"></span>';
     this._wireFilters();
@@ -165,7 +228,15 @@ const InventoryList = {
     bind("mf-rag", "rag", "onchange");
     bind("mf-owner", "owner", "onchange");
     bind("mf-review", "review", "onchange");
-    bind("mf-lifecycle", "lifecycle", "onchange");
+    document.getElementById("mf-lifecycle").onchange = function () {
+      const el = document.getElementById("mf-lifecycle");
+      const was = self._filters.lifecycle === HIBERNATED_FILTER;
+      self._filters.lifecycle = el.value;
+      // Hibernated models are not in the list this page was drawn from, so
+      // switching into (or out of) that filter has to go back for the data.
+      if (was !== (el.value === HIBERNATED_FILTER)) { Inventory.loadList(); return; }
+      self._renderTable();
+    };
     document.getElementById("mf-clear").onclick = function () {
       self._filters = { q: "", tier: "", rag: "", owner: "", review: "", lifecycle: "" };
       self._renderFilters();
@@ -183,7 +254,9 @@ const InventoryList = {
       if (f.rag && m.d.rag_rating !== f.rag) return false;
       if (f.owner && m.d.owner !== f.owner) return false;
       if (f.review && reviewStatus(m.d.next_review_date) !== f.review) return false;
-      if (f.lifecycle && (m.d.lifecycle_stage || m.d.status) !== f.lifecycle) return false;
+      if (f.lifecycle === HIBERNATED_FILTER) {
+        if (!m.retired) return false;
+      } else if (f.lifecycle && (m.d.lifecycle_stage || m.d.status) !== f.lifecycle) return false;
       return true;
     });
     const col = this._columns.find((c) => c.key === this._sort.key);

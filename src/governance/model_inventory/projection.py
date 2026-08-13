@@ -63,6 +63,20 @@ def get_model(model_id: str, config=None) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
-def list_models(config=None) -> list[dict[str, Any]]:
-    """Return all models in the inventory, ordered by ``model_id``."""
-    return read_view(_VIEW, _COLUMNS, order_by="model_id", config=config)
+def list_models(config=None, *, include_retired: bool = False) -> list[dict[str, Any]]:
+    """The live inventory, ordered by ``model_id``.
+
+    Hibernated models are left out by default. A hibernated model is one the
+    committee has retired: it carries no governance obligations any more, so
+    counting it drags every estate-wide figure — completeness, approval coverage,
+    the summary tiles — against a record nobody is ever going to complete, and it
+    can never improve. Excluding it is the honest default; the record itself
+    survives in the log, as it must.
+
+    ``include_retired=True`` is for reads that are *about* a particular record
+    rather than about the estate (a model's own neighbourhood, a product's
+    components) and for integrity checks that must see the whole declared graph
+    (the dependency cycle guard), where a hibernated model is still a fact.
+    """
+    rows = read_view(_VIEW, _COLUMNS, order_by="model_id", config=config)
+    return rows if include_retired else [row for row in rows if not row.get("retired")]

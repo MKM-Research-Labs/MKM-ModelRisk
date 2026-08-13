@@ -139,7 +139,27 @@ Object.assign(Detail, {
   _row(key, d) {
     const f = this.specByKey(key);
     if (!f) return "";
-    let value = fieldDisplay(d[key]);
+    // Through the spec, so a status vocabulary shows its label rather than the
+    // word the record stores.
+    let value = optionLabel(f, d[key]);
+    // The owner takes the model as soon as they are named, but the appointment is
+    // the committee's to ratify — so the record shows the new name and says the
+    // sign-off is outstanding rather than pretending the change is settled.
+    if (key === "owner") {
+      const pending = pendingOwnerRatification(d);
+      if (pending) {
+        value += ' <span class="badge" style="background:#f57c00" title="' +
+          esc((pending.from_owner || "unassigned") + " → " + (pending.to_owner || "unassigned")) +
+          '">MRC sign-off outstanding</span>';
+      }
+    }
+    if (key === "review_status") {
+      // Set by the review workflow (each interim approval carries it forward), so
+      // it is not typed here — it links to the tab that moves it instead.
+      return '<div class="inforow" id="row-review_status"><div class="k">' + esc(f.label) +
+        '</div><div class="v">' + value +
+        ' <a href="#" data-goreview="1" style="font-size:12px">open review</a></div></div>';
+    }
     if (key === "rag_rating") {
       // Show the owner's RAG alongside what the tier heatmap ("the table") says,
       // so any divergence needing MRC sign-off is visible at a glance.
@@ -208,6 +228,12 @@ Object.assign(Detail, {
     // "MRC status" links through to the full MRC linkage record.
     const linkage = document.querySelector("[data-open-linkage]");
     if (linkage) linkage.onclick = function () { self._tab = "decisions"; self._render(); };
+    // Review status is set by the workflow, so the row opens it rather than
+    // offering an edit that would put the record and the work out of step.
+    const review = document.querySelector("[data-goreview]");
+    if (review) {
+      review.onclick = function (e) { e.preventDefault(); self._tab = "review"; self._render(); };
+    }
   },
 
   // W4c — open the sign-off picker, then hand the chosen meeting off to the
@@ -229,13 +255,6 @@ Object.assign(Detail, {
           " (routed to " + (mrc.name || mrc.value) + ").",
         "POST", "/api/models/" + self._id + "/request-signoff",
         { proposed_rag: proposed },
-        () => self.show(self._id, "risk"));
-    };
-    const revoke = document.getElementById("revoke-signoff");
-    if (revoke) revoke.onclick = function () {
-      App.amend("Revoke the MRC sign-off for " + self._id +
-        " — the rating is kept but returns to needing sign-off.",
-        "POST", "/api/models/" + self._id + "/revoke-signoff", {},
         () => self.show(self._id, "risk"));
     };
   },

@@ -55,7 +55,9 @@ def derive_product_map(product_id: str, config=None) -> dict[str, Any] | None:
         return None
     comps = (product.get("data", {}) or {}).get(PRODUCT_COMPONENTS, []) or []
 
-    models = list_models(config=config)
+    # A product's components must resolve even where one has since been
+    # hibernated — otherwise the product reads as though the binding vanished.
+    models = list_models(config=config, include_retired=True)
     by_id = {m["model_id"]: m for m in models}
     component_ids = []
     for item in comps:

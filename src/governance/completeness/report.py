@@ -40,7 +40,10 @@ from config.governance import (
     SEVERITY_BANDS,
 )
 from src.governance.completeness._method import appendix, method_section
-from src.governance.completeness.scan import findings, scan
+from src.governance.completeness.framework_report import framework_section
+from src.governance.completeness.review_programme import programme
+from src.governance.completeness.scan import (findings, ratified_divisions, scan,
+                                              scoped_models)
 from src.governance.latex import (_para_table, _section, _subsection, front_matter,
                                   history_page, logo_asset, preamble)
 from src.governance.mrc import pack
@@ -57,6 +60,7 @@ KIND_LABELS = {
     "collection": "Collection empty or part-worked",
     "document": "Documentation never uploaded",
     "document_broken": "Documentation recorded but file absent",
+    "rule": "Record breaches a governance rule",
 }
 
 
@@ -77,7 +81,10 @@ def _headline(rows: list[dict], gaps: list[dict]) -> str:
     """The three numbers a committee reads before anything else."""
     models = [r for r in rows if r["entity_kind"] == "Model"]
     products = [r for r in rows if r["entity_kind"] == "Product"]
-    incomplete = [r for r in rows if r["completeness"] < COMPLETENESS_ACCEPTABLE_AT]
+    # Each record against its own division's threshold, not one number for the
+    # whole report — two divisions may have ratified different ones.
+    incomplete = [r for r in rows
+                  if r["completeness"] < r.get("acceptable_at", COMPLETENESS_ACCEPTABLE_AT)]
     critical = [g for g in gaps if g["band"] == "Critical"]
     broken = [g for g in gaps if g["kind"] == "document_broken"]
     return (
@@ -188,9 +195,49 @@ def _dossier(row: dict) -> str:
     return _subsection(heading, context + table)
 
 
+def _review_programme(models: list) -> str:
+    """How far the estate has got through its reviews, reported rather than scored.
+
+    It sits after the findings because it answers a different question: not "what is
+    missing from this record" but "how far through the programme are we". Scoring it
+    would have marked every model incomplete the day the workflow shipped.
+    """
+    if not models:
+        return ""
+    state = programme(models)
+    headline = (
+        f"Models: \\textbf{{{state['records']}}}. Reviews signed off: "
+        f"\\textbf{{{state['signed_off']}}}; under way: "
+        f"\\textbf{{{state['under_way']}}}; not yet started: "
+        f"\\textbf{{{state['not_started']}}}. Stages agreed: "
+        f"\\textbf{{{state['stages_agreed']}}} of {state['stages_possible']}. "
+        f"Challenges still open: \\textbf{{{state['open_challenges']}}}.\n\n"
+        "A review is a programme of work with its own timetable, so it is reported "
+        "here rather than scored above: a model with no review yet is a place in the "
+        "queue, not a defect in its record.\n\n")
+    if not state["rows"]:
+        return _section("Review programme",
+                        headline + "\\textit{No review has been started yet.}\n\n")
+    table = _para_table(
+        ["Model", "Reviewer", "Why", "Stages agreed", "Signed off", "Open challenges"],
+        [[r["entity_id"], r["reviewer"] or "\u2014", r["trigger"] or "\u2014",
+          f"{r['stages_agreed']} of {r['stages_total']}",
+          r["signed_off_at"] or ("yes" if r["signed_off"] else "\u2014"),
+          str(r["open_challenges"] or "\u2014")] for r in state["rows"]],
+        [0.16, 0.20, 0.16, 0.16, 0.16, 0.16],
+        caption="Reviews under way and completed")
+    return _section("Review programme", headline + table)
+
+
 def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
-                           logo: bool = False) -> str:
-    """LaTeX source for the completeness audit."""
+                           logo: bool = False, models: list | None = None,
+                           ratified=()) -> str:
+    """LaTeX source for the completeness audit.
+
+    ``ratified`` are the divisions whose risk policy their committee has approved;
+    the framework-coverage section reads it, and an empty one reports the criteria
+    clause as unevidenced rather than guessing.
+    """
     org = settings.get("fields", {}).get("org_name", "")
     gaps = findings(rows)
     return (
@@ -208,14 +255,30 @@ def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
         + _priority(gaps)
         + _section("Findings by record",
                    "".join(_dossier(row) for row in rows))
+        + _review_programme(models or [])
+        + framework_section(rows, models or [], as_of, ratified)
         + appendix()
         + "\\end{document}\n"
     )
 
 
-def render_completeness_pdf(settings: dict, as_of: str, rows=None) -> bytes:
-    """Scan the registers and compile the completeness audit to PDF bytes."""
+def render_completeness_pdf(settings: dict, as_of: str, rows=None, models=None,
+                            model_ids=None) -> bytes:
+    """Scan the registers and compile the completeness audit to PDF bytes.
+
+    ``models`` backs the review-programme and framework-coverage sections, which
+    report on the inventory rather than on the findings — the same records, read
+    for a different question.
+
+    ``model_ids`` scopes that inventory the way ``scan`` scopes the findings, and
+    a caller that scopes one must scope the other: a committee audit whose
+    findings covered its own models while its coverage table counted the firm's
+    would put two populations in one report with nothing to tell them apart.
+    """
     assets = logo_asset(settings)
     rows = scan(as_of) if rows is None else rows
+    models = scoped_models(model_ids) if models is None else models
     return pack.compile_tex(
-        build_completeness_tex(rows, settings, as_of, logo=bool(assets)), assets)
+        build_completeness_tex(rows, settings, as_of, logo=bool(assets), models=models,
+                               ratified=ratified_divisions(models)),
+        assets)

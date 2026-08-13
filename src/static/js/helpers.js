@@ -61,6 +61,12 @@ const Policy = {
     const p = this._for(division);
     return p ? (p.risk_ratings || []).map((r) => r.name) : null;
   },
+  // The full ratings ({name, colour, explanation, score}) in policy order, for the surfaces
+  // that count or colour every rating rather than just naming them.
+  ratings(division) {
+    const p = this._for(division);
+    return p ? (p.risk_ratings || []) : null;
+  },
   dimensionBandNames(key, division) {
     const p = this._for(division);
     const dim = p && p.dimensions && p.dimensions[key];
@@ -90,6 +96,15 @@ const Policy = {
     const dim = p && p.dimensions && p.dimensions[key];
     return (dim && dim.label) || null;
   },
+  // What to call a dimension, always. A division renames one and every screen that
+  // asks follows; nothing anywhere else may spell out "Materiality" or "Complexity",
+  // because the day a division renames one, every such spelling becomes a lie. Where
+  // no policy has been drafted yet the key itself is humanised — derived from the
+  // structure rather than a name somebody typed into the source.
+  dimensionName(key, division) {
+    return this.dimensionLabel(key, division) ||
+      key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+  },
   // Mission-Criticality bands as {value: score, label: name} for a select — the model
   // stores the score, but the owner picks by the admin-defined band name.
   missionOptions(division) {
@@ -110,11 +125,46 @@ const Policy = {
     const scores = bands.map((b) => b.score);
     return byScore[Math.min(Math.max(t, Math.min.apply(null, scores)), Math.max.apply(null, scores))] || null;
   },
+  // The rating a subject's cell resolves to, repeating the risk engine's lookup
+  // (model_inventory/risk.py): Mission-Criticality band → Materiality|Complexity → rating.
+  // Null when either axis is unset, so the subject is not on the heatmap at all.
+  gridRating(tier, materiality, complexity, division) {
+    if (!materiality || !complexity) return null;
+    const p = this._for(division);
+    const band = this.mcBand(tier, division);
+    if (!p || !band) return null;
+    return ((p.grid || {})[band.name] || {})[materiality + "|" + complexity] || null;
+  },
 };
 
 // Display a scalar value, or an em dash when empty.
+// What a stored value is shown as. A status vocabulary separates the two — the
+// record holds "Production" while the division may call that stage something else
+// — so anything displaying a field's value asks its spec first.
+// The undecided owner ratification on a record, if there is one. Mirrors
+// _owner_ratification.pending_owner_request on the server: the newest owner
+// request decides, and only while it is still queued or on an agenda.
+function pendingOwnerRatification(data) {
+  const requests = ((data || {}).signoff_requests || []).filter((r) => r.kind === "owner");
+  const latest = requests[requests.length - 1];
+  if (!latest) return null;
+  return (latest.status === "Pending" || latest.status === "Attached") ? latest : null;
+}
+
+function optionLabel(spec, value) {
+  const shown = spec && spec.option_labels;
+  if (!shown || value === null || value === undefined || value === "") return fieldDisplay(value);
+  return fieldDisplay(shown[value] || value);
+}
+
 function fieldDisplay(value) {
   if (value === null || value === undefined || value === "") return '<span class="muted">—</span>';
+  // A multi-value field (a person's roles) reads as a list, not as "a,b,c".
+  if (Array.isArray(value)) {
+    return value.length
+      ? value.map((v) => '<span class="pill">' + esc(v) + "</span>").join(" ")
+      : '<span class="muted">—</span>';
+  }
   return esc(value);
 }
 
@@ -204,6 +254,39 @@ function mrcOutcome(data) {
   return hist.length ? (hist[hist.length - 1].outcome || "Approved") : "";
 }
 
+// A subject's CURRENT MRC state — the one thing the status column, the summary tile and
+// the Risk tab must all agree on. It mirrors the risk engine (model_inventory/risk.py):
+// an active request supersedes any earlier decision; a Rejected or Revoked latest decision
+// is not a sign-off; and an approval granted before the division ratified its current
+// categorisation is stale, because it was made against categories that no longer exist.
+// A sign-off covers one cell, so it stops covering the subject once the owner moves it to
+// another — "Rating moved" is approved-but-not-for-where-it-now-sits.
+// Returns "Pending" | "Rejected" | "Revoked" | "Re-classify" | "Rating moved" |
+// "Not placed" | "Approved" | "".
+function mrcState(data, division) {
+  const reqs = (data && data.signoff_requests) || [];
+  if (reqs.some((r) => r.status === "Pending" || r.status === "Attached")) return "Pending";
+  const hist = (data && data.signoff_history) || [];
+  const latest = hist.length ? hist[hist.length - 1] : null;
+  if (!latest) return "";
+  const outcome = latest.outcome || "Approved";
+  if (outcome === "Rejected" || outcome === "Revoked") return outcome;
+  const div = division === undefined ? data.division : division;
+  const ratified = (Policy.state(div) || {}).approved_at;
+  if (ratified && latest.date && latest.date < ratified) return "Re-classify";
+  const rag = Policy.gridRating(data.tier, data.materiality, data.complexity, div);
+  if (!rag) return "Not placed";
+  if (latest.to_rating !== rag) return "Rating moved";
+  return "Approved";
+}
+
+// Everything short of a live sign-off is amber — it is work outstanding, not a failure.
+const MRC_STATE_COLORS = {
+  Pending: "#f57c00", Rejected: "var(--red)", Revoked: "var(--red)",
+  "Re-classify": "#f57c00", "Rating moved": "#f57c00", "Not placed": "#9e9e9e",
+  Approved: "#388e3c",
+};
+
 const LIFECYCLE_COLORS = {
   "New": "#1976d2", "Being Enhanced": "#f57c00",
   "No New Development": "#9e9e9e", "Marked for Removal": "#d32f2f",
@@ -220,20 +303,25 @@ function lifecycleBadge(lifecycle) {
 // rejected), or a dash when the MRC has not yet ruled. The detail view also
 // surfaces pending requests; the list keeps to the decided outcome.
 function mrcStatusBadge(data) {
-  // An active request (queued to a committee, awaiting its decision) is the
-  // model's current MRC state — it is waiting on approval — so Pending takes
-  // precedence over any earlier decided outcome. "Pending" / "Attached" mirrors
-  // the server's definition of an active request (api_models_signoff.pending_signoff).
-  const reqs = (data && data.signoff_requests) || [];
-  if (reqs.some((r) => r.status === "Pending" || r.status === "Attached")) {
-    return '<span style="color:#f57c00;font-weight:600">Pending</span>';
-  }
+  const state = mrcState(data);
+  if (!state) return '<span class="muted">—</span>';
+  // Each non-approved state says, on hover, what the Risk tab says at length: the approval
+  // is in the history but does not cover the subject as it now stands.
   const hist = (data && data.signoff_history) || [];
-  const latest = hist.length ? hist[hist.length - 1] : null;
-  if (!latest) return '<span class="muted">—</span>';
-  const outcome = latest.outcome || "Approved";
-  const color = outcome === "Rejected" ? "var(--red)" : "#388e3c";
-  return '<span style="color:' + color + ';font-weight:600">' + esc(outcome) + "</span>";
+  const approvedRating = (hist.length ? hist[hist.length - 1].to_rating : "") || "—";
+  const hints = {
+    "Re-classify": "Signed off under an older categorisation — re-confirm the " +
+      "classification and request sign-off again.",
+    "Rating moved": "The MRC approved " + approvedRating + "; the heatmap now says " +
+      (Policy.gridRating(data.tier, data.materiality, data.complexity, data.division) || "—") +
+      ". Request sign-off for the rating it now carries.",
+    "Not placed": Policy.dimensionName("materiality", data.division) + " or " +
+      Policy.dimensionName("complexity", data.division).toLowerCase() +
+      " is unset, so this is not on the heatmap and there is no rating to sign off.",
+  };
+  const title = hints[state] ? ' title="' + esc(hints[state]) + '"' : "";
+  return '<span style="color:' + (MRC_STATE_COLORS[state] || "#9e9e9e") +
+    ';font-weight:600"' + title + ">" + esc(state) + "</span>";
 }
 
 // Every uploaded document is stored, but the console lists each one once and only
@@ -288,6 +376,25 @@ const CLOSED_REMEDIATION_STATUS = "Closed";
 // The tab itself still lists every step — closing one is history, not deletion.
 function openRemediationCount(steps) {
   return (steps || []).filter((s) => s.status !== CLOSED_REMEDIATION_STATUS).length;
+}
+
+// Mirrors config CLOSED_ACTION_STATUS and REQUESTED_CLOSURE_ACTION_STATUS.
+const CLOSED_ACTION_STATUS = "Closed";
+const REQUESTED_CLOSURE_ACTION_STATUS = "Closure requested";
+
+// The MRC actions still owed on a model. An action closed at a later meeting stops
+// counting as outstanding, but stays on the meeting that agreed it — the committee's
+// record is the meeting, and this view only answers "what is still owed?".
+// A requested closure is still outstanding: the owner has asked, and until the
+// committee ratifies it the obligation stands.
+function outstandingActions(actions) {
+  return (actions || []).filter((a) => a.status !== CLOSED_ACTION_STATUS);
+}
+
+// Those an owner has asked the committee to close. Listed beside the outstanding ones
+// at the meeting, because ratifying them is the decision the committee actually takes.
+function closureRequestedActions(actions) {
+  return (actions || []).filter((a) => a.status === REQUESTED_CLOSURE_ACTION_STATUS);
 }
 
 // Human-readable file size.

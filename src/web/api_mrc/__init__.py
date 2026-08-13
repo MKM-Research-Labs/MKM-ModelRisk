@@ -24,6 +24,7 @@ from src.web.api_mrc._bp import mrc_bp
 # matter as long as the blueprint exists first.
 from src.web.api_mrc import (  # noqa: F401
     lifecycle, collections, signoff, close, products_scope, events, completeness,
+    membership, actions,
 )
 
 __all__ = ["mrc_bp"]

@@ -174,7 +174,59 @@ duplication percentage; cross-model duplication is treated as a hard fault in re
 
 ---
 
+## R9 — Test and verify against a restored backup, never the live database
+
+**Rule.** No tool, script, REPL or verification app may write to a protected database
+(`mkm_modelrisk`, `mkm_modelrisk_demo`). Work against a scratch database restored from the
+hourly backups — `scripts/restore_scratch.sh` builds one — or let `pytest` derive its own.
+Reading the live database is permitted; anything that writes is not. This binds ad-hoc work
+as tightly as committed code: the breach that prompted this rule came from a throwaway
+debugging script, not from the suite.
+
+**Two ports, two databases.** `5015` serves the live estate; **everything under test runs on
+`5016` against the scratch copy** (`scripts/dev_app.sh`, which refuses to start against a
+protected database however `DB_NAME` was set). The port split is what makes the mistake
+visible at a glance; the refusal is what makes it impossible. Note the port alone guarantees
+nothing — an app on 5016 that sourced `.env` unmodified is just as live, which is why the
+guard checks the resolved database and not the port.
+
+**Why.** The live database is the firm's governance record, and the event log is
+append-only by design: a junk write cannot simply be deleted, only retired through the MRC.
+On 2026-08-06 two debug scripts sourced `.env` — which points `DB_NAME` at `mkm_modelrisk` —
+and registered models ZZ1/ZZ2 into the real estate under the test suite's identity. The
+records are permanent; removing them from the active inventory needed a committee.
+
+**How to comply.** `.env` aims everything at production, and `config/env.py` loads it on
+import, so *any* process that imports `config` inherits the live database unless told
+otherwise. Set `DB_NAME` to a scratch database explicitly, and confirm what it resolves to
+before the first write:
+
+```bash
+# ✗ bad — inherits DB_NAME=mkm_modelrisk from .env
+set -a; . ./.env; set +a
+python -c "from src.web import create_app; create_app().run(port=5015)"
+
+# ✗ bad — pg.sh sources .env AFTER your environment, so this restores over LIVE
+DB_NAME=scratch scripts/pg.sh restore <dump>
+
+# ✓ good — scratch database from the latest backup, verified before use
+scripts/restore_scratch.sh                       # restores into mkm_modelrisk_scratch
+set -a; . ./.env; set +a; export DB_NAME=mkm_modelrisk_scratch
+python -c "from config.database import DatabaseConfig; print(DatabaseConfig.from_env().name)"
+```
+
+**Verified by.** Reviewed by hand — there is no mechanical gate yet, which is the weakness
+of this rule as it stands. `assert_disposable` guards the destructive *test fixtures* only;
+ordinary writes to a protected database pass unchallenged, and that is exactly the gap R9
+describes. The intended enforcement is the identity guard (refuse an actor that is not a
+registered person while `DB_NAME` is protected), which is designed but **not yet built**.
+
+---
+
 ## Change log
+
+- 2026-08-07 — Added R9 (test against a restored backup, never the live database), after two
+  ad-hoc debugging scripts wrote junk models into the production event log.
 
 - 2026-08-06 — R5 stopped being an automated check. The header and licence-notice scans left
   the audit (and the repo) for a local-only tool the maintainer runs by hand; `python -m audit`

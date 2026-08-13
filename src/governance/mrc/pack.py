@@ -40,6 +40,44 @@ from src.governance.latex import (
 )
 
 
+def _subject_of(item: dict) -> str:
+    """The model, product or handoff a routed sign-off is about — empty for an
+    ordinary agenda item, which is what separates the running order from the
+    requests the committee is answering."""
+    return (item.get("subject_model_id") or item.get("subject_product_id")
+            or item.get("subject_handoff_id") or "")
+
+
+def _signoff_ask(item: dict) -> str:
+    """What the committee was asked to ratify, in one cell.
+
+    Mirrors the console's Approvals row so the pack and the screen describe the same
+    decision: a rating names the RAG proposed, a change of owner names who it moves
+    between, and a lifecycle decision names itself. Plain ASCII for the arrow — the
+    preamble loads ``inputenc`` with utf8, and a literal arrow is a compile risk this
+    document should not take on.
+    """
+    kind = item.get("signoff_kind") or "rag"
+    if kind == "owner":
+        return (f"{item.get('from_owner') or 'unassigned'} -> "
+                f"{item.get('to_owner') or 'unassigned'}")
+    if kind in ("retire", "reactivate"):
+        return kind.capitalize()
+    return item.get("proposed_rag") or ""
+
+
+def _owners(action: dict) -> str:
+    """An action's owners as one cell.
+
+    An action agreed before it could have several owners holds a bare string, so
+    both shapes have to read the same way in a pack reprinted from the event log.
+    """
+    owner = action.get("owner")
+    if isinstance(owner, list):
+        return ", ".join(str(o) for o in owner)
+    return owner or ""
+
+
 def _model_remediation_section(
     in_scope_items: list[dict], remediations_by_model: dict[str, list[dict]],
 ) -> str:
@@ -61,9 +99,31 @@ def _model_remediation_section(
     return _section("Model Remediation (in-scope)", body) if body else ""
 
 
+def _carried_forward_section(actions: list[dict], meeting_id: str) -> str:
+    """Actions still owed once this meeting closes — the register the next one inherits.
+
+    Deliberately includes actions agreed at THIS meeting alongside older ones: what
+    matters to the reader is what is still owed when the meeting ends, not which
+    meeting first said it. The source meeting is named so an action carried over
+    several meetings shows how long it has been open.
+    """
+    if not actions:
+        return ""
+    rows = [[a.get("item_id"), a.get("model_id"), a.get("description"), _owners(a),
+             a.get("status"),
+             "this meeting" if a.get("meeting_id") == meeting_id else a.get("meeting_id")]
+            for a in actions]
+    return _section("Actions Carried Forward", _para_table(
+        ["ID", "Model", "Action", "Owners", "Status", "Agreed at"], rows,
+        [0.08, 0.15, 0.32, 0.17, 0.14, 0.14], caption="Actions carried forward") +
+        "\\par\\medskip\n\\textit{These remain outstanding at the close of this meeting "
+        "and carry forward to the next.}")
+
+
 def build_tex(
     meeting: dict, settings: dict, logo: bool = False,
     remediations_by_model: dict[str, list[dict]] | None = None,
+    carried_forward: list[dict] | None = None,
 ) -> str:
     """Render the LaTeX source for a meeting pack in the shared house style."""
     data = meeting.get("data", {})
@@ -84,28 +144,42 @@ def build_tex(
     # A wrapping table: agenda titles can be long (an event review carries the
     # event's summary), and a fixed-width table pushed the Status column — which
     # is where an item shows as reviewed — off the right edge of the page.
+    # The running order, and only that. A routed sign-off is an owner's request that
+    # happens to be carried on an agenda item; it is answered in its own section below,
+    # so listing it here too printed every one twice and buried the order the meeting
+    # actually ran. The console's Agenda tab draws the same distinction.
+    running_order = [a for a in data.get("agenda", []) if not _subject_of(a)]
     agenda = _section("Agenda", _para_table(
         ["#", "Title", "Presenter", "Status"],
         [[i + 1, a.get("title"), a.get("presenter"), a.get("status")]
-         for i, a in enumerate(data.get("agenda", []))],
-        [0.06, 0.60, 0.17, 0.17], caption="Agenda")) if data.get("agenda") else ""
-    # Sign-off agenda items (a model/product + a proposed RAG) called out on
-    # their own, with the outcome.
-    signoff_items = [
-        a for a in data.get("agenda", [])
-        if (a.get("subject_model_id") or a.get("subject_product_id")) and a.get("proposed_rag")
-    ]
-    signoffs = _section("Model Sign-offs", _table(
-        ["Subject", "Proposed RAG", "Status"],
-        [[a.get("subject_model_id") or a.get("subject_product_id"),
-          a.get("proposed_rag"), a.get("status")] for a in signoff_items],
-        caption="Model sign-offs")) if signoff_items else ""
-    # In-scope models with who presents and whether an analysis was attached.
+         for i, a in enumerate(running_order)],
+        [0.06, 0.60, 0.17, 0.17], caption="Agenda")) if running_order else ""
+    # Every sign-off routed to this meeting, with what the committee was asked to
+    # ratify. Deliberately not only the rating ones: a change of model owner, a
+    # retirement and a reactivation carry no proposed RAG, and filtering on one would
+    # drop them from the record entirely now that the agenda no longer repeats them.
+    signoff_items = [a for a in data.get("agenda", []) if _subject_of(a)]
+    signoffs = _section("Sign-offs", _table(
+        ["Subject", "Decision", "Status"],
+        [[_subject_of(a), _signoff_ask(a), a.get("status")] for a in signoff_items],
+        caption="Sign-offs")) if signoff_items else ""
+    # In-scope models with who presents, whether an analysis was attached, and — the
+    # part that makes this minutes rather than an attendance list — what the committee
+    # concluded: the outcome it recorded and the basis it let the presenter proceed on.
     in_scope = data.get("models_in_scope") or []
-    models_scope = _section("Models in Scope (Analysis)", _table(
-        ["Model", "Presenter", "Analysis"],
-        [[m.get("model_id"), m.get("presenter"), m.get("analysis_original_name") or "--"]
-         for m in in_scope], caption="Models in scope")) if in_scope else ""
+    models_scope = _section("Models in Scope (Analysis)", _para_table(
+        ["Model", "Presenter", "Analysis", "Outcome", "Basis to proceed"],
+        [[m.get("model_id"), m.get("presenter"), m.get("analysis_original_name") or "--",
+          m.get("analysis_status") or "Pending", m.get("proceed_basis") or "--"]
+         for m in in_scope],
+        [0.17, 0.15, 0.20, 0.16, 0.32], caption="Models in scope")) if in_scope else ""
+    # The committee's discussion of each model, kept out of the table because a note
+    # is prose and a table cell is not.
+    notes = "".join(
+        "\\textbf{" + _esc(m.get("model_id")) + "}: " + _esc(m.get("analysis_note")) +
+        "\\par\\medskip\n" for m in in_scope if m.get("analysis_note"))
+    if notes:
+        models_scope += _section("Analysis Discussion", notes)
     # The standing completeness-audit item: its latest run and the committee's
     # notes, so the minutes carry the audit outcome the committee reviewed.
     audit_item = next((a for a in data.get("agenda", [])
@@ -137,9 +211,10 @@ def build_tex(
         [[x.get("item_id"), x.get("date"), x.get("description")]
          for x in data.get("decisions", [])], caption="Decisions")) if data.get("decisions") else ""
     actions = _section("Actions", _table(
-        ["ID", "Action", "Owner", "Target", "Status"],
-        [[a.get("item_id"), a.get("description"), a.get("owner"), a.get("target_date"),
+        ["ID", "Model", "Action", "Owners", "Status"],
+        [[a.get("item_id"), a.get("model_id"), a.get("description"), _owners(a),
           a.get("status")] for a in data.get("actions", [])], caption="Actions")) if data.get("actions") else ""
+    carried = _carried_forward_section(carried_forward or [], meeting.get("meeting_id", ""))
     remediation = _model_remediation_section(
         data.get("models_in_scope") or [], remediations_by_model or {},
     )
@@ -151,7 +226,8 @@ def build_tex(
                        author=data.get("chair", ""), logo=logo, toc=True)
         + info + "\\par\\bigskip\n"
         + history_page(data.get("date", ""), "MRC meeting pack generated", org_name=org)
-        + participants + agenda + signoffs + models_scope + completeness + minutes + decisions + actions + remediation
+        + participants + agenda + signoffs + models_scope + completeness + minutes + decisions
+        + actions + carried + remediation
         + "\\end{document}\n"
     )
 
@@ -208,8 +284,12 @@ def _collect_remediations(meeting: dict) -> dict[str, list[dict]]:
 
 def render_pack_pdf(meeting: dict, settings: dict) -> bytes:
     """Build and compile a meeting pack, using the org's uploaded logo if one is set."""
+    from src.governance.mrc.projection import outstanding_actions_for_committee
     assets = logo_asset(settings)
     return compile_tex(
-        build_tex(meeting, settings, logo=bool(assets), remediations_by_model=_collect_remediations(meeting)),
+        build_tex(meeting, settings, logo=bool(assets),
+                  remediations_by_model=_collect_remediations(meeting),
+                  carried_forward=outstanding_actions_for_committee(
+                      meeting.get("meeting_id", ""))),
         assets,
     )

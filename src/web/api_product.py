@@ -35,6 +35,7 @@ from src.files import UploadError, upload_path
 from src.governance.documents import (
     add_document, find_document, product_scope as _product_scope, remove_document,
 )
+from src.governance.model_handoff import annotate_links
 from src.governance.model_inventory import list_models
 from src.governance.product import (
     add_collection_item,
@@ -99,7 +100,7 @@ def field_specs():
     so the component editor can narrow its model dropdown once a type is chosen
     rather than offering the whole inventory for every component.
     """
-    live = [m for m in list_models() if not m["retired"]]
+    live = list_models()
     models_by_type: dict[str, list[str]] = {}
     for model in live:
         models_by_type.setdefault(
@@ -148,6 +149,7 @@ def model_map(product_id: str):
     result = derive_product_map(product_id)
     if result is None:
         return jsonify({"error": "Product not found"}), 404
+    annotate_links(result["links"])
     return jsonify(result)
 
 

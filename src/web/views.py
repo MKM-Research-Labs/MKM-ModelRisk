@@ -20,7 +20,7 @@
 """HTML views (the single-page governance console)."""
 from __future__ import annotations
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, current_app, render_template, request, send_from_directory
 
 from src.identity import resolve_principal
 from src.web._assets import asset_version
@@ -40,4 +40,25 @@ def index():
         "index.html",
         actor_default=resolve_principal(request.headers).actor,
         asset_version=asset_version(),
+    )
+
+
+# Browsers and iOS ask the site root for these regardless of what index.html
+# declares (bookmarks, home-screen shortcuts, a tab opened straight on a PDF
+# endpoint), so serve them from src/static/img rather than logging a 404 each
+# time the console is opened.
+@views_bp.get("/favicon.ico")
+def favicon():
+    return _icon("favicon.ico")
+
+
+@views_bp.get("/apple-touch-icon.png")
+@views_bp.get("/apple-touch-icon-precomposed.png")
+def apple_touch_icon():
+    return _icon("apple-touch-icon.png")
+
+
+def _icon(filename: str):
+    return send_from_directory(
+        f"{current_app.static_folder}/img", filename, max_age=60 * 60 * 24
     )

@@ -5,6 +5,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Model Risk Governance</title>
+  <!-- Declared so the browser stops probing the site root for /favicon.ico and
+       /apple-touch-icon*.png; views.py also serves those roots for the clients
+       (bookmarks, iOS home screen) that ask for them regardless. -->
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml" />
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" sizes="any" />
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=asset_version) }}" />
 </head>
 <body>
@@ -150,7 +156,10 @@
   <script src="{{ url_for('static', filename='js/inventory_tabs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/detail_overview.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/graph_wire.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/neighbourhood.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/inventory/neighbourhood_edit.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/inventory/review.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory_collections.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/chain.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/handoffs.js', v=asset_version) }}"></script>
@@ -165,6 +174,8 @@
   <script src="{{ url_for('static', filename='js/mrc/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/detail_participants.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/detail_minutes.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/mrc/detail_actions.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/mrc/detail_actions_review.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/detail_agenda.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/detail_agenda_standing.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/detail_signoff.js', v=asset_version) }}"></script>
@@ -176,6 +187,7 @@
   <script src="{{ url_for('static', filename='js/settings.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/committee_list.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/committee_detail.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/risk_policy_audit.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/risk_policy.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/admin_misc.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/reference.js', v=asset_version) }}"></script>

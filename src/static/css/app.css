@@ -56,6 +56,14 @@ main { padding: 20px; max-width: 1180px; margin: 0 auto; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field label { color: var(--muted); font-size: 11px; }
 input, select, textarea { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; background: #fff; color: var(--text); }
+/* A tick-box in a list of them (an action's owners): the box sits beside its name.
+   Beats `.field label` on specificity deliberately — inside a field these are values
+   to pick from, not more field captions, so they must not render muted. */
+.field label.tickbox, .tickbox { display: inline-flex; align-items: center; gap: 5px; margin: 0 12px 4px 0; font-size: 12px; color: var(--text); }
+.tickbox input { padding: 0; }
+/* An action's update history: the note reads across, the status it moved to sits
+   at the right, so the column of badges is scannable down the history. */
+#mact-list .prow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
 /* Read-only org-scope values in the register modal — look like a disabled field. */
 .reg-scope { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: #f4f5f7; color: var(--muted); min-height: 34px; box-sizing: border-box; display: flex; align-items: center; }
 
@@ -118,6 +126,17 @@ th.sortable:hover { color: var(--accent); }
 .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
 .inforow .edit-btn { margin-left: 8px; }
 .inforow .editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1; }
+/* Artefact tiles: what the institution issues, shown as cards rather than a table —
+   a ToR or a presentation is a thing you pick up, not a row you scan. */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+.tile .tile-kind { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+.tile .tile-title { font-weight: 700; font-size: 13px; word-break: break-word; }
+.tile .tile-note { font-size: 11px; color: var(--muted); flex: 1; }
+.tile .tile-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+/* A field shown but not editable here — granted by another process. */
+.ro { font-size: 12px; padding: 6px 0; color: var(--text); }
 /* Which risk policy a subject's Risk tab is showing (mirrors the Admin state chip). */
 .policy-note { font-size: 11px; color: var(--muted); background: #fafafa; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; margin: 0 0 10px; }
 .policy-note.draft { background: #fff8e1; border-color: var(--amber); }
@@ -220,6 +239,46 @@ textarea { box-sizing: border-box; }
 .chain-edge-hit { stroke: transparent; stroke-width: 12; }
 .chain-edge-line { stroke: #94a3b8; stroke-width: 1.5; transition: stroke 0.1s ease, stroke-width 0.1s ease; }
 .chain-edge:hover .chain-edge-line { stroke: var(--accent); stroke-width: 2.5; }
+/* The neighbourhood canvas is also where declarations are made (see
+   inventory/neighbourhood_edit.js). Bands and handles stay invisible at rest, so
+   the picture is unchanged until a drag starts. */
+.nbhd-tray { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fbfcfe; }
+.nbhd-tray-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.nbhd-filter { margin-left: auto; padding: 3px 8px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; width: 160px; }
+.nbhd-tray-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; }
+.nbhd-tray-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); width: 92px; flex: none; padding-top: 4px; }
+.nbhd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.nbhd-chip { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 600; cursor: grab; border: 1.5px solid; user-select: none; touch-action: none; }
+.nbhd-chip:active { cursor: grabbing; }
+.nbhd-chip-model { background: #e3f2fd; border-color: #1976d2; color: #0d47a1; }
+.nbhd-chip-source { background: #fef3c7; border-color: #d97706; color: #92400e; }
+.nbhd-ghost { position: fixed; z-index: 9999; pointer-events: none; padding: 3px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 600; background: #e3f2fd; border: 1.5px solid #1976d2; color: #0d47a1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
+.nbhd-band { display: none; }
+.nbhd-canvas.nbhd-drop .nbhd-band { display: block; }
+.nbhd-band rect { fill: #eef2ff; fill-opacity: 0.82; stroke: #6366f1; stroke-width: 1.5; stroke-dasharray: 6 4; }
+.nbhd-band text { fill: #4338ca; font-weight: 600; }
+.nbhd-band.drop-over rect { fill-opacity: 0.95; stroke-width: 2.5; }
+.graph-handle { fill: #fff; stroke: #1976d2; stroke-width: 1.5; opacity: 0; cursor: crosshair; touch-action: none; }
+.nbhd-node:hover .graph-handle, .chain-node:hover .graph-handle,
+.graph-wiring .graph-handle { opacity: 1; }
+.wire-target rect { stroke-width: 3.5; filter: brightness(0.96); }
+/* The rubber line ends under the pointer, so it would otherwise win the
+   hit-test against the very node the wire is being dropped on. */
+.graph-rubber { pointer-events: none; }
+/* Staging a model onto the estate chain: the whole canvas is the drop target. */
+.chain-canvas.chain-staging { border-style: dashed; border-color: #6366f1; }
+.chain-canvas.chain-staging.drop-over { background: #f5f6ff; border-width: 2px; }
+/* Arrows carry the handoff, so they are clickable like the chain's. */
+.nbhd-edge { cursor: pointer; }
+.nbhd-hit { stroke: transparent; stroke-width: 14; }
+/* Drawn over the arrows, so the label carries a white halo to stay readable. */
+.nbhd-edge-label { fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.nbhd-edge:hover .nbhd-edge-label { fill: var(--accent); font-weight: 600; }
+/* On the whole-estate chain many edges converge on the same few nodes and their
+   midpoints collide, so there the label is a hover reveal rather than always on.
+   A model's own canvas holds a handful of edges and keeps them permanently. */
+.chain-edge .nbhd-edge-label { opacity: 0; transition: opacity 0.1s ease; }
+.chain-edge:hover .nbhd-edge-label { opacity: 1; fill: var(--accent); font-weight: 600; }
 .chain-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .chain-item { display: flex; align-items: baseline; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: #fff; }
 .chain-item:hover { border-color: var(--accent); background: #f7fbff; }

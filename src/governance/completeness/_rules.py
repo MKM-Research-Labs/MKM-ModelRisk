@@ -34,6 +34,7 @@ from datetime import date
 from typing import Any
 
 from config.governance import (
+    AUDIT_POLICY_DEFAULTS,
     COLLECTION_CRITICALITY,
     DEFAULT_COLLECTION_CRITICALITY,
     DEFAULT_DOC_CRITICALITY,
@@ -63,6 +64,8 @@ from src.governance.completeness._gaps import (
     _field_gaps,
     _held_categories,
     _recorded,
+    _rule_gaps,
+    _rules_carried,
 )
 
 
@@ -70,30 +73,41 @@ from src.governance.completeness._gaps import (
 # Escalation factors
 # ---------------------------------------------------------------------------
 
-def tier_weight(tier: Any) -> float:
+def _setting(policy: dict | None, key: str) -> float:
+    """One audit setting: the division's if its committee has ratified one, else the
+    firm-wide value. Read here rather than at the call sites so a division that has
+    set two of seven is scored on those two and the defaults for the rest."""
+    value = (policy or {}).get(key)
+    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) \
+        else AUDIT_POLICY_DEFAULTS[key]
+
+
+def tier_weight(tier: Any, policy: dict | None = None) -> float:
     """The tier's share of the severity. An untiered record escalates rather
     than damps: the missing tier is itself the reason it needs looking at."""
     try:
         return TIER_WEIGHTS[int(tier)]
     except (TypeError, ValueError, KeyError):
-        return UNTIERED_WEIGHT
+        return _setting(policy, "untiered_weight")
 
 
-def rag_multiplier(rag: Any, scores: dict | None = None) -> float:
+def rag_multiplier(rag: Any, scores: dict | None = None,
+                   policy: dict | None = None) -> float:
     """Escalation from the governed risk rating; unrated sits above the lowest rating.
 
     ``scores`` is the division policy's rating→score map (carried on the risk envelope);
     when absent it falls back to the firm-wide defaults, so the seed reproduces today's
     Red/Amber/Green = 1.25/1.10/1.00."""
     table = scores if scores is not None else RAG_MULTIPLIERS
-    return table.get(str(rag), UNRATED_MULTIPLIER)
+    return table.get(str(rag), _setting(policy, "unrated_multiplier"))
 
 
-def event_pressure(events: int) -> float:
+def event_pressure(events: int, policy: dict | None = None) -> float:
     """Escalation from operational failures in the rolling window, capped so a
     single bad year cannot dominate the whole ranking."""
     count = max(0, int(events or 0))
-    return min(1.0 + count * EVENT_PRESSURE_PER_EVENT, EVENT_PRESSURE_CAP)
+    return min(1.0 + count * _setting(policy, "event_pressure_per_event"),
+               _setting(policy, "event_pressure_cap"))
 
 
 def staleness(next_review_date: Any, as_of: str) -> float:
@@ -137,11 +151,14 @@ def _action(gap: dict, entity_kind: str) -> str:
     template_key = gap["kind"]
     if gap.get("partial"):
         template_key = "collection_partial"
+    # A rule carries its own instruction: each is breached in its own way, and a
+    # generic "correct the {item}" leaves an owner with nothing to do.
+    template = gap.get("template") or REMEDIATION_ACTIONS[template_key]
     # Labels keep the case they were authored with. Lower-casing them reads more
     # naturally mid-sentence for most fields but mangles the acronyms -- "record
     # rag rating", "record mrc sign-off" -- and an instruction an owner has to
     # decode is worse than one with a capital in the middle of it.
-    return REMEDIATION_ACTIONS[template_key].format(
+    return template.format(
         item=gap["label"], entity=entity_kind.lower(),
         detail=gap.get("detail", ""))
 
@@ -159,12 +176,13 @@ def audit_entity(
     """
     tier = data.get("tier")
     rag = risk.get("heatmap", {}).get("rag") or data.get("rag_rating")
+    audit_policy = risk.get("audit_policy")
     factors = {
-        "tier_weight": tier_weight(tier),
+        "tier_weight": tier_weight(tier, audit_policy),
         # The rating's escalation weight is its score in the division's policy (carried on
         # the risk envelope); an unrated model sits just above the lowest rating.
-        "rag_multiplier": rag_multiplier(rag, risk.get("rag_scores")),
-        "event_pressure": event_pressure(risk.get("events_in_window", 0)),
+        "rag_multiplier": rag_multiplier(rag, risk.get("rag_scores"), audit_policy),
+        "event_pressure": event_pressure(risk.get("events_in_window", 0), audit_policy),
         "staleness": staleness(data.get("next_review_date"), as_of),
     }
     escalation = (factors["tier_weight"] * factors["rag_multiplier"]
@@ -172,7 +190,8 @@ def audit_entity(
 
     raw = (_field_gaps(data, field_specs)
            + _collection_gaps(data, collection_specs)
-           + _document_gaps(data, doc_categories, available))
+           + _document_gaps(data, doc_categories, available)
+           + _rule_gaps(data))
 
     gaps = []
     for gap in raw:
@@ -201,6 +220,11 @@ def audit_entity(
         "events_in_window": risk.get("events_in_window", 0),
         "escalation": round(escalation, 4), **factors,
         "completeness": round(1 - missing / total, 4) if total else 1.0,
+        # The thresholds this record was scored against, carried on the row. Records
+        # from different divisions sit in one report, so "is this one acceptable?"
+        # cannot be answered by one number read from config at printing time.
+        "acceptable_at": _setting(audit_policy, "acceptable_at"),
+        "conditional_at": _setting(audit_policy, "conditional_at"),
         "gaps": gaps,
     }
 
@@ -223,6 +247,7 @@ def _carried(data: dict, field_specs: dict, collection_specs: dict,
     # closed by a broader pack is credited through that pack. Crediting a
     # category the register does not require would let a record climb above the
     # threshold on evidence nobody asked it to produce.
+    total += _rules_carried(data)
     retrievable, _ = _held_categories(data, available)
     for category in doc_categories:
         if category in EXEMPT_DOC_CATEGORIES:

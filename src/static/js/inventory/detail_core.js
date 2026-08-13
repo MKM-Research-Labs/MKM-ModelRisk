@@ -38,19 +38,18 @@ const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebas
 // Governance column. Note: recertification / review_frequency / last_review_date remain
 // intentionally off the overview (the MRC sets sign-off + next review at sign-off); that
 // they are still audit-scored is a separate, open decision, not this regression.
+// Reviewer and validation date moved onto the Review tab, where the review is
+// actually run; review_status stays because it is the one-line answer to "where
+// is this model up to", and it links through to the workflow that sets it.
 const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "model_owner_role", "lifecycle_stage",
-  "review_status", "peer_reviewer", "validation_date"];
-const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
-// The document category that backs each Testing field's in-context upload panel.
-const TESTING_DOC_CATEGORY = {
-  unit_tests: "Unit Test", integration_tests: "Integration Test", benchmark_tests: "Benchmark Test",
+  "review_status"];
+// The testing evidence is documentation, so it lives under Docs (between Analysis
+// and Monitoring) rather than on a tab of its own. The categories behind that panel
+// come from config with the rest — see doc_tab_groups in the field specs.
+// Collection tabs that carry an in-context supporting-documents panel.
+const COLLECTION_DOC_CATEGORY = {
+  remediation_steps: "Remediation Evidence",
 };
-// The model-wide test evidence pack, shown at the top of the Testing panel. Mirrors
-// the first entry of config TESTING_DOC_CATEGORIES.
-const TEST_RESULTS_CATEGORY = "Test Results";
-// The evidence that closes a remediation step, uploaded in context beside the
-// register on the Risk Rating tab rather than offered as a Docs category.
-const REMEDIATION_DOC_CATEGORY = "Remediation Evidence";
 const HEADER_DATES = ["next_review_date"];
 
 const Detail = {
@@ -63,13 +62,14 @@ const Detail = {
     this._id = modelId;
     this._specs = await Inventory.specs();
     // Fetch the independent reads in parallel so a re-render settles quickly.
-    const [model, risk, mrc, audit, decisions, presentations] = await Promise.all([
+    const [model, risk, mrc, audit, decisions, presentations, actions] = await Promise.all([
       App.get("/api/models/" + modelId),
       App.get("/api/models/" + modelId + "/risk-rating"),
       App.get("/api/models/" + modelId + "/mrc"),
       App.get("/api/audit"),
       App.get("/api/models/" + modelId + "/decisions"),
       App.get("/api/models/" + modelId + "/analysis-presentations"),
+      App.get("/api/models/" + modelId + "/actions"),
     ]);
     this._model = model;
     this._risk = risk;
@@ -77,10 +77,7 @@ const Detail = {
     this._audit = audit.filter((e) => e.aggregate_id === modelId);
     this._decisions = decisions;
     this._analysisPresentations = presentations;
-    // Testing is a Docs sub-tab and Remediation a section of Risk Rating now, so a
-    // link to either of the old tabs lands where its content moved to.
-    if (tab === "testing") { tab = "docs"; ModelDocs.select("Testing"); }
-    if (tab === "remediation_steps") tab = "risk";
+    this._mrcActions = actions;
     if (tab) this._tab = tab;
     this._render();
     if (!opts || opts.scroll !== false) {
@@ -131,18 +128,20 @@ const Detail = {
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
     const tabs = [
       ["overview", "Overview", null],
-      ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
-      ["dependencies", "Dependencies", n("dependencies")],
-      ["connections", "Connections", null],
+      ["version_history", "Versions", null],
+      // Dependencies and Connections were two halves of one subject — a table of
+      // declared feeds, and the picture those declarations draw. One tab now: the
+      // graph you wire, with both registers beneath it.
+      ["connections", "Connections", n("dependencies") + n("data_sources")],
       ["raci_roles", "RACI", n("raci_roles")],
-      ["validation_questions", "Validation & Assumptions", cov],
+      ["review", "Review", cov],
       ["risk", "Risk Rating", null],
-      ["decisions", "MRC linkage",
-        (d.signoff_history || []).length + this._decisions.length],
-      // Testing is a sub-tab of Docs, so the Docs badge counts the test evidence too
-      // — otherwise the tab would under-report what sits behind it.
-      ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories) +
-        DocLinks.countIn(d.documents, this._specs.testing_doc_categories)],
+      // Outstanding actions count here too: the badge should say there is something
+      // still owed to the committee, not only how much history the tab holds.
+      ["decisions", "MRC linkage", (d.signoff_history || []).length +
+        this._decisions.length + outstandingActions(this._mrcActions).length],
+      ["docs", "Docs", DocLinks.countIn(d.documents, (this._specs.doc_tab_categories || [])
+        .concat(this._specs.testing_doc_categories || []))],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
@@ -162,14 +161,19 @@ const Detail = {
     if (this._tab === "connections") {
       box.innerHTML =
         '<p class="muted" style="font-size:12px;margin-bottom:10px">This model\'s neighbourhood: ' +
-        "what feeds it, what it feeds, and the models it shares a data source with. Declare feeds on " +
-        "the Dependencies tab; declare data sources below. Click any model to re-centre.</p>" +
+        "what feeds it, what it feeds, and the models it shares a data source with. Drag a model or " +
+        "a data source from the tray onto the canvas to connect it, or drag from a node’s handle " +
+        "onto another node. Click an arrow to state what crosses it; click a model to re-centre.</p>" +
         '<div id="nbhd-host"></div>' +
+        '<div id="nbhd-handoff"></div>' +
+        '<p class="muted" style="font-size:12px;margin-top:16px">The declarations behind the picture. ' +
+        "Every feed drawn above is one of these rows, on this model or on the model at the other end.</p>" +
+        this._collSection("dependencies", d) +
         '<p class="muted" style="font-size:12px;margin-top:16px">The feeds this model pulls its inputs ' +
         "from. Any model that draws on the same source is linked to it above.</p>" +
         this._collSection("data_sources", d);
       Neighbourhood.render(this._id, "nbhd-host");
-      this._bindCollections(["data_sources"]);
+      this._bindCollections(["dependencies", "data_sources"]);
       return;
     }
     if (this._tab === "risk") {
@@ -179,20 +183,18 @@ const Detail = {
         "the model on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
         policyNotice(d.division) +
         this._riskTable(d) +
-        DetailTabs.risk(this._risk, false, d.division) +  // events are product-only
-        this._remediationSection(d);
+        DetailTabs.risk(this._risk, false, d.division);  // events are product-only
       this._bindEdits();          // the risk-assessment fields are editable here now
       this._bindSignoffRequest();
-      this._bindRemediation(d);
       return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
     if (this._tab === "decisions") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "docs") {
-      // Docs is the model's own documentation and supporting analysis, including its
-      // test evidence on the Testing sub-tab. Remediation Evidence stays on the
-      // Remediation register, beside what it evidences, so nothing is listed twice.
+      // Docs is the model's own documentation and supporting analysis. Testing
+      // evidence lives on the Testing tab and Remediation Evidence on the
+      // Remediation tab, each beside what it evidences, so nothing is listed twice.
       // The Model Risk Document is generated from the inventory on request, so it
       // is offered as an action rather than filed as one more uploaded row that
       // could go stale against the record it describes.
@@ -206,8 +208,9 @@ const Detail = {
         '<a class="btn small primary" target="_blank" rel="noopener" id="mrd-issue" href="/api/models/' +
         esc(this._id) + '/risk-document.pdf">Model Risk Document (PDF)</a></span></div>' +
         '<div id="docs-host"></div>';
-      ModelDocs.render(this._id, d.documents || [], this._docsSubtabs(d),
-        this._model.retired, "/api/models/", () => this.show(this._id, "docs"), "docs-host");
+      ModelDocs.render(this._id, d.documents || [], this._specs.doc_tab_categories || [],
+        this._model.retired, "/api/models/", () => this.show(this._id, "docs"), "docs-host",
+        this._specs.doc_tab_groups || {});
       // Issuing files a copy under History. Fetch the PDF ourselves so we know
       // when the server has finished generating and filing it, then refresh so the
       // new copy appears in History at once — a fixed timer used to race a slow
@@ -231,13 +234,12 @@ const Detail = {
       }
       return;
     }
-    // Validation & Assumptions overlap — one tab: the SR 26-2 questions plus
-    // the assumptions register.
-    if (this._tab === "validation_questions") {
-      box.innerHTML = DetailTabs.validation(d, this._model.retired) +
-        this._collSection("assumptions", d);
-      this._bindValidationSaves();
-      this._bindCollections(["assumptions"]); return;
+    // The review, run as a workflow: one rail, one stage at a time. The stages
+    // own the nine questions, the weaknesses and the limitations of use, which is
+    // why none of them is a tab of its own any more.
+    if (this._tab === "review") {
+      box.innerHTML = this._reviewTab(d);
+      this._bindReviewRail(); return;
     }
     // Versions & Changes overlap — one tab: the version timeline plus the
     // change-history register.
@@ -246,82 +248,21 @@ const Detail = {
         this._collSection("change_history", d);
       this._bindCollections(["version_history", "change_history"]); return;
     }
-    // Limitations tab: Model weaknesses + Limitations.
-    if (this._tab === "limitations") {
-      box.innerHTML = this._collSection("model_weaknesses", d) +
-        this._collSection("limitations", d);
-      this._bindCollections(["model_weaknesses", "limitations"]); return;
-    }
     const spec = this.collSpec(this._tab);
-    box.innerHTML = Collections.render(d, { collections: [spec] }, this._model.retired);
+    let html = Collections.render(d, { collections: [spec] }, this._model.retired);
+    const docCat = COLLECTION_DOC_CATEGORY[this._tab];
+    const docOpts = { category: docCat, docs: d.documents || [], base: "/api/models/", id: this._id,
+      retired: this._model.retired,
+      refresh: () => this.show(this._id, this._tab, { scroll: false }) };
+    if (docCat) html += '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
+      DocPanel.html(docOpts);
+    box.innerHTML = html;
     this._bindCollection(this._tab);
-  },
-
-  // Remediation: the steps register plus the evidence that closes them, shown at the
-  // foot of Risk Rating. Remediation is what the model is doing about its rating, so
-  // it reads there rather than on a tab of its own. The open count travels with the
-  // heading, since the tab badge that used to carry it has gone.
-  _remediationSection(d) {
-    const open = openRemediationCount(d.remediation_steps);
-    return '<div class="section-header" style="margin-top:18px">Remediation (' + open +
-      " open)</div>" +
-      '<p class="muted" style="font-size:12px;margin:0 0 8px">The steps being taken to ' +
-      "address this model's risk, and the evidence that closes them.</p>" +
-      this._collSection("remediation_steps", d) +
-      '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
-      DocPanel.html(this._remediationDocOpts(d));
-  },
-
-  _remediationDocOpts(d) {
-    return { category: REMEDIATION_DOC_CATEGORY, docs: d.documents || [], base: "/api/models/",
-      id: this._id, retired: this._model.retired,
-      refresh: () => this.show(this._id, "risk", { scroll: false }) };
-  },
-
-  _bindRemediation(d) {
-    this._bindCollections(["remediation_steps"]);
-    DocPanel.bind(this._remediationDocOpts(d));
+    if (docCat) DocPanel.bind(docOpts);
   },
 
   _collSection(key, d) {
     return Collections.render(d, { collections: [this.collSpec(key)] }, this._model.retired);
-  },
-
-  // The Docs sub-tabs: the configured document categories, with Testing inserted
-  // just to the left of Monitoring. Test evidence is documentation about the model
-  // like the rest of it, so it reads as one of Docs' panels rather than taking a tab
-  // of its own on the header. If an installation has no Monitoring category the
-  // panel goes last, so it is never dropped.
-  _docsSubtabs(d) {
-    const cats = (this._specs.doc_tab_categories || []).slice();
-    const testing = {
-      key: "Testing", label: "Testing",
-      count: DocLinks.countIn(d.documents, this._specs.testing_doc_categories),
-      render: (host) => this._renderTesting(host, d),
-    };
-    const at = cats.indexOf("Monitoring");
-    cats.splice(at < 0 ? cats.length : at, 0, testing);
-    return cats;
-  },
-
-  // The Testing panel: every piece of testing evidence for the model. The overall
-  // test results pack sits at the top, then the unit / integration / benchmark
-  // fields, each with its own upload panel. Each test type is a sub-header over its
-  // own panel; the old Yes/No flag is gone — the attached documents are the
-  // evidence, so a separate "tests exist?" tick added nothing.
-  _renderTesting(host, d) {
-    const docOpts = (cat) => ({ category: cat, docs: d.documents || [], base: "/api/models/",
-      id: this._id, retired: this._model.retired,
-      refresh: () => this.show(this._id, "docs", { scroll: false }) });
-    document.getElementById(host).innerHTML =
-      '<div class="section-header">Test results</div>' +
-      DocPanel.html(docOpts(TEST_RESULTS_CATEGORY)) +
-      TESTING_FIELDS.map((k) =>
-        '<div class="section-header" style="margin-top:14px">' +
-        esc(this.specByKey(k).label) + "</div>" +
-        DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
-    DocPanel.bind(docOpts(TEST_RESULTS_CATEGORY));
-    TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k])));
   },
 
   // The model's MRC record: granted rating sign-offs (which land here once a
@@ -349,9 +290,22 @@ const Detail = {
             paper + "</div></div>";
         }).join("")
       : '<div class="empty">No analysis presented to an MRC yet.</div>';
-    return '<p class="muted">The model&rsquo;s MRC record — granted rating sign-offs, the meetings ' +
-      "its analysis was presented at, plus decisions linked from meetings (read-only, sourced from " +
-      "the meeting log).</p>" +
+    // What the committee is still owed on this model, ahead of the historical record:
+    // an outstanding action is the live obligation, so it leads rather than sitting
+    // under the decisions that are already taken.
+    const outstanding = outstandingActions(this._mrcActions);
+    const settled = (this._mrcActions || []).length - outstanding.length;
+    const settledNote = settled
+      ? '<p class="muted" style="font-size:11px">' + settled + " closed action" +
+        (settled === 1 ? "" : "s") + " not shown — the meeting that agreed each one still " +
+        "holds it.</p>"
+      : "";
+    return '<p class="muted">The model&rsquo;s MRC record — actions still outstanding, granted ' +
+      "rating sign-offs, the meetings its analysis was presented at, plus decisions linked from " +
+      "meetings (read-only, sourced from the meeting log).</p>" +
+      '<div class="section-header">MRC actions outstanding</div>' +
+      DetailTabs.linkedItems("Actions outstanding", outstanding,
+                             ["description", "owner", "status"]) + settledNote +
       soSection +
       '<div class="section-header">Analysis presented to the MRC</div>' + presSection +
       '<div class="section-header">Decisions</div>' +

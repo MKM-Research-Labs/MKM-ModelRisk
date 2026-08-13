@@ -24,11 +24,13 @@ Everything not named here applies immediately — no confirmation dialog, no
 recorded change reason. The confirmation is enforced server-side in
 ``src.command.dispatch`` so the client cannot bypass it.
 
-Composed MRC decisions — sign-off approve / reject / revoke and closing a meeting
+Composed MRC decisions — sign-off approve / reject and closing a meeting
 — run several sub-commands rather than one dispatched command, so they enforce
 confirmation explicitly at their endpoints via ``require_confirmation``.
 """
 from __future__ import annotations
+
+from config.governance import REVIEW_QUESTION_LIST, STANDING_AGENDA_LIST
 
 # Whole commands that always require confirmation. Retiring is significant and
 # effectively one-way — the subject becomes read-only — so both the model and the
@@ -42,6 +44,20 @@ CONFIRM_REQUIRED_COMMANDS = frozenset({
     "retire_product",
     "retire_client",
 })
+
+# Reference lists whose edits require confirmation, keyed by the command. Most
+# admin lists are working vocabulary — adding a data source or renaming a division
+# applies as you type it. The review questionnaire is not: it is the standard every
+# model is held to, it is copied onto each model at registration, and reordering it
+# changes what the next review asks first. So editing it is a deliberate act with a
+# recorded reason, like retiring a model, rather than a menu tweak.
+_GOVERNED_LISTS = frozenset({REVIEW_QUESTION_LIST, STANDING_AGENDA_LIST})
+CONFIRM_REQUIRED_LISTS = {
+    "add_option": _GOVERNED_LISTS,
+    "update_option": _GOVERNED_LISTS,
+    "remove_option": _GOVERNED_LISTS,
+    "move_option": _GOVERNED_LISTS,
+}
 
 # Scalar-field edits that require confirmation, keyed by the field-update command.
 # Owner and risk rating are the significant model/product edits; a *meeting's*

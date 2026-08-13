@@ -6,6 +6,15 @@
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": ["model.py"],
       "port": 5015
+    },
+    {
+      "name": "modelrisk-verify",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-lc",
+        "set -a; . \"$HOME/Documents/ModelRisk/.env\"; set +a; export DB_NAME=mkm_modelrisk_scratch; export PYTHON=\"$HOME/Documents/ModelRisk/.venv/bin/python\"; exec scripts/dev_app.sh"
+      ],
+      "port": 5016
     }
   ]
 }

@@ -35,6 +35,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.files import HIDDEN_DOC_EXTENSIONS
+from src.governance.risk_policy.naming import field_label
 from config.governance import (COLLECTION_SPECS, MODEL_FIELD_SPECS,
                                TESTING_DOC_CATEGORIES)
 from src.files import extension
@@ -133,7 +134,12 @@ def _groups() -> dict[str, list[str]]:
 
 
 def _field_group(data: dict, title: str, keys: list[str], extra: list, heading) -> str:
-    rows = [[MODEL_FIELD_SPECS[k].get("label", k), _value(data, k)] for k in keys] + extra
+    # Risk-dimension fields are labelled the way the model's own division names
+    # them: a document that printed "Complexity" for a division that calls it
+    # something else would misdescribe the very policy it is reporting against.
+    division = data.get("division") or ""
+    rows = [[field_label(k, MODEL_FIELD_SPECS[k].get("label", k), division), _value(data, k)]
+            for k in keys] + extra
     return heading(title, _para_table(["Field", "Value"], rows, [0.28, 0.72], caption=title))
 
 

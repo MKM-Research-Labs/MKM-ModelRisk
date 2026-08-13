@@ -129,10 +129,13 @@ def test_a_decision_the_subject_cannot_carry_out_is_rejected(client):
     ratify one against it — the guard is server-side, not just a hidden button."""
     _seed_mrc(client)
     _schedule_meeting(client)
-    item = _add(client, "agenda", {
+    # Found by its subject, not by position: the agenda comes back in the order the
+    # meeting runs, which closes on AOB rather than on whatever was added last.
+    agenda = _add(client, "agenda", {
         "title": "Reactivate: P1", "subject_product_id": "P1",
         "signoff_kind": "reactivate", "status": "Pending",
-    }).get_json()["data"]["agenda"][-1]
+    }).get_json()["data"]["agenda"]
+    item = next(a for a in agenda if a.get("subject_product_id") == "P1")
     response = decide(client, item["item_id"])
     assert response.status_code == 400
     assert "cannot be the subject of a reactivate decision" in response.get_json()["error"]

@@ -17,8 +17,28 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Identity: resolve the acting principal from the client's SSO."""
+"""Identity: resolve the acting principal from the client's SSO, and say whether the
+institution recognises them."""
 from src.identity._principal import Principal
+from src.identity._recognition import (
+    UnrecognisedActor,
+    assert_recognised,
+    enforcement_applies,
+    is_recognised,
+    roles_for,
+    same_person,
+)
 from src.identity.resolver import IdentityError, ingest_principal, resolve_principal
 
-__all__ = ["Principal", "IdentityError", "resolve_principal", "ingest_principal"]
+__all__ = [
+    "Principal",
+    "IdentityError",
+    "UnrecognisedActor",
+    "resolve_principal",
+    "ingest_principal",
+    "assert_recognised",
+    "is_recognised",
+    "enforcement_applies",
+    "roles_for",
+    "same_person",
+]

@@ -50,6 +50,8 @@ const MeetingDetail = {
     // Prior closed meetings (same MRC) with saved minutes — offered on the
     // previous-minutes sign-off item.
     this._priorMinutes = await App.get("/api/meetings/" + meetingId + "/prior-minutes");
+    // The membership/role changes waiting on this committee, for the standing item.
+    this._membership = (await App.get("/api/meetings/" + meetingId + "/membership")).proposals || [];
     // The division's risk-categorisation state, so a pending draft surfaces as an AOB
     // agenda item for this meeting to sign off.
     const division = (this._meeting.data || {}).division;
@@ -201,10 +203,12 @@ const MeetingDetail = {
     // Minutes has a bespoke form: presenter from the participants, a related
     // model/product picker, and an expandable text box.
     if (this._tab === "minutes") { box.innerHTML = this._minutesContent(); this._bindMinutes(); return; }
+    // Actions are cards, not table rows: each carries owners and its own update history.
+    if (this._tab === "actions") { box.innerHTML = this._actionsContent(); this._bindActions(); return; }
     const spec = this.collSpec(this._tab);
-    // Decisions / actions accept multiple new entries at once; participants and
-    // minutes have their own bespoke tabs.
-    const bulk = ["decisions", "actions"].indexOf(this._tab) >= 0;
+    // Decisions accept multiple new entries at once; participants, minutes and
+    // actions have their own bespoke tabs.
+    const bulk = this._tab === "decisions";
     box.innerHTML = Collections.render(d, { collections: [spec] }, false, bulk);
     Collections.bind("/api/meetings/" + this._id + "/collections/", { collections: [spec] },
       false, () => this.show(this._id, this._tab), d, bulk);

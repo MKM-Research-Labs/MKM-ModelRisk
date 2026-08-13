@@ -26,7 +26,7 @@
 // using its last approved (or the firm-wide seed) policy until the MRC signs the draft off.
 const RiskEditor = {
   _division: null, _divisions: [], _policy: null, _state: "seed", _box: null,
-  _sub: "dimensions",   // active sub-tab: dimensions | ratings | grids
+  _sub: "dimensions",   // active sub-tab: dimensions | ratings | grids | audit
 
   async render(container) {
     this._box = container;
@@ -110,7 +110,8 @@ const RiskEditor = {
       "using the last approved (or firm-wide seed) policy until the committee signs it off.</p>" +
       // Three sub-tabs, matching the Admin mockup: Dimensions | Risk Ratings | Risk Tables.
       '<div class="dtabs" id="rp-subtabs">' + sub("dimensions", "Dimensions") +
-      sub("ratings", "Risk Ratings") + sub("grids", "Risk Tables") + "</div>" +
+      sub("ratings", "Risk Ratings") + sub("grids", "Risk Tables") +
+      sub("audit", "Audit") + "</div>" +
       '<section data-rp="dimensions"><p class="muted" style="font-size:11px">Each dimension ' +
       "is an ordered set of bands — set each band's name, colour, explanation and score, and " +
       'add or remove bands as the division needs.</p><div id="rp-dims"></div></section>' +
@@ -118,15 +119,17 @@ const RiskEditor = {
       "can carry. The score is the completeness-audit escalation multiplier.</p>" +
       '<div id="rp-ratings"></div></section>' +
       '<section data-rp="grids"><p class="muted" style="font-size:11px">Generated from the ' +
-      "dimensions — one Materiality × Complexity table per Mission-Criticality band. Pick each " +
-      'cell\'s rating.</p><div id="rp-grids"></div></section>' +
-      '<div class="section-header" style="margin-top:18px">Risk Policy document</div>' +
-      '<p class="muted" style="font-size:11px">The division\'s formal written Risk Policy ' +
-      "(PDF or Word) — a separate document from the categorisation configured above, sent to " +
-      "the MRC alongside it.</p>" +
-      '<div class="row" style="align-items:center;gap:10px"><span id="rp-doc-current"></span>' +
-      '<input type="file" id="rp-doc-file" accept=".pdf,.doc,.docx">' +
-      '<button class="btn small" id="rp-doc-upload">Upload</button></div>';
+      "dimensions — one " + esc(this._dimName("materiality")) + " × " +
+      esc(this._dimName("complexity")) + " table per " +
+      esc(this._dimName("mission_criticality")) + " band. Pick each cell\'s rating." +
+      '</p><div id="rp-grids"></div></section>' +
+      '<section data-rp="audit"><div id="rp-audit"></div></section>' +
+      // The written policy document now lives on Documents -> Artefacts, filed on its
+      // division's shelf with the rest of what that division issues. This tab configures
+      // the categorisation; it is no longer also a filing cabinet.
+      '<p class="muted" style="font-size:11px;margin-top:18px">The division\'s formal ' +
+      "written Risk Policy document is filed under Documents &rarr; Artefacts, on the " +
+      esc(this._division) + " shelf.</p>";
     document.getElementById("rp-div").onchange = (e) => {
       this._division = e.target.value; this._load();
     };
@@ -137,7 +140,10 @@ const RiskEditor = {
     this._drawDims();
     this._drawRatings();
     this._drawGrids();
-    this._drawDocument();
+    // The audit panel edits the same draft and saves through the same path, so it
+    // reaches the MRC with the rest of the policy rather than as a setting of its own.
+    RiskPolicyAudit.render(document.getElementById("rp-audit"), this._policy,
+                           () => this._save());
     this._showSub();
   },
 
@@ -153,32 +159,6 @@ const RiskEditor = {
     });
   },
 
-  _drawDocument() {
-    const el = document.getElementById("rp-doc-current");
-    if (el) {
-      el.innerHTML = this._document
-        ? '<a href="/api/risk-policy/' + encodeURIComponent(this._division) +
-          '/document" target="_blank">↓ ' + esc(this._document.original_name) + "</a>"
-        : '<span class="muted">None uploaded.</span>';
-    }
-    const btn = document.getElementById("rp-doc-upload");
-    if (btn) btn.onclick = () => this._uploadDocument();
-  },
-
-  _uploadDocument() {
-    const file = document.getElementById("rp-doc-file");
-    if (!file.files.length) { App.toast("Choose a file first", "error"); return; }
-    const form = new FormData();
-    form.append("file", file.files[0]);
-    fetch("/api/risk-policy/" + encodeURIComponent(this._division) + "/document", {
-      method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
-    }).then(async (res) => {
-      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "upload failed"); }
-      App.toast("Policy document uploaded", "ok");
-      this._load();
-    }).catch((e) => App.toast(e.message, "error"));
-  },
-
   _drawStatus() {
     const el = document.getElementById("rp-status");
     if (!el) return;
@@ -191,14 +171,21 @@ const RiskEditor = {
     el.innerHTML = (map[this._state] || [""])[0];
   },
 
+  // The three dimensions are structural — the heatmap is one grid per band of the
+  // first, across the other two — but what they are CALLED is the division's, and is
+  // read from the policy being edited. Nothing here spells a dimension out.
   _dimKeys() {
-    return [["mission_criticality", "Mission Criticality"], ["materiality", "Materiality"],
-            ["complexity", "Complexity"]];
+    return ["mission_criticality", "materiality", "complexity"];
+  },
+
+  _dimName(key) {
+    const dim = (this._policy.dimensions || {})[key] || {};
+    return dim.label || key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
   },
 
   _drawDims() {
     const host = document.getElementById("rp-dims");
-    host.innerHTML = this._dimKeys().map(([key]) => {
+    host.innerHTML = this._dimKeys().map((key) => {
       const dim = this._policy.dimensions[key];
       return '<div class="dim" data-dim="' + key + '" style="border:1px solid var(--line);' +
         'border-radius:8px;padding:12px 14px;margin-bottom:12px">' +
@@ -255,12 +242,24 @@ const RiskEditor = {
     host.querySelectorAll("tr[data-scope]").forEach((tr) => {
       const bands = this._bandsFor(tr.getAttribute("data-scope"));
       const band = bands[Number(tr.getAttribute("data-i"))];
+      const scope = tr.getAttribute("data-scope");
       tr.querySelectorAll("[data-f]").forEach((inp) => {
         inp.onchange = () => {
           const f = inp.getAttribute("data-f");
+          if (f === "name") {
+            // Carry the assignments onto the new name FIRST. The grid is keyed by band
+            // name, so a rename otherwise reads as "old band deleted, new band added" and
+            // _rebuildGrid fills the new one with the default rating — silently discarding
+            // the table the division had built, under a name change nobody expects to
+            // touch it.
+            this._renameInGrid(scope, band.name, inp.value);
+            band.name = inp.value;
+            this._save();
+            this._drawGrids();
+            return;
+          }
           band[f] = f === "score" ? this._num(inp.value) : inp.value;
-          // A name change reshapes the grid; colour/score/explanation do not.
-          if (f === "name") { this._save(); this._drawGrids(); } else { this._save(); }
+          this._save();
         };
       });
     });
@@ -297,6 +296,35 @@ const RiskEditor = {
     });
   },
 
+  // Move a scale's assignments onto its new name. Each scale keys the grid differently: a
+  // Mission-Criticality band names a whole table, Materiality and Complexity name the two
+  // halves of every cell key, and a rating is the cell's VALUE.
+  _renameInGrid(scope, from, to) {
+    const grid = this._policy.grid || {};
+    if (!from || !to || from === to) return;
+    if (scope === "mission_criticality") {
+      if (grid[from]) { grid[to] = grid[from]; delete grid[from]; }
+      return;
+    }
+    if (scope === "risk_ratings") {
+      Object.keys(grid).forEach((band) => Object.keys(grid[band]).forEach((cell) => {
+        if (grid[band][cell] === from) grid[band][cell] = to;
+      }));
+      return;
+    }
+    // Cell key is "materiality|complexity" — rewrite the half this scale owns.
+    const half = scope === "materiality" ? 0 : 1;
+    Object.keys(grid).forEach((band) => {
+      const renamed = {};
+      Object.keys(grid[band]).forEach((cell) => {
+        const parts = cell.split("|");
+        if (parts[half] === from) parts[half] = to;
+        renamed[parts.join("|")] = grid[band][cell];
+      });
+      grid[band] = renamed;
+    });
+  },
+
   _bandsFor(scope) {
     return scope === "risk_ratings" ? this._policy.risk_ratings
       : this._policy.dimensions[scope].bands;
@@ -319,13 +347,13 @@ const RiskEditor = {
         return '<td class="hcell" style="background:' + bg + '"><select data-mc="' + esc(mc) +
           '" data-cell="' + esc(a + "|" + c) + '">' + opts(rag) + "</select></td>";
       }).join("") + "</tr>").join("");
-    const mcLabel = p.dimensions.mission_criticality.label || "Mission Criticality";
+    const mcLabel = this._dimName("mission_criticality");
     const bands = p.dimensions.mission_criticality.bands;
     document.getElementById("rp-grids").innerHTML =
       '<p class="muted" style="font-size:11px;margin:0 0 12px">' + bands.length +
       " tables — one per " + esc(mcLabel) + " band (rows = " +
-      esc(p.dimensions.materiality.label || "Materiality") + ", columns = " +
-      esc(p.dimensions.complexity.label || "Complexity") + ").</p>" +
+      esc(this._dimName("materiality")) + ", columns = " +
+      esc(this._dimName("complexity")) + ").</p>" +
       '<div style="display:flex;flex-wrap:wrap;gap:22px">' +
       bands.map((b) =>
         '<div><div class="grid-cap" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +

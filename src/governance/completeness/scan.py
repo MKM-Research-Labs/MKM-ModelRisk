@@ -42,6 +42,7 @@ from src.governance.documents import model_scope
 from src.governance.model_inventory.projection import list_models
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.product.projection import list_products
+from src.governance.risk_policy import load as load_policy
 
 MODEL_KIND = "Model"
 PRODUCT_KIND = "Product"
@@ -108,6 +109,36 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None) -> list[dict
             product_scope(product["product_id"]), as_of))
     rows.sort(key=lambda r: (r["completeness"], r["entity_id"]))
     return rows
+
+
+def scoped_models(model_ids=None, config=None) -> list[dict[str, Any]]:
+    """The inventory the report's estate-wide sections read, under the same scope
+    rule as ``scan``: ``None`` is the whole estate, an empty sequence is nothing.
+
+    It exists so the two cannot diverge. A committee-scoped audit that scoped its
+    findings but not its inventory would print one table counting the committee's
+    records beside another counting the firm's, with nothing on the page to say
+    which was which.
+    """
+    models = list_models(config=config)
+    if model_ids is None:
+        return models
+    wanted = set(model_ids)
+    return [m for m in models if m["model_id"] in wanted]
+
+
+def ratified_divisions(models: list[dict], config=None) -> set:
+    """The divisions whose risk policy their own committee has actually approved.
+
+    A division still running on the firm-wide seed default has criteria, but not
+    criteria it has adopted, and the framework-coverage section turns on that
+    difference: ISO 6.3.4 asks the organisation to *define* its risk criteria, and
+    inheriting a default is the absence of that decision rather than the making
+    of it.
+    """
+    divisions = {(m.get("data") or {}).get("division") for m in models}
+    return {division for division in divisions if division
+            and load_policy(division, config)["approved"]}
 
 
 def findings(rows: list[dict]) -> list[dict]:

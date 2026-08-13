@@ -24,7 +24,8 @@
 // What a sign-off item is about, and which Approvals tab it belongs on. Written
 // once: the subject was previously spelled out at every call site, so adding a
 // third kind meant finding all of them.
-const SUBJECT_LABEL = { model: "model", product: "product", handoff: "handoff" };
+const SUBJECT_LABEL = { model: "model", product: "product", handoff: "handoff",
+                        owner: "model owner" };
 
 function subjectOf(item) {
   return item.subject_model_id || item.subject_product_id || item.subject_handoff_id || "";
@@ -42,7 +43,12 @@ Object.assign(MeetingDetail, {
   // sign-offs like any other: an owner raises them and the committee ratifies them.
   _signoffItems(kind) {
     const items = ((this._meeting.data || {}).agenda || []).filter(subjectOf);
-    return kind ? items.filter((a) => subjectKind(a) === kind) : items;
+    if (!kind) return items;
+    // "owner" is a kind of DECISION, not a kind of subject: an owner ratification
+    // is raised on a model, so it would otherwise sit among that model's rating
+    // sign-offs, which is a different question for the committee to answer.
+    if (kind === "owner") return items.filter((a) => this._signoffKind(a) === "owner");
+    return items.filter((a) => subjectKind(a) === kind && this._signoffKind(a) !== "owner");
   },
 
   // What the committee is being asked to ratify. Items raised before the queue
@@ -60,6 +66,10 @@ Object.assign(MeetingDetail, {
     }
     if (kind === "reactivate") {
       return '<span class="badge" style="background:var(--accent)">Reactivate</span>';
+    }
+    if (kind === "owner") {
+      return '<span class="muted">' + esc(item.from_owner || "unassigned") + "</span> &rarr; <b>" +
+        esc(item.to_owner || "unassigned") + "</b>";
     }
     return "&rarr; " + ragBadge(item.proposed_rag);
   },
@@ -96,26 +106,37 @@ Object.assign(MeetingDetail, {
   // count sits on each tab: an empty one still has to be visibly empty.
   _approvalSubtabs() {
     const current = this._approvalKind || "model";
-    const btn = (k, label) => {
-      const n = this._signoffItems(k).length;
+    const btn = (k, label, count) => {
+      const n = count === undefined ? this._signoffItems(k).length : count;
       return '<button class="dtab' + (k === current ? " active" : "") +
         '" data-sgtab="' + k + '">' + label + " (" + n + ")</button>";
     };
     return '<div class="dtabs" style="margin-bottom:8px">' +
-      btn("model", "Models") + btn("product", "Products") + btn("handoff", "Handoffs") + "</div>";
+      btn("model", "Models") + btn("product", "Products") + btn("handoff", "Handoffs") +
+      btn("owner", "Model Owner") +
+      // Beside the model-owner changes: both are things an owner raises and the
+      // committee ratifies, rather than a rating it grants.
+      btn("closure", "Action closures", this._closureRequests().length) + "</div>";
   },
 
   _approvalsSection() {
     const kind = this._approvalKind || "model";
-    const items = this._signoffItems(kind);
-    const rows = items.length
-      ? items.map((it) => this._signoffRow(it)).join("")
-      : '<div class="empty">No ' + SUBJECT_LABEL[kind] + " sign-offs routed to this meeting.</div>";
+    // Closures are not agenda items — they are actions carried across the committee's
+    // meetings — so they bring their own rows rather than going through _signoffRow.
+    const rows = kind === "closure" ? this._closureSignoffRows() : this._signoffRowsFor(kind);
     return '<div class="section-header">Approvals — MRC sign-offs</div>' +
       '<p class="muted" style="font-size:12px">Owner-raised requests routed to this committee — ' +
-      "risk-rating sign-offs, retirements, reactivations and handoff compatibility. " +
+      "risk-rating sign-offs, retirements, reactivations, handoff compatibility, and the " +
+      "closure of actions their owners believe are done. " +
       "Approving carries out the decision and records a minute.</p>" +
       this._approvalSubtabs() + rows;
+  },
+
+  _signoffRowsFor(kind) {
+    const items = this._signoffItems(kind);
+    return items.length
+      ? items.map((it) => this._signoffRow(it)).join("")
+      : '<div class="empty">No ' + SUBJECT_LABEL[kind] + " sign-offs routed to this meeting.</div>";
   },
 
   // The decision, in words, for the confirm dialog + audit trail.
@@ -131,6 +152,13 @@ Object.assign(MeetingDetail, {
       return approve
         ? "Ratify reactivating " + subj + " — it returns to the active inventory."
         : "Reject the reactivate request for " + subj + " — it stays hibernated.";
+    }
+    if (kind === "owner") {
+      const moved = (item.from_owner || "unassigned") + " → " + (item.to_owner || "unassigned");
+      return approve
+        ? "Ratify the change of model owner for " + subj + " (" + moved + ")."
+        : "Reject the change of model owner for " + subj + " (" + moved +
+          ") — the model keeps the new owner, and the appointment stays unratified.";
     }
     return approve
       ? "Sign off " + subj + " &rarr; " + item.proposed_rag + " and set its rating."
@@ -156,5 +184,6 @@ Object.assign(MeetingDetail, {
       });
     decide("data-agapprove", "approve-signoff", true);
     decide("data-agreject", "reject-signoff", false);
+    this._bindClosureSignoffs();
   },
 });

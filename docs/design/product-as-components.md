@@ -1,6 +1,6 @@
 # Design decision: a Product is typed components + a calculating agent
 
-**Status:** Accepted — 2026-07-29
+**Status:** Implemented — accepted 2026-07-29; one clean-up outstanding (see below)
 **Area:** Products / Model chain
 
 ## Decision
@@ -36,10 +36,10 @@ So the data model is already the candy-store shape. What was missing is the UI t
 
 ## Consequences / follow-ups
 
-1. **UI (this change):** add a **Components** tab to the Product detail so components
+1. **Done.** The **Components** tab to the Product detail so components
    can be added/edited (generic collection editor; `component_type` and `model_id`
    render as dropdowns from their reference lists). This is the first increment.
-2. **Remove `binding_role`** from the `model_type` reference (field + admin column +
+2. **Still outstanding (2026-08-11).** Remove `binding_role` from the `model_type` reference (field + admin column +
    `_component_set`/registration references) when Product functionality is reviewed.
    Left in place for now so nothing breaks mid-review.
 3. The model **type name** (Statistical, Curve, Fitter, …) is what a component

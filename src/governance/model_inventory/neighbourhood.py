@@ -34,7 +34,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import DATA_SOURCES_COLLECTION
-from src.governance.model_inventory.chain import all_edges
+from src.governance.model_inventory.chain import all_edges, declarations_by_edge
 from src.governance.model_inventory.projection import list_models
 
 
@@ -47,6 +47,18 @@ def _node(model: dict[str, Any]) -> dict[str, Any]:
         "tier": data.get("tier"),
         "retired": bool(model.get("retired")),
     }
+
+
+def _edge_detail(edge, declarations) -> dict[str, Any]:
+    """What the graph needs to treat one arrow as something you can act on: which
+    model's ``dependencies`` item put it there. An edge can be declared from either
+    end, so withdrawing it may mean touching two models.
+
+    What *crosses* the edge is the handoff's business, and the handoff aggregate
+    already depends on this one — ``model_handoff.annotate`` layers it on top rather
+    than this module reaching back the other way.
+    """
+    return {"from": edge[0], "to": edge[1], "declared_by": declarations.get(edge, [])}
 
 
 def _sources(model: dict[str, Any]) -> set[str]:
@@ -65,7 +77,10 @@ def derive_neighbourhood(model_id: str, config=None) -> dict[str, Any] | None:
     by a common data source (a feed neighbour is already drawn as an edge, so it is
     not repeated here); each carries the ``shared`` source list that connects them.
     """
-    models = list_models(config=config)
+    # A model's own neighbourhood, including a hibernated one: this view has to
+    # render for the very model somebody is looking at, and a neighbour that has
+    # been retired is a fact about this model, not a gap to hide.
+    models = list_models(config=config, include_retired=True)
     by_id = {m["model_id"]: m for m in models}
     focus = by_id.get(model_id)
     if focus is None:
@@ -74,6 +89,7 @@ def derive_neighbourhood(model_id: str, config=None) -> dict[str, Any] | None:
     edges = all_edges(config=config)
     upstream_ids = sorted({a for a, b in edges if b == model_id})
     downstream_ids = sorted({b for a, b in edges if a == model_id})
+    declarations = declarations_by_edge(config=config)
 
     focus_sources = _sources(focus)
     # Data sources are drawn as nodes upstream of the models that draw on them: each
@@ -96,8 +112,10 @@ def derive_neighbourhood(model_id: str, config=None) -> dict[str, Any] | None:
             "is_source": not upstream_ids,
         },
         "feeds": {
-            "upstream": [_node(by_id[i]) for i in upstream_ids if i in by_id],
-            "downstream": [_node(by_id[i]) for i in downstream_ids if i in by_id],
+            "upstream": [{**_node(by_id[i]), "edge": _edge_detail((i, model_id), declarations)}
+                         for i in upstream_ids if i in by_id],
+            "downstream": [{**_node(by_id[i]), "edge": _edge_detail((model_id, i), declarations)}
+                           for i in downstream_ids if i in by_id],
         },
         "sources": sources,
     }

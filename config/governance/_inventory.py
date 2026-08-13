@@ -24,6 +24,8 @@ fields: each entry carries a label, an input type, its group (for the grouped
 detail view), and — for choice fields — its options. ``EDITABLE_FIELDS`` and
 ``FIELD_CHOICES`` are derived from it so validation and the UI never drift apart.
 """
+from config.governance._review import (VALID_REVIEW_STATUSES,  # noqa: F401 (re-export)
+                                       VALID_REVIEW_TRIGGERS)
 
 VALID_RAG_RATINGS = ("Green", "Amber", "Red")
 VALID_VALIDATION_STATUSES = (
@@ -35,14 +37,13 @@ VALID_VALIDATION_STATUSES = (
 )
 VALID_MATERIALITY = ("Low", "Medium", "High")
 VALID_COMPLEXITY = ("Low", "Medium", "High")
+# The admin vocabulary behind the lifecycle field. Named here, beside the field
+# that uses it, because the reference specs import from this module and not the
+# other way round.
+LIFECYCLE_STAGE_LIST = "lifecycle_stage"
+VALIDATION_STATUS_LIST = "validation_status"
 VALID_LIFECYCLE_STAGES = ("Development", "Validation", "Production", "Retired")
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
-# Stages of the model's MRC review workflow, from kick-off to sign-off.
-VALID_REVIEW_STATUSES = (
-    "Not Started", "First Meeting", "Full Review", "Feedback",
-    "Remediation", "Final Review", "Documentation Complete",
-)
-
 TIER_MIN = 1
 TIER_MAX = 3
 
@@ -126,14 +127,16 @@ MODEL_FIELD_SPECS = {
     "lifecycle_stage": {
         "label": "Lifecycle stage", "type": "choice",
         "options": VALID_LIFECYCLE_STAGES, "group": "Governance",
+        "reference": LIFECYCLE_STAGE_LIST,
     },
     "version": {"label": "Version", "type": "text", "group": "Governance"},
     "validation_status": {
         "label": "Validation status", "type": "choice",
         "options": VALID_VALIDATION_STATUSES, "group": "Governance",
+        "reference": VALIDATION_STATUS_LIST,
     },
-    # The MRC review workflow stage (owner-editable). Supersedes validation_status
-    # on the overview.
+    # Where the review has got to. Set by the review workflow's interim approvals,
+    # not typed here (see config/governance/_review.py).
     "review_status": {
         "label": "Review status", "type": "choice",
         "options": VALID_REVIEW_STATUSES, "group": "Governance",
@@ -155,6 +158,41 @@ MODEL_FIELD_SPECS = {
     "mrc_signoff_meeting": {"label": "MRC sign-off meeting", "type": "text", "group": "Review dates"},
     "recertification_date": {"label": "Recertification", "type": "date", "group": "Review dates"},
     "validation_date": {"label": "Validation date", "type": "date", "group": "Review dates"},
+    # --- Review ---
+    # Stage 1: the owner says what this review is for before anyone starts it.
+    # A reviewer handed a model and no brief writes the review they imagine is
+    # wanted; the scope is where the owner says what has changed and what they
+    # want looked at.
+    "review_scope": {"label": "Scope of this review", "type": "textarea", "group": "Review"},
+    "review_trigger": {
+        "label": "Why this review", "type": "choice",
+        "options": VALID_REVIEW_TRIGGERS, "group": "Review",
+    },
+    "review_due_date": {"label": "Expected completion", "type": "date", "group": "Review"},
+    # The new-version checklist. Shown only when the trigger is a new version:
+    # the owner confirms the three documents that go stale together have been
+    # brought up to date and loaded, so the reviewer is not reading last
+    # version's write-up against this version's model.
+    "review_docs_updated": {
+        "label": "Model documentation updated and loaded", "type": "choice",
+        "options": ("Yes", "No"), "group": "Review",
+    },
+    "review_sensitivities_updated": {
+        "label": "Sensitivities updated and loaded", "type": "choice",
+        "options": ("Yes", "No"), "group": "Review",
+    },
+    "review_test_docs_updated": {
+        "label": "Test documentation updated and loaded", "type": "choice",
+        "options": ("Yes", "No"), "group": "Review",
+    },
+    # Stage 5 of the review: how the model will be watched once it is in use, in
+    # the owner's and reviewer's own words. Deliberately a narrative rather than a
+    # register of metrics and thresholds — an approach is agreed in sentences long
+    # before anyone can name the numbers. It structures later if it needs to,
+    # without disturbing the workflow around it.
+    "monitoring_approach": {
+        "label": "Monitoring approach", "type": "textarea", "group": "Review",
+    },
     # --- Testing ---
     "unit_tests": {
         "label": "Unit tests", "type": "choice", "options": ("Yes", "No"), "group": "Testing",
@@ -165,6 +203,19 @@ MODEL_FIELD_SPECS = {
     "benchmark_tests": {
         "label": "Benchmark tests", "type": "choice", "options": ("Yes", "No"), "group": "Testing",
     },
+}
+
+# Which record field carries which risk dimension, and which field justifies it.
+# The three dimensions are structural, so this mapping is too — but nothing here
+# says what a dimension is CALLED. That is the division's policy's to say, and any
+# surface showing a dimension asks the policy rather than spelling it out, so a
+# rename reaches every screen and every document at once.
+RISK_DIMENSION_FIELDS = {
+    "tier": "mission_criticality", "materiality": "materiality", "complexity": "complexity",
+}
+RISK_RATIONALE_FIELDS = {
+    "tier_rationale": "mission_criticality", "materiality_rationale": "materiality",
+    "complexity_rationale": "complexity",
 }
 
 # Human-readable tier descriptors (shown next to the tier badge).

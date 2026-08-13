@@ -43,7 +43,21 @@ from config.governance import (
     EXEMPT_FIELDS,
     FIELD_CRITICALITY,
     PLACEHOLDER_VALUES,
+    REVIEWER_INDEPENDENCE,
+    RULE_SPECS,
 )
+from src.identity import same_person
+
+# Each rule: does it apply to this record at all, and does the record satisfy it?
+# A rule that does not apply is neither a finding nor credit -- a record with no
+# owner recorded cannot be assessed for reviewer independence, and the missing
+# owner is already a finding in its own right.
+RULE_CHECKS = {
+    REVIEWER_INDEPENDENCE: (
+        lambda data: bool(data.get("owner")) and bool(data.get("peer_reviewer")),
+        lambda data: not same_person(data.get("peer_reviewer"), data.get("owner")),
+    ),
+}
 
 
 def _recorded(value: Any) -> bool:
@@ -96,6 +110,32 @@ def _field_gaps(data: dict, specs: dict) -> list[dict]:
             "criticality": FIELD_CRITICALITY.get(key, DEFAULT_FIELD_CRITICALITY),
         })
     return gaps
+
+
+def _rule_gaps(data: dict) -> list[dict]:
+    """One gap per governance rule the record breaches."""
+    gaps = []
+    for key, (applies, satisfied) in RULE_CHECKS.items():
+        if not applies(data) or satisfied(data):
+            continue
+        spec = RULE_SPECS[key]
+        gaps.append({
+            "kind": "rule", "key": key, "label": spec["label"],
+            "group": "Rules", "detail": spec["detail"],
+            "criticality": spec["criticality"], "template": spec["template"],
+        })
+    return gaps
+
+
+def _rules_carried(data: dict) -> float:
+    """Criticality of the rules this record is assessed against and satisfies.
+
+    The denominator's half of ``_rule_gaps``: a rule that applies counts towards
+    what the record was asked to carry whether it passes or fails, or a breach
+    would depress the score without the clean case ever earning anything back.
+    """
+    return sum(RULE_SPECS[key]["criticality"] for key, (applies, satisfied)
+               in RULE_CHECKS.items() if applies(data) and satisfied(data))
 
 
 def _collection_gaps(data: dict, specs: dict) -> list[dict]:

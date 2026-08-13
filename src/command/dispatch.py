@@ -33,9 +33,10 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from config.commands import CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS
+from config.commands import (CONFIRM_REQUIRED_COMMANDS, CONFIRM_REQUIRED_FIELDS,
+                             CONFIRM_REQUIRED_LISTS)
 from src.command._context import CommandContext
-from src.identity import Principal, resolve_principal
+from src.identity import Principal, assert_recognised, resolve_principal
 
 
 class ConfirmationRequired(RuntimeError):
@@ -47,8 +48,14 @@ class AuthorizationError(RuntimeError):
 
 
 def authorize(principal: Principal, command_name: str) -> None:
-    """Authorization hook. No-op today; the seam for future RBAC rules."""
-    return None
+    """May this principal run this command?
+
+    Phase P1 answers only "is the author somebody the institution registered". Every
+    mutating command passes through here, so a new endpoint cannot forget to ask — the
+    same reason R6 puts database access behind one door. Roles and segregation of duties
+    (docs/permissions_design.md P2-P5) extend this function; they do not add a second gate.
+    """
+    assert_recognised(principal.actor)
 
 
 def context_from_headers(
@@ -64,13 +71,16 @@ def _requires_confirmation(command_name: str, kwargs: dict[str, Any]) -> bool:
     in ``config.commands``). Non-critical changes apply without a confirmation."""
     if command_name in CONFIRM_REQUIRED_COMMANDS:
         return True
+    critical_lists = CONFIRM_REQUIRED_LISTS.get(command_name)
+    if critical_lists and kwargs.get("list_name") in critical_lists:
+        return True
     critical_fields = CONFIRM_REQUIRED_FIELDS.get(command_name)
     return bool(critical_fields) and kwargs.get("field") in critical_fields
 
 
 def require_confirmation(command_name: str, context: CommandContext) -> None:
     """Explicit confirm gate for composed operations (MRC sign-off / reject /
-    revoke, close meeting) that run several sub-commands rather than one
+    close meeting) that run several sub-commands rather than one
     dispatched command. Raises before any of them mutate."""
     if not context.confirmed:
         raise ConfirmationRequired(

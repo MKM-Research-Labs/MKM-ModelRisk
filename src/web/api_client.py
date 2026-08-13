@@ -125,7 +125,7 @@ def link_options(client_id: str):
         "products": [{"id": p["product_id"], "label": (p["data"] or {}).get("product") or p["product_id"]}
                      for p in list_products() if not p["retired"]],
         "models": [{"id": m["model_id"], "label": (m["data"] or {}).get("name") or m["model_id"]}
-                   for m in list_models() if not m["retired"]],
+                   for m in list_models()],
     })
 
 

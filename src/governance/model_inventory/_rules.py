@@ -28,13 +28,16 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (
+    APPEND_ONLY_COLLECTIONS,
     COLLECTION_SPECS,
     EDITABLE_FIELDS,
     FIELD_CHOICES,
     SIGNOFF_COLLECTIONS,
 )
+from config.permissions import ENFORCE_REVIEWER_INDEPENDENCE
 from src.governance import collections as coll
 from src.governance.errors import DomainError
+from src.identity import same_person
 from src.governance.model_inventory._state import (
     EVENT_FIELD_UPDATED,
     EVENT_REACTIVATED,
@@ -76,6 +79,31 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
             raise DomainError(f"{field} must be one of: {allowed}")
 
 
+# The two fields the segregation-of-duties rule holds apart, each named against the
+# other so a write to either is checked from the same table.
+_INDEPENDENT_OF = {"peer_reviewer": "owner", "owner": "peer_reviewer"}
+
+
+def _validate_independence(field: str, value: Any, held: dict[str, Any]) -> None:
+    """Refuse a write that would make a model's reviewer its own owner.
+
+    Checked on both fields rather than only on ``peer_reviewer``: a model with a
+    distinct reviewer can be put in breach just as easily by moving the ownership
+    onto them, and a rule enforced on one side of a pair is not enforced.
+
+    Only the write that creates the breach is refused. A record already in breach
+    stays editable in every other respect -- the audit reports it, and locking the
+    record would leave the owner unable to correct anything else about it.
+    """
+    if ENFORCE_REVIEWER_INDEPENDENCE == "never" or field not in _INDEPENDENT_OF:
+        return
+    counterpart = held.get(_INDEPENDENT_OF[field])
+    if same_person(value, counterpart):
+        raise DomainError(
+            f"{field} must not be the model's own owner: a review by the owner is "
+            f"not an independent one. Name somebody other than {counterpart}.")
+
+
 def decide_register(
     state: ModelState, *, model_id: str, name: str, fields: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
@@ -90,6 +118,7 @@ def decide_register(
         if field not in EDITABLE_FIELDS:
             raise DomainError(f"unknown field: {field}")
         _validate_field(field, value, division)
+        _validate_independence(field, value, fields)
     payload: dict[str, Any] = {"model_id": model_id, "name": name}
     payload.update(fields)
     return EVENT_REGISTERED, payload
@@ -108,6 +137,7 @@ def decide_update_field(
     # use the model's current division.
     division = value if field == "division" else state.fields.get("division")
     _validate_field(field, value, division)
+    _validate_independence(field, value, state.fields)
     # Capture the prior value so the audit trail can show old -> new. Older
     # events predate this and simply have no "from" (rendered as blank).
     return EVENT_FIELD_UPDATED, {
@@ -156,12 +186,29 @@ def decide_add_item(
     return coll.decide_add(state.collections, COLLECTION_SPECS, collection=collection, fields=fields)
 
 
+def _require_amendable(collection: str) -> None:
+    """Refuse to change or remove a row in an append-only collection.
+
+    The review notes are the record of how a model was challenged, and they are
+    printed in the report the committee receives. A challenge that could be edited
+    or deleted afterwards is not evidence of anything — so the rule lives here, in
+    the domain, rather than resting on the console not offering the button. A
+    correction is a new note, as it would be in minutes.
+    """
+    if collection in APPEND_ONLY_COLLECTIONS:
+        raise DomainError(
+            f"{collection} is append-only: a note cannot be edited or removed, "
+            "only answered by another note"
+        )
+
+
 def decide_update_item(
     state: ModelState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
     # Same exemption as adding: a hibernated model's reactivate request still has
     # to be walked through the queue (Pending -> Attached -> Completed), which is
     # an update on the retired model itself.
+    _require_amendable(collection)
     if collection in SIGNOFF_COLLECTIONS:
         if not state.exists:
             raise DomainError("model does not exist")
@@ -175,6 +222,7 @@ def decide_update_item(
 def decide_remove_item(
     state: ModelState, *, collection: str, item_id: str
 ) -> tuple[str, dict[str, Any]]:
+    _require_amendable(collection)
     _require_editable(state)
     return coll.decide_remove(
         state.collections, COLLECTION_SPECS, collection=collection, item_id=item_id

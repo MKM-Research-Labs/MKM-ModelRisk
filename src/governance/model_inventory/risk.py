@@ -126,9 +126,11 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dic
     # even when the owner and heatmap already agree: agreement is not approval, so
     # a never-signed-off model (or one whose heatmap has since moved) still needs
     # MRC sign-off.
-    # A rejected or revoked latest entry un-does the sign-off even if it names the
-    # current rating: the standing state is the outcome of the *most recent*
-    # decision, so a Revoke returns the subject to "needs MRC sign-off".
+    # A rejected latest entry un-does the sign-off even if it names the current
+    # rating: the standing state is the outcome of the *most recent* decision.
+    # "Revoked" is still honoured here because historic logs may carry one; it
+    # can no longer be created (a committee decision is not unsigned — a rating
+    # changes by re-classifying, which sends the new cell to the MRC).
     signoff_history = data.get("signoff_history") or []
     latest_signoff = signoff_history[-1] if signoff_history else None
     live_signoff = bool(
@@ -158,4 +160,8 @@ def compute_risk_rating(data: dict[str, Any], *, as_of: str, config=None) -> dic
         # audit escalates on this, so a division's own multipliers drive its remediation.
         "rag_scores": {rating["name"]: rating["score"]
                        for rating in policy.get("risk_ratings", [])},
+        # What this division's committee has ratified for the completeness audit —
+        # thresholds and escalation factors. Absent keys fall back to the firm-wide
+        # values, so a division that has never touched them is scored as before.
+        "audit_policy": dict(policy.get("audit") or {}),
     }

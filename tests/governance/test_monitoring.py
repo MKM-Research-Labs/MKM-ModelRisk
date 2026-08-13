@@ -129,14 +129,18 @@ def test_document_says_so_when_nothing_is_recorded():
 
 
 def test_document_reports_an_empty_estate_without_claiming_activity():
-    tex = build_monitoring_tex(_model(), SETTINGS, AS_OF, found=[])
+    # ``configured`` is stated rather than left to the environment: unset, it
+    # resolves the producing repo's portfolio directory off disk, so the estate
+    # section a checkout gets depends on whether that sibling repo is present.
+    tex = build_monitoring_tex(_model(), SETTINGS, AS_OF, found=[], configured=True)
     assert "\\textbf{0} of \\textbf{0} catchments" in tex
     assert "never" in tex
 
 
 def test_document_reports_observed_portfolio_activity(tmp_path):
     _catchment(tmp_path, "thames", property=[{}, {}], gauge=[{}])
-    tex = build_monitoring_tex(_model(), SETTINGS, AS_OF, found=catchments(tmp_path))
+    tex = build_monitoring_tex(_model(), SETTINGS, AS_OF,
+                               found=catchments(tmp_path), configured=True)
     assert "thames" in tex
     assert "\\textbf{1} of \\textbf{1} catchments" in tex
     assert "\\textbf{3}" in tex
@@ -161,7 +165,8 @@ def test_document_names_a_catchment_that_holds_no_portfolio(tmp_path):
     """The empty-catchment row must carry the standing statement, not a blank
     cell: a blank reads as missing data rather than as a deliberate observation."""
     (tmp_path / "rhine").mkdir()
-    tex = build_monitoring_tex(_model(), SETTINGS, AS_OF, found=catchments(tmp_path))
+    tex = build_monitoring_tex(_model(), SETTINGS, AS_OF,
+                               found=catchments(tmp_path), configured=True)
     assert "rhine" in tex
     assert "No portfolio has been generated" in tex
 

@@ -45,11 +45,21 @@ def test_fields_endpoint_lists_doc_categories(client):
 
 def test_fields_endpoint_surfaces_each_category_in_one_place(client):
     """Every category belongs to exactly one panel, so the console never lists the
-    same document twice. Testing evidence belongs to the Testing tab, not Docs."""
+    same document twice. Testing evidence is documentation: it sits under Docs,
+    between Analysis and Monitoring, as a group over its four categories rather
+    than as a category anything is filed under."""
     specs = client.get("/api/models/fields").get_json()
-    assert specs["doc_tab_categories"] == [
-        "Core Documentation", "Sensitivity", "Analysis", "Monitoring", "History"]
+    tabs = specs["doc_tab_categories"]
+    # Where Testing sits is the point — between the analysis of a model and the
+    # monitoring of it — so that is what is asserted, rather than an exact list
+    # that would break every time a panel is added beside it.
+    assert tabs.index("Analysis") < tabs.index("Testing") < tabs.index("Monitoring")
+    assert specs["doc_tab_groups"]["Testing"] == [
+        "Test Results", "Unit Test", "Integration Test", "Benchmark Test"]
     assert "Test Results" in specs["testing_doc_categories"]
+    # The group label names a panel, never a filing place — so no document can
+    # carry it, and its members appear in exactly one tab.
+    assert "Testing" not in specs["doc_categories"]
     for testing_cat in specs["testing_doc_categories"]:
         assert testing_cat not in specs["doc_tab_categories"]
     assert specs["hidden_doc_extensions"] == ["tex"]

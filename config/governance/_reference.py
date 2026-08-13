@@ -21,6 +21,17 @@
 
 Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
+from __future__ import annotations
+
+from config.governance._collections import (IMPACT_LIST, PRIORITY_LIST,
+                                            REMEDIATION_STATUS_LIST, VALID_IMPACT,
+                                            VALID_PRIORITY, VALID_REMEDIATION_STATUS,
+                                            VALID_VQ_STATUSES, VQ_STATUS_LIST)
+from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES,
+                                          VALID_VALIDATION_STATUSES,
+                                          VALIDATION_STATUS_LIST)
+from config.governance._standing_agenda import STANDING_AGENDA_ROLES
+from config.permissions import ROLES
 
 # Order: the Division/Line of Business org tree first, then the MRC committees
 # anchored to that tree, then the Product platform (Calculating Agent), then
@@ -36,10 +47,65 @@ CODEBASE_LIST = "codebase"
 DATA_SOURCE_LIST = "data_source"
 VENDOR_LIST = "vendor"
 
+# The question set a review works through. Held as an admin list rather than in
+# code because it is the institution's questionnaire: an adopter under a different
+# regulator, or with its own house standard, has to be able to reword a question,
+# drop one that does not apply and add its own. Seeded from SR 26-2 on a fresh
+# install and copied onto each model at registration, so a model always keeps the
+# questions it was actually asked even after the set is later edited.
+REVIEW_QUESTION_LIST = "review_questions"
+
+# The running order every meeting is seeded with. A committee's agenda is its own —
+# an adopter rewords it, drops an item that does not apply to it and adds
+# its own standing business. Held as an admin list for the same reason as the
+# questionnaire, and copied onto each meeting when it is scheduled, so a meeting
+# always shows the agenda it was actually given.
+STANDING_AGENDA_LIST = "standing_agenda"
+
+# (LIFECYCLE_STAGE_LIST is defined in _inventory, beside the field it serves.)
+# A status vocabulary: the words a record can carry for its lifecycle. Two columns,
+# and the difference between them is the whole point. ``value`` is what the record
+# STORES and what the code matches on; ``label`` is what a screen shows. Renaming a
+# status therefore edits the label and moves nothing in the estate — the stable
+# value is seeded to today's word, so nothing has to be migrated for this to work,
+# and a record set to "Production" years ago still reads correctly under whatever
+# the division calls that stage now.
+
+# Every status vocabulary, and the words it ships with. Each is a list whose items
+# carry a stable ``value`` (what a record stores, and what the code matches on) and
+# a ``label`` (what a screen shows). Seeding the value to today's word is what makes
+# these free of migration: nothing in the estate moves when a label is renamed.
+STATUS_VOCABULARIES = {
+    LIFECYCLE_STAGE_LIST: ("Lifecycle stages", "LC", VALID_LIFECYCLE_STAGES,
+                           "The stages a model moves through."),
+    VALIDATION_STATUS_LIST: ("Validation statuses", "VS", VALID_VALIDATION_STATUSES,
+                             "How far a model has got through validation."),
+    IMPACT_LIST: ("Impact levels", "IM", VALID_IMPACT,
+                  "How much an assumption, limitation or weakness matters."),
+    PRIORITY_LIST: ("Priorities", "PR", VALID_PRIORITY,
+                    "How urgent a remediation step is."),
+    REMEDIATION_STATUS_LIST: ("Remediation statuses", "RS", VALID_REMEDIATION_STATUS,
+                              "Where a remediation step has got to."),
+    VQ_STATUS_LIST: ("Review answer statuses", "VQ", VALID_VQ_STATUSES,
+                     "How completely a review question has been answered."),
+}
+
+# The shape every one of them takes. ``value`` is immutable once the entry exists:
+# records already carry it, and editing it would orphan every one of them.
+def _status_vocabulary_spec(label: str, prefix: str) -> dict:
+    return {"label": label, "id_prefix": prefix, "display": "label", "value_key": "value",
+            "fields": [
+                {"key": "label", "label": "Shown as", "type": "text", "required": True},
+                {"key": "value", "label": "Stored as", "type": "text", "required": True,
+                 "immutable": True},
+            ]}
+
+
 REFERENCE_LISTS = (
     "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,
-    MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people",
-)
+    MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
+    STANDING_AGENDA_LIST,
+) + tuple(STATUS_VOCABULARIES)
 
 # What a model type means to a Product's bindings. A Product binds one analytics
 # engine and one market-data source, and it picks each from the inventory filtered
@@ -176,12 +242,52 @@ REFERENCE_SPECS = {
     ]},
     # People carry an org unit — Division + Line of Business, backed by the admin lists,
     # exactly like a model's org fields. This anchoring is what makes a person
-    # eligible to sit on a given MRC or own a model in that scope. Role and
-    # organisation are not tracked — every person belongs to this institution.
+    # eligible to sit on a given MRC or own a model in that scope. Organisation is not
+    # tracked — every person belongs to this institution.
+    #
+    # Roles (permissions P2) say what a person may BE; a person may hold several. They are
+    # recorded here rather than in a separate register so that adding somebody and saying
+    # what they do is one act, and so every change is an audited reference-list event.
     "people": {"label": "People", "id_prefix": "PE", "display": "name", "fields": [
         {"key": "name", "label": "Name", "type": "text", "required": True},
         {"key": "email", "label": "Email", "type": "text"},
+        # Two fields, because a role is granted by a committee and not by whoever is
+        # editing the screen. "Proposed roles" is what an administrator sets; "Roles" is
+        # what the MRC has ratified and what the system acts on. Only the ratification
+        # path writes it, so it is readonly to the client.
+        {"key": "roles", "label": "Roles", "type": "multichoice", "options": list(ROLES),
+         "explanations": ROLES, "readonly": True},
+        {"key": "pending_roles", "label": "Proposed roles", "type": "multichoice",
+         "options": list(ROLES), "explanations": ROLES},
+        # The meeting that last ratified this person's roles — the answer to "who
+        # granted this approver their seat".
+        {"key": "roles_ratified_meeting", "label": "Ratified at", "type": "text",
+         "readonly": True},
         {"key": "division", "label": "Division", "type": "text", "reference": "division"},
         {"key": "line_of_business", "label": "Line of Business", "type": "text", "reference": "line_of_business"},
     ]},
+    # The review questionnaire. ``short_label`` is the topic the console shows in
+    # bold above the question itself, exactly as a model's own copy does.
+    REVIEW_QUESTION_LIST: {"label": "Review questions", "id_prefix": "RQ",
+                           "display": "short_label", "fields": [
+        {"key": "short_label", "label": "Topic", "type": "text", "required": True},
+        {"key": "question", "label": "Question", "type": "textarea", "required": True},
+    ]},
+    # A standing agenda item. ``kind`` is the item's ROLE and drives the bespoke
+    # panel a meeting renders for it (rollcall, the previous minutes, the sign-off
+    # review, the completeness audit, AOB), so it is picked from the roles the
+    # console knows how to draw rather than typed. Leave it blank for an item that
+    # is just business the committee always takes: those render as ordinary agenda
+    # items, which is exactly what they are.
+    STANDING_AGENDA_LIST: {"label": "Standing agenda", "id_prefix": "SA",
+                           "display": "title", "fields": [
+        {"key": "title", "label": "Item", "type": "text", "required": True},
+        {"key": "description", "label": "Description", "type": "textarea"},
+        {"key": "kind", "label": "Role", "type": "choice", "options": STANDING_AGENDA_ROLES},
+    ]},
 }
+
+REFERENCE_SPECS.update({
+    name: _status_vocabulary_spec(label, prefix)
+    for name, (label, prefix, _words, _hint) in STATUS_VOCABULARIES.items()
+})

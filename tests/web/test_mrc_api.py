@@ -48,6 +48,41 @@ def test_field_specs_endpoint(client):
     assert "agenda" in collection_keys and "participants" in collection_keys
 
 
+def test_action_spec_leads_with_the_model_and_takes_several_owners(client):
+    """The add form is driven by this spec, so its shape is the behaviour: the model
+    comes first (the owners default from it), owners are multi-valued, the status opens
+    on a default, and no target date is asked for."""
+    specs = client.get("/api/meetings/fields").get_json()
+    actions = next(c for c in specs["collections"] if c["key"] == "actions")
+    visible = [f for f in actions["fields"] if not f.get("hidden")]
+    assert [f["key"] for f in visible] == ["model_id", "description", "owner", "status"]
+    owner = next(f for f in actions["fields"] if f["key"] == "owner")
+    # A reference decides where the options come from, not how many may be picked.
+    assert owner["type"] == "multichoice"
+    status = next(f for f in actions["fields"] if f["key"] == "status")
+    assert status["default"] == "Open"
+
+
+def test_action_records_several_owners_and_its_updates(client):
+    _schedule(client)
+    added = _add(client, "actions", {
+        "description": "Re-run the backtest", "owner": ["Ada", "Grace"], "status": "Open",
+        "updates": [{"date": "2026-08-11", "note": "Agreed", "status": "Open"}],
+    })
+    assert added.status_code == 201
+    action = added.get_json()["data"]["actions"][0]
+    assert action["owner"] == ["Ada", "Grace"]
+    assert [u["note"] for u in action["updates"]] == ["Agreed"]
+
+
+def test_action_owners_must_be_a_list(client):
+    """A bare string would make one owner and two owners the same shape."""
+    _schedule(client)
+    refused = _add(client, "actions", {"description": "x", "owner": "Ada"})
+    assert refused.status_code == 400
+    assert "list of values" in refused.get_json()["error"]
+
+
 def test_schedule_get_and_list(client):
     assert _schedule(client).status_code == 201
     assert [m["meeting_id"] for m in client.get("/api/meetings").get_json()] == ["MTG1"]
@@ -164,15 +199,17 @@ def test_update_removed_meeting_field_is_400(client):
 
 def test_collection_add_update_remove(client):
     _schedule(client)
-    added = _add(client, "actions", {"description": "Follow up", "owner": "bob"})
+    added = _add(client, "actions", {"description": "Follow up", "owner": ["bob"]})
     assert added.status_code == 201
     assert added.get_json()["data"]["actions"][0]["item_id"] == "A-001"
 
+    # Closure is the committee's to grant (see test_mrc_action_closure), so the
+    # furthest a generic update can move an action is to request it.
     updated = client.post(
         "/api/meetings/MTG1/collections/actions/A-001",
-        json={"fields": {"status": "Closed"}, "confirmed": True}, headers=HEADERS,
+        json={"fields": {"status": "Closure requested"}, "confirmed": True}, headers=HEADERS,
     )
-    assert updated.get_json()["data"]["actions"][0]["status"] == "Closed"
+    assert updated.get_json()["data"]["actions"][0]["status"] == "Closure requested"
 
     removed = client.post(
         "/api/meetings/MTG1/collections/actions/A-001/delete",

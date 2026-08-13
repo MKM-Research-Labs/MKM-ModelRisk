@@ -258,10 +258,12 @@ On Linux/macOS confirm with `bash scripts/pg.sh status` → `... accepting conne
 **Step 4 — Launch the app.**
 
 ```bash
-python model.py                      # creates + migrates mkm_modelrisk on first run
+gunicorn --config gunicorn.conf.py wsgi:application   # migrates mkm_modelrisk on first run
 ```
 
-✓ You should see `Running on http://127.0.0.1:5015`.
+✓ You should see `Listening at: http://127.0.0.1:5015`.
+
+On Windows, where gunicorn does not run, use `python model.py` instead.
 
 **Step 5 — Open it.** Visit **http://127.0.0.1:5015**, set the **Acting as** field
 (top-right) to your name/email — that identity is stamped on every change — and
@@ -281,8 +283,14 @@ To do it by hand in a fresh terminal (the database persists between runs):
 cd MKM-ModelRisk
 source .venv/bin/activate
 bash scripts/pg.sh start
-python model.py
+gunicorn --config gunicorn.conf.py wsgi:application
 ```
+
+For local development, `python model.py` instead — the Flask development server,
+which reloads as you edit and carries the debugger. It serves the same app; what
+differs is the server in front of it. Under gunicorn there is no reloader, so a
+change to the code or to `index.html` needs a restart — `kill -HUP <master pid>`
+recycles the workers gracefully, finishing in-flight requests first.
 
 *Windows (PowerShell)*
 
@@ -397,6 +405,11 @@ variable always wins over the file.
 | `DB_OWNER_USER` / `DB_OWNER_PASSWORD` | `mkm_owner` / `mkm_dev_pw` | Owner role (migrations) |
 | `DB_APP_USER` / `DB_APP_PASSWORD` | `mkm_app` / `mkm_app_dev_pw` | Runtime role (insert-only) |
 | `WEB_HOST` / `WEB_PORT` | `127.0.0.1` / `5015` | Console host/port |
+| `WEB_WORKERS` / `WEB_THREADS` | `4` / `4` | gunicorn worker processes and threads each. Peak database connections are the product of the two — the stock `max_connections` is 100 |
+| `WEB_TIMEOUT` | `300` | Seconds before gunicorn kills a stuck worker. Generous because report PDFs shell out to tectonic |
+| `WEB_WORKER_CLASS` | `gthread` | gunicorn worker type |
+| `BACKUP_ENABLED` | `1` | Whether the running app keeps the hourly backup schedule. The verification app sets `0` |
+| `BACKUP_INTERVAL_SECONDS` | `3600` | How often the app dumps the database |
 | `PG_DATA_DIR` | `./.pgdata` | Cluster data directory (`scripts/pg.sh`); point at an external volume to keep the clone free of data |
 | `PG_BIN` | auto-detected | Directory holding `initdb`/`pg_ctl`, if PostgreSQL 16 isn't in a standard location (`scripts/pg.sh`) |
 | `PG_LOCALE` | auto-detected | Locale used to `initdb` the cluster; falls back `en_US.UTF-8` → `C.UTF-8` → `C` (`scripts/pg.sh`) |
@@ -404,7 +417,12 @@ variable always wins over the file.
 | `UPLOAD_DIR` | `./uploads` | Where uploaded files (and audit PDFs) are stored |
 | `PRODUCER_ROOT` | `../PhysicalRisk` | Root of the producing repo a migration reads from |
 
-A WSGI server can serve the app object directly, e.g. `gunicorn model:app`.
+The console is served by gunicorn against `wsgi:application`, configured by
+`gunicorn.conf.py` at the repo root (which takes every value from `config/web.py`).
+The startup work — migrations, seeded defaults and the read-model rebuild — and the
+hourly backup both run **once in the gunicorn master, before it forks**, not once per
+worker; see `src/web/_startup.py` and `src/web/_backup.py`. Any other WSGI server can
+serve `wsgi:application` too, and will do that startup work on import instead.
 
 ---
 

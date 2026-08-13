@@ -30,11 +30,11 @@ from datetime import date
 
 from flask import Blueprint, Response, jsonify
 
-from config.governance import SIGNOFF_REQUESTS_COLLECTION
 from src.command import dispatch
 from src.governance.model_handoff import (
     add_collection_item,
     declare_handoff,
+    derive_status,
     get_handoff,
     get_handoff_for_edge,
     list_handoffs,
@@ -59,20 +59,13 @@ handoffs_bp = Blueprint("handoffs", __name__, url_prefix="/api/handoffs")
 OWNER_FIELDS = ("data_handoff", "compatibility")
 
 
-def _status(data: dict) -> str:
-    """Derived lifecycle: approved once the MRC has stamped it, pending while a
-    request is in the queue, else a draft the owner is still filling in."""
-    if data.get("mrc_signoff_meeting"):
-        return "Approved"
-    active = [r for r in (data.get(SIGNOFF_REQUESTS_COLLECTION) or [])
-              if r.get("status") in ("Pending", "Attached")]
-    return "Pending sign-off" if active else "Draft"
-
-
 def _decorate(handoff: dict) -> dict:
     """Add the derived status to a handoff document (read-side only). Callers only
-    ever pass a handoff that exists (a missing one is a 404 before this point)."""
-    handoff["data"]["status"] = _status(handoff["data"] or {})
+    ever pass a handoff that exists (a missing one is a 404 before this point).
+
+    ``derive_status`` lives on the read model rather than here so the neighbourhood
+    graph, which labels the same edge, cannot drift from this."""
+    handoff["data"]["status"] = derive_status(handoff["data"] or {})
     return handoff
 
 

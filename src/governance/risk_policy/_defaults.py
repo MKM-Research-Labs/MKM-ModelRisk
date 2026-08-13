@@ -32,6 +32,7 @@ maps to a band by score. Colours mirror the values currently hardcoded in ``help
 from __future__ import annotations
 
 from config.governance import (
+    AUDIT_POLICY_DEFAULTS,
     COMPLEXITY_ORDER,
     MATERIALITY_ORDER,
     RAG_MULTIPLIERS,
@@ -126,4 +127,8 @@ def default_policy() -> dict:
         },
         "risk_ratings": _risk_rating_bands(),
         "grid": _default_grid(),
+        # What the completeness audit scores this division against. Seeded from the
+        # firm-wide values, so a division that never opens this section is audited
+        # exactly as it was before the section existed.
+        "audit": dict(AUDIT_POLICY_DEFAULTS),
     }

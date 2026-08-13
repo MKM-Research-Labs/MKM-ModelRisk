@@ -49,7 +49,21 @@ DEFAULT_FIELD_CRITICALITY = 0.40
 # Fields whose absence is not a finding. ``review_status`` is derived from the
 # review dates rather than typed, so an empty one restates a gap already raised
 # against ``next_review_date``; counting it twice would inflate the register.
-EXEMPT_FIELDS = ("review_status",)
+# ``monitoring_approach`` is exempt while the review workflow is being built: it
+# lands as an empty field on every existing model, and scoring it on the day the
+# tab appears would drop every score for a gap nobody has been asked to fill yet.
+# It becomes a finding when the workflow's sign-off gate lands and a review can
+# actually be completed (see docs/design/review-workflow.md).
+# ``review_status`` is derived from the workflow rather than typed. The rest belong
+# to the review itself — the brief an owner writes when a review starts, and the
+# "has the documentation been brought up to date" checklist a new version raises —
+# so they are empty until a review begins, and scoring them would charge every model
+# for a review it has not had. Progress is reported in its own section instead.
+EXEMPT_FIELDS = (
+    "review_status", "monitoring_approach",
+    "review_trigger", "review_scope", "review_due_date",
+    "review_docs_updated", "review_sensitivities_updated", "review_test_docs_updated",
+)
 
 FIELD_CRITICALITY = {
     # --- Drives the risk rating. Without these the model cannot be rated at
@@ -120,6 +134,34 @@ FIELD_CRITICALITY = {
 }
 
 # ---------------------------------------------------------------------------
+# Rules: findings about what a record HOLDS, not about what it lacks.
+# ---------------------------------------------------------------------------
+# Every other finding in this audit is an absence. A rule finding is a
+# contradiction between answers that are both present, which no completeness
+# score can see: a model whose peer reviewer is its own owner has both fields
+# filled in and scores as fully governed on them. It is also the first record an
+# external assessor pulls, so an audit that cannot raise it is reporting the
+# estate as better governed than it is.
+#
+# ``template`` is the instruction, held with the rule rather than in
+# REMEDIATION_ACTIONS: each rule is breached in its own way and a generic
+# "correct the {item}" tells an owner nothing.
+REVIEWER_INDEPENDENCE = "reviewer_independence"
+
+RULE_SPECS = {
+    REVIEWER_INDEPENDENCE: {
+        "label": "Reviewer independence",
+        "detail": "the peer reviewer is the record's own owner",
+        # Above validation_date and below owner: a review that was not independent
+        # is worth less than no review at all is worth chasing, because the record
+        # asserts an assurance it does not have.
+        "criticality": 0.85,
+        "template": "Name a peer reviewer for the {entity} other than its owner, "
+                    "or record why the owner's review is treated as independent.",
+    },
+}
+
+# ---------------------------------------------------------------------------
 # Collections.
 # ---------------------------------------------------------------------------
 # Collections where empty is a legitimate steady state rather than a gap. An
@@ -135,6 +177,17 @@ EXEMPT_COLLECTIONS = (
     # Written by the ingest pipe from the producing repo rather than typed by an
     # owner, so its absence is a pipeline finding, not a governance one.
     "field_lineage",
+    # --- The review workflow ---------------------------------------------
+    # A review is a programme of work with its own timetable, not a field an
+    # owner forgot to fill in. Scoring these would mark every model in the estate
+    # incomplete from the day the workflow shipped and keep it there until each
+    # one had been through a review — a new bar applied retrospectively, which
+    # reads as decay rather than as the backlog it is. Progress against them is
+    # reported instead, in its own section (see review_programme.py), where "none
+    # started yet" is a plan rather than a failure.
+    "review_notes",
+    "review_progress",
+    "review_signoffs",
 )
 
 DEFAULT_COLLECTION_CRITICALITY = 0.60
@@ -185,7 +238,10 @@ DOC_CRITICALITY = {
 # each time a Model Risk Document is issued: demanding it would raise a finding
 # against every model that has never had one issued, which is a statement about
 # platform usage rather than about the governance record.
-EXEMPT_DOC_CATEGORIES = ("History",)
+# "Review" holds the reviewer's working papers and "Model Review Report" the signed
+# output; both arrive only once a review has run, so they are reported as programme
+# progress rather than scored as gaps (see EXEMPT_COLLECTIONS).
+EXEMPT_DOC_CATEGORIES = ("History", "Review", "Model Review Report")
 
 # Categories satisfied by a broader evidence pack rather than in their own right.
 # The Test Results document reports every unit, integration and benchmark test

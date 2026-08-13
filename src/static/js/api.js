@@ -28,7 +28,11 @@ function esc(v) {
 // Read the trimmed value of an input by id.
 function val(id) {
   const el = document.getElementById(id);
-  return el ? el.value.trim() : "";
+  if (!el) return "";
+  // A multi-select holds several values; `.value` would silently return only the first,
+  // so a person given three roles would be recorded with one.
+  if (el.multiple) return [...el.selectedOptions].map((o) => o.value);
+  return el.value.trim();
 }
 
 const App = {

@@ -30,7 +30,8 @@ from typing import Any
 
 from config.governance import (COLLECTION_SPECS, DEFAULT_VQ_STATUS,
                                DEPENDENCIES_COLLECTION, MODEL_FIELD_SPECS,
-                               REFERENCE_SPECS, SR262_QUESTIONS)
+                               REFERENCE_SPECS, REVIEW_QUESTION_LIST,
+                               SR262_QUESTIONS)
 from src.database import Event, append_event, read_stream
 from src.governance import collections as coll
 from src.governance.errors import DomainError
@@ -49,10 +50,29 @@ from src.governance.model_inventory._state import ModelState, apply, initial_sta
 AGGREGATE_TYPE = "ModelInventoryEntry"
 
 
+def _review_questions(config) -> list[dict]:
+    """The questionnaire a newly registered model is asked.
+
+    The institution's own list (Admin > Review), falling back to the SR 26-2 set
+    only where none has been recorded — a fresh database before the first-run seed,
+    or one whose list has been emptied. A model is asked the questions that stood
+    when it was registered; editing the list afterwards does not rewrite the
+    answers already given, which is why each model keeps its own copy.
+    """
+    from src.governance.reference import get_reference_lists
+    try:
+        recorded = get_reference_lists(config=config).get(REVIEW_QUESTION_LIST) or []
+    except Exception:
+        recorded = []
+    asked = [{"short_label": q.get("short_label") or "", "question": q.get("question") or ""}
+             for q in recorded if (q.get("question") or "").strip()]
+    return asked or [dict(q) for q in SR262_QUESTIONS]
+
+
 def _seed_validation_questions(model_id, after_version, actor, config) -> None:
-    """Append the nine SR 26-2 questions immediately after registration."""
+    """Copy the review questionnaire onto the model, immediately after registration."""
     version = after_version
-    for index, question in enumerate(SR262_QUESTIONS, start=1):
+    for index, question in enumerate(_review_questions(config), start=1):
         payload = {
             "collection": "validation_questions",
             "item_id": f"VQ-{index:03d}",
@@ -63,7 +83,7 @@ def _seed_validation_questions(model_id, after_version, actor, config) -> None:
         append_event(
             aggregate_type=AGGREGATE_TYPE, aggregate_id=model_id,
             event_type=coll.EVENT_ITEM_ADDED, payload=payload, actor=actor,
-            reason="Seed SR 26-2 validation questions", expected_version=version,
+            reason="Seed the review questions", expected_version=version,
             config=config,
         )
         version += 1
@@ -212,7 +232,10 @@ def _guard_dependency(model_id: str, new_state: ModelState, config) -> None:
         raise DomainError("a model cannot depend on itself")
     other_edges = [
         edge
-        for other in list_models(config=config)
+        # The cycle guard reasons about the declared graph, which a hibernated
+        # model is still part of: a cycle hidden while it sleeps would come
+        # back the moment it was reactivated.
+        for other in list_models(config=config, include_retired=True)
         if other["model_id"] != model_id
         for edge in edges_for_model(
             other["model_id"],

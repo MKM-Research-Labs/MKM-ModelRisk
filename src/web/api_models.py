@@ -24,10 +24,12 @@ from datetime import date
 
 from flask import Blueprint, jsonify, request
 
-from config.governance import COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPECS, REGISTER_FIELDS
+from config.governance import (COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPECS,
+                               REGISTER_FIELDS, VALID_REVIEW_TRIGGERS)
 from src.files import UploadError, upload_path
 from src.governance.documents import (add_document, find_document, model_scope,
                                       remove_document)
+from src.governance.model_handoff import annotate_links, annotate_neighbourhood
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.mrc import meeting_items_for_model
@@ -44,6 +46,7 @@ from src.governance.model_inventory import (
     update_collection_item,
     update_model_field,
 )
+from src.web._owner_ratification import set_model_field
 from src.web._helpers import (
     context_from_request,
     json_body,
@@ -74,10 +77,14 @@ def _grouped_specs(options_by_list: dict[str, list]):
             by_name[spec["group"]] = group
             groups.append(group)
         resolved = resolve_field({**spec, "key": key}, options_by_list)
-        group["fields"].append(
-            {"key": resolved["key"], "label": resolved["label"],
-             "type": resolved["type"], "options": resolved["options"]}
-        )
+        field = {"key": resolved["key"], "label": resolved["label"],
+                 "type": resolved["type"], "options": resolved["options"]}
+        # What each option is shown as, where a status vocabulary separates the word
+        # a record stores from the word a screen shows. Carried only when the two
+        # differ, so every other field's payload is unchanged.
+        if resolved.get("option_labels"):
+            field["option_labels"] = resolved["option_labels"]
+        group["fields"].append(field)
     return groups
 
 
@@ -100,6 +107,10 @@ def field_specs():
         "groups": _grouped_specs(reference_options()),
         "register": list(REGISTER_FIELDS),
         "collections": _collection_specs(),
+        # Why a review is being run. The server validates against this list, so the
+        # console has to offer the same one — served rather than copied, or the two
+        # drift and a legitimate trigger starts being refused.
+        "review_triggers": list(VALID_REVIEW_TRIGGERS),
         **document_specs(),
     })
 
@@ -158,7 +169,11 @@ def delete_document(model_id: str, item_id: str):
 
 @models_bp.get("")
 def list_all():
-    return jsonify(list_models())
+    """The live inventory. ``?include_retired=1`` adds the hibernated models back —
+    the console asks for them only when somebody goes looking for one to reactivate,
+    so a retired model is not in the list, the tiles or any figure drawn from them."""
+    include_retired = request.args.get("include_retired") == "1"
+    return jsonify(list_models(include_retired=include_retired))
 
 
 @models_bp.get("/<model_id>/neighbourhood")
@@ -167,13 +182,15 @@ def model_neighbourhood(model_id: str):
     result = derive_neighbourhood(model_id)
     if result is None:
         return jsonify({"error": "model not found"}), 404
-    return jsonify(result)
+    return jsonify(annotate_neighbourhood(result))
 
 
 @models_bp.get("/chain")
 def model_chain():
     """The 'string of pearls' derived from every model's declared dependencies."""
-    return jsonify(derive_chain())
+    chain = derive_chain()
+    annotate_links(chain["links"])
+    return jsonify(chain)
 
 
 @models_bp.get("/<model_id>")
@@ -237,11 +254,10 @@ def register():
 @models_bp.post("/<model_id>/field")
 def update_field(model_id: str):
     body = json_body()
-    dispatch(
-        "update_model_field", update_model_field, context=context_from_request(body),
-        model_id=model_id, field=body.get("field"), value=body.get("value"),
-    )
-    rebuild_inventory_view()
+    # An owner change carries a committee ratification with it (see
+    # _owner_ratification): the write is the same, what follows it is not.
+    set_model_field(context_from_request(body), model_id,
+                    field=body.get("field"), value=body.get("value"))
     return jsonify(get_model(model_id))
 
 

@@ -18,37 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Model Docs tab: per-category (Core Documentation / Sensitivity / Analysis /
-// Monitoring / History) uploadable document lists with download and delete.
-//
-// A sub-tab is normally just a category name. It can instead be a panel object
-// {key, label, count, render(hostId)}, which the caller renders itself — the
-// model's Testing panel arrives this way, because test evidence spans four
-// categories and so cannot be one plain upload list.
+// Model Docs tab: per-category (Core Documentation / Test Results / Analysis /
+// Monitoring) uploadable document lists with download and delete.
 const ModelDocs = {
   _id: null, _docs: [], _categories: [], _retired: false, _cat: null,
   _base: "/api/models/", _refresh: null, _host: "dt-content",
 
-  _key(c) { return typeof c === "string" ? c : c.key; },
-  _entry(key) {
-    const self = this;
-    return this._categories.find((c) => self._key(c) === key);
-  },
-
-  // Pre-select a sub-tab (by key) before the next render — used where a link
-  // targets one panel of the Docs tab rather than the tab as a whole.
-  select(key) { this._cat = key; },
-
   // base / refresh / host let the same renderer serve any aggregate (models, Products).
-  render(modelId, docs, categories, retired, base, refresh, host) {
+  render(modelId, docs, categories, retired, base, refresh, host, groups) {
     this._id = modelId;
+    this._groups = groups || this._groups || {};
     this._docs = docs;
     this._categories = categories;
     this._retired = retired;
     this._base = base || "/api/models/";
     this._refresh = refresh || (() => Detail.show(this._id, "docs"));
     this._host = host || "dt-content";
-    if (!this._cat || !this._entry(this._cat)) this._cat = this._key(categories[0]);
+    if (!this._cat || categories.indexOf(this._cat) < 0) this._cat = categories[0];
     document.getElementById(this._host).innerHTML =
       this._subtabs() + '<div id="docs-cat"></div>';
     const self = this;
@@ -56,26 +42,42 @@ const ModelDocs = {
       b.onclick = function () {
         self._cat = b.getAttribute("data-doctab");
         self.render(self._id, self._docs, self._categories, self._retired,
-          self._base, self._refresh, self._host);
+          self._base, self._refresh, self._host, self._groups);
       };
     });
     this._renderCategory();
   },
 
+  // The real categories behind a tab: itself, unless it is a group (Testing is a
+  // panel over four categories, and nothing is ever filed under the label).
+  _members(cat) {
+    return (this._groups && this._groups[cat]) || [cat];
+  },
+
+  // A grouped panel: one section per member category, each with its own upload
+  // panel, so a document is filed under the test it evidences rather than into one
+  // undifferentiated heap.
+  _renderGroup(members) {
+    const opts = (cat) => ({ category: cat, docs: this._docs, base: this._base,
+      id: this._id, retired: this._retired, refresh: this._refresh });
+    document.getElementById("docs-cat").innerHTML = members.map((cat) =>
+      '<div class="section-header" style="margin-top:12px">' + esc(cat) + "</div>" +
+      DocPanel.html(opts(cat))).join("");
+    members.forEach((cat) => DocPanel.bind(opts(cat)));
+  },
+
   _subtabs() {
     return '<div class="dtabs">' + this._categories.map((c) => {
-      const key = this._key(c);
-      const n = typeof c === "string" ? DocLinks.visible(this._docs, c).length : c.count;
-      const label = typeof c === "string" ? c : c.label;
-      return '<button class="dtab' + (key === this._cat ? " active" : "") + '" data-doctab="' +
-        esc(key) + '">' + esc(label) + " (" + n + ")</button>";
+      const n = this._members(c)
+        .reduce((sum, m) => sum + DocLinks.visible(this._docs, m).length, 0);
+      return '<button class="dtab' + (c === this._cat ? " active" : "") + '" data-doctab="' +
+        esc(c) + '">' + esc(c) + " (" + n + ")</button>";
     }).join("") + "</div>";
   },
 
   _renderCategory() {
-    // A caller-rendered panel owns its own host, uploads and bindings.
-    const entry = this._entry(this._cat);
-    if (entry && typeof entry !== "string") { entry.render("docs-cat"); return; }
+    const members = this._members(this._cat);
+    if (members.length > 1) { this._renderGroup(members); return; }
     const items = DocLinks.visible(this._docs, this._cat);
     const rows = items.length ? items.map((d) =>
       "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +

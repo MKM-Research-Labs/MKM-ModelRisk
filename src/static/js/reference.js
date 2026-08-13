@@ -36,6 +36,17 @@ const Reference = {
     ["model_type", "Model Type"], ["vendor", "Vendor"],
     // The per-division risk policy: dimensions, ratings and the generated grids.
     ["risk", "Risk"],
+    // The questionnaire every review works through. Its own tab rather than a row
+    // among the reference lists: it is the institution's own standard, and the
+    // review workflow is built around it.
+    ["review_questions", "Review"],
+    // The running order every meeting is seeded with. Beside the questionnaire
+    // because they are the same kind of thing: a standard the institution sets,
+    // copied onto each record it applies to.
+    ["standing_agenda", "Agenda"],
+    // Every status vocabulary on one tab: shown-as is the institution's to change,
+    // stored-as is what the records already hold and never moves.
+    ["vocabulary", "Vocabulary"],
     // Institution-specific wording that is not a reference list — what the
     // generated PDFs say (classification, author, legal notice).
     ["misc", "Misc"],
@@ -51,6 +62,26 @@ const Reference = {
       btn.onclick = () => { this._tab = btn.getAttribute("data-atab"); this.render(); };
     });
     await this._renderBody(document.getElementById("admin-body"));
+  },
+
+  // The status vocabularies, in the order a record meets them. Each is an ordinary
+  // reference list; what they have in common is the two columns, so they are shown
+  // together rather than as six tabs nobody would find.
+  _VOCABULARIES: ["lifecycle_stage", "validation_status", "impact_level",
+                  "priority_level", "remediation_status", "vq_status"],
+
+  _renderVocabularies(container, res) {
+    container.innerHTML =
+      '<p class="muted">The words the console shows for a record\'s status. ' +
+      "<b>Shown as</b> is yours to change; <b>stored as</b> is the word the records " +
+      "themselves carry and the code matches on, fixed once an entry exists. Renaming " +
+      "therefore changes every screen without moving anything on record.</p>" +
+      this._VOCABULARIES.map((key) => '<div id="voc-' + key + '"></div>').join("");
+    this._VOCABULARIES.forEach((key) => {
+      const spec = res.collections.find((c) => c.key === key);
+      if (!spec) return;
+      this._renderList(document.getElementById("voc-" + key), spec, res.data[key] || []);
+    });
   },
 
   async _renderBody(container) {
@@ -71,6 +102,7 @@ const Reference = {
       return;
     }
     const res = await App.get("/api/reference");
+    if (this._tab === "vocabulary") { this._renderVocabularies(container, res); return; }
     const spec = res.collections.find((c) => c.key === this._tab);
     // MRC committees are entities with a drill-in detail (fields + per-committee
     // Terms of Reference); the scope field reacts to the committee's level.
@@ -79,6 +111,24 @@ const Reference = {
       return;
     }
     if (!spec) { container.innerHTML = '<div class="empty">This section has moved.</div>'; return; }
+    if (this._tab === "standing_agenda") {
+      this._renderList(container, spec, res.data[this._tab] || [],
+        "The running order every meeting is seeded with. A meeting is copied the list " +
+        "as it stands when it is scheduled and keeps its own agenda, so editing here " +
+        "changes the <em>next</em> meeting — it never rewrites one already held. " +
+        "<b>Role</b> is what the console draws for the item (a rollcall, the previous " +
+        "minutes, the sign-off review); leave it blank for business the committee " +
+        "always takes, which renders as an ordinary agenda item.");
+      return;
+    }
+    if (this._tab === "review_questions") {
+      this._renderList(container, spec, res.data[this._tab] || [],
+        "The questions every review works through, asked of each model in this order. A " +
+        "model is copied the list as it stands when it is registered and keeps its own " +
+        "answers, so editing here changes what the <em>next</em> review asks — it never " +
+        "rewrites an answer already given.");
+      return;
+    }
     this._renderList(container, spec, res.data[this._tab] || []);
   },
 
@@ -139,28 +189,46 @@ const Reference = {
   // A plain reference list rendered as a table with a working add form and
   // inline edit / remove per row (via the confirm-to-amend flow). Selectors
   // mirror the shared Collections module so the e2e helpers can drive both.
-  _renderList(container, spec, items) {
+  _renderList(container, spec, items, intro) {
     const cols = spec.fields.filter((f) => !f.hidden);
     const head = cols.map((f) => "<th>" + esc(f.label) + "</th>").join("") + "<th></th>";
     const body = items.length
-      ? items.map((it) =>
+      ? items.map((it, i) =>
           '<tr id="rlrow-' + esc(it.item_id) + '">' +
-          cols.map((f) => "<td>" + fieldDisplay(it[f.key]) + "</td>").join("") +
-          '<td class="rowact"><button class="btn small" data-ed="' + esc(spec.key) + "|" + esc(it.item_id) +
+          cols.map((f) => "<td>" + optionLabel(f, it[f.key]) + "</td>").join("") +
+          '<td class="rowact">' +
+          '<button class="edit-btn" data-mv="up|' + esc(it.item_id) + '" title="Move up"' +
+          (i === 0 ? " disabled" : "") + ">\u2191</button>" +
+          '<button class="edit-btn" data-mv="down|' + esc(it.item_id) + '" title="Move down"' +
+          (i === items.length - 1 ? " disabled" : "") + ">\u2193</button> " +
+          '<button class="btn small" data-ed="' + esc(spec.key) + "|" + esc(it.item_id) +
           '">Edit</button> <button class="btn small danger" data-rm="' + esc(spec.key) + "|" + esc(it.item_id) +
           '">Remove</button></td></tr>').join("")
       : '<tr><td colspan="' + (cols.length + 1) + '" class="empty">None yet.</td></tr>';
-    const addInputs = cols.map((f) =>
-      '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
+    // A readonly field (a person's ratified roles) is recorded by the process that
+    // grants it, so it is shown in the table but never offered as an input.
+    // A prose field takes the width that is going. The add row is a flex row, so a
+    // textarea sized by its rows attribute alone sat in a small box with the rest of
+    // the line empty beside it — on the review questions, the field holding the
+    // longest text on the screen was the narrowest thing on it.
+    const addInputs = cols.filter((f) => !f.readonly).map((f) =>
+      '<div class="field"' + (f.type === "textarea" ? ' style="flex:1;min-width:280px"' : "") +
+      "><label>" + esc(f.label) + (f.required ? " *" : "") + "</label>" +
       inputControl("add-" + spec.key + "-" + f.key, f) + "</div>").join("");
     container.innerHTML =
       '<div class="section-header">' + esc(spec.label) + "</div>" +
+      (intro ? '<p class="muted" style="font-size:12px">' + intro + "</p>" : "") +
       "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
       '<div class="row" style="margin-top:8px">' + addInputs +
       '<button class="btn small" data-add="' + esc(spec.key) + '">Add&hellip;</button></div>';
     container.querySelector('[data-add="' + spec.key + '"]').onclick = () => {
       const fields = {};
-      cols.forEach((f) => { const v = val("add-" + spec.key + "-" + f.key); if (v !== "") fields[f.key] = v; });
+      // An empty list is dropped on ADD (nothing to say yet); on edit it is kept, so a
+      // role can be taken away.
+      cols.filter((f) => !f.readonly).forEach((f) => {
+        const v = val("add-" + spec.key + "-" + f.key);
+        if (v !== "" && !(Array.isArray(v) && !v.length)) fields[f.key] = v;
+      });
       App.amend("Add to " + spec.label + ".", "POST",
         "/api/reference/collections/" + spec.key, { fields: fields }, () => this.render());
     };
@@ -168,6 +236,15 @@ const Reference = {
       const id = btn.getAttribute("data-rm").split("|")[1];
       btn.onclick = () => App.amend("Remove " + id + ".", "POST",
         "/api/reference/collections/" + spec.key + "/" + id + "/delete", {}, () => this.render());
+    });
+    container.querySelectorAll("[data-mv]").forEach((btn) => {
+      if (btn.disabled) return;
+      const [direction, id] = btn.getAttribute("data-mv").split("|");
+      // Reordering is an edit to what every dropdown offers, so it is confirmed and
+      // recorded like the others rather than treated as a display preference.
+      btn.onclick = () => App.amend("Move " + id + " " + direction + ".", "POST",
+        "/api/reference/collections/" + spec.key + "/" + id + "/move",
+        { direction: direction }, () => this.render());
     });
     container.querySelectorAll("[data-ed]").forEach((btn) => {
       const id = btn.getAttribute("data-ed").split("|")[1];
@@ -180,17 +257,31 @@ const Reference = {
     const row = document.getElementById("rlrow-" + item.item_id);
     row.innerHTML = '<td colspan="' + (cols.length + 1) + '"><div class="row">' +
       cols.map((f) => '<div class="field"><label>' + esc(f.label) + "</label>" +
-        inputControl("ce-" + f.key, f) + "</div>").join("") +
+        (f.readonly || f.immutable
+          ? '<div class="ro">' + fieldDisplay(item[f.key]) + "</div>"
+          : inputControl("ce-" + f.key, f)) + "</div>").join("") +
       '<button class="btn small primary" id="ce-save">Save&hellip;</button>' +
       '<button class="btn small" id="ce-cancel">Cancel</button></div></td>';
-    cols.forEach((f) => {
+    cols.filter((f) => !f.readonly && !f.immutable).forEach((f) => {
       const el = document.getElementById("ce-" + f.key);
-      if (item[f.key] !== null && item[f.key] !== undefined) el.value = item[f.key];
+      const current = item[f.key];
+      if (current === null || current === undefined) return;
+      // A multi-select cannot be filled by assigning `.value`; each held value has to be
+      // marked selected, or editing a person would quietly drop their roles.
+      if (el.multiple) {
+        const held = new Set(Array.isArray(current) ? current : [current]);
+        [...el.options].forEach((o) => { o.selected = held.has(o.value); });
+      } else {
+        el.value = current;
+      }
     });
     document.getElementById("ce-cancel").onclick = () => this.render();
     document.getElementById("ce-save").onclick = () => {
       const fields = {};
-      cols.forEach((f) => { const v = val("ce-" + f.key); if (v !== "") fields[f.key] = v; });
+      cols.filter((f) => !f.readonly && !f.immutable).forEach((f) => {
+        const v = val("ce-" + f.key);
+        if (v !== "" || Array.isArray(v)) fields[f.key] = v;
+      });
       App.amend("Update " + item.item_id + ".", "POST",
         "/api/reference/collections/" + spec.key + "/" + item.item_id, { fields: fields }, () => this.render());
     };

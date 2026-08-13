@@ -102,13 +102,6 @@ Object.assign(ProductDetail, {
 
   _bindSignoffRequest() {
     const self = this;
-    const revoke = document.getElementById("prevoke-signoff");
-    if (revoke) revoke.onclick = function () {
-      App.amend("Revoke the MRC sign-off for " + self._id +
-        " — the rating is kept but returns to needing sign-off.", "POST",
-        "/api/products/" + self._id + "/revoke-signoff", {},
-        () => self.show(self._id, "overview"));
-    };
     const btn = document.getElementById("preq-signoff");
     if (!btn) return;
     btn.onclick = function () {

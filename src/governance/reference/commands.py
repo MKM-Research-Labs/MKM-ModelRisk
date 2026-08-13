@@ -24,7 +24,11 @@ from typing import Any
 
 from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
                                DEFAULT_MODEL_TYPES, DEFAULT_VENDORS,
-                               MODEL_TYPE_LIST, REFERENCE_SPECS, VENDOR_LIST)
+                               MODEL_TYPE_LIST, REFERENCE_SPECS,
+                               REVIEW_QUESTION_LIST, SR262_QUESTIONS,
+                               STANDING_AGENDA, STANDING_AGENDA_LIST,
+                               STATUS_VOCABULARIES,
+                               VENDOR_LIST)
 from config.identity import SYSTEM_ACTOR
 from src.database import Event, append_event
 from src.governance import collections as coll
@@ -55,12 +59,17 @@ def add_option(
 
 def update_option(
     *, list_name: str, item_id: str, fields: dict[str, Any], actor: str,
-    reason: str | None = None, config=None,
+    reason: str | None = None, config=None, allow_readonly: bool = False,
 ) -> Event:
-    """Edit an existing reference entry (e.g. a company's name or owner)."""
+    """Edit an existing reference entry (e.g. a company's name or owner).
+
+    ``allow_readonly`` is passed only by the process that grants a readonly field — the
+    MRC ratifying a person's roles — never by the admin edit screen.
+    """
     collections, version = load(config)
     decision = coll.decide_update(
-        collections, REFERENCE_SPECS, collection=list_name, item_id=item_id, fields=fields
+        collections, REFERENCE_SPECS, collection=list_name, item_id=item_id, fields=fields,
+        allow_readonly=allow_readonly,
     )
     return _record(decision, version, actor, reason, config)
 
@@ -72,6 +81,25 @@ def remove_option(
     collections, version = load(config)
     decision = coll.decide_remove(
         collections, REFERENCE_SPECS, collection=list_name, item_id=item_id
+    )
+    return _record(decision, version, actor, reason, config)
+
+
+def move_option(
+    *, list_name: str, item_id: str, direction: str, actor: str,
+    reason: str | None = None, config=None,
+) -> Event:
+    """Move a reference entry one place up or down its list.
+
+    Order is meaningful where a list is read in sequence — the review questionnaire
+    is asked in the order it is listed — and it is also the order every dropdown
+    offers. Recorded as an event like any other edit, so who reordered a list, and
+    when, is on the audit trail.
+    """
+    collections, version = load(config)
+    decision = coll.decide_move(
+        collections, REFERENCE_SPECS, collection=list_name, item_id=item_id,
+        direction=direction,
     )
     return _record(decision, version, actor, reason, config)
 
@@ -102,6 +130,62 @@ _DEFAULT_SIMPLE_LISTS = {
     DATA_SOURCE_LIST: DEFAULT_DATA_SOURCES,
     VENDOR_LIST: DEFAULT_VENDORS,
 }
+
+
+def ensure_default_review_questions(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the review questionnaire on a fresh install; return how many were added.
+
+    The nine SR 26-2 questions are the starting point, not the definition: an
+    adopter rewords them, drops what does not apply and adds its own. Same rule as
+    the other lists — this seeds a vacuum and never reconciles a curated one, so a
+    questionnaire somebody has since edited is not quietly restored at a restart.
+    """
+    collections, _ = load(config)
+    if collections.get(REVIEW_QUESTION_LIST):
+        return 0
+    for question in SR262_QUESTIONS:
+        add_option(list_name=REVIEW_QUESTION_LIST, fields=dict(question), actor=actor,
+                   reason="Seed the SR 26-2 review questions on first run", config=config)
+    return len(SR262_QUESTIONS)
+
+
+def ensure_default_standing_agenda(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the standing agenda on a fresh install; return how many were added.
+
+    The shipped running order is where a committee starts, not what it is stuck
+    with. Same rule as the other lists — seeds a vacuum, never reconciles a curated
+    one — so an agenda somebody has reworded is not restored at the next restart.
+    """
+    collections, _ = load(config)
+    if collections.get(STANDING_AGENDA_LIST):
+        return 0
+    for item in STANDING_AGENDA:
+        add_option(list_name=STANDING_AGENDA_LIST, fields=dict(item), actor=actor,
+                   reason="Seed the standing agenda on first run", config=config)
+    return len(STANDING_AGENDA)
+
+
+def ensure_default_status_vocabularies(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed every status vocabulary on a fresh install; return how many were added.
+
+    Each entry is seeded with its stored value EQUAL to the word records already
+    carry, and its label the same. That is what makes these migration-free: nothing
+    in the estate moves, and renaming an entry afterwards edits only the label.
+
+    One function for all of them because they differ in nothing but their words —
+    five near-identical seeders would be five places to forget.
+    """
+    added = 0
+    for list_name, (_label, _prefix, words, _hint) in STATUS_VOCABULARIES.items():
+        collections, _ = load(config)
+        if collections.get(list_name):
+            continue
+        for word in words:
+            add_option(list_name=list_name, fields={"value": word, "label": word},
+                       actor=actor, reason=f"Seed the {list_name} vocabulary on first run",
+                       config=config)
+        added += len(words)
+    return added
 
 
 def ensure_default_reference_lists(*, actor: str = SYSTEM_ACTOR, config=None) -> int:

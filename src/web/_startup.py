@@ -17,7 +17,17 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Startup reconciliation: rebuild every read-model from the event log.
+"""One-time startup work: schema migrations, seeded defaults, read-model rebuild.
+
+``bootstrap()`` is everything that must happen once before the app serves a
+request, and — importantly — **once per boot, not once per worker**. Under the
+development server that distinction does not arise; under gunicorn it very much
+does, which is why this is a callable the master can run before it forks rather
+than something buried in ``create_app``. See ``bootstrap()`` for what goes wrong
+if several workers run it at the same time.
+
+The read-model rebuild that ``bootstrap()`` finishes with is the delicate part,
+and has its own history:
 
 The read-models (the ``*_view`` tables) are derived caches, maintained
 incrementally as commands are applied. If one drifts out of sync with the event
@@ -38,6 +48,8 @@ import importlib
 import logging
 import os
 
+from config.web import BOOTSTRAP_DONE_ENV
+
 logger = logging.getLogger(__name__)
 
 _DISABLE_ENV = "REBUILD_VIEWS_ON_STARTUP"
@@ -57,6 +69,57 @@ _REBUILDERS: tuple[tuple[str, str, str], ...] = (
     ("clients", "src.governance.client.projection", "rebuild_client_view"),
     ("receipts", "src.ingest.receipt.projection", "rebuild_receipts_view"),
 )
+
+
+def bootstrap(config=None) -> None:
+    """Apply migrations, seed the admin-managed defaults, rebuild the read-models.
+
+    Run this **once per boot**. Under gunicorn that means the master process,
+    before it forks, with the workers building their app with
+    ``create_app(run_db_migrations=False)``.
+
+    Concurrent runs are not merely wasteful, they are unsafe. ``run_migrations``
+    reads the applied set and applies the rest in a single transaction with no
+    lock held, so two workers starting together both see a migration as pending,
+    both execute its DDL, and the loser blocks on the ``schema_migrations``
+    primary key until the winner commits and then dies on a unique violation —
+    a worker that crashes on boot for no visible reason. The full read-model
+    replay behind it would likewise run once per worker.
+    """
+    from src.database import run_migrations
+    from src.governance.reference import (ensure_default_model_types,
+                                          ensure_default_reference_lists,
+                                          ensure_default_review_questions,
+                                          ensure_default_standing_agenda,
+                                          ensure_default_status_vocabularies)
+
+    run_migrations(config)
+    # Model types are admin-managed, but an empty list degrades the field to
+    # free text — so a fresh database is given the defaults once.
+    ensure_default_model_types()
+    # Data source + vendor lists back the model's data_sources / vendor fields;
+    # seed their defaults on a fresh database for the same reason.
+    ensure_default_reference_lists()
+    ensure_default_review_questions()
+    ensure_default_standing_agenda()
+    ensure_default_status_vocabularies()
+    reconcile_read_models(config)
+
+
+def bootstrap_once(config=None) -> bool:
+    """Run :func:`bootstrap` unless a parent process already did.
+
+    Returns whether the work was actually done. The marker is an environment
+    variable because that is what survives ``fork`` — the gunicorn master sets
+    it after bootstrapping and every worker inherits it, without the two ever
+    needing to talk to each other.
+    """
+    if os.environ.get(BOOTSTRAP_DONE_ENV) == "1":
+        logger.info("startup work already done by a parent process; skipping")
+        return False
+    bootstrap(config)
+    os.environ[BOOTSTRAP_DONE_ENV] = "1"
+    return True
 
 
 def reconcile_read_models(config=None) -> dict[str, int]:

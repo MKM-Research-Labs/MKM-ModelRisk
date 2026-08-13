@@ -25,28 +25,17 @@ from flask import Blueprint, jsonify, request, send_file
 from config.governance import REFERENCE_SPECS
 from src.command import dispatch
 from src.files import UploadError, save_upload, upload_path
-from src.governance.reference import add_option, get_reference_lists, remove_option, update_option
-from src.web._helpers import context_from_request, json_body, reference_options, request_actor
+from src.governance.reference import (add_option, get_reference_lists, move_option,
+                                      remove_option, update_option)
+from src.web._helpers import (
+    context_from_request,
+    json_body,
+    reference_options,
+    request_actor,
+    resolve_field,
+)
 
 reference_bp = Blueprint("reference", __name__, url_prefix="/api/reference")
-
-
-def _field_spec(field: dict, options: dict[str, list]) -> dict:
-    # A field backed by another list (e.g. a Division's Company, or an Owner)
-    # becomes a dropdown once that list has values. ``hidden`` fields (e.g. the
-    # MRC ToR file metadata) are passed through so the UI can skip them.
-    reference = field.get("reference")
-    if reference and options.get(reference):
-        spec = {"key": field["key"], "label": field["label"], "type": "choice",
-                "options": options[reference], "required": bool(field.get("required"))}
-    else:
-        # Otherwise keep the field's own type and any static options (e.g. a
-        # choice field like the MRC frequency).
-        spec = {"key": field["key"], "label": field["label"], "type": field["type"],
-                "options": list(field.get("options", [])), "required": bool(field.get("required"))}
-    if field.get("hidden"):
-        spec["hidden"] = True
-    return spec
 
 
 def _specs():
@@ -54,7 +43,7 @@ def _specs():
     return [
         {
             "key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
-            "fields": [_field_spec(f, options) for f in spec["fields"]],
+            "fields": [resolve_field(f, options) for f in spec["fields"]],
         }
         for key, spec in REFERENCE_SPECS.items()
     ]
@@ -92,6 +81,22 @@ def remove(list_name: str, item_id: str):
     dispatch(
         "remove_option", remove_option, context=context_from_request(body),
         list_name=list_name, item_id=item_id,
+    )
+    return jsonify(get_reference_lists())
+
+
+@reference_bp.post("/collections/<list_name>/<item_id>/move")
+def move(list_name: str, item_id: str):
+    """Move one entry up or down its list.
+
+    Reordering is an edit to a list the estate reads in order — the review
+    questionnaire is asked in it, and every dropdown offers it — so it goes through
+    the same recorded path as any other change rather than being a display setting.
+    """
+    body = json_body()
+    dispatch(
+        "move_option", move_option, context=context_from_request(body),
+        list_name=list_name, item_id=item_id, direction=body.get("direction"),
     )
     return jsonify(get_reference_lists())
 

@@ -29,8 +29,10 @@ from tests.e2e._flows import (
     add_collection_item,
     confirm,
     edit_collection_item,
+    maybe_confirm,
     open_app,
     open_detail_tab,
+    open_review_stage,
     open_model,
     register_model,
     remove_collection_item,
@@ -50,17 +52,18 @@ def test_add_remediation_step(page: Page, base_url: str):
     """Remediation is edited fully in place (every field is an inline control),
     so it doesn't render row-level edit/remove buttons — drive it through the
     add form + description assertion rather than the shared helper."""
-    _setup(page, base_url, "MKM-E2E-010", "remediation_steps")
+    _setup(page, base_url, "MKM-E2E-010", "review")
+    open_review_stage(page, "remediation")
     page.fill("#add-remediation_steps-description", "Recalibrate severity tail")
     page.click("[data-add='remediation_steps']")
-    confirm(page)
+    maybe_confirm(page, "add_collection_item")
     expect(page.locator("#dt-content")).to_contain_text("Recalibrate severity tail")
-    expect(page.locator("[data-dtab='remediation_steps']")).to_contain_text("1")
 
 
 def test_add_assumption(page: Page, base_url: str):
-    # Assumptions now live under the merged "Validation & Assumptions" tab.
-    _setup(page, base_url, "MKM-E2E-011", "validation_questions")
+    # Assumptions are stage 1 of the review, not a tab of their own.
+    _setup(page, base_url, "MKM-E2E-011", "review")
+    open_review_stage(page, "assumptions")
     add_collection_item(
         page, "assumptions",
         {"description": "Returns are i.i.d. Gaussian", "impact": "Medium"},
@@ -69,13 +72,13 @@ def test_add_assumption(page: Page, base_url: str):
 
 
 def test_add_limitation(page: Page, base_url: str):
-    _setup(page, base_url, "MKM-E2E-012", "limitations")
+    _setup(page, base_url, "MKM-E2E-012", "review")
+    open_review_stage(page, "limitations")
     add_collection_item(
         page, "limitations",
         {"description": "Not calibrated to crisis vol", "impact": "High"},
     )
     expect(page.locator("#dt-content")).to_contain_text("Not calibrated to crisis vol")
-    expect(page.locator("[data-dtab='limitations']")).to_contain_text("1")
 
 
 def test_add_version_history(page: Page, base_url: str):
@@ -100,28 +103,10 @@ def test_add_version_with_lifecycle_shows_badge(page: Page, base_url: str):
     expect(item).to_contain_text("Being Enhanced")
 
 
-def test_events_tab_records_a_post_mortem_with_raci(page: Page, base_url: str):
-    """W4b: Operational Failure Events captures an incident with the RACI legs."""
-    open_app(page, base_url)
-    # Seed a Person so the People-referenced RACI fields render as choices.
-    from tests.e2e._flows import add_collection_item, open_admin_subtab
-    open_admin_subtab(page, "people")
-    add_collection_item(page, "people", {"name": "Lena Okafor"})
-    page.click(".tab[data-tab='inventory']")
-    register_model(page, "MKM-E2E-EV1", "Events Model")
-    open_model(page, "MKM-E2E-EV1")
-    open_detail_tab(page, "operational_failure_events")
-    add_collection_item(
-        page, "operational_failure_events",
-        {"date": "2026-05-12", "description": "Curve flipped sign on illiquid tenor",
-         "remediation": "Rolled back to prior dataset; root cause under investigation",
-         "responsible": "Lena Okafor",
-         "informed_client": "No", "informed_senior_mgmt": "Yes"},
-    )
-    body = page.locator("#dt-content")
-    expect(body).to_contain_text("Curve flipped sign on illiquid tenor")
-    expect(body).to_contain_text("Lena Okafor")
-    expect(page.locator("[data-dtab='operational_failure_events']")).to_contain_text("(1)")
+# test_events_tab_records_a_post_mortem_with_raci moved to test_e2e_product.
+# A model still carries the operational_failure_events collection, but nothing on
+# a model's screen renders it: a failure in production is the Product's event, and
+# that is where the register is shown. The test follows the screen.
 
 
 def test_add_change_history(page: Page, base_url: str):
@@ -135,26 +120,33 @@ def test_add_change_history(page: Page, base_url: str):
 
 
 def test_set_validation_question_status_and_rationale(page: Page, base_url: str):
-    """Set status + rationale on the first SR 26-2 question; both commit in one save."""
-    _setup(page, base_url, "MKM-E2E-016", "validation_questions")
-    save_btn = page.locator("[data-vq-save]").first
-    item_id = save_btn.get_attribute("data-vq-save")
+    """Set status + rationale on the first SR 26-2 question; both commit in one save.
+
+    There is no save button: every change to a question posts as it is made, and
+    the handler sends the status and the rationale together whichever of the two
+    was touched. So each edit is its own save, and each re-renders the tab —
+    hence re-resolving the second control rather than holding a stale handle.
+    """
+    _setup(page, base_url, "MKM-E2E-016", "review")
+    open_review_stage(page, "questions")
+    item_id = page.locator("[data-vq-item]").first.get_attribute("data-vq-item")
     page.select_option(f"#vq-{item_id}-status", "Addressed")
     page.fill(f"#vq-{item_id}-rationale", "Owner walked through the assumptions in detail.")
-    save_btn.click()
-    confirm(page)
+    page.locator(f"#vq-{item_id}-rationale").blur()
     # After re-render, the rationale persists in the input's value attribute.
     expect(page.locator(f"#vq-{item_id}-rationale")).to_have_value(
         "Owner walked through the assumptions in detail."
     )
     expect(page.locator(f"#vq-{item_id}-status")).to_have_value("Addressed")
-    expect(page.locator("[data-dtab='validation_questions']")).to_contain_text("1/9")
+    # The Review tab's count is the owner's coverage across the nine questions.
+    expect(page.locator("[data-dtab='review']")).to_contain_text("1/9")
 
 
 # --- X1 coverage: edit and remove operations on model collections -----------
 
 def test_edit_limitation_updates_row(page: Page, base_url: str):
-    _setup(page, base_url, "MKM-X1-EDIT1", "limitations")
+    _setup(page, base_url, "MKM-X1-EDIT1", "review")
+    open_review_stage(page, "limitations")
     item_id = add_collection_item(
         page, "limitations",
         {"description": "Original wording", "impact": "Medium"},
@@ -175,14 +167,14 @@ def test_edit_limitation_updates_row(page: Page, base_url: str):
 def test_close_remediation_step_via_inline_status(page: Page, base_url: str):
     """Closing an item flips its inline Status control to "Closed" — the row
     stays in the list (audit trail) but its state changes."""
-    _setup(page, base_url, "MKM-X1-RM1", "remediation_steps")
+    _setup(page, base_url, "MKM-X1-RM1", "review")
+    open_review_stage(page, "remediation")
     page.fill("#add-remediation_steps-description", "Transient item")
     page.click("[data-add='remediation_steps']")
-    confirm(page)
-    expect(page.locator("[data-dtab='remediation_steps']")).to_contain_text("(1)")
+    maybe_confirm(page, "add_collection_item")
     # Every remediation field is an inline data-upd control; use the Status one.
     page.locator("select[data-upd^='remediation_steps|'][data-upd$='|status']").select_option("Closed")
-    confirm(page)
+    maybe_confirm(page, "update_collection_item")
     expect(page.locator("select[data-upd$='|status']").first).to_have_value("Closed")
 
 
