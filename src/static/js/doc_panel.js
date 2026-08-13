@@ -22,8 +22,8 @@
 // documents in ONE category, reusing the aggregate's existing /documents
 // endpoints (so uploads also surface in the Docs tab, are audited, etc.). Used
 // in-context on the Docs tab's Testing panel, the Events tab and the Remediation
-// register on Risk Rating, so evidence can be attached where it belongs. Several panels can coexist on a
-// page — every element id is namespaced by the category slug.
+// register on Risk Rating, so evidence can be attached where it belongs. Several
+// panels can coexist on a page — every element id is namespaced by the category slug.
 const DocPanel = {
   _slug(category) { return "dp-" + category.toLowerCase().replace(/[^a-z0-9]+/g, "-"); },
 

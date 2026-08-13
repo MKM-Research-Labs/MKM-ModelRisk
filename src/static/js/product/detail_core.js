@@ -34,11 +34,6 @@ const PRODUCT_OVERVIEW_ORG = ["division", "line_of_business"];
 const PRODUCT_OVERVIEW_MONITORING = ["monitoring_approach"];
 const PRODUCT_OVERVIEW_GOV = ["status", "owner", "mrc_signoff_date", "next_review_date",
   "last_review_date", "notes"];
-// Product register tabs that carry an in-context supporting-documents panel, so the
-// evidence sits beside what it evidences instead of in a Docs category.
-const COLLECTION_DOC_CATEGORY = {
-  remediation_steps: "Remediation Evidence",
-};
 
 const ProductDetail = {
   _id: null, _product: null, _specs: null, _audit: [], _mrc: null, _risk: null,
