@@ -40,6 +40,32 @@ from src.governance.latex import (
 )
 
 
+def _subject_of(item: dict) -> str:
+    """The model, product or handoff a routed sign-off is about — empty for an
+    ordinary agenda item, which is what separates the running order from the
+    requests the committee is answering."""
+    return (item.get("subject_model_id") or item.get("subject_product_id")
+            or item.get("subject_handoff_id") or "")
+
+
+def _signoff_ask(item: dict) -> str:
+    """What the committee was asked to ratify, in one cell.
+
+    Mirrors the console's Approvals row so the pack and the screen describe the same
+    decision: a rating names the RAG proposed, a change of owner names who it moves
+    between, and a lifecycle decision names itself. Plain ASCII for the arrow — the
+    preamble loads ``inputenc`` with utf8, and a literal arrow is a compile risk this
+    document should not take on.
+    """
+    kind = item.get("signoff_kind") or "rag"
+    if kind == "owner":
+        return (f"{item.get('from_owner') or 'unassigned'} -> "
+                f"{item.get('to_owner') or 'unassigned'}")
+    if kind in ("retire", "reactivate"):
+        return kind.capitalize()
+    return item.get("proposed_rag") or ""
+
+
 def _owners(action: dict) -> str:
     """An action's owners as one cell.
 
@@ -118,22 +144,25 @@ def build_tex(
     # A wrapping table: agenda titles can be long (an event review carries the
     # event's summary), and a fixed-width table pushed the Status column — which
     # is where an item shows as reviewed — off the right edge of the page.
+    # The running order, and only that. A routed sign-off is an owner's request that
+    # happens to be carried on an agenda item; it is answered in its own section below,
+    # so listing it here too printed every one twice and buried the order the meeting
+    # actually ran. The console's Agenda tab draws the same distinction.
+    running_order = [a for a in data.get("agenda", []) if not _subject_of(a)]
     agenda = _section("Agenda", _para_table(
         ["#", "Title", "Presenter", "Status"],
         [[i + 1, a.get("title"), a.get("presenter"), a.get("status")]
-         for i, a in enumerate(data.get("agenda", []))],
-        [0.06, 0.60, 0.17, 0.17], caption="Agenda")) if data.get("agenda") else ""
-    # Sign-off agenda items (a model/product + a proposed RAG) called out on
-    # their own, with the outcome.
-    signoff_items = [
-        a for a in data.get("agenda", [])
-        if (a.get("subject_model_id") or a.get("subject_product_id")) and a.get("proposed_rag")
-    ]
-    signoffs = _section("Model Sign-offs", _table(
-        ["Subject", "Proposed RAG", "Status"],
-        [[a.get("subject_model_id") or a.get("subject_product_id"),
-          a.get("proposed_rag"), a.get("status")] for a in signoff_items],
-        caption="Model sign-offs")) if signoff_items else ""
+         for i, a in enumerate(running_order)],
+        [0.06, 0.60, 0.17, 0.17], caption="Agenda")) if running_order else ""
+    # Every sign-off routed to this meeting, with what the committee was asked to
+    # ratify. Deliberately not only the rating ones: a change of model owner, a
+    # retirement and a reactivation carry no proposed RAG, and filtering on one would
+    # drop them from the record entirely now that the agenda no longer repeats them.
+    signoff_items = [a for a in data.get("agenda", []) if _subject_of(a)]
+    signoffs = _section("Sign-offs", _table(
+        ["Subject", "Decision", "Status"],
+        [[_subject_of(a), _signoff_ask(a), a.get("status")] for a in signoff_items],
+        caption="Sign-offs")) if signoff_items else ""
     # In-scope models with who presents, whether an analysis was attached, and — the
     # part that makes this minutes rather than an attendance list — what the committee
     # concluded: the outcome it recorded and the basis it let the presenter proceed on.
