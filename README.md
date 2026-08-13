@@ -16,6 +16,11 @@ and reason.
 > **New here?** The [**User Guide**](docs/user_guide.md) walks through every
 > screen and feature. This README covers installation and the architecture.
 
+> **Installing on Windows 11?** Go straight to
+> [**Installing on Windows 11 with Claude**](#installing-on-windows-11-with-claude) —
+> a step-by-step runbook written to be followed by an AI assistant, with the
+> checks and the corporate-laptop failure modes spelled out.
+
 ---
 
 ## Key capabilities
@@ -38,13 +43,13 @@ and reason.
   to the MRC as agenda items for the committee to receive.
 - **MRC meetings** — schedule meetings with agenda, minutes, participants,
   models-in-scope, decisions, and actions; export a **Meeting Pack PDF**.
-- **Document control** — upload supporting documents per model (nine categories,
+- **Document control** — upload supporting documents per model (thirteen categories,
   from Core Documentation and Test Results to Event and Remediation Evidence)
   and governance-wide.
 - **Model Risk Report** — a committee-facing **PDF status report** across the
   whole inventory.
 - **Audit Reports** — an in-app tab that generates and serves PDF reports (the
-  R1–R8 coding-rule audit, the Model Risk Report, and the User Guide).
+  coding-rule audit, the Model Risk Report, and the User Guide).
 - **Immutable audit trail** — every mutation recorded with actor, timestamp,
   reason, and a tamper-evident hash chain.
 
@@ -61,7 +66,7 @@ and reason.
 | **Web layer** | A Flask app factory + blueprints, with a dependency-free vanilla-JS console. |
 | **Documents & PDFs** | Uploads stored on disk with metadata in the event stream; PDFs rendered via LaTeX (tectonic). |
 
-The codebase is held to six **coding rules**, mechanically enforced (see
+The codebase is held to nine **coding rules** (R1-R9), mechanically enforced (see
 [Quality gates](#quality-gates)): parameters live only in `config/`; source files
 stay under 300 lines; ≥99% test coverage per stage; no logic in `__init__.py`; a
 canonical copyright header on every source file; and all database access through
@@ -149,6 +154,155 @@ initdb --version 2>/dev/null || ls -d /usr/lib/postgresql/16 /usr/pgsql-16 \
 > your `PATH`. On Debian/Ubuntu the binaries are deliberately **not** on `PATH`,
 > which is normal — the script finds them anyway. If yours lives somewhere else,
 > set `PG_BIN` to the directory containing `initdb`.
+
+---
+
+## Installing on Windows 11 with Claude
+
+This section is written to be **followed by an AI assistant** (Claude) driving the
+install on a Windows 11 machine, and to be readable by the person watching it.
+Work through it **in order**. Every step ends in a check — do not move past a check
+that fails; go to [When a step fails](#when-a-step-fails) instead.
+
+> **The short version for a human.** Download the repo, double-click
+> **`START-HERE.bat`**, and answer the prompt. It installs what is missing and
+> launches the app. Everything below exists for when that is not allowed to work,
+> which on a managed corporate laptop is the normal case.
+
+### Three facts that cause most Windows failures
+
+Read these first; they are the reason the steps are shaped the way they are.
+
+1. **Python must be 3.13 or newer.** Typing `python` on a clean Windows 11 box
+   often opens the Microsoft Store instead of running anything — that stub is not
+   a Python. Use the `py` launcher (`py -3.13`) to be certain which one you have.
+2. **gunicorn is not used on Windows and is not installed there.** It needs
+   `fcntl`, which is POSIX-only, so `pyproject.toml` marks it
+   `sys_platform != "win32"`. On Windows the app runs with **`python model.py`**.
+   Do not try to install gunicorn; do not follow the Linux run commands.
+3. **Never run any of this elevated.** `initdb` refuses to run as Administrator.
+   The database cluster lives inside the repo folder (`.\.pgdata`) and needs no
+   admin rights at all. If a step seems to want Administrator, that is a signal
+   something else is wrong.
+
+### Step 1 — Preflight
+
+```powershell
+winget --version
+py -3.13 --version
+git --version
+```
+
+**Check:** `py -3.13 --version` prints `Python 3.13.x`. If all three print a
+version, skip to [Step 3](#step-3--set-up-and-launch).
+
+### Step 2 — Install the packages
+
+This is the step most likely to need a human with rights. Two are required; the
+rest only affect PDF export.
+
+```powershell
+winget install -e --id Python.Python.3.13
+winget install -e --id PostgreSQL.PostgreSQL.16
+winget install -e --id Git.Git
+# Optional: PDF export and one audit section
+winget install -e --id JohnMacFarlane.Pandoc
+winget install -e --id OpenJS.NodeJS
+```
+
+Then **close PowerShell and open a new one** — `PATH` is only re-read by new
+processes, and skipping this makes a correct install look like a failed one.
+
+**Check:**
+
+```powershell
+py -3.13 --version                                  # Python 3.13.x
+Test-Path 'C:\Program Files\PostgreSQL\16\bin\initdb.exe'   # True
+```
+
+`tectonic` has no winget package. It is optional: without it the Meeting Pack,
+Model Risk Report and Audit Report PDFs return **503** and every other screen
+works. Install it later from <https://tectonic-typesetting.github.io> if those
+exports are needed.
+
+### Step 3 — Set up and launch
+
+From the repo folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1
+```
+
+It creates the virtualenv, installs the Python dependencies, initialises the
+PostgreSQL cluster in `.\.pgdata` on port 5433, applies migrations and starts the
+app. It is **safe to re-run** — every step is idempotent and it leaves a running
+cluster alone. Useful variants:
+
+| Command | Effect |
+|---|---|
+| `... start.ps1 -NoRun` | Set everything up, do not launch |
+| `... start.ps1 -Seed` | Also load a few example models |
+| `... start.ps1 -Identity you@corp` | Skip the identity prompt |
+| `... start.ps1 -StopDb` | Stop the database cluster |
+
+**Check:** the console is served at **http://127.0.0.1:5015**.
+
+```powershell
+(Invoke-WebRequest http://127.0.0.1:5015 -UseBasicParsing).StatusCode   # 200
+```
+
+To run it again later in a fresh terminal, the cluster having persisted:
+
+```powershell
+.venv\Scripts\Activate.ps1
+powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -NoRun   # starts the cluster
+python model.py
+```
+
+### Step 4 — Confirm the install is sound
+
+```powershell
+.venv\Scripts\Activate.ps1
+python -m audit
+pytest
+```
+
+**Check:** `python -m audit` ends with a `FINDINGS:` or `PASS:` line — read that
+line, not the exit code of the shell. `pytest` is expected to report a small
+number of known failures; see [Quality gates](#quality-gates). A wall of errors
+about databases or imports means the setup did not complete, not that the code is
+broken.
+
+### When a step fails
+
+Corporate Windows blocks things a home machine does not. These are the ones worth
+knowing before they happen.
+
+| Symptom | What it means, and what to do |
+|---|---|
+| `winget` is not recognised | It ships as **App Installer**. Install or update App Installer from the Microsoft Store, then reopen PowerShell. |
+| winget runs but every install is blocked | Group policy is refusing installs. Download the installers directly — Python from <https://www.python.org/downloads/windows/> (tick **Add python.exe to PATH**), PostgreSQL 16 from <https://www.enterprisedb.com/downloads/postgres-postgresql-downloads>. Both offer a per-user install that does not need Administrator. |
+| Neither installer is permitted at all | PostgreSQL only needs its **binaries** on disk — the repo runs its own cluster. Unzip a PostgreSQL 16 binary bundle anywhere and point at it: `$env:PG_BIN = 'D:\pg16\bin'`, then re-run `start.ps1`. |
+| `pip` cannot reach the network / SSL errors | You are behind the corporate proxy. `$env:HTTPS_PROXY = 'http://proxy.corp:8080'` (and `HTTP_PROXY`) before re-running, or configure an internal index with `pip config set global.index-url ...`. |
+| `... cannot be loaded because running scripts is disabled` | PowerShell execution policy. The commands above already pass `-ExecutionPolicy Bypass`, which needs no permanent change — use them exactly as written. |
+| `initdb: cannot be run as Administrator` | You are in an elevated prompt. Close it, open a normal PowerShell window. |
+| `Python 3.13+ not found` after installing it | `PATH` is stale in this window. Open a **new** PowerShell. |
+| `connection refused` on port 5433 | The cluster is not running: `powershell -ExecutionPolicy Bypass -File scripts\start.ps1 -NoRun`. |
+| `Address already in use` on 5015 | An instance is still up. `Get-NetTCPConnection -LocalPort 5015 \| Select-Object -ExpandProperty OwningProcess \| ForEach-Object { Stop-Process -Id $_ }` |
+| PDF exports return **503** | `tectonic` is not installed. Optional — see Step 2. |
+| `ModuleNotFoundError: gunicorn` | Something is following the Linux instructions. On Windows the app runs with `python model.py`. |
+
+### If you are Claude, doing this install
+
+- Run the checks and **read their output** before continuing. A command that
+  printed nothing has not passed.
+- Do not substitute `python` for `py -3.13` when verifying the version — that is
+  the check that catches the Microsoft Store stub.
+- Do not elevate, and do not install gunicorn, whatever an error suggests.
+- The database and the uploaded files are two halves of one record: if you move
+  `PG_DATA_DIR`, move `UPLOAD_DIR` with it, or documents will list but not download.
+- Nothing here writes outside the repo folder except the package installs in
+  Step 2.
 
 ---
 
@@ -364,7 +518,7 @@ pytest                           # unit + integration suite (e2e excluded by def
 
 ```bash
 # Unit + integration suite (applies migrations automatically), with coverage
-coverage run -m pytest && coverage report        # ~747 tests, ≥99% coverage (gated)
+coverage run -m pytest && coverage report        # ~1,300 tests, >=99% coverage (gated)
 
 # End-to-end browser suite (Playwright against a live server). The Python
 # packages are part of `[dev]`; only the browser binary is a separate step.
