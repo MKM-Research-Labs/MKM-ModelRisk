@@ -169,8 +169,20 @@ const Inventory = {
     // The live estate by default. Hibernated models are fetched only when somebody
     // asks for them (the Hibernated lifecycle filter), so they are absent from the
     // list, the tiles and every figure drawn from them until then.
-    const all = await App.get("/api/models" + (InventoryList.wantsHibernated() ? "?include_retired=1" : ""));
-    const models = all.filter((m) => MrcNav.inScope(this._committees, this._ref, m.data));
+    const wantsHibernated = InventoryList.wantsHibernated();
+    const inScope = (m) => MrcNav.inScope(this._committees, this._ref, m.data);
+    const all = await App.get("/api/models" + (wantsHibernated ? "?include_retired=1" : ""));
+    const models = all.filter(inScope);
+    if (!models.length && !(await this._estateIsEmpty(all, wantsHibernated, inScope))) {
+      // Nothing live in scope, but the estate does hold something — so mount the
+      // list rather than the bare empty state. The empty state carries no filter
+      // bar, and the lifecycle filter is the only route back to a hibernated
+      // model: a register whose models had all been hibernated would otherwise
+      // strand them behind a screen with no control on it. mount() keeps the
+      // filters and the table renders its own "nothing matches" line.
+      InventoryList.mount(models, function (id) { Detail.show(id); });
+      return;
+    }
     if (!models.length) {
       document.getElementById("m-summary").innerHTML = "";
       document.getElementById("m-list").innerHTML = '<div class="empty">' +
@@ -180,5 +192,16 @@ const Inventory = {
     }
     // Delegate tiles, filters and the sortable table to the list view.
     InventoryList.mount(models, function (id) { Detail.show(id); });
+  },
+
+  // Is there genuinely nothing registered in scope, or merely nothing *live*?
+  // A first run should keep the plain "register one above" state rather than a
+  // filter bar over an empty table, so the two are told apart before choosing.
+  // Only asked when the live list came back empty, and skipped entirely when the
+  // fetch already included hibernated models — it is the same question answered.
+  async _estateIsEmpty(all, wantsHibernated, inScope) {
+    if (wantsHibernated) return !all.filter(inScope).length;
+    const everything = await App.get("/api/models?include_retired=1");
+    return !everything.filter(inScope).length;
   },
 };

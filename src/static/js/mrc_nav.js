@@ -26,19 +26,30 @@
 const MrcNav = {
   state: { div: null, mrc: null },
   _cache: null,             // {ref, committees} — shared so tab switches don't re-fetch
+  _gen: 0,                  // bumped by invalidate(); see load()
 
   // Reference data for the nav, fetched once and reused across tabs. Any mutation
   // (via App.confirmPending) invalidates it, so committee/division edits show up.
+  //
+  // An invalidate() landing while a fetch is in flight must not be swallowed: the
+  // response was read before the mutation, so caching it would pin the nav to
+  // pre-mutation data until something else invalidated. Stamp each load with the
+  // generation it started in and only cache when that generation still stands —
+  // otherwise return the fresh read without caching it, and let the next load
+  // re-fetch.
   async load() {
     if (!this._cache) {
+      const gen = this._gen;
       const ref = (await App.get("/api/reference")).data || {};
       const committees = (ref.mrc || []).filter((c) => c.archived !== "true");
-      this._cache = { ref, committees };
+      const loaded = { ref, committees };
+      if (gen === this._gen) this._cache = loaded;
+      return loaded;
     }
     return this._cache;
   },
 
-  invalidate() { this._cache = null; this._key = null; },
+  invalidate() { this._cache = null; this._key = null; this._gen += 1; },
 
   // --- the single persistent bar (#region-nav), shared across the four tabs ---
   _reload: null,            // the active tab's re-filter callback

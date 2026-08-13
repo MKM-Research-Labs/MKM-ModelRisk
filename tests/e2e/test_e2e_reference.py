@@ -67,7 +67,7 @@ def test_division_edit(page: Page, base_url: str):
 def test_division_delete(page: Page, base_url: str):
     _on(page, base_url, "division")
     item_id = add_collection_item(page, "division", {"value": "Markets"})
-    remove_collection_item(page, "division", item_id)
+    remove_collection_item(page, "division", item_id, command="remove_option")
     expect(page.locator(f"[data-ed='division|{item_id}']")).to_have_count(0)
 
 
@@ -101,7 +101,7 @@ def test_line_of_business_delete(page: Page, base_url: str):
     _seed_division(page)
     open_admin_subtab(page, "line_of_business")
     item_id = add_collection_item(page, "line_of_business", {"value": "Rates Trading", "division": "Markets"})
-    remove_collection_item(page, "line_of_business", item_id)
+    remove_collection_item(page, "line_of_business", item_id, command="remove_option")
     expect(page.locator(f"[data-ed='line_of_business|{item_id}']")).to_have_count(0)
 
 
@@ -127,7 +127,7 @@ def test_calculating_agent_edit(page: Page, base_url: str):
 def test_calculating_agent_delete(page: Page, base_url: str):
     _on(page, base_url, "calculating_agent")
     item_id = add_collection_item(page, "calculating_agent", {"value": "Quartz Pricer"})
-    remove_collection_item(page, "calculating_agent", item_id)
+    remove_collection_item(page, "calculating_agent", item_id, command="remove_option")
     expect(page.locator(f"[data-ed='calculating_agent|{item_id}']")).to_have_count(0)
 
 
@@ -155,7 +155,7 @@ def test_people_edit(page: Page, base_url: str):
 def test_people_delete(page: Page, base_url: str):
     _on(page, base_url, "people")
     item_id = add_collection_item(page, "people", {"name": "D. Kelly"})
-    remove_collection_item(page, "people", item_id)
+    remove_collection_item(page, "people", item_id, command="remove_option")
     expect(page.locator(f"[data-ed='people|{item_id}']")).to_have_count(0)
 
 
