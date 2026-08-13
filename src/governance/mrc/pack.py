@@ -244,9 +244,14 @@ def compile_tex(tex: str, assets: dict[str, bytes] | None = None) -> bytes:
     ``FileNotFoundError`` from the subprocess layer.
     """
     if shutil.which("tectonic") is None:
+        # Deliberately platform-neutral: this reaches a Windows pilot as readily as
+        # a developer's Mac, and "brew install" is no help to the former. It also
+        # says PATH out loud, because the usual cause is an installed tectonic.exe
+        # sitting somewhere the app cannot see.
         raise TectonicNotFound(
-            "tectonic is not installed, so PDF reports cannot be generated. "
-            "Install it (e.g. `brew install tectonic`) and try again."
+            "tectonic is not installed, or is not on this process's PATH, so PDF "
+            "reports cannot be generated. See the README (Install tectonic) for "
+            "your platform, then restart the app so it picks up the new PATH."
         )
     with tempfile.TemporaryDirectory() as directory:
         base = Path(directory)

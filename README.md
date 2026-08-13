@@ -220,10 +220,95 @@ py -3.13 --version                                  # Python 3.13.x
 Test-Path 'C:\Program Files\PostgreSQL\16\bin\initdb.exe'   # True
 ```
 
-`tectonic` has no winget package. It is optional: without it the Meeting Pack,
-Model Risk Report and Audit Report PDFs return **503** and every other screen
-works. Install it later from <https://tectonic-typesetting.github.io> if those
-exports are needed.
+`tectonic` is not in winget and has its own step — see
+[Step 2b](#step-2b--install-tectonic-needed-for-every-pdf).
+
+### Step 2b — Install tectonic (needed for every PDF)
+
+Skip only if the pilot does not need PDFs. Without tectonic the **Meeting Pack**,
+**Model Risk Report** and **Audit Report** exports return **503**; every other
+screen works normally.
+
+Two things make this different from the other packages:
+
+- **There is no winget package.** That request is still open upstream, so
+  `winget install tectonic` will not find anything.
+- **The app finds it on `PATH` and nowhere else.** `compile_tex` resolves it with
+  `shutil.which("tectonic")` and there is no setting to point at a path, so
+  wherever `tectonic.exe` lands it must be on `PATH`.
+
+Pick the first of these that your machine allows.
+
+**Option A — Scoop (per-user, no Administrator).** Usually the best fit for a
+managed laptop: Scoop installs into your profile and puts its shims on `PATH` for
+you.
+
+```powershell
+# Install Scoop itself, if you do not already have it
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+scoop install tectonic
+```
+
+**Option B — Download the release archive (no package manager at all).** The most
+likely to work when installers are blocked, because it is just a file.
+
+1. Download the Windows archive from
+   <https://github.com/tectonic-typesetting/tectonic/releases> (the
+   `x86_64-pc-windows-msvc` asset).
+2. Unpack it and put `tectonic.exe` somewhere permanent, e.g.
+   `%LOCALAPPDATA%\Programs\tectonic\`.
+3. Add that folder to your user `PATH` — no Administrator needed:
+
+```powershell
+$dir = "$env:LOCALAPPDATA\Programs\tectonic"
+[Environment]::SetEnvironmentVariable(
+  'PATH', [Environment]::GetEnvironmentVariable('PATH','User') + ";$dir", 'User')
+```
+
+**Option C — The official installer script.** Note what it does: it drops
+`tectonic.exe` **in the directory you run it from**, which is almost certainly not
+on `PATH` — so finish with the `PATH` step from Option B.
+
+```powershell
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+iex ((New-Object System.Net.WebClient).DownloadString('https://drop-ps1.fullyjustified.net'))
+```
+
+**Option D — Build it with Cargo.** Only if the Rust toolchain is already there;
+it is a long compile and needs no admin.
+
+```powershell
+cargo install tectonic
+```
+
+**Check — in a new PowerShell window**, so it picks up the changed `PATH`:
+
+```powershell
+tectonic --version          # → Tectonic 0.x.x
+```
+
+Then confirm the app can see it. `shutil.which` reads the `PATH` of the **running
+process**, so an app that was already running when you installed tectonic will
+keep returning 503 until it is restarted:
+
+```powershell
+# stop the app with Ctrl-C, then
+python model.py
+```
+
+and download a Meeting Pack PDF from any meeting.
+
+> **First run needs the internet.** Tectonic ships as a single executable and
+> downloads the TeX support files it needs on the fly, caching them for later. On
+> a restricted network that first fetch is the thing most likely to fail, and it
+> looks like a hang or a PDF timeout rather than a network error. If the machine
+> goes through a proxy, set it before the first PDF:
+> ```powershell
+> $env:HTTPS_PROXY = 'http://proxy.corp:8080'
+> ```
+> Once the support files are cached, later PDFs do not need the network.
 
 ### Step 3 — Set up and launch
 
