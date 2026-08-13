@@ -75,21 +75,39 @@ pytest tests/e2e -m e2e
 **not** a pass — that exit code is the shell's. Always read the final line:
 `PASS: 0 gated finding(s)` or `FINDINGS: N gated finding(s)`.
 
-**Known-red at HEAD (verified 2026-08-11 on `main`) — 3 tests. Do not chase these:**
+**Known-red at HEAD (verified 2026-08-12 on `main`) — 1 test. Do not chase it:**
 
 ```
 tests/audit/test_audit_large_files.py::test_source_tree_within_limit
-tests/web/test_product_api.py::test_raci_roles_collection_on_a_product
-tests/web/test_product_risk_api.py::test_validation_and_events_collections_are_available
 ```
 
-This list shrinks as well as grows: the three `tests/governance/test_monitoring.py`
-failures that sat here from 2026-08-07 now pass. Treat it the same way as the audit
-baseline below — as a claim with a date on it, not a standing fact. A stale entry costs
-more than a missing one, because it excuses a real regression.
+It fails for the same reason the audit gate sits at 3: the three over-long source files
+below. Fixing one fixes the other; there is nothing else to find in it.
+
+This list shrinks as well as grows. The two product-API entries that sat here were
+tests asserting a retired design — a Product seeds four RACI roles at registration, and
+its validation questions were deliberately removed — so they were fixed, not excused.
+The three `tests/governance/test_monitoring.py` failures were never a `main` failure at
+all: they left `configured` to resolve off disk, so they passed in the main checkout and
+failed in a worktree, which is exactly the sort of entry that rots. Treat this list the
+same way as the audit baseline below — a claim with a date on it, not a standing fact. A
+stale entry costs more than a missing one, because it excuses a real regression.
+
+**The e2e suite is a separate baseline, and it is not green.** `pytest` excludes it, so
+the gate above says nothing about it. Verified 2026-08-12 on `main`: inventory,
+reference, committee and collections pass; `tests/e2e/test_e2e_mrc.py` (9),
+`test_e2e_mrc_meeting.py` (2), `test_e2e_product.py` (6) and `test_e2e_documents.py` (3)
+still fail, all of them tests that have drifted from screens that moved. Two traps if
+you run it:
+
+- The harness uses one fixed database (`mkm_modelrisk_e2e`) and truncates it before
+  every test, so **two e2e runs at once destroy each other's data**. Run one at a time;
+  concurrent runs look like flakiness, not like a collision.
+- Killing a run leaves `tests/e2e/_runserver.py` orphaned (parent PID 1). It serves
+  stale JS on a port nothing points at. Check for strays before blaming a change.
 
 The audit's own gate sits at **3 findings** — three over-long source files, verified
-2026-08-11 on `main`:
+2026-08-12 on `main`:
 
 ```
 384  src/governance/client/pack.py
@@ -100,6 +118,10 @@ The audit's own gate sits at **3 findings** — three over-long source files, ve
 Anything beyond these is yours — diff against `main` before assuming otherwise, since the
 list moves. It moved most recently at `e9a6280`, which pushed `api_models.py` to 301: one
 line over, and the reason this baseline was 2 for a while after it was really 3.
+
+**Test files are gated too, at 400 lines.** It is not in the list above only because
+nothing currently exceeds it, and a few added comments are enough to trip it — run the
+audit, not just `pytest`, before calling a test change done.
 
 ## 4. Verifying a UI change
 
