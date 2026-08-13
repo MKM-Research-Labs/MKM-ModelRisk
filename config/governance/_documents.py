@@ -42,12 +42,14 @@ HISTORY_DOC_CATEGORY = "History"
 # reviews the document the model actually holds rather than a copy of it.
 MRC_REVIEWABLE_CATEGORIES = ("Sensitivity", "Analysis", "Test Results")
 
-# The Testing tab. "Test Results" is the overall evidence pack; the other three back
-# the in-context upload panel beside each unit / integration / benchmark test field.
+# The Testing sub-tab of Docs. "Test Results" is the overall evidence pack; the other
+# three back the in-context upload panel beside each unit / integration / benchmark
+# test field. They are listed there rather than as Docs categories of their own, so a
+# test document appears under Testing and nowhere else.
 TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", "Benchmark Test")
 
-# Attached in context on the Events and Remediation tabs, beside the item they
-# evidence, so they are not offered as standalone Docs categories.
+# Attached in context beside the item they evidence — Remediation sits at the foot of
+# the model's Risk Rating tab — so they are not offered as standalone Docs categories.
 EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
 
 DOC_CATEGORIES = DOC_TAB_CATEGORIES + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES

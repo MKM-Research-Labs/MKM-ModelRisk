@@ -45,13 +45,12 @@ const TESTING_FIELDS = ["unit_tests", "integration_tests", "benchmark_tests"];
 const TESTING_DOC_CATEGORY = {
   unit_tests: "Unit Test", integration_tests: "Integration Test", benchmark_tests: "Benchmark Test",
 };
-// The model-wide test evidence pack, shown at the top of the Testing tab. Mirrors
+// The model-wide test evidence pack, shown at the top of the Testing panel. Mirrors
 // the first entry of config TESTING_DOC_CATEGORIES.
 const TEST_RESULTS_CATEGORY = "Test Results";
-// Collection tabs that carry an in-context supporting-documents panel.
-const COLLECTION_DOC_CATEGORY = {
-  remediation_steps: "Remediation Evidence",
-};
+// The evidence that closes a remediation step, uploaded in context beside the
+// register on the Risk Rating tab rather than offered as a Docs category.
+const REMEDIATION_DOC_CATEGORY = "Remediation Evidence";
 const HEADER_DATES = ["next_review_date"];
 
 const Detail = {
@@ -78,6 +77,10 @@ const Detail = {
     this._audit = audit.filter((e) => e.aggregate_id === modelId);
     this._decisions = decisions;
     this._analysisPresentations = presentations;
+    // Testing is a Docs sub-tab and Remediation a section of Risk Rating now, so a
+    // link to either of the old tabs lands where its content moved to.
+    if (tab === "testing") { tab = "docs"; ModelDocs.select("Testing"); }
+    if (tab === "remediation_steps") tab = "risk";
     if (tab) this._tab = tab;
     this._render();
     if (!opts || opts.scroll !== false) {
@@ -126,21 +129,20 @@ const Detail = {
     const n = (k) => (d[k] || []).length;
     const vq = d.validation_questions || [];
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
-    // The Testing tab is document-driven now that the Yes/No flags are gone, so its
-    // badge counts the test evidence attached rather than a stuck "0/3".
-    const tst = DocLinks.countIn(d.documents, this._specs.testing_doc_categories);
     const tabs = [
-      ["overview", "Overview", null], ["remediation_steps", "Remediation", openRemediationCount(d.remediation_steps)],
+      ["overview", "Overview", null],
       ["version_history", "Versions", n("version_history")], ["limitations", "Limitations", n("limitations")],
       ["dependencies", "Dependencies", n("dependencies")],
       ["connections", "Connections", null],
       ["raci_roles", "RACI", n("raci_roles")],
       ["validation_questions", "Validation & Assumptions", cov],
-      ["testing", "Testing", tst],
       ["risk", "Risk Rating", null],
       ["decisions", "MRC linkage",
         (d.signoff_history || []).length + this._decisions.length],
-      ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],
+      // Testing is a sub-tab of Docs, so the Docs badge counts the test evidence too
+      // — otherwise the tab would under-report what sits behind it.
+      ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories) +
+        DocLinks.countIn(d.documents, this._specs.testing_doc_categories)],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
@@ -177,18 +179,20 @@ const Detail = {
         "the model on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
         policyNotice(d.division) +
         this._riskTable(d) +
-        DetailTabs.risk(this._risk, false, d.division);  // events are product-only
+        DetailTabs.risk(this._risk, false, d.division) +  // events are product-only
+        this._remediationSection(d);
       this._bindEdits();          // the risk-assessment fields are editable here now
       this._bindSignoffRequest();
+      this._bindRemediation(d);
       return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
     if (this._tab === "decisions") { box.innerHTML = this._mrcLinkage(d); return; }
     if (this._tab === "docs") {
-      // Docs is the model's own documentation and supporting analysis. Testing
-      // evidence lives on the Testing tab and Remediation Evidence on the
-      // Remediation tab, each beside what it evidences, so nothing is listed twice.
+      // Docs is the model's own documentation and supporting analysis, including its
+      // test evidence on the Testing sub-tab. Remediation Evidence stays on the
+      // Remediation register, beside what it evidences, so nothing is listed twice.
       // The Model Risk Document is generated from the inventory on request, so it
       // is offered as an action rather than filed as one more uploaded row that
       // could go stale against the record it describes.
@@ -202,7 +206,7 @@ const Detail = {
         '<a class="btn small primary" target="_blank" rel="noopener" id="mrd-issue" href="/api/models/' +
         esc(this._id) + '/risk-document.pdf">Model Risk Document (PDF)</a></span></div>' +
         '<div id="docs-host"></div>';
-      ModelDocs.render(this._id, d.documents || [], this._specs.doc_tab_categories || [],
+      ModelDocs.render(this._id, d.documents || [], this._docsSubtabs(d),
         this._model.retired, "/api/models/", () => this.show(this._id, "docs"), "docs-host");
       // Issuing files a copy under History. Fetch the PDF ourselves so we know
       // when the server has finished generating and filing it, then refresh so the
@@ -242,25 +246,6 @@ const Detail = {
         this._collSection("change_history", d);
       this._bindCollections(["version_history", "change_history"]); return;
     }
-    // Testing tab: every piece of testing evidence for the model. The overall test
-    // results pack sits at the top, then the unit / integration / benchmark fields,
-    // each with its own in-context upload panel. None of this appears under Docs.
-    if (this._tab === "testing") {
-      const docOpts = (cat) => ({ category: cat, docs: d.documents || [], base: "/api/models/",
-        id: this._id, retired: this._model.retired, refresh: () => this.show(this._id, "testing") });
-      // Each test type is a sub-header over its own upload panel. The old Yes/No
-      // flag is gone — the attached documents are the evidence, so a separate
-      // "tests exist?" tick added nothing.
-      box.innerHTML = '<div class="section-header">Test results</div>' +
-        DocPanel.html(docOpts(TEST_RESULTS_CATEGORY)) +
-        '<div class="section-header" style="margin-top:14px">Testing</div>' +
-        TESTING_FIELDS.map((k) =>
-          '<div class="section-header" style="margin-top:12px;font-size:13px">' +
-          esc(this.specByKey(k).label) + "</div>" +
-          DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
-      DocPanel.bind(docOpts(TEST_RESULTS_CATEGORY));
-      TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k]))); return;
-    }
     // Limitations tab: Model weaknesses + Limitations.
     if (this._tab === "limitations") {
       box.innerHTML = this._collSection("model_weaknesses", d) +
@@ -268,20 +253,75 @@ const Detail = {
       this._bindCollections(["model_weaknesses", "limitations"]); return;
     }
     const spec = this.collSpec(this._tab);
-    let html = Collections.render(d, { collections: [spec] }, this._model.retired);
-    const docCat = COLLECTION_DOC_CATEGORY[this._tab];
-    const docOpts = { category: docCat, docs: d.documents || [], base: "/api/models/", id: this._id,
-      retired: this._model.retired,
-      refresh: () => this.show(this._id, this._tab, { scroll: false }) };
-    if (docCat) html += '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
-      DocPanel.html(docOpts);
-    box.innerHTML = html;
+    box.innerHTML = Collections.render(d, { collections: [spec] }, this._model.retired);
     this._bindCollection(this._tab);
-    if (docCat) DocPanel.bind(docOpts);
+  },
+
+  // Remediation: the steps register plus the evidence that closes them, shown at the
+  // foot of Risk Rating. Remediation is what the model is doing about its rating, so
+  // it reads there rather than on a tab of its own. The open count travels with the
+  // heading, since the tab badge that used to carry it has gone.
+  _remediationSection(d) {
+    const open = openRemediationCount(d.remediation_steps);
+    return '<div class="section-header" style="margin-top:18px">Remediation (' + open +
+      " open)</div>" +
+      '<p class="muted" style="font-size:12px;margin:0 0 8px">The steps being taken to ' +
+      "address this model's risk, and the evidence that closes them.</p>" +
+      this._collSection("remediation_steps", d) +
+      '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
+      DocPanel.html(this._remediationDocOpts(d));
+  },
+
+  _remediationDocOpts(d) {
+    return { category: REMEDIATION_DOC_CATEGORY, docs: d.documents || [], base: "/api/models/",
+      id: this._id, retired: this._model.retired,
+      refresh: () => this.show(this._id, "risk", { scroll: false }) };
+  },
+
+  _bindRemediation(d) {
+    this._bindCollections(["remediation_steps"]);
+    DocPanel.bind(this._remediationDocOpts(d));
   },
 
   _collSection(key, d) {
     return Collections.render(d, { collections: [this.collSpec(key)] }, this._model.retired);
+  },
+
+  // The Docs sub-tabs: the configured document categories, with Testing inserted
+  // just to the left of Monitoring. Test evidence is documentation about the model
+  // like the rest of it, so it reads as one of Docs' panels rather than taking a tab
+  // of its own on the header. If an installation has no Monitoring category the
+  // panel goes last, so it is never dropped.
+  _docsSubtabs(d) {
+    const cats = (this._specs.doc_tab_categories || []).slice();
+    const testing = {
+      key: "Testing", label: "Testing",
+      count: DocLinks.countIn(d.documents, this._specs.testing_doc_categories),
+      render: (host) => this._renderTesting(host, d),
+    };
+    const at = cats.indexOf("Monitoring");
+    cats.splice(at < 0 ? cats.length : at, 0, testing);
+    return cats;
+  },
+
+  // The Testing panel: every piece of testing evidence for the model. The overall
+  // test results pack sits at the top, then the unit / integration / benchmark
+  // fields, each with its own upload panel. Each test type is a sub-header over its
+  // own panel; the old Yes/No flag is gone — the attached documents are the
+  // evidence, so a separate "tests exist?" tick added nothing.
+  _renderTesting(host, d) {
+    const docOpts = (cat) => ({ category: cat, docs: d.documents || [], base: "/api/models/",
+      id: this._id, retired: this._model.retired,
+      refresh: () => this.show(this._id, "docs", { scroll: false }) });
+    document.getElementById(host).innerHTML =
+      '<div class="section-header">Test results</div>' +
+      DocPanel.html(docOpts(TEST_RESULTS_CATEGORY)) +
+      TESTING_FIELDS.map((k) =>
+        '<div class="section-header" style="margin-top:14px">' +
+        esc(this.specByKey(k).label) + "</div>" +
+        DocPanel.html(docOpts(TESTING_DOC_CATEGORY[k]))).join("");
+    DocPanel.bind(docOpts(TEST_RESULTS_CATEGORY));
+    TESTING_FIELDS.forEach((k) => DocPanel.bind(docOpts(TESTING_DOC_CATEGORY[k])));
   },
 
   // The model's MRC record: granted rating sign-offs (which land here once a

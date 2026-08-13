@@ -18,11 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Model Docs tab: per-category (Core Documentation / Test Results / Analysis /
-// Monitoring) uploadable document lists with download and delete.
+// Model Docs tab: per-category (Core Documentation / Sensitivity / Analysis /
+// Monitoring / History) uploadable document lists with download and delete.
+//
+// A sub-tab is normally just a category name. It can instead be a panel object
+// {key, label, count, render(hostId)}, which the caller renders itself — the
+// model's Testing panel arrives this way, because test evidence spans four
+// categories and so cannot be one plain upload list.
 const ModelDocs = {
   _id: null, _docs: [], _categories: [], _retired: false, _cat: null,
   _base: "/api/models/", _refresh: null, _host: "dt-content",
+
+  _key(c) { return typeof c === "string" ? c : c.key; },
+  _entry(key) {
+    const self = this;
+    return this._categories.find((c) => self._key(c) === key);
+  },
+
+  // Pre-select a sub-tab (by key) before the next render — used where a link
+  // targets one panel of the Docs tab rather than the tab as a whole.
+  select(key) { this._cat = key; },
 
   // base / refresh / host let the same renderer serve any aggregate (models, Products).
   render(modelId, docs, categories, retired, base, refresh, host) {
@@ -33,7 +48,7 @@ const ModelDocs = {
     this._base = base || "/api/models/";
     this._refresh = refresh || (() => Detail.show(this._id, "docs"));
     this._host = host || "dt-content";
-    if (!this._cat || categories.indexOf(this._cat) < 0) this._cat = categories[0];
+    if (!this._cat || !this._entry(this._cat)) this._cat = this._key(categories[0]);
     document.getElementById(this._host).innerHTML =
       this._subtabs() + '<div id="docs-cat"></div>';
     const self = this;
@@ -49,13 +64,18 @@ const ModelDocs = {
 
   _subtabs() {
     return '<div class="dtabs">' + this._categories.map((c) => {
-      const n = DocLinks.visible(this._docs, c).length;
-      return '<button class="dtab' + (c === this._cat ? " active" : "") + '" data-doctab="' +
-        esc(c) + '">' + esc(c) + " (" + n + ")</button>";
+      const key = this._key(c);
+      const n = typeof c === "string" ? DocLinks.visible(this._docs, c).length : c.count;
+      const label = typeof c === "string" ? c : c.label;
+      return '<button class="dtab' + (key === this._cat ? " active" : "") + '" data-doctab="' +
+        esc(key) + '">' + esc(label) + " (" + n + ")</button>";
     }).join("") + "</div>";
   },
 
   _renderCategory() {
+    // A caller-rendered panel owns its own host, uploads and bindings.
+    const entry = this._entry(this._cat);
+    if (entry && typeof entry !== "string") { entry.render("docs-cat"); return; }
     const items = DocLinks.visible(this._docs, this._cat);
     const rows = items.length ? items.map((d) =>
       "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +

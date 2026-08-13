@@ -277,8 +277,8 @@ Click a model row to open its **detail view**. The header shows the name, its
 `id · version · category`, tier badge, next-review date and — on the right — the
 **Owner** RAG badge. The detail tabs, in order, are:
 
-**Overview · Remediation · Versions · Limitations · Dependencies · RACI ·
-Validation & Assumptions · Testing · Risk Rating · MRC linkage · Docs · Danger ·
+**Overview · Versions · Limitations · Dependencies · RACI ·
+Validation & Assumptions · Risk Rating · MRC linkage · Docs · Danger ·
 Audit.**
 
 - **Overview** — a **Summary** band (the description) then two columns: **Model
@@ -287,8 +287,6 @@ Audit.**
   rationales) and **Governance** (the responsible MRC, RAG rating, Owner and role,
   Lifecycle stage, Review status, Peer reviewer, Validation date, MRC status, Next
   review). Fill any field via its inline **edit** link.
-- **Remediation** — remediation steps: Description, Owner, Priority (Low/Medium/High),
-  Due date, Status (Open / In Progress / Closed). The tab badge counts open steps.
 - **Versions** — the version register (Version, Date, Description, Author, Reference
   document, Lifecycle) plus the **Change history** register.
 - **Limitations** — two registers: **Model weaknesses** (Description, Impact) and
@@ -300,14 +298,18 @@ Audit.**
   Consulted / Informed), Assigned to, Backup, Description.
 - **Validation & Assumptions** — the nine SR 26-2 questions (section 10) plus the
   **Assumptions** register (Description, Impact, Monitoring, Mitigation).
-- **Testing** — evidence-driven: upload **Unit tests**, **Integration tests** and
-  **Benchmark tests** results into their panels. (The old Yes/No flags are gone;
-  the record is the attached evidence.)
-- **Risk Rating** — see section 9.
+- **Risk Rating** — see section 9. **Remediation** sits at the foot of this tab:
+  remediation steps (Description, Owner, Priority (Low/Medium/High), Due date,
+  Status (Open / In Progress / Closed)) with the **Supporting documents** panel that
+  files the evidence closing them. The heading carries the open-step count.
 - **MRC linkage** — the meeting decisions and actions tagged to this model
   (section 16), read-only here.
-- **Docs** — item-specific documents, plus **Model Risk Document (PDF)** and
-  **Client pack (ZIP)** generation for this model.
+- **Docs** — item-specific documents on per-category sub-tabs (**Core Documentation ·
+  Sensitivity · Analysis · Testing · Monitoring · History**), plus **Model Risk
+  Document (PDF)** and **Client pack (ZIP)** generation for this model. The
+  **Testing** sub-tab is evidence-driven: upload the overall **Test results** pack
+  and the **Unit tests**, **Integration tests** and **Benchmark tests** results into
+  their panels. (The old Yes/No flags are gone; the record is the attached evidence.)
 - **Danger** — **Request retire…** (hibernate) or **Request reactivate…**. Both go
   to the responsible committee as a sign-off item to ratify (section 13); they are
   not immediate.
