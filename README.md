@@ -61,7 +61,7 @@ and reason.
 |---|---|
 | **Persistence** | PostgreSQL, accessed only through `src/database/` (one sanctioned utility). |
 | **Model of record** | Event sourcing / CQRS — an append-only `events` table; read models (projections) are rebuilt from it. |
-| **Immutability** | Enforced at the database-grant level: the runtime `mkm_app` role can `SELECT`/`INSERT` but never `UPDATE`/`DELETE`/`TRUNCATE`. Each event chains to the previous event's SHA-256 hash, so tampering is detectable. |
+| **Immutability** | Enforced at the database-grant level: the runtime `mkm_app` role can `SELECT`/`INSERT` but never `UPDATE`/`DELETE`/`TRUNCATE`. Those grants are PostgreSQL DDL and do **not** cross to another engine — for SQL Server see [`docs/mssql-immutability.md`](docs/mssql-immutability.md). Each event chains to the previous event's SHA-256 hash, so tampering is detectable. |
 | **Authorisation** | No built-in auth — identity arrives from SSO at the perimeter. All users may amend; a confirmation step is mandatory and the actor + reason are stamped on every event. |
 | **Web layer** | A Flask app factory + blueprints, with a dependency-free vanilla-JS console. |
 | **Documents & PDFs** | Uploads stored on disk with metadata in the event stream; PDFs rendered via LaTeX (tectonic). |
