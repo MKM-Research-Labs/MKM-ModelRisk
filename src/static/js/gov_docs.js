@@ -30,9 +30,12 @@ function parseModelTypes(str) {
 // regulatory texts — which is everything filed here to date. Artefacts is for what the
 // institution itself produces; what belongs there is still being decided, so it is an
 // empty panel rather than a guess at a schema.
+// Vendors is a third kind again: neither what we read nor what we issue, but what a
+// supplier hands over about its own product. It lives in gov_vendor_docs.js.
 const GOV_DOC_PANELS = [
   { key: "bibliography", label: "Bibliography" },
   { key: "artefacts", label: "Artefacts" },
+  { key: "vendors", label: "Vendors" },
 ];
 
 const GovDocs = {
@@ -58,10 +61,13 @@ const GovDocs = {
     if (!this._shelf || this._shelves.indexOf(this._shelf) < 0) this._shelf = this._shelves[0];
     this._types = parseModelTypes(settings.fields.document_model_types);
     this._filter = "";
+    if (this._panel === "vendors") await GovVendorDocs.load();
     document.getElementById("tab-documents").innerHTML = this._shell();
     if (this._panel === "bibliography") {
       this._renderRows();
       this._bindShell();
+    } else if (this._panel === "vendors") {
+      GovVendorDocs.bind();
     } else {
       this._bindArtefacts();
     }
@@ -111,6 +117,7 @@ const GovDocs = {
 
   _shell() {
     if (this._panel === "artefacts") return this._artefactsShell();
+    if (this._panel === "vendors") return GovVendorDocs.shell(this._panelTabs());
     const opts = ['<option value="">All model types</option>']
       .concat(this._types.map((t) => '<option value="' + esc(t) + '">' + esc(t) + "</option>"))
       .join("");
