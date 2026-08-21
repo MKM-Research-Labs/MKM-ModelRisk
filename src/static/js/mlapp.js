@@ -84,31 +84,51 @@ const MLApps = {
       { ml_application_id: id, fields: fields }, () => this.render());
   },
 
-  // Summary tiles, one per lifecycle stage the INSTITUTION has defined (Admin >
-  // Vocabulary), not a set of stage names chosen here. An adopter that renames or
-  // replaces its stages gets tiles that match, because the options come from the
-  // field spec the API publishes. Colour is neutral for the same reason: nothing
-  // here knows which of somebody else's stages is the good one.
-  _summary(records) {
-    const spec = this.fieldSpec("lifecycle_stage") || {};
-    const stages = spec.options || [];
-    const shown = spec.option_labels || {};
-    const card = (lbl, v, color) =>
-      '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
-      esc(lbl) + '</div><div class="val">' + v + "</div></div>";
-    const live = records.filter((r) => !r.retired);
-    return '<div class="summary">' +
-      card("Total", records.length, "#1976d2") +
-      stages.map((stage) =>
-        card(shown[stage] || stage,
-             live.filter((r) => (r.data || {}).lifecycle_stage === stage).length,
-             "#607d8b")).join("") +
-      // "Hibernated", not "Retired": retirement is a flag on the record, not a stage,
-      // and an institution whose vocabulary happens to contain a stage called Retired
-      // would otherwise get two tiles with the same word counting different things.
-      // The Models list draws the same distinction with the same word.
-      card("Hibernated", records.filter((r) => r.retired).length, "#9e9e9e") +
-      "</div>";
+  // The same list the Models register draws -- tiles, filters, sortable table --
+  // through createRecordList, so the two look and behave the same. Only the columns
+  // and the id key differ, and the Estimator column takes the place of the model's
+  // Criticality/Name pairing because it is the first thing asked of an ML estate.
+  _list: null,
+
+  list() {
+    if (!this._list) {
+      const self = this;
+      this._list = createRecordList({
+        idKey: "ml_application_id", summaryId: "mlapp-summary", listId: "mlapp-list",
+        filtersId: "mla-filters", tableId: "mla-table", p: "af-",
+        noun: "ML Applications",
+        spec: (key) => self.fieldSpec(key),
+        reload: () => self.loadList(),
+      }, [
+        { key: "id", label: "ID", sortVal: (m) => m.id.toLowerCase(),
+          cell: (m) => '<span class="modelid">' + esc(m.id) + "</span>" },
+        { key: "name", label: "Name", sortVal: (m) => (m.d.name || "").toLowerCase(),
+          cell: (m) => fieldDisplay(m.d.name) },
+        { key: "estimator", label: "Estimator",
+          sortVal: (m) => (m.d.estimator || "").toLowerCase(),
+          cell: (m) => '<span class="code">' + fieldDisplay(m.d.estimator) +
+            (m.d.estimator_version
+              ? ' <span class="muted">' + esc(m.d.estimator_version) + "</span>" : "") +
+            "</span>" },
+        { key: "tier", label: "Criticality", sortVal: (m) => m.d.tier || 99,
+          cell: (m) => tierBadge(m.d.tier, m.d.division) },
+        { key: "rag", label: "Risk Rating",
+          sortVal: (m) => ragOrder(m.d.rag_rating, m.d.division),
+          cell: (m) => ragBadge(m.d.rag_rating, m.d.division) },
+        { key: "owner", label: "Owner", sortVal: (m) => (m.d.owner || "").toLowerCase(),
+          cell: (m) => fieldDisplay(m.d.owner) },
+        { key: "next", label: "Next Review",
+          sortVal: (m) => m.d.next_review_date || "9999",
+          cell: (m) => fieldDisplay(m.d.next_review_date) },
+        { key: "mrc", label: "MRC Status", sortVal: (m) => mrcState(m.d),
+          cell: (m) => mrcStatusBadge(m.d) },
+        { key: "lifecycle", label: "Lifecycle",
+          sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || "").toLowerCase(),
+          cell: (m) => m.retired ? '<span class="pill">retired</span>'
+            : optionLabel(self.fieldSpec("lifecycle_stage"), m.d.lifecycle_stage) },
+      ]);
+    }
+    return this._list;
   },
 
   async loadList() {
@@ -116,40 +136,11 @@ const MLApps = {
     this._ref = nav.ref;
     this._committees = nav.committees;
     const all = await App.get("/api/ml-applications");
-    const records = all.filter((r) => MrcNav.inScope(this._committees, this._ref, r.data));
-    document.getElementById("mlapp-summary").innerHTML = this._summary(records);
-    const box = document.getElementById("mlapp-list");
-    if (!records.length) {
-      box.innerHTML = '<div class="empty">' +
-        (MrcNav.state.div
-          ? "No ML Applications in this scope yet. Register one above."
-          : "No ML Applications yet. Register one above.") + "</div>";
-      return;
-    }
-    let rows = "";
-    records.forEach(function (r) {
-      const d = r.data || {};
-      // Estimator and version together: "which engine, at which release" is the first
-      // question asked of an ML estate, and neither half answers it alone.
-      const engine = fieldDisplay(d.estimator) +
-        (d.estimator_version ? ' <span class="muted">' + esc(d.estimator_version) + "</span>" : "");
-      rows +=
-        '<tr class="clickable" data-id="' + esc(r.ml_application_id) + '">' +
-        '<td class="modelid">' + esc(r.ml_application_id) + "</td>" +
-        "<td>" + fieldDisplay(d.name) + "</td>" +
-        '<td><span class="code">' + engine + "</span></td>" +
-        "<td>" + fieldDisplay(d.owner) + "</td>" +
-        "<td>" + tierBadge(d.tier, d.division) + "</td>" +
-        "<td>" + ragBadge(d.rag_rating, d.division) + "</td>" +
-        "<td>" + (r.retired ? '<span class="pill">retired</span>'
-          : optionLabel(MLApps.fieldSpec("lifecycle_stage"), d.lifecycle_stage)) +
-        "</td></tr>";
-    });
-    box.innerHTML =
-      "<table><thead><tr><th>ID</th><th>Name</th><th>Estimator</th><th>Owner</th>" +
-      "<th>Tier</th><th>RAG</th><th>Lifecycle</th></tr></thead><tbody>" + rows + "</tbody></table>";
-    box.querySelectorAll("tr.clickable").forEach(function (tr) {
-      tr.onclick = function () { MLAppDetail.show(tr.getAttribute("data-id")); };
-    });
+    // Retired records are out of the estate and out of every figure, exactly as a
+    // hibernated model is: they appear only when the Lifecycle filter asks for them.
+    const wanted = this.list().wantsHibernated()
+      ? all : all.filter((r) => !r.retired);
+    const records = wanted.filter((r) => MrcNav.inScope(this._committees, this._ref, r.data));
+    this.list().mount(records, (id) => MLAppDetail.show(id));
   },
 };

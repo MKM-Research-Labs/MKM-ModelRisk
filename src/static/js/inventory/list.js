@@ -29,7 +29,19 @@ const LIFECYCLE_STAGES = ["Development", "Validation", "Production", "Retired"];
 // it, say — is to ask. Picking it re-fetches with the retired models included.
 const HIBERNATED_FILTER = "Hibernated";
 
+// The list is the same furniture for every register: tiles over filters over a
+// sortable table. What differs is the id key, which columns it draws and which
+// elements it draws into -- so those are configuration and the rest is written once.
+// ``createRecordList`` below makes an instance; ML Applications make a second.
 const InventoryList = {
+  _cfg: {
+    idKey: "model_id", summaryId: "m-summary", listId: "m-list",
+    filtersId: "m-filters", tableId: "m-table", p: "mf-", noun: "models",
+    spec: (key) => (typeof Inventory !== "undefined" && Inventory.specByKey
+      ? Inventory.specByKey(key) : null),
+    reload: () => Inventory.loadList(),
+  },
+
   // Whether the list is currently asking for hibernated models. Read by the fetch
   // in inventory.js, because choosing this filter changes what has to be fetched,
   // not just what is shown.
@@ -43,8 +55,8 @@ const InventoryList = {
   // Column set: key drives sorting; sortVal extracts a comparable value; cell
   // renders the <td> body from a model's data document.
   _columns: [
-    { key: "model_id", label: "ID", sortVal: (m) => m.model_id.toLowerCase(),
-      cell: (m) => '<span class="modelid">' + esc(m.model_id) + "</span>" },
+    { key: "id", label: "ID", sortVal: (m) => m.id.toLowerCase(),
+      cell: (m) => '<span class="modelid">' + esc(m.id) + "</span>" },
     { key: "name", label: "Name", sortVal: (m) => (m.d.name || "").toLowerCase(),
       cell: (m) => fieldDisplay(m.d.name) },
     { key: "tier", label: "Criticality", sortVal: (m) => m.d.tier || 99,
@@ -63,12 +75,12 @@ const InventoryList = {
     { key: "mrc", label: "MRC Status", sortVal: (m) => mrcState(m.d),
       cell: (m) => mrcStatusBadge(m.d) },
     { key: "lifecycle", label: "Lifecycle", sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || m.d.status || "").toLowerCase(),
-      cell: (m) => m.retired ? '<span class="pill">retired</span>'
-        : optionLabel(Inventory.specByKey("lifecycle_stage"), m.d.lifecycle_stage || m.d.status) },
+      cell: function (m) { return m.retired ? '<span class="pill">retired</span>'
+        : optionLabel(InventoryList._cfg.spec("lifecycle_stage"), m.d.lifecycle_stage || m.d.status); } },
   ],
 
   mount(models, onRow) {
-    this._models = models.map((m) => ({ model_id: m.model_id, retired: m.retired, d: m.data || {} }));
+    this._models = models.map((m) => ({ id: m[this._cfg.idKey], retired: m.retired, d: m.data || {} }));
     this._onRow = onRow;
     // Filters survive a re-mount. Choosing "Hibernated" re-fetches, and clearing
     // the filters here would drop the very filter that asked for the reload —
@@ -78,11 +90,12 @@ const InventoryList = {
     // are at the top on load; unscheduled ("9999" sort key) fall to the bottom.
     // Any header click still re-sorts and toggles.
     this._sort = { key: "next", dir: 1 };
-    document.getElementById("m-summary").innerHTML = this._tiles() +
+    document.getElementById(this._cfg.summaryId).innerHTML = this._tiles() +
       policyDraftNotice(this._models.map((m) => m.d.division));
     this._wireTiles();
-    document.getElementById("m-list").innerHTML =
-      '<div id="m-filters" class="filters"></div><div id="m-table"></div>';
+    document.getElementById(this._cfg.listId).innerHTML =
+      '<div id="' + this._cfg.filtersId + '" class="filters"></div>' +
+      '<div id="' + this._cfg.tableId + '"></div>';
     this._renderFilters();
     this._renderTable();
   },
@@ -146,7 +159,7 @@ const InventoryList = {
       (filter ? ' data-tile="' + filter + '"' : "") + '><div class="lbl">' + lbl +
       '</div><div class="val">' + val + "</div></div>";
     return '<div class="summary">' +
-      tile("Total Models", live.length, "#1976d2", "") +
+      tile("Total " + this._cfg.noun, live.length, "#1976d2", "") +
       this._mcBands().map((b) => tile(esc(b.name), byTier(b.score),
         b.colour || TIER_COLORS[b.score] || "#9e9e9e", "tier=" + b.score)).join("") +
       tile(esc(ragLabel), ragVal, "#388e3c", "") +
@@ -156,7 +169,7 @@ const InventoryList = {
 
   _wireTiles() {
     const self = this;
-    document.querySelectorAll("#m-summary [data-tile]").forEach(function (el) {
+    document.querySelectorAll("#" + this._cfg.summaryId + " [data-tile]").forEach(function (el) {
       el.classList.add("clickable-tile");
       el.onclick = function () {
         const [key, val] = el.getAttribute("data-tile").split("=");
@@ -171,15 +184,13 @@ const InventoryList = {
   // The stages the estate actually uses, from the division's vocabulary, falling
   // back to the shipped words before it has been seeded.
   _lifecycleValues() {
-    const spec = typeof Inventory !== "undefined" && Inventory.specByKey
-      ? Inventory.specByKey("lifecycle_stage") : null;
+    const spec = this._cfg.spec("lifecycle_stage");
     return (spec && spec.options && spec.options.length) ? spec.options : LIFECYCLE_STAGES;
   },
 
   // What each stage is shown as, where the institution has renamed one.
   _lifecycleLabels() {
-    const spec = typeof Inventory !== "undefined" && Inventory.specByKey
-      ? Inventory.specByKey("lifecycle_stage") : null;
+    const spec = this._cfg.spec("lifecycle_stage");
     return (spec && spec.option_labels) || {};
   },
 
@@ -198,22 +209,22 @@ const InventoryList = {
     // the option's value and its label differ — hence its own builder.
     const mcLabel = Policy.dimensionLabel("mission_criticality",
       (typeof MrcNav !== "undefined" && MrcNav.state) ? MrcNav.state.div : null);
-    const tierSel = '<select id="mf-tier"><option value="">All ' +
+    const tierSel = '<select id="' + this._cfg.p + 'tier"><option value="">All ' +
       esc(mcLabel || "tiers") + "</option>" +
       this._mcBands().map((b) => '<option value="' + esc(b.score) + '"' +
         (String(b.score) === String(f.tier) ? " selected" : "") + ">" + esc(b.name) +
         "</option>").join("") + "</select>";
-    document.getElementById("m-filters").innerHTML =
-      '<input id="mf-q" placeholder="Search id or name…" value="' + esc(f.q) + '">' +
+    document.getElementById(this._cfg.filtersId).innerHTML =
+      '<input id="' + this._cfg.p + 'q" placeholder="Search id or name…" value="' + esc(f.q) + '">' +
       tierSel +
       // Policy order, so a division's own ratings (and only those) are offered.
-      sel("mf-rag", f.rag, ["All ratings", ...this._ratings().map((r) => r.name)]) +
-      sel("mf-owner", f.owner, ["All owners", ...owners]) +
-      sel("mf-review", f.review, ["All reviews", "Overdue", "Due Soon", "On Track", "Not Scheduled"]) +
-      sel("mf-lifecycle", f.lifecycle, ["All lifecycle", ...this._lifecycleValues(), HIBERNATED_FILTER],
+      sel(this._cfg.p + "rag", f.rag, ["All ratings", ...this._ratings().map((r) => r.name)]) +
+      sel(this._cfg.p + "owner", f.owner, ["All owners", ...owners]) +
+      sel(this._cfg.p + "review", f.review, ["All reviews", "Overdue", "Due Soon", "On Track", "Not Scheduled"]) +
+      sel(this._cfg.p + "lifecycle", f.lifecycle, ["All lifecycle", ...this._lifecycleValues(), HIBERNATED_FILTER],
           this._lifecycleLabels()) +
-      '<button class="btn small" id="mf-clear">Clear</button>' +
-      '<span class="fcount" id="mf-count"></span>';
+      '<button class="btn small" id="' + this._cfg.p + 'clear">Clear</button>' +
+      '<span class="fcount" id="' + this._cfg.p + 'count"></span>';
     this._wireFilters();
   },
 
@@ -223,21 +234,21 @@ const InventoryList = {
       const el = document.getElementById(id);
       el[ev] = function () { self._filters[key] = el.value; self._renderTable(); };
     };
-    bind("mf-q", "q", "oninput");
-    bind("mf-tier", "tier", "onchange");
-    bind("mf-rag", "rag", "onchange");
-    bind("mf-owner", "owner", "onchange");
-    bind("mf-review", "review", "onchange");
-    document.getElementById("mf-lifecycle").onchange = function () {
-      const el = document.getElementById("mf-lifecycle");
+    bind(this._cfg.p + "q", "q", "oninput");
+    bind(this._cfg.p + "tier", "tier", "onchange");
+    bind(this._cfg.p + "rag", "rag", "onchange");
+    bind(this._cfg.p + "owner", "owner", "onchange");
+    bind(this._cfg.p + "review", "review", "onchange");
+    document.getElementById(this._cfg.p + "lifecycle").onchange = function () {
+      const el = document.getElementById(this._cfg.p + "lifecycle");
       const was = self._filters.lifecycle === HIBERNATED_FILTER;
       self._filters.lifecycle = el.value;
       // Hibernated models are not in the list this page was drawn from, so
       // switching into (or out of) that filter has to go back for the data.
-      if (was !== (el.value === HIBERNATED_FILTER)) { Inventory.loadList(); return; }
+      if (was !== (el.value === HIBERNATED_FILTER)) { self._cfg.reload(); return; }
       self._renderTable();
     };
-    document.getElementById("mf-clear").onclick = function () {
+    document.getElementById(this._cfg.p + "clear").onclick = function () {
       self._filters = { q: "", tier: "", rag: "", owner: "", review: "", lifecycle: "" };
       self._renderFilters();
       self._renderTable();
@@ -249,7 +260,7 @@ const InventoryList = {
     const f = this._filters;
     const q = f.q.trim().toLowerCase();
     let rows = this._models.filter((m) => {
-      if (q && (m.model_id + " " + (m.d.name || "")).toLowerCase().indexOf(q) < 0) return false;
+      if (q && (m.id + " " + (m.d.name || "")).toLowerCase().indexOf(q) < 0) return false;
       if (f.tier && String(m.d.tier) !== f.tier) return false;
       if (f.rag && m.d.rag_rating !== f.rag) return false;
       if (f.owner && m.d.owner !== f.owner) return false;
@@ -270,18 +281,18 @@ const InventoryList = {
 
   _renderTable() {
     const rows = this._visible();
-    const count = document.getElementById("mf-count");
+    const count = document.getElementById(this._cfg.p + "count");
     if (count) count.textContent = rows.length + " of " + this._models.length;
-    const box = document.getElementById("m-table");
+    const box = document.getElementById(this._cfg.tableId);
     if (!rows.length) {
-      box.innerHTML = '<div class="empty">No models match these filters.</div>';
+      box.innerHTML = '<div class="empty">No ' + this._cfg.noun + ' match these filters.</div>';
       return;
     }
     const arrow = (k) => this._sort.key === k ? (this._sort.dir > 0 ? " ▲" : " ▼") : "";
     const head = this._columns.map((c) =>
       '<th class="sortable" data-sort="' + c.key + '">' + c.label + arrow(c.key) + "</th>").join("");
     const body = rows.map((m) =>
-      '<tr class="clickable" data-id="' + esc(m.model_id) + '">' +
+      '<tr class="clickable" data-id="' + esc(m.id) + '">' +
       this._columns.map((c) => "<td>" + c.cell(m) + "</td>").join("") + "</tr>").join("");
     box.innerHTML = "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>";
     this._wireTable();
@@ -289,7 +300,7 @@ const InventoryList = {
 
   _wireTable() {
     const self = this;
-    document.querySelectorAll("#m-table th.sortable").forEach(function (th) {
+    document.querySelectorAll("#" + this._cfg.tableId + " th.sortable").forEach(function (th) {
       th.onclick = function () {
         const key = th.getAttribute("data-sort");
         if (self._sort.key === key) self._sort.dir = -self._sort.dir;
@@ -297,8 +308,20 @@ const InventoryList = {
         self._renderTable();
       };
     });
-    document.querySelectorAll("#m-table tr.clickable").forEach(function (tr) {
+    document.querySelectorAll("#" + this._cfg.tableId + " tr.clickable").forEach(function (tr) {
       tr.onclick = function () { self._onRow(tr.getAttribute("data-id")); };
     });
   },
 };
+
+// A second register's list: same furniture, its own columns, ids and id key.
+function createRecordList(cfg, columns) {
+  const list = Object.create(InventoryList);
+  list._cfg = Object.assign({}, InventoryList._cfg, cfg);
+  if (columns) list._columns = columns;
+  list._models = [];
+  list._onRow = null;
+  list._filters = null;
+  list._sort = null;
+  return list;
+}

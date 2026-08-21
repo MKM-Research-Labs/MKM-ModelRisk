@@ -206,10 +206,19 @@ def test_the_audit_probe_collections_exist_on_the_record(collection):
 
 
 def test_what_the_record_deliberately_does_not_carry():
-    """Chains and a model's provenance fields are not this record's business; the
-    ML Application's provenance is its Estimator."""
-    for absent in ("dependencies", "type", "vendor", "codebase", "repo_location"):
-        assert absent not in ML_APPLICATION_FIELD_SPECS
+    """An ML Application has no dependency chain, and no model TYPE: the admin
+    model_type list describes a model's part in a Product, and an ML Application's
+    provenance is its Estimator instead.
+
+    Repository, codebase, source module and vendor ARE carried: an ML Application has
+    code in exactly the sense a model does, and a record migrated from the inventory
+    would otherwise lose them.
+    """
+    assert "type" not in ML_APPLICATION_FIELD_SPECS
+    from config.governance import ML_APPLICATION_COLLECTION_SPECS
+    assert "dependencies" not in ML_APPLICATION_COLLECTION_SPECS
+    for carried in ("repo_location", "codebase", "source_module", "vendor"):
+        assert carried in ML_APPLICATION_FIELD_SPECS
 
 
 def test_no_raci_on_the_record():
