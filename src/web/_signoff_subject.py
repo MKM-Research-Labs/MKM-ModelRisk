@@ -39,6 +39,15 @@ from src.governance.model_inventory import (
     update_collection_item as _model_update,
     update_model_field,
 )
+from src.governance.ml_application import (
+    add_collection_item as _ml_add,
+    get_ml_application,
+    list_ml_applications,
+    rebuild_ml_application_view,
+    retire_ml_application,
+    update_collection_item as _ml_update,
+    update_ml_application_field,
+)
 from src.governance.model_handoff import (
     add_collection_item as _handoff_add,
     get_handoff,
@@ -141,7 +150,21 @@ HANDOFF_SUBJECT = Subject(
     get=get_handoff, list_all=list_handoffs, add_cmd=_handoff_add, update_cmd=_handoff_update,
     field_cmd=update_handoff_field, rebuild=rebuild_handoff_view, id_kwarg="handoff_id",
 )
-SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT, HANDOFF_SUBJECT)
+# An ML Application takes the same trip through the committee as a model: its rating
+# is proposed, and moves only once the committee approves it. Before this it applied
+# directly, which meant an ML rating bypassed the committee that signs off every other
+# rating in the estate.
+#
+# Retire is carried; reactivate is not yet, so ``supports`` keeps the committee from
+# being offered a decision the subject cannot carry out.
+ML_APPLICATION_SUBJECT = Subject(
+    kind="ml_application", agenda_id_field="subject_ml_application_id",
+    id_key="ml_application_id", get=get_ml_application, list_all=list_ml_applications,
+    add_cmd=_ml_add, update_cmd=_ml_update, field_cmd=update_ml_application_field,
+    rebuild=rebuild_ml_application_view, id_kwarg="ml_application_id",
+    retire_cmd=retire_ml_application,
+)
+SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT, HANDOFF_SUBJECT, ML_APPLICATION_SUBJECT)
 
 
 def subject_for_agenda_item(item: dict) -> tuple[Subject | None, str | None]:

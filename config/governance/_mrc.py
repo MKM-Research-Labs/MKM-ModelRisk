@@ -178,9 +178,9 @@ MRC_COLLECTION_SPECS = {
         {"key": "subject_model_id", "label": "Subject model",
          "type": "text", "reference": "model_inventory", "hidden": True},
         {"key": "subject_product_id", "label": "Subject product", "type": "text", "hidden": True},
-        # A "handoff" sign-off item links back to the model-to-model handoff
-        # ("from~to") the committee is being asked to approve. Set by the routing.
+        # A sign-off item names its subject: a handoff ("from~to"), or the ML Application whose rating is proposed. Set by the routing.
         {"key": "subject_handoff_id", "label": "Subject handoff", "type": "text", "hidden": True},
+        {"key": "subject_ml_application_id", "label": "Subject ML Application", "type": "text", "hidden": True},
         # An "event review" agenda item links to a product's operational-failure
         # event (the event's item id, with subject_product_id naming the product).
         {"key": "subject_event_id", "label": "Subject event", "type": "text", "hidden": True},

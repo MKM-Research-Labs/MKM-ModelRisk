@@ -29,7 +29,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import (
+from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
+                               ML_APPLICATION_FIELD_SPECS,
     COLLECTION_SPECS,
     DOC_CATEGORIES,
     MODEL_FIELD_SPECS,
@@ -38,14 +39,16 @@ from config.governance import (
 )
 from src.files import upload_path
 from src.governance.completeness._rules import audit_entity
-from src.governance.documents import model_scope
+from src.governance.documents import ml_application_scope, model_scope
 from src.governance.model_inventory.projection import list_models
 from src.governance.model_inventory.risk import compute_risk_rating
+from src.governance.ml_application.projection import list_ml_applications
 from src.governance.product.projection import list_products
 from src.governance.risk_policy import load as load_policy
 
 MODEL_KIND = "Model"
 PRODUCT_KIND = "Product"
+ML_APPLICATION_KIND = "ML Application"
 
 
 def product_scope(product_id: str) -> str:
@@ -76,8 +79,9 @@ def _audit(kind, entity_id, name, data, field_specs, collection_specs, scope, as
     )
 
 
-def scan(as_of: str, config=None, model_ids=None, product_ids=None) -> list[dict[str, Any]]:
-    """Audit every model and product, worst weighted completeness first.
+def scan(as_of: str, config=None, model_ids=None, product_ids=None,
+         ml_application_ids=None) -> list[dict[str, Any]]:
+    """Audit every model, product and ML Application, worst completeness first.
 
     Products follow the models so that a reader working down the register meets
     the model gaps before the product gaps that inherit from them.
@@ -90,6 +94,7 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None) -> list[dict
     """
     want_models = None if model_ids is None else set(model_ids)
     want_products = None if product_ids is None else set(product_ids)
+    want_ml = None if ml_application_ids is None else set(ml_application_ids)
     rows = []
     for model in list_models(config=config):
         if want_models is not None and model["model_id"] not in want_models:
@@ -107,6 +112,22 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None) -> list[dict
             PRODUCT_KIND, product["product_id"], data.get("product"), data,
             PRODUCT_FIELD_SPECS, PRODUCT_COLLECTION_SPECS,
             product_scope(product["product_id"]), as_of))
+    # ML Applications are audited on the same terms as everything else. An estate
+    # half of which is ML, audited on the other half, reports a gap picture that is
+    # wrong in the direction that flatters — and nothing on the page would say so.
+    for record in list_ml_applications(config=config):
+        # A retired record is out of the estate and out of every figure, exactly as a
+        # hibernated model is: ``list_models`` excludes them and this must match, or
+        # the audit reports gaps against records nobody is running.
+        if record.get("retired"):
+            continue
+        if want_ml is not None and record["ml_application_id"] not in want_ml:
+            continue
+        data = record.get("data") or {}
+        rows.append(_audit(
+            ML_APPLICATION_KIND, record["ml_application_id"], data.get("name"), data,
+            ML_APPLICATION_FIELD_SPECS, ML_APPLICATION_COLLECTION_SPECS,
+            ml_application_scope(record["ml_application_id"]), as_of))
     rows.sort(key=lambda r: (r["completeness"], r["entity_id"]))
     return rows
 

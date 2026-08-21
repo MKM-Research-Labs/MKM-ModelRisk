@@ -42,6 +42,7 @@ from src.web.api_mrc import mrc_bp
 from src.web.api_mrc_settings import settings_bp
 from src.web.api_ml_application import ml_application_bp
 from src.web import api_ml_application_documents  # noqa: F401 — attaches endpoints to ml_application_bp
+from src.web import api_ml_application_signoff  # noqa: F401 — attaches endpoints to ml_application_bp
 from src.web.api_product import product_bp
 from src.web import api_product_signoff  # noqa: F401 — attaches endpoints to product_bp
 from src.web import api_product_risk  # noqa: F401 — attaches endpoints to product_bp

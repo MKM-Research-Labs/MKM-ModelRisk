@@ -164,6 +164,11 @@ const MLAppDetail = {
           current: d[key], division: d.division, withSave: true,
           onCancel: () => self._renderContent(),
           onSave: (value, shown) => {
+            // The rating is not set, it is PROPOSED. It moves when the committee
+            // approves it, exactly as a model's does — an ML rating that applied
+            // directly was the one class of record exempt from the committee that
+            // signs off everything else.
+            if (key === "rag_rating") { self._proposeRag(value, d[key]); return; }
             App.amend("Set " + MLApps.fieldSpec(key).label + ' = "' + shown + '" on ' +
               self._record.ml_application_id + ".", "POST",
               "/api/ml-applications/" + encodeURIComponent(self._record.ml_application_id) +
@@ -353,6 +358,24 @@ const MLAppDetail = {
         if (box) box.style.display = box.style.display === "none" ? "block" : "none";
       };
     });
+  },
+
+  // A rating change goes to the committee rather than to the record. Nothing is
+  // stored until it approves, so the screen says where the proposal went rather than
+  // looking unchanged and inviting the owner to try again.
+  _proposeRag(value, current) {
+    if (!value || value === current) { this._renderContent(); return; }
+    const mrc = (this._mrc || {}).mrc;
+    if (!mrc) {
+      App.toast("No MRC covers this ML Application — set one up under Admin → MRC first.",
+                "error");
+      return;
+    }
+    const id = this._record.ml_application_id;
+    App.amend("Propose " + value + " for " + id + " — routed to " +
+      (mrc.name || mrc.value) + " for MRC sign-off. The rating changes once approved.",
+      "POST", "/api/ml-applications/" + encodeURIComponent(id) + "/request-signoff",
+      { proposed_rag: value }, () => { this.refresh(); MLApps.loadList(); });
   },
 
   // The plot or table behind a field  // The plot or table behind a field, filed beside it. A reliability curve IS the
