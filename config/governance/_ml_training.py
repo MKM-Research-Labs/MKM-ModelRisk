@@ -39,6 +39,8 @@ Requirement:
 """
 from __future__ import annotations
 
+from config.governance._ml_training_notes import TRAINING_NOTES
+
 TRAINING_RUNS_COLLECTION = "training_runs"
 
 MANDATORY, CONDITIONAL, OPTIONAL = "M", "C", "O"
@@ -204,6 +206,7 @@ _F = (
 # Derived: the field table the form, the validation and the completeness count read.
 TRAINING_FIELD_SPECS = {
     key: {"section": section, "label": label, "type": ftype, "requirement": req,
+          "note": TRAINING_NOTES.get(key, ""),
           **({"reference": ref} if ref else {}),
           **({"when": when} if when else {}),
           **({"options": ("Yes", "No")} if key == "reproduced_matched" else {})}
@@ -226,6 +229,17 @@ ML_TRAINING_COLLECTION_SPEC = {
 
 MANDATORY_FIELDS = tuple(k for k, s in TRAINING_FIELD_SPECS.items()
                          if s["requirement"] == MANDATORY)
+
+# --- Artefacts ---------------------------------------------------------------
+# Which field each artefact category is filed against. The evidence is the plot or
+# the table; the field beside it carries the reading of it. A field with a number in
+# it and no artefact behind it is an assertion, which is what these turn into
+# evidence -- so completeness counts the artefact, not the sentence.
+TRAINING_ARTEFACTS = {
+    "calibration": "Calibration",
+    "convergence_evidence": "Convergence",
+    "segment_performance": "Segment analysis",
+}
 
 # --- Completeness ------------------------------------------------------------
 # The state a train's evidence is in. NOT the record's RAG: that is the risk rating,
