@@ -87,6 +87,7 @@ const MLAppDetail = {
       ["overview", "Overview", null],
       // A retrain is this record's substantial change -- the same collection a model
       // versions through, under the word that actually describes what happened.
+      ["training", "Training & Performance", null],
       ["version_history", "Retrains", n("version_history")],
       ["review", "Review", cov],
       ["risk", "Risk Rating", null],
@@ -108,11 +109,15 @@ const MLAppDetail = {
   _LEFT: [
     ["ML Application", ["name", "short_name", "use_case"]],
     ["Estimator", ["estimator", "estimator_version", "estimator_rationale"]],
-    ["Training and performance",
-     ["training_data", "training_period", "performance", "benchmark", "misinterpretation"]],
     ["Organisation", ["division", "line_of_business"]],
     ["Monitoring", ["monitoring_approach"]],
   ],
+  // What the model was fitted on and how well it does. Its own tab rather than a
+  // block on the Overview: this is the substance of an ML Application -- the part a
+  // reviewer actually argues with -- and it has room to grow into.
+  _TRAINING: ["training_data", "training_period", "performance", "benchmark",
+              "misinterpretation"],
+
   _RIGHT: [
     ["Governance",
      ["rag_rating", "owner", "peer_reviewer", "lifecycle_stage", "validation_status",
@@ -197,6 +202,17 @@ const MLAppDetail = {
     const d = this._record.data || {};
     const box = document.getElementById("mla-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(); this._bindEdits(); return; }
+    if (this._tab === "training") {
+      const self = this;
+      box.innerHTML =
+        '<div class="section-header">Training and performance</div>' +
+        '<p class="muted" style="font-size:12px;margin:0 0 8px">What the model was ' +
+        "fitted on, how it performs against a metric and a baseline, and where its " +
+        "output could be read as saying more than it does.</p>" +
+        this._TRAINING.map((k) => self._row(k)).join("");
+      this._bindEdits();
+      return;
+    }
     if (this._tab === "risk") {
       box.innerHTML =
         '<div class="section-header">Risk assessment</div>' +
