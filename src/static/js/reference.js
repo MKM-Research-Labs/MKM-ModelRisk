@@ -34,15 +34,22 @@ const Reference = {
     // reference list could not be maintained from the UI. Vendor sits with it —
     // both classify the model itself (its type and who supplies it).
     ["model_type", "Model Type"], ["vendor", "Vendor"],
+    // The off-the-shelf ML engines an ML Application is built on. Beside Model Type
+    // and Vendor because it is the same kind of thing: what a record is classified
+    // as, and who supplies it.
+    ["estimator", "Estimator"],
     // The per-division risk policy: dimensions, ratings and the generated grids.
     ["risk", "Risk"],
     // The questionnaire every review works through. Its own tab rather than a row
     // among the reference lists: it is the institution's own standard, and the
     // review workflow is built around it.
-    ["review_questions", "Review"],
+    ["review_questions", "Model Review"],
     // The running order every meeting is seeded with. Beside the questionnaire
     // because they are the same kind of thing: a standard the institution sets,
     // copied onto each record it applies to.
+    // The ML questionnaire, beside the model one and deliberately separate from it:
+    // an ML Application is asked different questions, and the two sets move apart.
+    ["ml_application_questions", "ML Review"],
     ["standing_agenda", "Agenda"],
     // Every status vocabulary on one tab: shown-as is the institution's to change,
     // stored-as is what the records already hold and never moves.
@@ -119,6 +126,25 @@ const Reference = {
         "<b>Role</b> is what the console draws for the item (a rollcall, the previous " +
         "minutes, the sign-off review); leave it blank for business the committee " +
         "always takes, which renders as an ordinary agenda item.");
+      return;
+    }
+    if (this._tab === "estimator") {
+      this._renderList(container, spec, res.data[this._tab] || [],
+        "The off-the-shelf ML engines an ML Application can be built on \u2014 one row per " +
+        "source and estimator, carrying the versions available for it. An ML Application " +
+        "picks the estimator and then one of its versions, so the menu is set here and the " +
+        "choice is made on the record. <b>Available versions</b> is comma-separated and " +
+        "ships empty on purpose: which releases you actually run is yours to state, not " +
+        "ours to guess.");
+      return;
+    }
+    if (this._tab === "ml_application_questions") {
+      this._renderList(container, spec, res.data[this._tab] || [],
+        "The questions every ML Application review works through. Separate from the model " +
+        "questionnaire because an ML Application is asked different things \u2014 what it was " +
+        "trained on, why this estimator, how it is known to still work. A record is copied " +
+        "the list as it stands when it is registered and keeps its own answers, so editing " +
+        "here changes what the <em>next</em> review asks.");
       return;
     }
     if (this._tab === "review_questions") {

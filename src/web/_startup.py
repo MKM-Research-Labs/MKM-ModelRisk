@@ -87,7 +87,9 @@ def bootstrap(config=None) -> None:
     replay behind it would likewise run once per worker.
     """
     from src.database import run_migrations
-    from src.governance.reference import (ensure_default_model_types,
+    from src.governance.reference import (ensure_default_estimators,
+                                          ensure_default_ml_application_questions,
+                                          ensure_default_model_types,
                                           ensure_default_reference_lists,
                                           ensure_default_review_questions,
                                           ensure_default_standing_agenda,
@@ -103,6 +105,10 @@ def bootstrap(config=None) -> None:
     ensure_default_review_questions()
     ensure_default_standing_agenda()
     ensure_default_status_vocabularies()
+    # The Estimator menu and the ML Application questionnaire: the same "seed a
+    # vacuum" rule, for the ML side of the estate.
+    ensure_default_estimators()
+    ensure_default_ml_application_questions()
     reconcile_read_models(config)
 
 
