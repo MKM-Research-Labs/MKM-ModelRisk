@@ -47,7 +47,7 @@ from src.governance.model_inventory import (
     update_model_field,
 )
 from src.web._owner_ratification import set_model_field
-from src.web._helpers import (
+from src.web._helpers import (collection_field_specs, grouped_field_specs,
     context_from_request,
     json_body,
     reference_options,
@@ -62,51 +62,13 @@ from src.web._helpers import (
 models_bp = Blueprint("models", __name__, url_prefix="/api/models")
 
 
-def _grouped_specs(options_by_list: dict[str, list]):
-    """Field specs grouped for the detail view.
-
-    Fields backed by a reference list become dropdowns (type ``choice``) once
-    that admin-managed list has values; otherwise they stay free text.
-    """
-    groups: list[dict] = []
-    by_name: dict[str, dict] = {}
-    for key, spec in MODEL_FIELD_SPECS.items():
-        group = by_name.get(spec["group"])
-        if group is None:
-            group = {"group": spec["group"], "fields": []}
-            by_name[spec["group"]] = group
-            groups.append(group)
-        resolved = resolve_field({**spec, "key": key}, options_by_list)
-        field = {"key": resolved["key"], "label": resolved["label"],
-                 "type": resolved["type"], "options": resolved["options"]}
-        # What each option is shown as, where a status vocabulary separates the word
-        # a record stores from the word a screen shows. Carried only when the two
-        # differ, so every other field's payload is unchanged.
-        if resolved.get("option_labels"):
-            field["option_labels"] = resolved["option_labels"]
-        group["fields"].append(field)
-    return groups
-
-
-def _collection_specs():
-    """Collection metadata (label, id prefix, item fields) for the UI."""
-    options_by_list = reference_options()
-    return [
-        {
-            "key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
-            "fields": [resolve_field(f, options_by_list) for f in spec["fields"]],
-        }
-        for key, spec in COLLECTION_SPECS.items()
-    ]
-
-
 @models_bp.get("/fields")
 def field_specs():
     """Field metadata so the UI can render the form and editors generically."""
     return jsonify({
-        "groups": _grouped_specs(reference_options()),
+        "groups": grouped_field_specs(MODEL_FIELD_SPECS, reference_options()),
         "register": list(REGISTER_FIELDS),
-        "collections": _collection_specs(),
+        "collections": collection_field_specs(COLLECTION_SPECS),
         # Why a review is being run. The server validates against this list, so the
         # console has to offer the same one — served rather than copied, or the two
         # drift and a legitimate trigger starts being refused.

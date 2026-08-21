@@ -33,6 +33,7 @@
     <button class="tab active" data-tab="inventory">Models</button>
     <button class="tab" data-tab="chain">Model Chain</button>
     <button class="tab" data-tab="product">Products</button>
+    <button class="tab" data-tab="mlapps">ML Apps</button>
     <button class="tab" data-tab="clients">Clients</button>
     <button class="tab" data-tab="audit">Audit Trail</button>
     <button class="tab" data-tab="documents">Documents</button>
@@ -47,6 +48,7 @@
     <section id="tab-inventory" class="panel active"></section>
     <section id="tab-chain" class="panel"></section>
     <section id="tab-product" class="panel"></section>
+    <section id="tab-mlapps" class="panel"></section>
     <section id="tab-clients" class="panel"></section>
     <section id="tab-mrc" class="panel"></section>
     <section id="tab-documents" class="panel"></section>
@@ -78,6 +80,19 @@
   </div>
 
   <!-- Register a Product: ID, product and three component bindings. -->
+  <div id="mlapp-register-overlay" class="overlay hidden">
+    <div class="modal">
+      <h2>Register an ML Application</h2>
+      <p class="muted">A use case for an off-the-shelf estimator. Name the estimator and
+        say what the model is for; everything else is edited on the record afterwards.</p>
+      <div id="mlapp-reg-body"></div>
+      <div class="modal-actions">
+        <button id="mlapp-reg-cancel" class="btn ghost">Cancel</button>
+        <button id="mlapp-reg-submit" class="btn primary">Register&hellip;</button>
+      </div>
+    </div>
+  </div>
+
   <div id="product-register-overlay" class="overlay hidden">
     <div class="modal">
       <h2>Register a Product</h2>
@@ -147,6 +162,7 @@
 
   <script src="{{ url_for('static', filename='js/api.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/helpers.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/detail_shell.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/risk_assessment.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc_nav.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/org_scope.js', v=asset_version) }}"></script>
@@ -166,6 +182,8 @@
   <script src="{{ url_for('static', filename='js/model_docs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/doc_panel.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/mlapp.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/mlapp/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/model_map.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/detail_edit.js', v=asset_version) }}"></script>

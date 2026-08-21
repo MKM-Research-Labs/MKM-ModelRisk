@@ -51,7 +51,7 @@ from src.governance.product import (
     update_product_field,
 )
 from src.governance.product.commands import AGGREGATE_TYPE as PRODUCT_AGGREGATE
-from src.web._helpers import (
+from src.web._helpers import (collection_field_specs, grouped_field_specs,
     context_from_request,
     json_body,
     reference_options,
@@ -62,34 +62,6 @@ from src.web._helpers import (
 )
 
 product_bp = Blueprint("product", __name__, url_prefix="/api/products")
-
-
-def _grouped_specs(options: dict[str, list]):
-    """Field specs grouped for the detail view; references resolve to dropdowns."""
-    groups: list[dict] = []
-    by_name: dict[str, dict] = {}
-    for key, spec in PRODUCT_FIELD_SPECS.items():
-        group = by_name.get(spec["group"])
-        if group is None:
-            group = {"group": spec["group"], "fields": []}
-            by_name[spec["group"]] = group
-            groups.append(group)
-        field_type, choices = spec["type"], list(spec.get("options", []))
-        reference = spec.get("reference")
-        if reference and options.get(reference):
-            field_type, choices = "choice", options[reference]
-        group["fields"].append(
-            {"key": key, "label": spec["label"], "type": field_type, "options": choices})
-    return groups
-
-
-def _collection_specs():
-    options_by_list = reference_options()
-    return [
-        {"key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
-         "fields": [resolve_field(f, options_by_list) for f in spec["fields"]]}
-        for key, spec in PRODUCT_COLLECTION_SPECS.items()
-    ]
 
 
 @product_bp.get("/fields")
@@ -106,12 +78,12 @@ def field_specs():
         models_by_type.setdefault(
             str((model["data"] or {}).get("type") or ""), []).append(model["model_id"])
     return jsonify({
-        "groups": _grouped_specs(reference_options()),
+        "groups": grouped_field_specs(PRODUCT_FIELD_SPECS, reference_options()),
         "register": list(PRODUCT_REGISTER_FIELDS),
         "bindings": list(PRODUCT_BINDINGS),
         "components": PRODUCT_COMPONENTS,
         "models_by_type": models_by_type,
-        "collections": _collection_specs(),
+        "collections": collection_field_specs(PRODUCT_COLLECTION_SPECS),
         **document_specs(),
     })
 

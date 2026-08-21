@@ -146,12 +146,7 @@ const Detail = {
       // entry and upload, so it always sits last after Danger.
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
     ];
-    return '<div class="dtabs">' + tabs.map((t) => {
-      const danger = t[0] === "danger" ? " dtab-danger" : "";
-      return '<button class="dtab' + (t[0] === this._tab ? " active" : "") + danger +
-        '" data-dtab="' + t[0] + '">' +
-        esc(t[1]) + (t[2] !== null ? " (" + t[2] + ")" : "") + "</button>";
-    }).join("") + "</div>";
+    return DetailShell.tabBar(tabs, this._tab, "data-dtab");
   },
 
   _renderContent() {

@@ -75,13 +75,13 @@ pytest tests/e2e -m e2e
 **not** a pass — that exit code is the shell's. Always read the final line:
 `PASS: 0 gated finding(s)` or `FINDINGS: N gated finding(s)`.
 
-**Known-red at HEAD (verified 2026-08-12 on `main`) — 1 test. Do not chase it:**
+**Known-red at HEAD (verified 2026-08-21 on `main`) — 1 test. Do not chase it:**
 
 ```
 tests/audit/test_audit_large_files.py::test_source_tree_within_limit
 ```
 
-It fails for the same reason the audit gate sits at 3: the three over-long source files
+It fails for the same reason the audit gate sits at 2: the two over-long source files
 below. Fixing one fixes the other; there is nothing else to find in it.
 
 This list shrinks as well as grows. The two product-API entries that sat here were
@@ -106,18 +106,21 @@ you run it:
 - Killing a run leaves `tests/e2e/_runserver.py` orphaned (parent PID 1). It serves
   stale JS on a port nothing points at. Check for strays before blaming a change.
 
-The audit's own gate sits at **3 findings** — three over-long source files, verified
-2026-08-12 on `main`:
+The audit's own gate sits at **2 findings** — two over-long source files, verified
+2026-08-21 on `main`:
 
 ```
 384  src/governance/client/pack.py
 326  src/web/api_mrc/lifecycle.py
-301  src/web/api_models.py
 ```
 
 Anything beyond these is yours — diff against `main` before assuming otherwise, since the
-list moves. It moved most recently at `e9a6280`, which pushed `api_models.py` to 301: one
-line over, and the reason this baseline was 2 for a while after it was really 3.
+list moves. It moved most recently during the ML Application work: `api_models.py` had
+been the third entry at 301 lines, and dropped to 263 when its `_grouped_specs` /
+`_collection_specs` were extracted to `src/web/_helpers.py`. Four APIs had a copy of
+those (models, product, client, ML Application) and only the inventory's carried
+``option_labels``, so a status vocabulary renamed in Admin displayed by its stored value
+on every screen but a model's. One helper now, and one fewer gated finding.
 
 **Test files are gated too, at 400 lines.** It is not in the list above only because
 nothing currently exceeds it, and a few added comments are enough to trip it — run the

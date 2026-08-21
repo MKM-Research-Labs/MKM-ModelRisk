@@ -25,6 +25,7 @@ from typing import Any
 from config.governance import DEFAULT_RACI, PRODUCT_COMPONENTS
 from src.governance import collections as coll
 from src.governance.errors import DomainError
+from src.governance.seeding import seed_items
 from src.database import Event, append_event, read_stream
 from src.governance.product._rules import (
     decide_add_item,
@@ -94,17 +95,11 @@ def _seed_raci(product_id, after_version, actor, config) -> None:
     (each with a standard governance role the owner edits) — the same way a model's
     nine SR 26-2 validation questions are seeded on registration.
     """
-    version = after_version
-    for index, (raci, role) in enumerate(DEFAULT_RACI, start=1):
-        append_event(
-            aggregate_type=AGGREGATE_TYPE, aggregate_id=product_id,
-            event_type=coll.EVENT_ITEM_ADDED,
-            payload={"collection": "raci_roles", "item_id": f"RC-{index:03d}",
-                     "role": role, "raci": raci},
-            actor=actor, reason="Seed the four RACI accountabilities",
-            expected_version=version, config=config,
-        )
-        version += 1
+    seed_items(aggregate_type=AGGREGATE_TYPE, aggregate_id=product_id,
+               collection="raci_roles", id_prefix="RC",
+               items=[{"role": role, "raci": raci} for raci, role in DEFAULT_RACI],
+               after_version=after_version, actor=actor,
+               reason="Seed the four RACI accountabilities", config=config)
 
 
 def register_product(

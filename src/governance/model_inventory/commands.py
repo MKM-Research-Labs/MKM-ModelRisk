@@ -35,6 +35,7 @@ from config.governance import (COLLECTION_SPECS, DEFAULT_VQ_STATUS,
 from src.database import Event, append_event, read_stream
 from src.governance import collections as coll
 from src.governance.errors import DomainError
+from src.governance.seeding import seed_items
 from src.governance.graph import has_cycle, self_loops
 from src.governance.model_inventory._rules import (
     decide_add_item,
@@ -71,22 +72,13 @@ def _review_questions(config) -> list[dict]:
 
 def _seed_validation_questions(model_id, after_version, actor, config) -> None:
     """Copy the review questionnaire onto the model, immediately after registration."""
-    version = after_version
-    for index, question in enumerate(_review_questions(config), start=1):
-        payload = {
-            "collection": "validation_questions",
-            "item_id": f"VQ-{index:03d}",
-            "short_label": question["short_label"],
-            "question": question["question"],
-            "status": DEFAULT_VQ_STATUS,
-        }
-        append_event(
-            aggregate_type=AGGREGATE_TYPE, aggregate_id=model_id,
-            event_type=coll.EVENT_ITEM_ADDED, payload=payload, actor=actor,
-            reason="Seed the review questions", expected_version=version,
-            config=config,
-        )
-        version += 1
+    seed_items(aggregate_type=AGGREGATE_TYPE, aggregate_id=model_id,
+               collection="validation_questions", id_prefix="VQ",
+               items=[{"short_label": q["short_label"], "question": q["question"],
+                       "status": DEFAULT_VQ_STATUS}
+                      for q in _review_questions(config)],
+               after_version=after_version, actor=actor,
+               reason="Seed the review questions", config=config)
 
 
 def _load(model_id: str, config) -> tuple[ModelState, int]:
@@ -117,34 +109,12 @@ def _record(
 
 
 def _reject_unknown_references(
-    specs: dict[str, dict[str, Any]], fields: dict[str, Any], config=None,
+    specs: dict[str, Any], fields: dict[str, Any], config=None,
 ) -> None:
-    """Reject a value not on the admin list for any ``strict_reference`` field.
+    """Shared with the ML Application aggregate -- see reference._validate."""
+    from src.governance.reference import reject_unknown_references
 
-    Lives here rather than in ``_rules`` because the allowed values are rows in
-    the reference store, and the rules stay pure. ``specs`` maps a field key to
-    its spec; only fields flagged strict are checked — see MODEL_FIELD_SPECS for
-    why the others are deliberately open.
-
-    An empty list is not enforced: on a fresh database, before the defaults are
-    seeded, there is nothing to validate against and rejecting everything would
-    make the field unusable rather than safe.
-    """
-    from src.governance.reference import get_reference_lists
-
-    strict = {key: spec["reference"] for key, spec in specs.items()
-              if spec.get("strict_reference") and key in fields
-              and str(fields[key] or "").strip()}
-    if not strict:
-        return
-    lists = get_reference_lists(config)
-    for key, list_name in strict.items():
-        spec = REFERENCE_SPECS[list_name]
-        allowed = [item.get(spec.get("display", "value"))
-                   for item in lists.get(list_name, ())]
-        if allowed and fields[key] not in allowed:
-            raise DomainError(
-                f"{key} must be one of: {', '.join(str(a) for a in allowed)}")
+    reject_unknown_references(specs, fields, config)
 
 
 def _check_reference_fields(fields: dict[str, Any], config=None) -> None:

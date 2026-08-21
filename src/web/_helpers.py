@@ -194,3 +194,41 @@ def context_from_request(body: dict[str, Any]) -> CommandContext:
         confirmed=bool(body.get("confirmed")),
         reason=body.get("reason"),
     )
+
+
+def grouped_field_specs(field_specs: dict, options_by_list: dict[str, list]) -> list[dict]:
+    """Field specs grouped for a detail view; references resolve to dropdowns.
+
+    One implementation for every aggregate that draws a grouped detail view -- the
+    model inventory, Products, Clients and ML Applications. There were four, and only
+    the inventory's carried ``option_labels``, so a status vocabulary renamed in Admin
+    displayed correctly on a model and by its stored value everywhere else.
+
+    ``option_labels`` is carried only where a list separates the word a record stores
+    from the word a screen shows, so every other field's payload is unchanged.
+    """
+    groups: list[dict] = []
+    by_name: dict[str, dict] = {}
+    for key, spec in field_specs.items():
+        group = by_name.get(spec["group"])
+        if group is None:
+            group = {"group": spec["group"], "fields": []}
+            by_name[spec["group"]] = group
+            groups.append(group)
+        resolved = resolve_field({**spec, "key": key}, options_by_list)
+        field = {"key": resolved["key"], "label": resolved["label"],
+                 "type": resolved["type"], "options": resolved["options"]}
+        if resolved.get("option_labels"):
+            field["option_labels"] = resolved["option_labels"]
+        group["fields"].append(field)
+    return groups
+
+
+def collection_field_specs(specs: dict) -> list[dict]:
+    """Collection metadata (label, id prefix, item fields) for the UI."""
+    options_by_list = reference_options()
+    return [
+        {"key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
+         "fields": [resolve_field(f, options_by_list) for f in spec["fields"]]}
+        for key, spec in specs.items()
+    ]
