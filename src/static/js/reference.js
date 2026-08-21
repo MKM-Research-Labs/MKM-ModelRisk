@@ -50,6 +50,10 @@ const Reference = {
     // The ML questionnaire, beside the model one and deliberately separate from it:
     // an ML Application is asked different questions, and the two sets move apart.
     ["ml_application_questions", "ML Review"],
+    // The enumerations the Training tab is typed against. One tab, not eleven —
+    // the same reasoning as the status vocabularies below: shown together rather
+    // than as eleven tabs nobody would find.
+    ["ml_training", "ML Training"],
     ["standing_agenda", "Agenda"],
     // Every status vocabulary on one tab: shown-as is the institution's to change,
     // stored-as is what the records already hold and never moves.
@@ -77,14 +81,24 @@ const Reference = {
   _VOCABULARIES: ["lifecycle_stage", "version_lifecycle", "validation_status",
                   "impact_level", "priority_level", "remediation_status", "vq_status"],
 
-  _renderVocabularies(container, res) {
+  // The enumerations a train is typed against. Held here rather than in code so an
+  // institution that fits something we never listed can say so — the same rule as
+  // every other vocabulary on this platform.
+  _ML_VOCABULARIES: ["learning_task", "missing_data_treatment", "categorical_encoding",
+                     "scaling_method", "scaler_fit_point", "split_method",
+                     "cross_validation_method", "search_method", "determinism",
+                     "primary_metric", "naive_baseline"],
+
+  _renderVocabularies(container, res, keys, blurb) {
+    keys = keys || this._VOCABULARIES;
     container.innerHTML =
-      '<p class="muted">The words the console shows for a record\'s status. ' +
+      '<p class="muted">' + (blurb ||
+        "The words the console shows for a record's status. ") +
       "<b>Shown as</b> is yours to change; <b>stored as</b> is the word the records " +
       "themselves carry and the code matches on, fixed once an entry exists. Renaming " +
       "therefore changes every screen without moving anything on record.</p>" +
-      this._VOCABULARIES.map((key) => '<div id="voc-' + key + '"></div>').join("");
-    this._VOCABULARIES.forEach((key) => {
+      keys.map((key) => '<div id="voc-' + key + '"></div>').join("");
+    keys.forEach((key) => {
       const spec = res.collections.find((c) => c.key === key);
       if (!spec) return;
       this._renderList(document.getElementById("voc-" + key), spec, res.data[key] || []);
@@ -110,6 +124,14 @@ const Reference = {
     }
     const res = await App.get("/api/reference");
     if (this._tab === "vocabulary") { this._renderVocabularies(container, res); return; }
+    if (this._tab === "ml_training") {
+      this._renderVocabularies(container, res, this._ML_VOCABULARIES,
+        "The enumerations an ML Application's Training tab is typed against \u2014 the " +
+        "learning task, how the data was split, how it was scaled, what it was scored " +
+        "on. Typed rather than free text so the estate can be asked which models were " +
+        "fitted a particular way; admin-managed so you can add what you actually fit. ");
+      return;
+    }
     const spec = res.collections.find((c) => c.key === this._tab);
     // MRC committees are entities with a drill-in detail (fields + per-committee
     // Terms of Reference); the scope field reacts to the committee's level.
