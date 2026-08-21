@@ -210,3 +210,14 @@ def test_what_the_record_deliberately_does_not_carry():
     ML Application's provenance is its Estimator."""
     for absent in ("dependencies", "type", "vendor", "codebase", "repo_location"):
         assert absent not in ML_APPLICATION_FIELD_SPECS
+
+
+def test_no_raci_on_the_record():
+    """Accountability for an ML Application's use in production sits on the Product
+    that consumes it, where the RACI operating model already lives. A second one here
+    would ask the same question twice and let the two answers disagree."""
+    from config.governance import ML_APPLICATION_COLLECTION_SPECS
+
+    assert "raci_roles" not in ML_APPLICATION_COLLECTION_SPECS
+    _register()
+    assert not _data().get("raci_roles")
