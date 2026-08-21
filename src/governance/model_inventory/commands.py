@@ -35,6 +35,7 @@ from config.governance import (COLLECTION_SPECS, DEFAULT_VQ_STATUS,
 from src.database import Event, append_event, read_stream
 from src.governance import collections as coll
 from src.governance.errors import DomainError
+from src.governance.reference import reject_unknown_values
 from src.governance.seeding import seed_items
 from src.governance.graph import has_cycle, self_loops
 from src.governance.model_inventory._rules import (
@@ -229,6 +230,7 @@ def add_collection_item(
     reason: str | None = None, config=None,
 ) -> Event:
     """Add an item to a structured collection (assumptions, limitations, …)."""
+    reject_unknown_values(COLLECTION_SPECS, collection, fields, config)
     state, version = _load(model_id, config)
     _check_collection_reference_fields(collection, fields, config)
     decision = decide_add_item(state, collection=collection, fields=fields)
@@ -241,6 +243,7 @@ def update_collection_item(
     actor: str, reason: str | None = None, config=None,
 ) -> Event:
     """Update fields of an existing collection item."""
+    reject_unknown_values(COLLECTION_SPECS, collection, fields, config)
     state, version = _load(model_id, config)
     _check_collection_reference_fields(collection, fields, config)
     decision = decide_update_item(

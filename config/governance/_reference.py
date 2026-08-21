@@ -23,7 +23,7 @@ Each spec's ``display`` field is the value shown in dropdowns that reference it.
 """
 from __future__ import annotations
 
-from config.governance._collections import (IMPACT_LIST, PRIORITY_LIST,
+from config.governance._collections import (IMPACT_LIST, PRIORITY_LIST, VERSION_LIFECYCLE_LIST, VALID_VERSION_LIFECYCLE,
                                             REMEDIATION_STATUS_LIST, VALID_IMPACT,
                                             VALID_PRIORITY, VALID_REMEDIATION_STATUS,
                                             VALID_VQ_STATUSES, VQ_STATUS_LIST)
@@ -89,6 +89,7 @@ STATUS_VOCABULARIES = {
                               "Where a remediation step has got to."),
     VQ_STATUS_LIST: ("Review answer statuses", "VQ", VALID_VQ_STATUSES,
                      "How completely a review question has been answered."),
+    VERSION_LIFECYCLE_LIST: ("Version lifecycle", "VL", VALID_VERSION_LIFECYCLE, "Where a version sits in its development arc."),
 }
 
 # The shape every one of them takes. ``value`` is immutable once the entry exists:

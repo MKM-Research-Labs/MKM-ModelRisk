@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (DEFAULT_RACI, DEFAULT_VQ_STATUS,
+                               ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS,
                                ML_APPLICATION_QUESTIONS,
                                ML_APPLICATION_QUESTION_LIST,
@@ -33,6 +34,7 @@ from src.governance.ml_application._rules import (decide_add_item, decide_edit_f
                                                   decide_register, decide_remove_item,
                                                   decide_retire, decide_update_item)
 from src.governance.ml_application._state import MLApplicationState, apply, initial_state
+from src.governance.reference import reject_unknown_values
 from src.governance.seeding import seed_items
 
 AGGREGATE_TYPE = "MLApplication"
@@ -132,6 +134,7 @@ def retire_ml_application(*, ml_application_id: str, actor: str, reason: str = "
 
 def add_collection_item(*, ml_application_id: str, collection: str, fields: dict[str, Any],
                         actor: str, reason: str = "", config=None) -> Event:
+    reject_unknown_values(ML_APPLICATION_COLLECTION_SPECS, collection, fields, config)
     state, version = _load(ml_application_id, config)
     decision = decide_add_item(state, collection=collection, fields=fields)
     return _record(ml_application_id, decision, version, actor, reason, config)
@@ -140,6 +143,7 @@ def add_collection_item(*, ml_application_id: str, collection: str, fields: dict
 def update_collection_item(*, ml_application_id: str, collection: str, item_id: str,
                            fields: dict[str, Any], actor: str, reason: str = "",
                            config=None) -> Event:
+    reject_unknown_values(ML_APPLICATION_COLLECTION_SPECS, collection, fields, config)
     state, version = _load(ml_application_id, config)
     decision = decide_update_item(state, collection=collection, item_id=item_id, fields=fields)
     return _record(ml_application_id, decision, version, actor, reason, config)

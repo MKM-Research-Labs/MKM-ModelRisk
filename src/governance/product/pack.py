@@ -35,7 +35,8 @@ import io
 import zipfile
 
 from config.files import HIDDEN_DOC_EXTENSIONS
-from config.governance import PRODUCT_COMPONENTS
+from config.governance import (COMPONENT_KIND_MODEL, PRODUCT_COMPONENTS,
+                               component_kind)
 from src.files import extension, upload_path
 from src.governance.documents import model_scope, product_scope
 from src.governance.model_inventory import get_model
@@ -50,10 +51,17 @@ UNCATEGORISED = "Other"
 
 def _component_model_ids(product: dict) -> list[str]:
     """Every model the product binds as a component, de-duplicated in first-seen
-    order — the models whose full packs this pack pulls in."""
+    order — the models whose full packs this pack pulls in.
+
+    ML Application components are skipped: their ids resolve against a different
+    register, and asking the model pack builder for one would either fail or quietly
+    bundle nothing. Their own documents are not yet part of this pack — see
+    docs/design/mlmodel.md.
+    """
     data = product.get("data") or {}
     ids = [str(c["model_id"]) for c in (data.get(PRODUCT_COMPONENTS) or [])
-           if isinstance(c, dict) and c.get("model_id")]
+           if isinstance(c, dict) and c.get("model_id")
+           and component_kind(c) == COMPONENT_KIND_MODEL]
     seen: set[str] = set()
     return [i for i in ids if not (i in seen or seen.add(i))]
 

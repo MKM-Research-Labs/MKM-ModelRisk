@@ -127,7 +127,16 @@ def _validate(
             raise DomainError(
                 f"{field_spec['label']} is not set directly — it is recorded by the "
                 "process that grants it")
-        if field_spec["type"] == "choice" and value not in field_spec["options"]:
+        # A reference-backed choice draws its live values from an admin-managed list.
+        # ``options`` on such a field is the SHIPPED SEED, not the vocabulary: an
+        # institution that adds an impact level, a priority or a lifecycle in Admin
+        # must be able to use it, and checking the seed here rejected exactly that --
+        # the admin list accepted the new word and every record refused it. This
+        # module is pure and cannot read the list, so membership is checked against
+        # the live vocabulary in the command layer (reference.reject_unknown_values),
+        # which is the same split the multichoice branch below describes.
+        if (field_spec["type"] == "choice" and not field_spec.get("reference")
+                and value not in field_spec["options"]):
             allowed = ", ".join(field_spec["options"])
             raise DomainError(f"{field_spec['label']} must be one of: {allowed}")
         # A multichoice holds SEVERAL of its options (a person may be both an owner and a

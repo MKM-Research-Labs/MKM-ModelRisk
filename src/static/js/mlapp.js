@@ -84,17 +84,30 @@ const MLApps = {
       { ml_application_id: id, fields: fields }, () => this.render());
   },
 
+  // Summary tiles, one per lifecycle stage the INSTITUTION has defined (Admin >
+  // Vocabulary), not a set of stage names chosen here. An adopter that renames or
+  // replaces its stages gets tiles that match, because the options come from the
+  // field spec the API publishes. Colour is neutral for the same reason: nothing
+  // here knows which of somebody else's stages is the good one.
   _summary(records) {
-    const n = (s) => records.filter((r) => (r.data || {}).lifecycle_stage === s && !r.retired).length;
+    const spec = this.fieldSpec("lifecycle_stage") || {};
+    const stages = spec.options || [];
+    const shown = spec.option_labels || {};
     const card = (lbl, v, color) =>
       '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
-      lbl + '</div><div class="val">' + v + "</div></div>";
+      esc(lbl) + '</div><div class="val">' + v + "</div></div>";
+    const live = records.filter((r) => !r.retired);
     return '<div class="summary">' +
       card("Total", records.length, "#1976d2") +
-      card("Development", n("Development"), "#0288d1") +
-      card("Validation", n("Validation"), "#f57c00") +
-      card("Production", n("Production"), "#388e3c") +
-      card("Retired", records.filter((r) => r.retired).length, "#9e9e9e") +
+      stages.map((stage) =>
+        card(shown[stage] || stage,
+             live.filter((r) => (r.data || {}).lifecycle_stage === stage).length,
+             "#607d8b")).join("") +
+      // "Hibernated", not "Retired": retirement is a flag on the record, not a stage,
+      // and an institution whose vocabulary happens to contain a stage called Retired
+      // would otherwise get two tiles with the same word counting different things.
+      // The Models list draws the same distinction with the same word.
+      card("Hibernated", records.filter((r) => r.retired).length, "#9e9e9e") +
       "</div>";
   },
 
@@ -128,7 +141,9 @@ const MLApps = {
         "<td>" + fieldDisplay(d.owner) + "</td>" +
         "<td>" + tierBadge(d.tier, d.division) + "</td>" +
         "<td>" + ragBadge(d.rag_rating, d.division) + "</td>" +
-        "<td>" + lifecycleBadge(r.retired ? "Retired" : d.lifecycle_stage) + "</td></tr>";
+        "<td>" + (r.retired ? '<span class="pill">retired</span>'
+          : optionLabel(MLApps.fieldSpec("lifecycle_stage"), d.lifecycle_stage)) +
+        "</td></tr>";
     });
     box.innerHTML =
       "<table><thead><tr><th>ID</th><th>Name</th><th>Estimator</th><th>Owner</th>" +

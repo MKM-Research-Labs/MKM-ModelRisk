@@ -56,13 +56,20 @@ def _data(ml_application_id="MLA-0001"):
 
 # --- Registration -----------------------------------------------------------
 
-def test_register_records_the_minimum_and_starts_in_development():
+def test_register_records_the_minimum():
     _register()
     data = _data()
     assert data["name"] == "Retail PD scorecard"
     assert data["estimator"] == "GradientBoostingClassifier"
-    assert data["lifecycle_stage"] == "Development"
     assert len(list_ml_applications()) == 1
+
+
+def test_registration_invents_no_lifecycle_stage():
+    """The stages are the institution's own vocabulary (Admin > Vocabulary), so there
+    is no word this code could choose that is certainly in their list. A model sets
+    none at registration; nor does this. The owner picks from their own menu."""
+    _register()
+    assert not _data().get("lifecycle_stage")
 
 
 @pytest.mark.parametrize("missing", sorted(_MINIMUM))
@@ -133,7 +140,10 @@ def test_retiring_marks_the_record_and_freezes_it():
     retire_ml_application(ml_application_id="MLA-0001", actor="admin")
     rebuild_ml_application_view()
     assert get_ml_application("MLA-0001")["retired"] is True
-    assert _data()["lifecycle_stage"] == "Retired"
+    # ``retired`` is the fact. The lifecycle stage is not overwritten with a word we
+    # chose -- an estate whose stages are New / Being Enhanced / No New Development /
+    # Marked for Removal has no "Retired" for us to write.
+    assert not _data().get("lifecycle_stage")
     with pytest.raises(DomainError, match="retired"):
         update_ml_application_field(ml_application_id="MLA-0001", field="training_data",
                                    value="anything", actor="admin")

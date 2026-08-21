@@ -73,7 +73,6 @@ def test_register_returns_the_record_with_its_questionnaire(client):
     assert res.status_code == 201
     data = res.get_json()["data"]
     assert data["name"] == "Retail PD scorecard"
-    assert data["lifecycle_stage"] == "Development"
     asked = data[ML_REVIEW_QUESTIONS_COLLECTION]
     assert asked[0]["short_label"] == "Use Case"
     assert len(asked) == 10
@@ -124,7 +123,7 @@ def test_retiring_through_the_api(client):
     res = client.post("/api/ml-applications/MLA-0001/retire",
                       json={"confirmed": True}, headers=HEADERS)
     assert res.get_json()["retired"] is True
-    assert res.get_json()["data"]["lifecycle_stage"] == "Retired"
+    assert not res.get_json()["data"].get("lifecycle_stage")
 
 
 def test_the_list_endpoint_returns_registered_records(client):

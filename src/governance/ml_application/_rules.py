@@ -88,8 +88,10 @@ def decide_register(
         if field not in ML_APPLICATION_FIELD_SPECS:
             raise DomainError(f"unknown field: {field}")
         _validate_field(field, value, division)
-    payload: dict[str, Any] = {"ml_application_id": ml_application_id,
-                               "lifecycle_stage": "Development"}
+    # No lifecycle default. The stages are an admin-managed vocabulary the institution
+    # sets (Admin > Vocabulary), so there is no word this code could put here that is
+    # certainly in their list -- a model sets none at registration for the same reason.
+    payload: dict[str, Any] = {"ml_application_id": ml_application_id}
     payload.update(fields)
     return EVENT_REGISTERED, payload
 

@@ -22,9 +22,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import DEFAULT_RACI, PRODUCT_COMPONENTS
+from config.governance import (DEFAULT_RACI, PRODUCT_COLLECTION_SPECS,
+                               PRODUCT_COMPONENTS, component_kind)
 from src.governance import collections as coll
 from src.governance.errors import DomainError
+from src.governance.reference import reject_unknown_values
 from src.governance.seeding import seed_items
 from src.database import Event, append_event, read_stream
 from src.governance.product._rules import (
@@ -48,7 +50,8 @@ def _component_set(data: dict[str, Any]) -> frozenset:
     sets, not lists.
     """
     return frozenset(
-        (str(item.get("component_type") or ""), str(item.get("model_id") or ""))
+        (component_kind(item), str(item.get("component_type") or ""),
+         str(item.get("model_id") or ""))
         for item in (data.get(PRODUCT_COMPONENTS) or []) if isinstance(item, dict))
 
 
@@ -148,6 +151,7 @@ def add_collection_item(
     reason: str | None = None, config=None,
 ) -> Event:
     """Add a component, limitation or assumption to a Product."""
+    reject_unknown_values(PRODUCT_COLLECTION_SPECS, collection, fields, config)
     state, version = _load(product_id, config)
     duplicate = False
     first_component = False
@@ -199,6 +203,7 @@ def update_collection_item(
     reason: str | None = None, config=None,
 ) -> Event:
     """Update a Product limitation or assumption."""
+    reject_unknown_values(PRODUCT_COLLECTION_SPECS, collection, fields, config)
     state, version = _load(product_id, config)
     decision = decide_update_item(state, collection=collection, item_id=item_id, fields=fields)
     return _record(product_id, decision, version, actor, reason, config)

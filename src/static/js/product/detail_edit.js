@@ -161,40 +161,20 @@ Object.assign(ProductDetail, {
   // so those still raise the confirm dialog (App.amend turns the server's 409 into it);
   // every other field just applies.
   _editor(f, paramKey, endpoint, verb) {
-    // Scoped to this panel — a model detail left rendered in the (hidden) Models panel
-    // carries rows under the same ids, and the editor would open on that one instead.
-    const row = document.querySelector("#pt-content #row-" + f.key) ||
-      document.getElementById("row-" + f.key);
-    const division = (this._product.data || {}).division;
-    const current = this._product.data[f.key];
-    // A risk dimension is chosen from the division's bands as Admin → Risk presents them
-    // (colour, name, the admin's explanation); everything else keeps the compact control.
-    const picker = bandPicker("ped-input", f, division, current);
-    // In the risk table the target is a cell, which carries its own Dimension heading.
-    const heading = row.tagName === "TD"
-      ? "" : '<div class="k">' + esc(riskFieldLabel(f, division)) + "</div>";
-    row.innerHTML = heading + '<div class="editor">' +
-      (picker || inputControl("ped-input", f, division)) +
-      '<button class="btn small" id="ped-cancel">Cancel</button></div>';
-    const input = document.getElementById("ped-input");
-    if (picker) bindBandPicker("ped-input");
-    else if (current !== null && current !== undefined) input.value = current;
-    input.focus();
-    // Editing returns to the tab the row was on — the risk fields live on the Risk tab,
-    // and bouncing back to Overview after every edit lost the owner their place.
-    const back = () => this.show(this._id, this._tab);
-    document.getElementById("ped-cancel").onclick = back;
-    input.onchange = () => {
-      // Tier stores the Mission-Criticality band SCORE (an integer), though the owner
-      // picks it by band name.
-      const value = f.type === "tier" ? parseInt(input.value, 10) : input.value.trim();
-      const body = paramKey === "component"
-        ? { component: f.key, value: input.value.trim() }
-        : { field: f.key, value: value };
-      App.amend(verb + " " + f.label + ' to "' + input.value + '" on ' + this._id + ".", "POST",
-        "/api/products/" + this._id + endpoint, body,
-        () => { back(); Product.loadList(); });
-    };
+    DetailShell.fieldEditor({
+      scope: "#pt-content", prefix: "ped", spec: f,
+      current: this._product.data[f.key],
+      division: (this._product.data || {}).division, withSave: false,
+      onCancel: () => this.show(this._id, this._tab),
+      onSave: (value, shown) => {
+        const body = paramKey === "component"
+          ? { component: f.key, value: String(shown).trim() }
+          : { field: f.key, value: value };
+        App.amend(verb + " " + f.label + ' to "' + shown + '" on ' + this._id + ".", "POST",
+          "/api/products/" + this._id + endpoint, body,
+          () => { this.show(this._id, this._tab); Product.loadList(); });
+      },
+    });
   },
 
   // Snag: a product RAG-rating change goes through the MRC. Raise a sign-off

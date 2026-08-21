@@ -33,12 +33,14 @@ from typing import Any
 
 from config.files import HIDDEN_DOC_EXTENSIONS
 from src.governance.risk_policy.naming import field_label
-from config.governance import (PRODUCT_COLLECTION_SPECS, PRODUCT_COMPONENTS,
+from config.governance import (COMPONENT_KIND_ML, PRODUCT_COLLECTION_SPECS,
+                               PRODUCT_COMPONENTS, component_kind,
                                PRODUCT_FIELD_SPECS)
 from src.files import extension
 from src.governance import report_blocks as rb
 from src.governance.latex import _esc, _para_table, _section, _wrappable
 from src.governance.report_blocks import NOT_RECORDED, items
+from src.governance.ml_application import get_ml_application
 from src.governance.model_inventory import get_model
 
 
@@ -95,22 +97,32 @@ def _component_models(data: dict, config) -> str:
     marked as such, rather than silently dropped."""
     components = items(data, PRODUCT_COMPONENTS)
     if not components:
-        return _section("Component models", NOT_RECORDED)
+        return _section("Components", NOT_RECORDED)
     rows = []
     for comp in components:
-        model_id = str(comp.get("model_id") or "")
-        model = get_model(model_id, config=config) if model_id else None
-        if model is not None:
-            name = (model.get("data") or {}).get("name") or ""
-            model_cell = f"{model_id} --- {name}" if name else model_id
-        elif model_id:
-            model_cell = f"{model_id} (not in the inventory)"
+        kind = component_kind(comp)
+        component_id = str(comp.get("model_id") or "")
+        # An ML Application resolves against its own register. Looking it up in the
+        # inventory would report a bound component as "not in the inventory" -- a
+        # missing model, which is a finding, rather than a component of another kind.
+        if kind == COMPONENT_KIND_ML:
+            record = get_ml_application(component_id) if component_id else None
+            name = (record.get("data") or {}).get("name") or "" if record else ""
+            missing = "(not on the ML Application register)"
         else:
-            model_cell = "Not recorded"
-        rows.append([comp.get("component_type", ""), model_cell, comp.get("role", "")])
-    body = _para_table(["Type", "Model", "Role in product"], rows, [0.26, 0.44, 0.30],
-                       caption="Component models")
-    return _section("Component models", body)
+            record = get_model(component_id, config=config) if component_id else None
+            name = (record.get("data") or {}).get("name") or "" if record else ""
+            missing = "(not in the inventory)"
+        if record is not None:
+            cell = f"{component_id} --- {name}" if name else component_id
+        elif component_id:
+            cell = f"{component_id} {missing}"
+        else:
+            cell = "Not recorded"
+        rows.append([kind, comp.get("component_type", ""), cell, comp.get("role", "")])
+    body = _para_table(["Kind", "Type", "Component", "Role in product"], rows,
+                       [0.16, 0.22, 0.36, 0.26], caption="Components")
+    return _section("Components", body)
 
 
 

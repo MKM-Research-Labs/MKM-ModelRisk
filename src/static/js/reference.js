@@ -74,8 +74,8 @@ const Reference = {
   // The status vocabularies, in the order a record meets them. Each is an ordinary
   // reference list; what they have in common is the two columns, so they are shown
   // together rather than as six tabs nobody would find.
-  _VOCABULARIES: ["lifecycle_stage", "validation_status", "impact_level",
-                  "priority_level", "remediation_status", "vq_status"],
+  _VOCABULARIES: ["lifecycle_stage", "version_lifecycle", "validation_status",
+                  "impact_level", "priority_level", "remediation_status", "vq_status"],
 
   _renderVocabularies(container, res) {
     container.innerHTML =
