@@ -28,7 +28,11 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (
+    COMPONENT_KIND_MODEL,
     PRODUCT_BINDINGS,
+    PRODUCT_COMPONENTS,
+    VALID_COMPONENT_KINDS,
+    component_kind,
     PRODUCT_COLLECTION_SPECS,
     PRODUCT_EDITABLE_FIELDS,
     PRODUCT_FIELD_CHOICES,
@@ -130,6 +134,20 @@ def decide_retire(state: ProductState) -> tuple[str, dict[str, Any]]:
     return EVENT_RETIRED, {}
 
 
+def _validate_component(fields: dict[str, Any]) -> None:
+    """A component row must say what it is, and a model component must say its type.
+
+    The type comes from the admin model_type list and describes a model's part in the
+    product. An ML Application has no entry there -- its provenance is its Estimator --
+    so requiring one would force whoever binds it to pick a lie from a dropdown.
+    """
+    kind = component_kind(fields)
+    if kind not in VALID_COMPONENT_KINDS:
+        raise DomainError(f"kind must be one of: {', '.join(VALID_COMPONENT_KINDS)}")
+    if kind == COMPONENT_KIND_MODEL and not fields.get("component_type"):
+        raise DomainError("component_type is required for a model component")
+
+
 def decide_add_item(
     state: ProductState, *, collection: str, fields: dict[str, Any],
     duplicate: bool = False,
@@ -143,6 +161,8 @@ def decide_add_item(
     the rule only decides what to do about it.
     """
     _require_editable(state)
+    if collection == PRODUCT_COMPONENTS:
+        _validate_component(fields)
     if duplicate:
         raise DomainError(
             "another Product of this name already binds exactly these components")

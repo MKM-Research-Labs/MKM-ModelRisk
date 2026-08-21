@@ -63,3 +63,36 @@ def reject_unknown_references(
         if allowed and fields[key] not in allowed:
             raise DomainError(
                 f"{key} must be one of: {', '.join(str(a) for a in allowed)}")
+
+
+def reject_unknown_values(specs: dict[str, Any], collection: str,
+                          fields: dict[str, Any], config=None) -> None:
+    """Reject a collection-item value that is not on its field's admin list.
+
+    The sibling of ``reject_unknown_references`` for collection items. ``collections``
+    is pure and so cannot read the reference store; it therefore skips reference-backed
+    choices and they are checked here, against the vocabulary as it actually stands
+    rather than against the words that shipped.
+
+    An empty list is not enforced, exactly as above: before the defaults are seeded
+    there is nothing to validate against, and rejecting everything would make the
+    field unusable rather than safe.
+    """
+    from src.governance.reference._store import get_reference_lists
+
+    spec = (specs or {}).get(collection) or {}
+    checkable = [f for f in spec.get("fields", ())
+                 if f.get("type") == "choice" and f.get("reference")
+                 and f["key"] in fields and str(fields[f["key"]] or "").strip()]
+    if not checkable:
+        return
+    lists = get_reference_lists(config)
+    for field in checkable:
+        list_name = field["reference"]
+        list_spec = REFERENCE_SPECS.get(list_name, {})
+        key = list_spec.get("value_key") or list_spec.get("display", "value")
+        allowed = [item.get(key) for item in lists.get(list_name, ())]
+        if allowed and fields[field["key"]] not in allowed:
+            raise DomainError(
+                f"{field['label']} must be one of: "
+                f"{', '.join(str(a) for a in allowed)}")

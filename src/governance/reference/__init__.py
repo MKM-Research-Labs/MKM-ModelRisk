@@ -19,7 +19,8 @@
 # SOFTWARE.
 """Reference data: admin-managed menu lists for organisation fields."""
 from src.governance.reference._store import get_reference_lists, model_type_roles
-from src.governance.reference._validate import reject_unknown_references
+from src.governance.reference._validate import (reject_unknown_references,
+                                                 reject_unknown_values)
 from src.governance.reference.commands import (add_option,
                                                ensure_default_estimators,
                                                ensure_default_ml_application_questions,
@@ -31,7 +32,7 @@ from src.governance.reference.commands import (add_option,
                                                move_option, remove_option,
                                                update_option)
 
-__all__ = ["get_reference_lists", "model_type_roles", "reject_unknown_references",
+__all__ = ["get_reference_lists", "model_type_roles", "reject_unknown_references", "reject_unknown_values",
            "add_option",
            "ensure_default_estimators",
            "ensure_default_ml_application_questions",

@@ -42,6 +42,22 @@ PRODUCT_BINDINGS = ("calculating_agent",)
 # structured credit, not an error.
 PRODUCT_COMPONENTS = "components"
 
+# What a component IS. A Product is built from models and from ML Applications, and
+# the two resolve against different registers -- so the row says which, rather than
+# leaving every consumer to guess from whether an id happens to resolve.
+#
+# Absent means Model. Every component recorded before ML Applications existed carries
+# no kind, and the log is append-only, so the default has to be the old meaning or
+# each of those rows would change meaning retrospectively.
+COMPONENT_KIND_MODEL = "Model"
+COMPONENT_KIND_ML = "ML Application"
+VALID_COMPONENT_KINDS = (COMPONENT_KIND_MODEL, COMPONENT_KIND_ML)
+
+
+def component_kind(item: dict) -> str:
+    """The kind of one component row, defaulting a blank to Model (see above)."""
+    return str((item or {}).get("kind") or COMPONENT_KIND_MODEL)
+
 # Ordered scalar field specs. The calculating agent and the owner reference admin
 # lists; the model components live in the ``components`` collection below.
 PRODUCT_FIELD_SPECS = {
@@ -119,11 +135,20 @@ PRODUCT_COLLECTION_SPECS = {
     # (the model_type list), so the vocabulary grows with the estate rather than
     # with a release; ``model_id`` resolves against the inventory, filtered to
     # models of that type.
+    # ``model_id`` holds a model id or an ML Application id depending on ``kind``. One
+    # list rather than two: a product's risk story reads off "what is this built from",
+    # and with two collections every consumer has to remember to read both -- the ones
+    # that forget do not error, they silently under-report, which on a completeness
+    # audit is the worst failure available.
     PRODUCT_COMPONENTS: {"label": "Components", "id_prefix": "CMP", "fields": [
+        {"key": "kind", "label": "Kind", "type": "choice", "options": VALID_COMPONENT_KINDS},
+        # Required for a model component and meaningless for an ML Application, whose
+        # provenance is its Estimator -- so the requirement is enforced in the rules,
+        # conditionally, rather than declared here unconditionally.
         {"key": "component_type", "label": "Type", "type": "text",
-         "reference": "model_type", "required": True},
-        {"key": "model_id", "label": "Model", "type": "text",
-         "reference": "model_inventory", "required": True},
+         "reference": "model_type"},
+        {"key": "model_id", "label": "Component", "type": "text",
+         "reference": "product_component", "required": True},
         {"key": "role", "label": "Role in product", "type": "text"},
     ]},
     "limitations": COLLECTION_SPECS["limitations"],

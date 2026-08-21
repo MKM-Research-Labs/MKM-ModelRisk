@@ -48,6 +48,61 @@ const DetailShell = {
     return '<div class="section-header">' + title + "</div>" + keys.map(row).join("");
   },
 
+  // One inline field row: label, value, and an edit affordance where the record is
+  // still editable. The markup is shared so every detail screen's rows are the same
+  // shape -- which is what makes the editor below able to open on any of them.
+  row(key, label, value, editable) {
+    return '<div class="inforow" id="row-' + key + '"><div class="k">' + esc(label) +
+      '</div><div class="v">' + value +
+      (editable ? ' <span class="edit-btn" data-edit="' + key + '">edit</span>' : "") +
+      "</div></div>";
+  },
+
+  // The inline field editor, opened in place of a row.
+  //
+  // Three screens had their own copy of this and they differed in four things: which
+  // panel to scope the row lookup to, an id prefix, whether there is a Save button or
+  // the control saves on change, and what to do with the value. Those are the options;
+  // everything else -- the band picker for risk dimensions, the tier score, the
+  // heading suppression inside a risk-table cell -- is the same everywhere and is
+  // written once here.
+  //
+  // ``scope`` matters: a model detail left rendered in a hidden panel carries rows
+  // under the same ids, and a bare getElementById would hand back whichever the
+  // document happens to hold first.
+  fieldEditor(opts) {
+    const f = opts.spec;
+    if (!f) return null;
+    const row = document.querySelector(opts.scope + " #row-" + f.key) ||
+      document.getElementById("row-" + f.key);
+    if (!row) return null;
+    const inputId = opts.prefix + "-input";
+    const picker = bandPicker(inputId, f, opts.division, opts.current);
+    // In a risk table the target is a cell, which carries its own Dimension heading;
+    // only an inforow needs the label repeated inside the editor.
+    const heading = row.tagName === "TD"
+      ? "" : '<div class="k">' + esc(riskFieldLabel(f, opts.division)) + "</div>";
+    row.innerHTML = heading + '<div class="editor">' +
+      (picker || inputControl(inputId, f, opts.division)) +
+      (opts.withSave
+        ? '<button class="btn small primary" id="' + opts.prefix + '-save">Save&hellip;</button>'
+        : "") +
+      '<button class="btn small" id="' + opts.prefix + '-cancel">Cancel</button></div>';
+    const input = document.getElementById(inputId);
+    if (picker) bindBandPicker(inputId);
+    else if (opts.current !== null && opts.current !== undefined) input.value = opts.current;
+    document.getElementById(opts.prefix + "-cancel").onclick = opts.onCancel;
+    const commit = function () {
+      // Tier stores the Mission-Criticality band SCORE (an integer), though the owner
+      // picks it by band name.
+      const value = f.type === "tier" ? parseInt(input.value, 10) : input.value.trim();
+      opts.onSave(value, input.value);
+    };
+    if (opts.withSave) document.getElementById(opts.prefix + "-save").onclick = commit;
+    else { input.onchange = commit; input.focus(); }
+    return input;
+  },
+
   // "retired — read only", shown on a record that can no longer be edited. Retirement
   // itself lives on the Danger tab; this is only the flag.
   retiredFlag(retired) {

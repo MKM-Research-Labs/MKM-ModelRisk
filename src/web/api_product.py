@@ -26,6 +26,7 @@ from config.governance import (
     DOC_CATEGORIES,
     PRODUCT_BINDINGS,
     PRODUCT_COMPONENTS,
+    VALID_COMPONENT_KINDS,
     PRODUCT_COLLECTION_SPECS,
     PRODUCT_FIELD_SPECS,
     PRODUCT_REGISTER_FIELDS,
@@ -36,6 +37,7 @@ from src.governance.documents import (
     add_document, find_document, product_scope as _product_scope, remove_document,
 )
 from src.governance.model_handoff import annotate_links
+from src.governance.ml_application import list_ml_applications
 from src.governance.model_inventory import list_models
 from src.governance.product import (
     add_collection_item,
@@ -83,6 +85,12 @@ def field_specs():
         "bindings": list(PRODUCT_BINDINGS),
         "components": PRODUCT_COMPONENTS,
         "models_by_type": models_by_type,
+        "component_kinds": list(VALID_COMPONENT_KINDS),
+        # The ML Applications a product can bind, id -> name, so the component editor
+        # can offer them by name rather than making somebody type an id. Not narrowed
+        # by type the way models are: an ML Application has no model type.
+        "ml_applications": {r["ml_application_id"]: (r["data"] or {}).get("name") or ""
+                            for r in list_ml_applications() if not r["retired"]},
         "collections": collection_field_specs(PRODUCT_COLLECTION_SPECS),
         **document_specs(),
     })

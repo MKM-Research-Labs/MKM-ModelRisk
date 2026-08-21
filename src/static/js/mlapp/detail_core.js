@@ -73,7 +73,8 @@ const MLAppDetail = {
       fieldDisplay(d.name) + "</h3>" +
       '<span style="margin-left:10px">' + tierBadge(d.tier, d.division) + " " +
       ragBadge(d.rag_rating, d.division) + " " +
-      lifecycleBadge(this._record.retired ? "Retired" : d.lifecycle_stage) + "</span>" +
+      (this._record.retired ? '<span class="pill">retired</span>'
+        : optionLabel(MLApps.fieldSpec("lifecycle_stage"), d.lifecycle_stage)) + "</span>" +
       '<span style="flex:1"></span><button class="btn small ghost" id="mla-close">Close</button>' +
       "</div>";
   },
@@ -118,8 +119,37 @@ const MLAppDetail = {
     const d = this._record.data || {};
     const spec = MLApps.fieldSpec(key);
     if (!spec) return "";
-    return '<div class="drow"><div class="dlabel">' + esc(spec.label) + "</div>" +
-      '<div class="dvalue" data-edit="' + key + '">' + fieldDisplay(d[key]) + "</div></div>";
+    // Through the spec, so a status vocabulary shows its label rather than the word
+    // the record stores.
+    return DetailShell.row(key, riskFieldLabel(spec, d.division), optionLabel(spec, d[key]),
+                           !this._record.retired);
+  },
+
+  // Every Overview field is editable in place, through the shared editor the model and
+  // product screens use. Nothing here is confirmation-gated yet: the MRC route for an
+  // ML Application arrives with phase 4, and until then a rating change applies
+  // directly rather than pretending to be routed somewhere.
+  _bindEdits() {
+    if (this._record.retired) return;
+    const self = this;
+    const d = this._record.data || {};
+    document.querySelectorAll("#mla-content [data-edit]").forEach(function (btn) {
+      const key = btn.getAttribute("data-edit");
+      btn.onclick = function () {
+        DetailShell.fieldEditor({
+          scope: "#mla-content", prefix: "mlaed", spec: MLApps.fieldSpec(key),
+          current: d[key], division: d.division, withSave: true,
+          onCancel: () => self._renderContent(),
+          onSave: (value, shown) => {
+            App.amend("Set " + MLApps.fieldSpec(key).label + ' = "' + shown + '" on ' +
+              self._record.ml_application_id + ".", "POST",
+              "/api/ml-applications/" + encodeURIComponent(self._record.ml_application_id) +
+              "/field", { field: key, value: value },
+              () => self.refresh());
+          },
+        });
+      };
+    });
   },
 
   _overview() {
@@ -135,7 +165,7 @@ const MLAppDetail = {
   _renderContent() {
     const d = this._record.data || {};
     const box = document.getElementById("mla-content");
-    if (this._tab === "overview") { box.innerHTML = this._overview(); return; }
+    if (this._tab === "overview") { box.innerHTML = this._overview(); this._bindEdits(); return; }
     if (this._tab === "risk") {
       // events are product-only, exactly as on a model
       box.innerHTML = DetailTabs.risk(this._risk, false, d.division);

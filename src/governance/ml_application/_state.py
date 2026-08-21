@@ -61,9 +61,10 @@ def apply(state: MLApplicationState, event_type: str,
         updated[payload["field"]] = payload["value"]
         return replace(state, fields=updated)
     if event_type == EVENT_RETIRED:
-        updated = dict(state.fields)
-        updated["lifecycle_stage"] = "Retired"
-        return replace(state, retired=True, fields=updated)
+        # ``retired`` is the fact; the lifecycle stage is the institution's own
+        # vocabulary and is not overwritten with a word we chose. A model retires the
+        # same way, and its screens read the flag rather than a stage.
+        return replace(state, retired=True)
     folded = coll.fold(state.collections, event_type, payload)
     if folded is not None:
         return replace(state, collections=folded)

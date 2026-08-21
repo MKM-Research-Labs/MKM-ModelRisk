@@ -65,6 +65,9 @@ DATA_SOURCES_COLLECTION = "data_sources"
 # A version's place in the development lifecycle. "New" = a fresh version just
 # cut; "Being Enhanced" = active development against it; "No New Development" =
 # stable, still in use but frozen; "Marked for Removal" = scheduled to retire.
+# Admin-managed, like every other status vocabulary: an institution names the arc its
+# own versions move through. Held here beside the field it serves.
+VERSION_LIFECYCLE_LIST = "version_lifecycle"
 VALID_VERSION_LIFECYCLE = (
     "New", "Being Enhanced", "No New Development", "Marked for Removal",
 )
@@ -147,7 +150,7 @@ COLLECTION_SPECS = {
         {"key": "author", "label": "Author", "type": "text"},
         {"key": "ref_document", "label": "Reference document", "type": "text"},
         {"key": "lifecycle", "label": "Lifecycle", "type": "choice",
-         "options": VALID_VERSION_LIFECYCLE},
+         "options": VALID_VERSION_LIFECYCLE, "reference": VERSION_LIFECYCLE_LIST},
     ]},
     "remediation_steps": {"label": "Remediation", "id_prefix": "RM", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},

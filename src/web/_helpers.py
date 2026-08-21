@@ -29,6 +29,7 @@ from config.governance import (DOC_CATEGORIES, DOC_TAB_CATEGORIES, DOC_TAB_GROUP
                                REVIEW_DOC_CATEGORIES, TESTING_DOC_CATEGORIES)
 from src.command import CommandContext, context_from_headers
 from src.files import extension
+from src.governance.ml_application import list_ml_applications
 from src.governance.model_inventory import list_models
 from src.governance.reference import get_reference_lists
 
@@ -94,6 +95,12 @@ def reference_options() -> dict[str, list]:
         for name, items in lists.items()
     }
     options["model_inventory"] = [m["model_id"] for m in list_models()]
+    # A Product component is a model OR an ML Application, so its picker offers both.
+    # Kept separate from ``model_inventory`` so the other consumers of that list (an
+    # MRC decision's linked model, say) are not quietly offered ML Applications too.
+    options["product_component"] = (options["model_inventory"] +
+                                    [r["ml_application_id"] for r in list_ml_applications()
+                                     if not r["retired"]])
     return options
 
 

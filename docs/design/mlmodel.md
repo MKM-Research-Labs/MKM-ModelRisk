@@ -1,6 +1,6 @@
 # ML Applications — design and project plan
 
-**Status:** Phase 1 built on branch (admin lists), phases 2–5 outstanding
+**Status:** Phases 1–3 shipped on `main`; phase 4 (MRC) and phase 5 outstanding
 **Date:** 2026-08-21
 **Area:** ML Applications / Products / MRC
 **Driver:** A named Moody's use case — a Product that draws on several models *and*
@@ -135,11 +135,11 @@ ML-specific fields — which is the reason for the separation in the first place
 
 ## 5. Open questions
 
-- **One component list on a Product, or two?** Extending `components` so an entry points
-  at either an inventory model or an ML Application keeps "what is this built from" a single
-  list. Two parallel collections means every consumer has to read both, and the ones that
-  forget under-report silently — the worst failure mode on a completeness audit.
-  *Leaning: one list with a kind discriminator.*
+- ~~**One component list on a Product, or two?**~~ **Settled — one list, phase 3.** The row
+  carries a `kind` (`Model` / `ML Application`) and `model_id` holds an id from whichever
+  register that names. A blank kind means Model, because the log is append-only and every
+  component bound before ML Applications existed carries none — the default has to be the
+  old meaning or those rows change meaning retrospectively.
 - **Does the heatmap still discriminate?** (Sharpened by decision 8, not answered by it.)
   If an ML Application rates High complexity essentially by construction, the map stops
   separating the risky ones from the rest across the whole ML population — precisely
@@ -215,14 +215,32 @@ What it deliberately does *not* carry: chains, dependencies, `type` / `vendor` /
 neutral with respect to the display label.** The log is append-only: the screen wording
 is cheap to change later, ids and event names are not.
 
-### Phase 3 — Link to Products
+### Phase 3 — Link to Products — SHIPPED
 
-Resolve the one-list-or-two question, then extend the Components tab.
+One component list carrying both kinds. The consumers branch on `kind`: the pack skips ML
+ids (they resolve against a different register), the model map ignores them (no dependency
+chain), and the document names them from the right register instead of reporting a bound
+component as a missing model. The picker offers both registers through a `product_component`
+option list, kept separate from `model_inventory` so other consumers of that list are not
+quietly offered ML Applications too.
+
+**Found while doing it, and fixed:** the status vocabularies were half-built. Admin accepted
+a new impact level, priority, remediation status or review-answer status and every record
+then refused it, because the pure collection validator checked values against the words that
+*shipped* rather than the list as it stands — an adopter could rename a vocabulary but never
+extend one. `collections` now skips reference-backed choices (it is pure and cannot read the
+store) and the command layer checks them against the live list. The version lifecycle became
+an admin-managed vocabulary on the back of it; it had been a fixed tuple in config.
 Housekeeping to decide at the same time: `product-as-components.md` follow-up 2 —
 remove the now-vestigial `binding_role` from `model_type`, deferred on 2026-08-11 until
 "Product functionality is reviewed". This is that review.
 
 ### Phase 4 — MRC and sign-off
+
+**Carry this in:** an ML Application currently has **no confirmation gate on `rag_rating`**.
+A model proposes a rating to its committee and it changes only once approved; an ML
+Application applies it directly, because there is no MRC route yet. That must change here,
+or ML ratings bypass the committee that signs off everything else.
 
 Register a fourth `Subject`; surface ML Applications in the sign-off tabs.
 

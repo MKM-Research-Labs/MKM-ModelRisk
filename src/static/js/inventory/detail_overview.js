@@ -279,37 +279,19 @@ Object.assign(Detail, {
   },
 
   _edit(f, current) {
-    // Scoped to this panel: a product detail rendered in its own (hidden) panel carries
-    // rows under the same ids, and a bare getElementById would hand back whichever the
-    // document happens to hold first.
-    const row = document.querySelector("#dt-content #row-" + f.key) ||
-      document.getElementById("row-" + f.key);
-    const division = (this._model.data || {}).division;
-    // A risk dimension is chosen from the division's bands as Admin → Risk presents them
-    // (colour, name, the admin's explanation); everything else keeps the compact control.
-    const picker = bandPicker("ed-input", f, division, current);
-    // In the risk table the target is a cell, which carries its own Dimension heading —
-    // only an inforow needs the label repeated inside the editor.
-    const heading = row.tagName === "TD"
-      ? "" : '<div class="k">' + esc(riskFieldLabel(f, division)) + "</div>";
-    row.innerHTML = heading + '<div class="editor">' +
-      (picker || inputControl("ed-input", f, division)) +
-      '<button class="btn small primary" id="ed-save">Save…</button>' +
-      '<button class="btn small" id="ed-cancel">Cancel</button></div>';
-    const input = document.getElementById("ed-input");
-    if (picker) bindBandPicker("ed-input");
-    else if (current !== null && current !== undefined) input.value = current;
-    document.getElementById("ed-cancel").onclick = () => this.show(this._id, this._tab);
-    document.getElementById("ed-save").onclick = () => {
-      let value = input.value.trim();
-      if (f.type === "tier") value = parseInt(value, 10);
-      // Changing the RAG rating isn't applied directly — it is proposed to the
-      // MRC for sign-off, and only takes effect once approved.
-      if (f.key === "rag_rating") { this._proposeRag(value, current); return; }
-      App.amend("Set " + f.label + ' = "' + input.value + '" on ' + this._id + ".", "POST",
-        "/api/models/" + this._id + "/field", { field: f.key, value: value },
-        () => { this.show(this._id, this._tab); Inventory.loadList(); });
-    };
+    DetailShell.fieldEditor({
+      scope: "#dt-content", prefix: "ed", spec: f, current: current,
+      division: (this._model.data || {}).division, withSave: true,
+      onCancel: () => this.show(this._id, this._tab),
+      onSave: (value, shown) => {
+        // Changing the RAG rating isn't applied directly — it is proposed to the MRC
+        // for sign-off, and only takes effect once approved.
+        if (f.key === "rag_rating") { this._proposeRag(value, current); return; }
+        App.amend("Set " + f.label + ' = "' + shown + '" on ' + this._id + ".", "POST",
+          "/api/models/" + this._id + "/field", { field: f.key, value: value },
+          () => { this.show(this._id, this._tab); Inventory.loadList(); });
+      },
+    });
   },
 
   // Snag: a RAG-rating change must go through the MRC. Rather than setting the

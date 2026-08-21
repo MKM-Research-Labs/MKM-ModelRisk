@@ -84,10 +84,11 @@ def test_add_rejects_unknown_field():
 
 
 def test_add_rejects_invalid_choice():
+    """A choice with no reference list: its options ARE the vocabulary."""
     with pytest.raises(DomainError):
         decide_add_item(
-            _registered(), collection="assumptions",
-            fields={"description": "x", "impact": "Massive"},
+            _registered(), collection="review_notes",
+            fields={"text": "x", "kind": "Shouting"},
         )
 
 
@@ -108,12 +109,23 @@ def test_update_unknown_item_raises():
 
 
 def test_update_rejects_invalid_choice():
-    state, _ = _add(_registered(), "assumptions", {"description": "x"})
+    """A choice with no reference list is the pure layer's to police: its options are
+    the vocabulary, not a seed of one."""
+    state, _ = _add(_registered(), "review_notes", {"stage": "scope", "text": "x", "kind": "Note"})
     with pytest.raises(DomainError):
         decide_update_item(
-            state, collection="assumptions", item_id="AS-001",
-            fields={"impact": "Massive"},
+            state, collection="review_notes", item_id="RN-001",
+            fields={"kind": "Shouting"},
         )
+
+
+def test_a_reference_backed_choice_is_left_to_the_admin_list():
+    """Its ``options`` are the words that SHIPPED, not the institution's vocabulary.
+    Checking them here rejected every value an adopter added in Admin, so membership
+    is checked in the command layer against the list as it actually stands."""
+    state, _ = _add(_registered(), "assumptions", {"description": "x"})
+    decide_update_item(state, collection="assumptions", item_id="AS-001",
+                       fields={"impact": "Catastrophic"})
 
 
 def test_update_requires_editable_model():

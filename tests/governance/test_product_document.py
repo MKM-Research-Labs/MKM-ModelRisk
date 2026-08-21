@@ -58,7 +58,7 @@ def test_document_leads_with_components_and_reports_the_record(resolve_models):
     )
     tex = build_product_document_tex(product, SETTINGS, "2026-08-03")
     assert "PRD-1 --- Government Bond" in tex          # title page
-    assert "Component models" in tex
+    assert "Components" in tex
     assert "MKM-EF-001 --- Event Frequency" in tex     # resolved component
     assert "not in the inventory" in tex               # MKM-GONE-001 is unknown
     assert "Derived identifier" in tex and "MKM-EF-001.QuantLib" in tex
@@ -73,7 +73,7 @@ def test_document_states_absent_material_rather_than_omitting_it(resolve_models)
     # No description, no components, no registers, no attachments: every section is
     # present and marked as not recorded, so nothing is silently missing.
     tex = build_product_document_tex(_product(identifier=None), SETTINGS, "2026-08-03")
-    assert "Component models" in tex and "Not recorded" in tex
+    assert "Components" in tex and "Not recorded" in tex
     assert "Not yet derived" in tex                    # identifier absent
     assert "Attached documents" in tex
 
