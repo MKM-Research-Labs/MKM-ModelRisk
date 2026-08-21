@@ -81,6 +81,13 @@ def product_scope(product_id: str) -> str:
     return f"product/{product_id}"
 
 
+def ml_application_scope(ml_application_id: str) -> str:
+    """Where an ML Application's uploaded files live under the upload directory —
+    named beside ``model_scope`` so the API and the generated document agree about
+    which directory the record's files are in."""
+    return f"ml_application/{ml_application_id}"
+
+
 def _fold(aggregate_type: str, aggregate_id: str, config) -> tuple[list, int]:
     state: dict = {}
     version = 0

@@ -54,6 +54,7 @@ def test_migration_files_are_ordered():
         "0008_model_handoff_view.sql",
         "0009_field_lineage_view.sql",
         "0010_client_view.sql",
+        "0011_ml_application_view.sql",
     ]
 
 
@@ -71,6 +72,7 @@ def test_run_migrations_applies_then_skips():
         "0008_model_handoff_view",
         "0009_field_lineage_view",
         "0010_client_view",
+        "0011_ml_application_view",
     ]
     # Re-running is a no-op: every version already recorded.
     assert run_migrations() == []

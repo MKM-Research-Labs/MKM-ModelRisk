@@ -36,10 +36,11 @@ from src.governance.risk_policy.naming import field_label
 from config.governance import (PRODUCT_COLLECTION_SPECS, PRODUCT_COMPONENTS,
                                PRODUCT_FIELD_SPECS)
 from src.files import extension
+from src.governance import report_blocks as rb
 from src.governance.latex import _esc, _para_table, _section, _wrappable
+from src.governance.report_blocks import NOT_RECORDED, items
 from src.governance.model_inventory import get_model
 
-NOT_RECORDED = "\\textit{Not recorded.}\n\n"
 
 # The description opens the dossier as a paragraph, so it is not repeated in the
 # field table beneath it.
@@ -75,32 +76,17 @@ COLLECTIONS = [
 ]
 
 
-def items(data: dict, name: str) -> list[dict]:
-    """A collection's entries, skipping any malformed non-object entry rather than
-    failing the whole document over one bad record."""
-    return [i for i in data.get(name) or [] if isinstance(i, dict)]
 
 
 def _value(data: dict, key: str) -> str:
-    value = data.get(key)
-    if value is None or value == "":
-        return "Not recorded"
-    return str(value)
-
+    return rb.value(data, key)
 
 def _groups() -> dict[str, list[str]]:
     """The product's field groups, in the order the specs declare them."""
-    groups: dict[str, list[str]] = {}
-    for key, spec in PRODUCT_FIELD_SPECS.items():
-        if key not in SKIP_FIELDS:
-            groups.setdefault(spec.get("group", "Other"), []).append(key)
-    return groups
-
+    return rb.field_groups(PRODUCT_FIELD_SPECS, SKIP_FIELDS)
 
 def _field_group(data: dict, title: str, keys: list[str], extra: list) -> str:
-    rows = [[field_label(k, PRODUCT_FIELD_SPECS[k].get("label", k), data.get("division") or ""), _value(data, k)] for k in keys] + extra
-    return _section(title, _para_table(["Field", "Value"], rows, [0.28, 0.72], caption=title))
-
+    return rb.field_group(data, title, keys, extra, field_specs=PRODUCT_FIELD_SPECS)
 
 def _component_models(data: dict, config) -> str:
     """The models this product binds, each resolved to its inventory name so the
@@ -127,48 +113,13 @@ def _component_models(data: dict, config) -> str:
     return _section("Component models", body)
 
 
-def _blocks(entries: list[dict], fields: list[dict]) -> str:
-    """One labelled block per item, each field on its own line so long rationales
-    wrap instead of being squeezed into a table column."""
-    out = []
-    for index, item in enumerate(entries, start=1):
-        lines = ["\\textbf{" + _esc(str(index)) + ".}\\quad "]
-        for field in fields:
-            value = item.get(field["key"])
-            if value is None or value == "":
-                continue
-            lines.append("\\textbf{" + _esc(field["label"]) + ":} " + _wrappable(value) + " \\\\\n")
-        out.append("".join(lines).rstrip(" \\\n") + "\n\n")
-    return "".join(out)
 
 
 def _collection(data: dict, name: str, label: str | None) -> str:
-    spec = PRODUCT_COLLECTION_SPECS[name]
-    fields = spec["fields"]
-    entries = items(data, name)
-    title = label or spec["label"]
-    if not entries:
-        return _section(title, NOT_RECORDED)
-    layout = LAYOUTS[name]
-    if layout == "blocks":
-        return _section(title, _blocks(entries, fields))
-    rows = [[item.get(f["key"], "") for f in fields] for item in entries]
-    return _section(title, _para_table([f["label"] for f in fields], rows, list(layout), caption=title))
-
+    return rb.collection(data, name, label, specs=PRODUCT_COLLECTION_SPECS, layouts=LAYOUTS)
 
 def _documents(data: dict) -> str:
-    """The evidence pack attached to the product. Sources filed beside their PDF
-    (``.tex``) are left out: they are the same document listed twice."""
-    docs = [d for d in items(data, "documents")
-            if extension(d.get("original_name", "")) not in HIDDEN_DOC_EXTENSIONS]
-    if not docs:
-        return _section("Attached documents", NOT_RECORDED)
-    rows = [[d.get("category", ""), d.get("filename", ""), d.get("description", "")]
-            for d in docs]
-    body = _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45],
-                       caption="Attached documents")
-    return _section("Attached documents", body)
-
+    return rb.documents(data)
 
 def product_section(product: dict, review_status: str, config=None) -> str:
     """A product's complete dossier as top-level sections, for the Product Document."""

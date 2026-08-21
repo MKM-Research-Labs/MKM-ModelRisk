@@ -1,0 +1,65 @@
+# Copyright (c) 2022-2026 MKM Research Labs.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Validation of record fields against the admin reference lists.
+
+Shared by every aggregate that has ``strict_reference`` fields -- the model
+inventory's ``type`` and ``vendor``, and an ML Application's ``estimator``. Held
+here rather than in one aggregate because the allowed values are rows in the
+reference store, so this is the reference package's business and not the
+inventory's; a second copy in each aggregate would drift the moment one of them
+learned something the other did not.
+"""
+from __future__ import annotations
+
+from typing import Any
+
+from config.governance import REFERENCE_SPECS
+from src.governance.errors import DomainError
+
+
+def reject_unknown_references(
+    specs: dict[str, dict[str, Any]], fields: dict[str, Any], config=None,
+) -> None:
+    """Reject a value not on the admin list for any ``strict_reference`` field.
+
+    ``specs`` maps a field key to its spec; only fields flagged strict are
+    checked -- the others are deliberately open, because they hold names that
+    predate the lists and rejecting those would block every edit to an existing
+    record.
+
+    An empty list is not enforced: on a fresh database, before the defaults are
+    seeded, there is nothing to validate against, and rejecting everything would
+    make the field unusable rather than safe.
+    """
+    from src.governance.reference._store import get_reference_lists
+
+    strict = {key: spec["reference"] for key, spec in specs.items()
+              if spec.get("strict_reference") and key in fields
+              and str(fields[key] or "").strip()}
+    if not strict:
+        return
+    lists = get_reference_lists(config)
+    for key, list_name in strict.items():
+        spec = REFERENCE_SPECS[list_name]
+        allowed = [item.get(spec.get("display", "value"))
+                   for item in lists.get(list_name, ())]
+        if allowed and fields[key] not in allowed:
+            raise DomainError(
+                f"{key} must be one of: {', '.join(str(a) for a in allowed)}")

@@ -185,6 +185,10 @@ function ragOrder(rating, division) {
 // Mission-Criticality as a coloured pill showing the division's band NAME (was "Tier N");
 // colour and name come from the division's Mission-Criticality band for that tier score.
 function tierBadge(tier, division) {
+  // An unrated record shows a dash, never a band name. Policy.mcBand falls back to the
+  // first band for a non-numeric tier, so without this guard a record nobody has rated
+  // renders as "Critical" in red -- a rating no one gave, on a risk register.
+  if (tier === null || tier === undefined || tier === "") return '<span class="muted">—</span>';
   const band = Policy.mcBand(tier, division);
   const color = (band && band.colour) || TIER_COLORS[tier];
   const label = (band && band.name) || TIER_DESCRIPTORS[tier] || ("Tier " + tier);
@@ -210,6 +214,7 @@ const TIER_DESCRIPTORS = { 1: "Mission critical", 2: "Important", 3: "Not import
 // The descriptor shown next to the Mission-Criticality pill: the band's admin-defined
 // explanation. Empty when the band carries none (the pill already names it).
 function tierFullLabel(tier, division) {
+  if (tier === null || tier === undefined || tier === "") return "—";
   const band = Policy.mcBand(tier, division);
   if (band && band.explanation) return band.explanation;
   const d = (band && band.name) || TIER_DESCRIPTORS[tier];

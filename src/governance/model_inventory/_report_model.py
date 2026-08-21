@@ -39,9 +39,10 @@ from src.governance.risk_policy.naming import field_label
 from config.governance import (COLLECTION_SPECS, MODEL_FIELD_SPECS,
                                TESTING_DOC_CATEGORIES)
 from src.files import extension
+from src.governance import report_blocks as rb
+from src.governance.report_blocks import NOT_RECORDED, items
 from src.governance.latex import _esc, _para_table, _section, _subsection, _wrappable
 
-NOT_RECORDED = "\\textit{Not recorded.}\n\n"
 
 # The description opens the dossier as a paragraph, so it is not repeated in the
 # classification table underneath it.
@@ -111,67 +112,25 @@ def history(data: dict) -> list[dict]:
     return sorted(entries, key=lambda e: str(e.get("date") or ""))
 
 
-def items(data: dict, name: str) -> list[dict]:
-    """A collection's entries, ignoring any malformed non-object entry rather than
-    failing the whole report over one bad record."""
-    return [i for i in data.get(name) or [] if isinstance(i, dict)]
 
 
 def _value(data: dict, key: str) -> str:
-    value = data.get(key)
-    if value is None or value == "":
-        return "Not recorded"
-    return str(value)
-
+    return rb.value(data, key)
 
 def _groups() -> dict[str, list[str]]:
     """The Overview tab's field groups, in the order the detail view shows them."""
-    groups: dict[str, list[str]] = {}
-    for key, spec in MODEL_FIELD_SPECS.items():
-        if key not in SKIP_FIELDS:
-            groups.setdefault(spec.get("group", "Other"), []).append(key)
-    return groups
-
+    return rb.field_groups(MODEL_FIELD_SPECS, SKIP_FIELDS)
 
 def _field_group(data: dict, title: str, keys: list[str], extra: list, heading) -> str:
-    # Risk-dimension fields are labelled the way the model's own division names
-    # them: a document that printed "Complexity" for a division that calls it
-    # something else would misdescribe the very policy it is reporting against.
-    division = data.get("division") or ""
-    rows = [[field_label(k, MODEL_FIELD_SPECS[k].get("label", k), division), _value(data, k)]
-            for k in keys] + extra
-    return heading(title, _para_table(["Field", "Value"], rows, [0.28, 0.72], caption=title))
+    return rb.field_group(data, title, keys, extra, field_specs=MODEL_FIELD_SPECS,
+                          heading=heading)
 
-
-def _blocks(entries: list[dict], fields: list[dict]) -> str:
-    """One labelled block per item, each field on its own line so long rationales
-    and evidence citations wrap instead of being squeezed into a table column."""
-    out = []
-    for index, item in enumerate(entries, start=1):
-        lines = ["\\textbf{" + _esc(str(index)) + ".}\\quad "]
-        for field in fields:
-            value = item.get(field["key"])
-            if value is None or value == "":
-                continue
-            lines.append("\\textbf{" + _esc(field["label"]) + ":} " + _wrappable(value) + " \\\\\n")
-        out.append("".join(lines).rstrip(" \\\n") + "\n\n")
-    return "".join(out)
 
 
 def _collection(data: dict, name: str, label: str | None, heading,
                 entries: list[dict] | None = None) -> str:
-    spec = COLLECTION_SPECS[name]
-    fields = spec["fields"]
-    entries = items(data, name) if entries is None else entries
-    title = label or spec["label"]
-    if not entries:
-        return heading(title, NOT_RECORDED)
-    layout = LAYOUTS[name]
-    if layout == "blocks":
-        return heading(title, _blocks(entries, fields))
-    rows = [[item.get(f["key"], "") for f in fields] for item in entries]
-    return heading(title, _para_table([f["label"] for f in fields], rows, list(layout), caption=title))
-
+    return rb.collection(data, name, label, specs=COLLECTION_SPECS, layouts=LAYOUTS,
+                         heading=heading, entries=entries)
 
 def _testing_evidence(data: dict) -> str:
     """The testing documents attached to the model, listed under the Testing
@@ -190,19 +149,7 @@ def _testing_evidence(data: dict) -> str:
 
 
 def _documents(data: dict, heading) -> str:
-    """The evidence pack attached to the model. Filenames are listed so a reviewer
-    can tie each dossier back to the document it was drawn from. Sources filed beside
-    their PDF (``.tex``) are left out: they are the same document, listed twice."""
-    docs = [d for d in items(data, "documents")
-            if extension(d.get("original_name", "")) not in HIDDEN_DOC_EXTENSIONS]
-    if not docs:
-        return heading("Attached documents", NOT_RECORDED)
-    rows = [[d.get("category", ""), d.get("filename", ""), d.get("description", "")]
-            for d in docs]
-    body = _para_table(["Category", "File", "Description"], rows, [0.22, 0.33, 0.45],
-                       caption="Attached documents")
-    return heading("Attached documents", body)
-
+    return rb.documents(data, heading)
 
 def model_section(model: dict, review_status: str, *, standalone: bool = False) -> str:
     """A model's complete dossier.

@@ -52,7 +52,7 @@ from src.governance.model_inventory import list_models
 from src.governance.mrc.pack import TectonicNotFound
 from src.governance.mrc_settings import get_settings
 from src.governance.product import list_products
-from src.web._helpers import (
+from src.web._helpers import (collection_field_specs, grouped_field_specs,
     context_from_request,
     json_body,
     reference_options,
@@ -67,41 +67,13 @@ _SUPPLEMENTARY_CATEGORY = "Supplementary"
 client_bp = Blueprint("client", __name__, url_prefix="/api/clients")
 
 
-def _grouped_specs(options: dict[str, list]):
-    """Field specs grouped for the detail view; references resolve to dropdowns."""
-    groups: list[dict] = []
-    by_name: dict[str, dict] = {}
-    for key, spec in CLIENT_FIELD_SPECS.items():
-        group = by_name.get(spec["group"])
-        if group is None:
-            group = {"group": spec["group"], "fields": []}
-            by_name[spec["group"]] = group
-            groups.append(group)
-        field_type, choices = spec["type"], list(spec.get("options", []))
-        reference = spec.get("reference")
-        if reference and options.get(reference):
-            field_type, choices = "choice", options[reference]
-        group["fields"].append(
-            {"key": key, "label": spec["label"], "type": field_type, "options": choices})
-    return groups
-
-
-def _collection_specs():
-    options_by_list = reference_options()
-    return [
-        {"key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
-         "fields": [resolve_field(f, options_by_list) for f in spec["fields"]]}
-        for key, spec in CLIENT_COLLECTION_SPECS.items()
-    ]
-
-
 @client_bp.get("/fields")
 def field_specs():
     """Field and collection specs plus the register-form minimum."""
     return jsonify({
-        "groups": _grouped_specs(reference_options()),
+        "groups": grouped_field_specs(CLIENT_FIELD_SPECS, reference_options()),
         "register": list(CLIENT_REGISTER_FIELDS),
-        "collections": _collection_specs(),
+        "collections": collection_field_specs(CLIENT_COLLECTION_SPECS),
     })
 
 

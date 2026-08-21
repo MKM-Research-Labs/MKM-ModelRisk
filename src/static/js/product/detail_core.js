@@ -123,10 +123,7 @@ const ProductDetail = {
       // entry and upload, so it always sits last after Danger.
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
     ];
-    return '<div class="dtabs">' + tabs.map((t) =>
-      '<button class="dtab' + (t[0] === this._tab ? " active" : "") + '" data-ptab="' + t[0] + '"' +
-      (t[0] === "danger" ? ' style="color:#d32f2f"' : "") + ">" +
-      esc(t[1]) + (t[2] !== null ? " (" + t[2] + ")" : "") + "</button>").join("") + "</div>";
+    return DetailShell.tabBar(tabs, this._tab, "data-ptab");
   },
 
   _renderContent() {
