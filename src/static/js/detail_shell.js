@@ -58,6 +58,28 @@ const DetailShell = {
       "</div></div>";
   },
 
+  // The value cell for the fields every detail screen renders the same way: the three
+  // risk dimensions, and the MRC sign-off that shows its granting meeting. Returns null
+  // where it has nothing particular to say, so a screen falls through to its own
+  // handling — a product's status badge, a model's Owner-vs-Table RAG.
+  //
+  // A dimension is shown AS THE ADMIN DEFINED THE BAND (its colour, name and
+  // explanation), never as the stored score: "Criticality 4" tells a reader nothing,
+  // and the band it stands for is the whole point of the policy.
+  fieldValue(key, spec, d) {
+    if (key === "tier" && (d[key] || d[key] === 0)) {
+      return tierBadge(d[key], d.division) + ' <span class="muted">' +
+        esc(tierFullLabel(d[key], d.division)) + "</span>";
+    }
+    if ((key === "materiality" || key === "complexity") && d[key]) {
+      return bandDisplay(spec, d[key], d.division);
+    }
+    if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
+      return '<span class="code">' + esc(d.mrc_signoff_meeting) + "</span>";
+    }
+    return null;
+  },
+
   // The inline field editor, opened in place of a row.
   //
   // Three screens had their own copy of this and they differed in four things: which

@@ -98,30 +98,44 @@ const MLAppDetail = {
     ], this._tab, "data-mlatab");
   },
 
-  // Which fields sit where on the Overview. The ML half leads: what this thing is
-  // for and what it is built on is the question a reader arrives with.
-  _GROUPS: [
-    ["What it is", ["name", "short_name", "description", "use_case"]],
+  // Which fields sit where on the Overview, following the model and product screens
+  // rather than a layout of this screen's own: a full-width summary, then record
+  // details on the left and Governance on the right.
+  //
+  // The risk assessment is NOT here. It lives on the Risk Rating tab beside the grid
+  // it drives -- one row per dimension in the Admin editor's Dimension / Rating /
+  // Rationale columns -- exactly as a model's and a product's do. Only the headline
+  // rag_rating stays on Overview.
+  _LEFT: [
+    ["ML Application", ["name", "short_name", "use_case"]],
     ["Estimator", ["estimator", "estimator_version", "estimator_rationale"]],
     ["Training and performance",
      ["training_data", "training_period", "performance", "benchmark", "misinterpretation"]],
-    ["Organisation", ["division", "line_of_business", "owner", "peer_reviewer"]],
-    ["Classification",
-     ["tier", "tier_rationale", "materiality", "materiality_rationale",
-      "complexity", "complexity_rationale", "rating_rationale", "rag_rating"]],
-    ["Governance", ["lifecycle_stage", "validation_status", "version", "review_frequency"]],
-    ["Review dates",
-     ["last_review_date", "next_review_date", "mrc_signoff_date", "mrc_signoff_meeting"]],
+    ["Organisation", ["division", "line_of_business"]],
     ["Monitoring", ["monitoring_approach"]],
   ],
+  _RIGHT: [
+    ["Governance",
+     ["rag_rating", "owner", "peer_reviewer", "lifecycle_stage", "validation_status",
+      "version", "review_frequency", "mrc_signoff_date", "next_review_date",
+      "last_review_date"]],
+  ],
+
+  _editLink(key) {
+    return this._record.retired
+      ? "" : '<span class="edit-btn" data-edit="' + key + '">edit</span>';
+  },
 
   _row(key) {
     const d = this._record.data || {};
     const spec = MLApps.fieldSpec(key);
     if (!spec) return "";
     // Through the spec, so a status vocabulary shows its label rather than the word
-    // the record stores.
-    return DetailShell.row(key, riskFieldLabel(spec, d.division), optionLabel(spec, d[key]),
+    // the record stores; and through the shared value cell, so a risk dimension shows
+    // the band the division defined rather than the score behind it.
+    const shared = DetailShell.fieldValue(key, spec, d);
+    return DetailShell.row(key, riskFieldLabel(spec, d.division),
+                           shared === null ? optionLabel(spec, d[key]) : shared,
                            !this._record.retired);
   },
 
@@ -153,13 +167,31 @@ const MLAppDetail = {
   },
 
   _overview() {
+    const d = this._record.data || {};
     const self = this;
-    const section = ([title, keys]) =>
-      DetailShell.section(title, keys, (k) => self._row(k));
-    const left = this._GROUPS.slice(0, 3).map(section).join("");
-    const right = this._GROUPS.slice(3).map(section).join("");
-    return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" +
+    const section = ([title, keys]) => DetailShell.section(title, keys, (k) => self._row(k));
+    // A full-width summary of what the ML Application does, spanning both columns --
+    // the same shape a model's Overview opens with.
+    const summary = DetailShell.row("description", "Summary", fieldDisplay(d.description),
+                                    !this._record.retired);
+    return '<div style="margin-bottom:14px">' + summary + "</div>" +
+      '<div class="grid2"><div>' + this._LEFT.map(section).join("") + "</div>" +
+      "<div>" + this._RIGHT.map(section).join("") + "</div></div>" +
       DetailShell.retiredFlag(this._record.retired);
+  },
+
+  // The risk assessment, through the same shared table the model and product screens
+  // use: one row per dimension, named and banded as the division's ratified policy
+  // says, with the rationale beside each.
+  _riskTable(d) {
+    const rag = (this._risk.heatmap || {}).rag;
+    return riskAssessmentTable({
+      data: d,
+      division: d.division,
+      spec: (key) => MLApps.fieldSpec(key),
+      editLink: (key) => this._editLink(key),
+      ratingBadge: rag ? ragBadge(rag, d.division) : "",
+    });
   },
 
   _renderContent() {
@@ -167,8 +199,15 @@ const MLAppDetail = {
     const box = document.getElementById("mla-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(); this._bindEdits(); return; }
     if (this._tab === "risk") {
-      // events are product-only, exactly as on a model
-      box.innerHTML = DetailTabs.risk(this._risk, false, d.division);
+      box.innerHTML =
+        '<div class="section-header">Risk assessment</div>' +
+        '<p class="muted" style="font-size:12px;margin:0 0 8px">The owner sets these; they ' +
+        "place the ML Application on the heatmap below, which becomes its rating once the " +
+        "MRC signs it off.</p>" +
+        policyNotice(d.division) +
+        this._riskTable(d) +
+        DetailTabs.risk(this._risk, false, d.division);  // events are product-only
+      this._bindEdits();
       return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }

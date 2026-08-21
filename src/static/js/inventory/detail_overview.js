@@ -182,13 +182,10 @@ Object.assign(Detail, {
           (p.meeting_id ? " at " + esc(p.meeting_id) : " (not yet on an agenda)") +
           "</div>";
       }
-    } else if (key === "tier" && (d[key] || d[key] === 0)) {
-      value = tierBadge(d[key], d.division) + ' <span class="muted">' +
-        esc(tierFullLabel(d[key], d.division)) + "</span>";
-    } else if ((key === "materiality" || key === "complexity") && d[key]) {
-      // Shown as the admin defined the band — its colour and its explanation — not as a
-      // bare "High", so the level means the same thing here as it does in Admin → Risk.
-      value = bandDisplay(f, d[key], d.division);
+    } else if (DetailShell.fieldValue(key, f, d) !== null) {
+      // The three risk dimensions, shown as the admin defined the band (colour, name,
+      // explanation) rather than as the stored score. Shared with every detail screen.
+      value = DetailShell.fieldValue(key, f, d);
     } else if (key === "source_module" && d[key]) {
       value = '<span class="code">' + esc(d[key]) + "</span>";
     } else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {

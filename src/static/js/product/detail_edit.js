@@ -62,12 +62,10 @@ Object.assign(ProductDetail, {
       value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key], d.division) +
         '<span class="muted" style="font-size:11px;margin-left:12px">Table</span> ' +
         (tableRag ? ragBadge(tableRag, d.division) : '<span class="muted">&mdash;</span>');
-    } else if (key === "tier" && (d[key] || d[key] === 0)) {
-      value = tierBadge(d[key], d.division) + ' <span class="muted">' +
-        esc(tierFullLabel(d[key], d.division)) + "</span>";
-    } else if ((key === "materiality" || key === "complexity") && d[key]) {
-      // As the admin defined the band — colour, name and its explanation — matching models.
-      value = bandDisplay(f, d[key], d.division);
+    } else if (DetailShell.fieldValue(key, f, d) !== null) {
+      // The three risk dimensions, shown as the admin defined the band (colour, name,
+      // explanation) rather than as the stored score. Shared with every detail screen.
+      value = DetailShell.fieldValue(key, f, d);
     }
     // MRC sign-off shows the granting meeting (not the raw date) once approved.
     else if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
