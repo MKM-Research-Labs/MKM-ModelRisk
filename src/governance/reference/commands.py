@@ -23,6 +23,8 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
+                               DEFAULT_ESTIMATORS, ESTIMATOR_LIST,
+                               ML_APPLICATION_QUESTIONS, ML_APPLICATION_QUESTION_LIST,
                                DEFAULT_MODEL_TYPES, DEFAULT_VENDORS,
                                MODEL_TYPE_LIST, REFERENCE_SPECS,
                                REVIEW_QUESTION_LIST, SR262_QUESTIONS,
@@ -147,6 +149,43 @@ def ensure_default_review_questions(*, actor: str = SYSTEM_ACTOR, config=None) -
         add_option(list_name=REVIEW_QUESTION_LIST, fields=dict(question), actor=actor,
                    reason="Seed the SR 26-2 review questions on first run", config=config)
     return len(SR262_QUESTIONS)
+
+
+def ensure_default_estimators(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the Estimator menu on a fresh install; return how many were added.
+
+    The off-the-shelf ML engines an ML Application is built on. Same rule as every
+    other list -- this seeds a vacuum and never reconciles a curated one, so a menu
+    an adopter has trimmed to the libraries it actually runs is not quietly refilled
+    at the next restart.
+
+    Note that the seeded rows carry no versions: which releases an institution runs
+    is a fact about their environment, not something we can know for them.
+    """
+    collections, _ = load(config)
+    if collections.get(ESTIMATOR_LIST):
+        return 0
+    for entry in DEFAULT_ESTIMATORS:
+        add_option(list_name=ESTIMATOR_LIST, fields=dict(entry), actor=actor,
+                   reason="Seed the default estimators on first run", config=config)
+    return len(DEFAULT_ESTIMATORS)
+
+
+def ensure_default_ml_application_questions(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the ML Application questionnaire on a fresh install; return how many.
+
+    Parallel to ``ensure_default_review_questions`` and deliberately separate from it:
+    an ML Application is asked different questions from a model, and the two sets have
+    to be able to move independently. Same rule again -- seeds a vacuum, never
+    reconciles a curated one.
+    """
+    collections, _ = load(config)
+    if collections.get(ML_APPLICATION_QUESTION_LIST):
+        return 0
+    for question in ML_APPLICATION_QUESTIONS:
+        add_option(list_name=ML_APPLICATION_QUESTION_LIST, fields=dict(question), actor=actor,
+                   reason="Seed the ML Application questions on first run", config=config)
+    return len(ML_APPLICATION_QUESTIONS)
 
 
 def ensure_default_standing_agenda(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
