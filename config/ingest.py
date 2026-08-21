@@ -38,6 +38,7 @@ INGEST_ARTIFACTS = {
     "data-lineage": "data_lineage.schema.json",
     "field-lineage": "field_lineage.schema.json",
     "document": "document.schema.json",
+    "ml-training-run": "ml_training_run.schema.json",
 }
 
 # Largest single payload accepted (bytes). Enforced at the HTTP boundary.

@@ -34,16 +34,20 @@ and whether it is required all live in this table, so the form, the validation, 
 completeness count and the audit-log field names come from one place and adding a
 field is a one-line change.
 
-Requirement:
-``M`` mandatory   ``C`` conditional (the rule is in ``when``)   ``O`` optional
+No field is mandatory. A complete set of fifty-one will not be reached on a real
+estate, and a form that opens by declaring most of itself outstanding is a form
+somebody stops filling in. What the tab reports instead is how much has been
+recorded, and -- separately, and far more usefully -- what has been recorded that a
+reviewer must be told about.
+
+A field either APPLIES to a fit or it does not: a regression is not asked for a loss
+curve it never produced. That rule lives in ``when``.
 """
 from __future__ import annotations
 
 from config.governance._ml_training_notes import TRAINING_NOTES
 
 TRAINING_RUNS_COLLECTION = "training_runs"
-
-MANDATORY, CONDITIONAL, OPTIONAL = "M", "C", "O"
 
 # The six sections, in the order a fit is actually performed.
 TRAINING_SECTIONS = (
@@ -132,85 +136,110 @@ CONDITIONAL_TASKS = {
     WHEN_NEURAL: ("Sequence", "Image"),
 }
 
+# --- Capture at fit time -----------------------------------------------------
+# The fields a training run can report for ITSELF. Everything here is a fact about
+# the run rather than a judgement about it, so a human retyping it adds nothing but
+# the chance of a typo -- and a metric transcribed by hand is a metric nobody can
+# tie back to the fit that produced it.
+#
+# What is deliberately NOT here is what the spec leaves to the owner: the target
+# definition, the intended and excluded uses, why the missing data was handled that
+# way, why the split does not leak, and what the segment table means. Those are the
+# argument, and an argument is not captured, it is made.
+CAPTURABLE_FIELDS = (
+    "snapshot_id", "row_count", "feature_count",
+    "hyperparameters", "search_method", "random_seed", "determinism",
+    "run_date", "run_duration", "run_hardware", "epochs",
+    "learning_task", "primary_metric", "metric_train", "metric_cv", "metric_test",
+    "cv_method", "cv_folds", "cv_result", "split_method", "split_proportions",
+    "scaling", "scaler_fit_point", "encoding", "missing_data",
+    "code_commit", "environment", "artefact",
+)
+
+# Which fields on a train arrived by capture rather than by hand. Stored on the item
+# so a screen can show them as read-only and a reviewer can tell the two apart: a
+# field the owner can hand-edit is a field a validator has to verify separately.
+CAPTURED_FIELD = "captured_fields"
+
 # --- The fields -------------------------------------------------------------
-# key: (section, label, type, requirement, reference-or-None, when-or-None)
+# key: (section, label, type, reference-or-None, when-or-None)
 # ``type`` is the ordinary field vocabulary: text | textarea | choice | date | number.
 _F = (
     # A. Task and target
-    ("learning_task", "A", "Learning task", "choice", MANDATORY, LEARNING_TASK_LIST, None),
-    ("target_definition", "A", "Target definition", "textarea", MANDATORY, None, None),
-    ("feature_count", "A", "Feature count", "number", MANDATORY, None, None),
-    ("intended_use", "A", "Intended use", "textarea", MANDATORY, None, None),
-    ("excluded_use", "A", "Excluded use", "textarea", MANDATORY, None, None),
+    ("learning_task", "A", "Learning task", "choice", LEARNING_TASK_LIST, None),
+    ("target_definition", "A", "Target definition", "textarea", None, None),
+    ("feature_count", "A", "Feature count", "number", None, None),
+    ("intended_use", "A", "Intended use", "textarea", None, None),
+    ("excluded_use", "A", "Excluded use", "textarea", None, None),
     # B. Training data
-    ("snapshot_id", "B", "Snapshot identifier", "text", MANDATORY, None, None),
-    ("training_period", "B", "Training period", "text", MANDATORY, None, None),
-    ("coverage", "B", "Coverage", "textarea", MANDATORY, None, None),
-    ("row_count", "B", "Rows", "number", MANDATORY, None, None),
-    ("target_distribution", "B", "Target distribution", "text", CONDITIONAL, None,
+    ("snapshot_id", "B", "Snapshot identifier", "text", None, None),
+    ("training_period", "B", "Training period", "text", None, None),
+    ("coverage", "B", "Coverage", "textarea", None, None),
+    ("row_count", "B", "Rows", "number", None, None),
+    ("target_distribution", "B", "Target distribution", "text", None,
      WHEN_CLASSIFICATION),
-    ("missing_data", "B", "Missing data treatment", "choice", MANDATORY, MISSING_DATA_LIST, None),
-    ("missing_data_columns", "B", "Columns affected", "text", OPTIONAL, None, None),
-    ("encoding", "B", "Categorical encoding", "choice", CONDITIONAL, ENCODING_LIST,
+    ("missing_data", "B", "Missing data treatment", "choice", MISSING_DATA_LIST, None),
+    ("missing_data_columns", "B", "Columns affected", "text", None, None),
+    ("encoding", "B", "Categorical encoding", "choice", ENCODING_LIST,
      WHEN_CATEGORICAL),
-    ("scaling", "B", "Scaling / normalisation", "choice", MANDATORY, SCALING_LIST, None),
-    ("scaler_fit_point", "B", "Scaler fitted on", "choice", MANDATORY, SCALER_FIT_POINT_LIST,
+    ("scaling", "B", "Scaling / normalisation", "choice", SCALING_LIST, None),
+    ("scaler_fit_point", "B", "Scaler fitted on", "choice", SCALER_FIT_POINT_LIST,
      None),
     # C. Split and validation
-    ("split_method", "C", "Split method", "choice", MANDATORY, SPLIT_METHOD_LIST, None),
-    ("split_proportions", "C", "Split proportions (train/val/test)", "text", MANDATORY, None,
+    ("split_method", "C", "Split method", "choice", SPLIT_METHOD_LIST, None),
+    ("split_proportions", "C", "Split proportions (train/val/test)", "text", None,
      None),
-    ("split_rationale", "C", "Split rationale", "textarea", MANDATORY, None, None),
-    ("cv_method", "C", "Cross-validation", "choice", MANDATORY, CV_METHOD_LIST, None),
-    ("cv_folds", "C", "Folds (k)", "number", OPTIONAL, None, None),
-    ("cv_result", "C", "CV result (mean +/- std)", "text", MANDATORY, None, None),
-    ("test_evaluations", "C", "Times the hold-out was evaluated", "number", MANDATORY, None,
+    ("split_rationale", "C", "Split rationale", "textarea", None, None),
+    ("cv_method", "C", "Cross-validation", "choice", CV_METHOD_LIST, None),
+    ("cv_folds", "C", "Folds (k)", "number", None, None),
+    ("cv_result", "C", "CV result (mean +/- std)", "text", None, None),
+    ("test_evaluations", "C", "Times the hold-out was evaluated", "number", None,
      None),
     # D. Fit record
-    ("hyperparameters", "D", "Hyperparameters (as fitted)", "textarea", MANDATORY, None, None),
-    ("search_method", "D", "Search method", "choice", OPTIONAL, SEARCH_METHOD_LIST, None),
-    ("random_seed", "D", "Random seed(s)", "text", MANDATORY, None, None),
-    ("determinism", "D", "Determinism", "choice", MANDATORY, DETERMINISM_LIST, None),
-    ("run_date", "D", "Run date", "date", MANDATORY, None, None),
-    ("run_duration", "D", "Duration", "text", MANDATORY, None, None),
-    ("run_hardware", "D", "Hardware", "text", MANDATORY, None, None),
-    ("epochs", "D", "Epochs / batch size / early stopping", "text", CONDITIONAL, None,
+    ("hyperparameters", "D", "Hyperparameters (as fitted)", "textarea", None, None),
+    ("search_method", "D", "Search method", "choice", SEARCH_METHOD_LIST, None),
+    ("random_seed", "D", "Random seed(s)", "text", None, None),
+    ("determinism", "D", "Determinism", "choice", DETERMINISM_LIST, None),
+    ("run_date", "D", "Run date", "date", None, None),
+    ("run_duration", "D", "Duration", "text", None, None),
+    ("run_hardware", "D", "Hardware", "text", None, None),
+    ("epochs", "D", "Epochs / batch size / early stopping", "text", None,
      WHEN_NEURAL),
-    ("convergence_evidence", "D", "Convergence evidence", "text", CONDITIONAL, None, WHEN_NEURAL),
+    ("convergence_evidence", "D", "Convergence evidence", "text", None, WHEN_NEURAL),
     # E. Performance
-    ("primary_metric", "E", "Primary metric", "choice", MANDATORY, METRIC_LIST, None),
-    ("metric_train", "E", "Metric on train", "text", MANDATORY, None, None),
-    ("metric_cv", "E", "Metric on CV", "text", MANDATORY, None, None),
-    ("metric_test", "E", "Metric on test", "text", MANDATORY, None, None),
-    ("secondary_metrics", "E", "Secondary metrics", "textarea", CONDITIONAL, None, None),
-    ("calibration", "E", "Calibration (curve + Brier)", "text", CONDITIONAL, None,
+    ("primary_metric", "E", "Primary metric", "choice", METRIC_LIST, None),
+    ("metric_train", "E", "Metric on train", "text", None, None),
+    ("metric_cv", "E", "Metric on CV", "text", None, None),
+    ("metric_test", "E", "Metric on test", "text", None, None),
+    ("secondary_metrics", "E", "Secondary metrics", "textarea", None, None),
+    ("calibration", "E", "Calibration (curve + Brier)", "text", None,
      WHEN_PROBABILITY),
-    ("baseline_kind", "E", "Naive baseline", "choice", MANDATORY, BASELINE_LIST, None),
-    ("baseline_value", "E", "Baseline score", "text", MANDATORY, None, None),
-    ("challenger", "E", "Challenger comparison", "textarea", MANDATORY, None, None),
-    ("segment_performance", "E", "Segment performance", "textarea", MANDATORY, None, None),
-    ("worst_segment", "E", "Worst segment", "text", MANDATORY, None, None),
-    ("stability", "E", "Stability (bootstrap / repeated CV spread)", "text", OPTIONAL, None,
+    ("baseline_kind", "E", "Naive baseline", "choice", BASELINE_LIST, None),
+    ("baseline_value", "E", "Baseline score", "text", None, None),
+    ("challenger", "E", "Challenger comparison", "textarea", None, None),
+    ("segment_performance", "E", "Segment performance", "textarea", None, None),
+    ("worst_segment", "E", "Worst segment", "text", None, None),
+    ("stability", "E", "Stability (bootstrap / repeated CV spread)", "text", None,
      None),
     # F. Reproducibility and attestation
-    ("code_commit", "F", "Code reference (commit + repo)", "text", MANDATORY, None, None),
-    ("environment", "F", "Environment (lockfile)", "text", MANDATORY, None, None),
-    ("artefact", "F", "Serialised artefact (path + hash)", "text", MANDATORY, None, None),
-    ("rebuild_command", "F", "Rebuild command", "text", MANDATORY, None, None),
-    ("reproduced_by", "F", "Independently reproduced by", "text", MANDATORY, None, None),
-    ("reproduced_matched", "F", "Reproduction matched", "choice", MANDATORY, None, None),
-    ("attested_by", "F", "Owner attestation", "text", MANDATORY, None, None),
-    ("attested_date", "F", "Attested on", "date", MANDATORY, None, None),
+    ("code_commit", "F", "Code reference (commit + repo)", "text", None, None),
+    ("environment", "F", "Environment (lockfile)", "text", None, None),
+    ("artefact", "F", "Serialised artefact (path + hash)", "text", None, None),
+    ("rebuild_command", "F", "Rebuild command", "text", None, None),
+    ("reproduced_by", "F", "Independently reproduced by", "text", None, None),
+    ("reproduced_matched", "F", "Reproduction matched", "choice", None, None),
+    ("attested_by", "F", "Owner attestation", "text", None, None),
+    ("attested_date", "F", "Attested on", "date", None, None),
 )
 
 # Derived: the field table the form, the validation and the completeness count read.
 TRAINING_FIELD_SPECS = {
-    key: {"section": section, "label": label, "type": ftype, "requirement": req,
+    key: {"section": section, "label": label, "type": ftype,
           "note": TRAINING_NOTES.get(key, ""),
           **({"reference": ref} if ref else {}),
           **({"when": when} if when else {}),
           **({"options": ("Yes", "No")} if key == "reproduced_matched" else {})}
-    for key, section, label, ftype, req, ref, when in _F
+    for key, section, label, ftype, ref, when in _F
 }
 
 # The collection one train is stored as. Only ``fit_id`` is required to create one:
@@ -219,7 +248,9 @@ TRAINING_FIELD_SPECS = {
 # that the fit happened at all.
 ML_TRAINING_COLLECTION_SPEC = {
     "label": "Trains", "id_prefix": "TR",
-    "fields": [{"key": "fit_id", "label": "Train", "type": "text", "required": True}] + [
+    "fields": [{"key": "fit_id", "label": "Train", "type": "text", "required": True},
+               {"key": CAPTURED_FIELD, "label": "Captured automatically", "type": "text",
+                "hidden": True}] + [
         {"key": key, "label": spec["label"], "type": spec["type"],
          **({"reference": spec["reference"]} if spec.get("reference") else {}),
          **({"options": spec["options"]} if spec.get("options") else {})}
@@ -227,8 +258,7 @@ ML_TRAINING_COLLECTION_SPEC = {
     ],
 }
 
-MANDATORY_FIELDS = tuple(k for k, s in TRAINING_FIELD_SPECS.items()
-                         if s["requirement"] == MANDATORY)
+
 
 # --- Artefacts ---------------------------------------------------------------
 # Which field each artefact category is filed against. The evidence is the plot or
@@ -246,9 +276,10 @@ TRAINING_ARTEFACTS = {
 # Materiality x Complexity through the division's ratified heatmap, moved only by MRC
 # sign-off. A thin Training tab is a different fact from a risky model, and a reader
 # must be able to tell them apart.
-TRAINING_INCOMPLETE = "Incomplete"
+# What a train's evidence says, and it is never a pass mark. Either something has
+# been recorded that a reviewer must be told about, or nothing has.
 TRAINING_QUALIFIED = "Qualified"
-TRAINING_COMPLETE = "Complete"
+TRAINING_CLEAN = "No findings"
 
 # A hold-out evaluated more often than this has become a validation set: every look
 # leaks a little of it into the choices that follow, and the reported test figure
@@ -261,6 +292,4 @@ TEST_EVALUATION_CAP = 3
 # answer to that.
 MIN_RATIONALE_CHARS = 80
 
-# The sections whose mandatory fields must be complete before anything else is worth
-# reading: what the model is for, what it was fitted on, and how it was split.
-FOUNDATION_SECTIONS = ("A", "B", "C")
+

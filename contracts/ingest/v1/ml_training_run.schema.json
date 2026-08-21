@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modelrisk.mkm/contracts/ingest/v1/ml_training_run.schema.json",
+  "title": "ML training run (v1)",
+  "description": "One fit, reported by the code that performed it. Everything here is a fact about the run rather than a judgement about it: the snapshot it was fitted to, the hyperparameters as fitted, the seed, the environment, the commit and the metrics. What the owner must still write -- the target definition, the intended and excluded uses, why the split does not leak -- is deliberately absent, because an argument is not captured, it is made. Fields are validated against the training schema server-side; unknown keys are rejected there rather than here, so a producer learns which field it got wrong.",
+  "type": "object",
+  "required": ["ml_application_id", "fit_id"],
+  "additionalProperties": true,
+  "properties": {
+    "ml_application_id": {
+      "description": "The ML Application this fit belongs to. Must already be registered: a train arriving for a record nobody has registered is a record nobody is accountable for.",
+      "type": "string",
+      "minLength": 1
+    },
+    "fit_id": {
+      "description": "Identifies this fit. Re-reporting the same fit_id updates that train rather than adding another, so a run that reports twice does not become two trains.",
+      "type": "string",
+      "minLength": 1
+    },
+    "fields": {
+      "description": "The captured values, keyed by training field. Only fields the platform marks capturable are accepted; anything else is refused with its name, because silently dropping a value a producer believed it had recorded is worse than rejecting it.",
+      "type": "object",
+      "additionalProperties": { "type": ["string", "number", "boolean"] }
+    }
+  }
+}

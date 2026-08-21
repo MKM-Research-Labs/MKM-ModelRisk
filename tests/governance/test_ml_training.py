@@ -29,8 +29,7 @@ from __future__ import annotations
 import pytest
 
 from config.governance import TRAINING_FIELD_SPECS, TRAINING_RUNS_COLLECTION
-from config.governance._ml_training import (MANDATORY, TEST_EVALUATION_CAP,
-                                            TRAINING_COMPLETE, TRAINING_INCOMPLETE,
+from config.governance._ml_training import (TEST_EVALUATION_CAP, TRAINING_CLEAN,
                                             TRAINING_QUALIFIED)
 from src.governance.ml_application import (add_collection_item, get_ml_application,
                                            rebuild_ml_application_view,
@@ -48,9 +47,8 @@ _GOOD_RATIONALE = ("Neighbouring parcels share a catchment and a storm event, so
 def _complete_train(**overrides) -> dict:
     """Every mandatory field populated, no qualification triggered."""
     train = {"fit_id": "TR-001", "learning_task": "Regression"}
-    for key, spec in TRAINING_FIELD_SPECS.items():
-        if spec["requirement"] == MANDATORY:
-            train.setdefault(key, "recorded")
+    for key in TRAINING_FIELD_SPECS:
+        train.setdefault(key, "recorded")
     train.update({"split_rationale": _GOOD_RATIONALE, "scaler_fit_point": "Train only",
                   "test_evaluations": "1", "reproduced_by": "Sam Okafor",
                   "reproduced_matched": "Yes"})
@@ -60,31 +58,28 @@ def _complete_train(**overrides) -> dict:
 
 # --- the three states -------------------------------------------------------
 
-def test_a_train_with_nothing_recorded_is_incomplete():
+def test_a_train_with_nothing_recorded_raises_nothing():
+    """No field is mandatory: a train nobody has filled in yet is not a finding, it is
+    a train nobody has filled in yet."""
     c = completeness({"fit_id": "TR-001"})
-    assert c["state"] == TRAINING_INCOMPLETE
-    assert c["filled"] == 0
+    assert c["state"] == TRAINING_CLEAN
+    assert c["filled"] == 0 and c["qualifications"] == []
 
 
-def test_a_fully_evidenced_train_is_complete():
+def test_a_sound_train_raises_nothing():
     c = completeness(_complete_train())
-    assert c["state"] == TRAINING_COMPLETE
-    assert c["missing"] == [] and c["qualifications"] == []
+    assert c["state"] == TRAINING_CLEAN
+    assert c["qualifications"] == []
+    assert c["filled"] == c["total"]
 
 
-@pytest.mark.parametrize("field", ["target_definition", "snapshot_id", "split_method"])
-def test_a_gap_in_task_data_or_split_is_incomplete_not_qualified(field):
-    """Sections A, B and C are the foundation: what it is for, what it was fitted on,
-    and how it was split. A gap there makes everything below it unreadable, so it is
-    not a qualification on otherwise-good evidence."""
-    c = completeness(_complete_train(**{field: ""}))
-    assert c["state"] == TRAINING_INCOMPLETE
-
-
-def test_a_gap_later_on_is_qualified():
-    c = completeness(_complete_train(rebuild_command=""))
-    assert c["state"] == TRAINING_QUALIFIED
-    assert "rebuild_command" in c["missing"]
+def test_a_gap_is_progress_not_a_finding():
+    """A field nobody has filled in yet lowers the count and raises nothing. A full
+    set of fifty-one will not be reached on a real estate, and a tab that says so on
+    every record teaches people to ignore it."""
+    partial = completeness(_complete_train(target_definition="", snapshot_id=""))
+    assert partial["state"] == TRAINING_CLEAN
+    assert partial["filled"] == completeness(_complete_train())["filled"] - 2
 
 
 # --- the qualifications -----------------------------------------------------
@@ -121,7 +116,17 @@ def test_a_reproduction_that_did_not_match_is_qualified():
 
 def test_a_non_numeric_evaluation_count_does_not_crash_the_calculation():
     """A completeness figure that raises is worse than one that is generous."""
-    assert completeness(_complete_train(test_evaluations="lots"))["state"] == TRAINING_COMPLETE
+    assert completeness(_complete_train(test_evaluations="lots"))["state"] == TRAINING_CLEAN
+
+
+def test_reproduction_is_only_asked_for_once_there_is_a_result():
+    """Raising it against a train that has not reported a metric yet is telling
+    somebody off for work they have not finished."""
+    early = completeness({"fit_id": "TR-001", "learning_task": "Regression"})
+    assert early["qualifications"] == []
+    scored = completeness({"fit_id": "TR-001", "learning_task": "Regression",
+                           "metric_test": "0.95"})
+    assert any("reproduced" in q for q in scored["qualifications"])
 
 
 # --- conditionals -----------------------------------------------------------
@@ -158,7 +163,7 @@ def test_the_record_carries_the_figure_and_it_moves_when_the_train_does(tmp_path
                         fields={"fit_id": "TR-001"}, actor="admin")
     rebuild_ml_application_view()
     before = (get_ml_application("MLA-1")["data"] or {})["training_completeness"]
-    assert before["state"] == TRAINING_INCOMPLETE and before["filled"] == 0
+    assert before["state"] == TRAINING_CLEAN and before["filled"] == 0
 
     update_collection_item(ml_application_id="MLA-1", collection=TRAINING_RUNS_COLLECTION,
                            item_id="TR-001",
