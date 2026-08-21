@@ -46,6 +46,8 @@ What this record deliberately does NOT carry, and why:
 ``codebase`` / ``repo``     Application's provenance is its Estimator.
 ``validation_questions``    It has its own questionnaire (``ml_review_questions``
                             below), seeded from a different admin list.
+``version_history``         There is no version. Every fit is a train, recorded in
+                            ``training_runs`` with the evidence that fit produced.
 ``raci_roles``              Accountability for an ML Application's use in production
                             sits on the Product that consumes it, where the RACI
                             operating model already lives. Carrying a second one here
@@ -61,6 +63,8 @@ from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY
                                           VALID_RAG_RATINGS, VALID_REVIEW_FREQUENCIES,
                                           VALID_VALIDATION_STATUSES, VALIDATION_STATUS_LIST)
 from config.governance._ml import ESTIMATOR_LIST
+from config.governance._ml_training import (ML_TRAINING_COLLECTION_SPEC,
+                                             TRAINING_RUNS_COLLECTION)
 from config.governance._review import REVIEW_COLLECTION_SPECS
 from config.governance._signoff_collections import SIGNOFF_COLLECTION_SPECS
 
@@ -205,7 +209,10 @@ ML_APPLICATION_COLLECTION_SPECS = {
     "limitations": COLLECTION_SPECS["limitations"],
     "model_weaknesses": COLLECTION_SPECS["model_weaknesses"],
     "remediation_steps": COLLECTION_SPECS["remediation_steps"],
-    "version_history": COLLECTION_SPECS["version_history"],
+    # One item per FIT. An ML Application has no versions: the record of change is
+    # the sequence of trains, each with its own snapshot, seed, hyperparameters and
+    # metrics, so the Trains tab is a view over this rather than a store of its own.
+    TRAINING_RUNS_COLLECTION: ML_TRAINING_COLLECTION_SPEC,
     # The feeds it draws on -- for an ML Application, where the training and scoring
     # data comes from. Shared shape, so "which records share a source" is one query.
     "data_sources": COLLECTION_SPECS["data_sources"],

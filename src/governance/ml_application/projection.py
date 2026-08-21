@@ -23,7 +23,9 @@ from __future__ import annotations
 from typing import Any
 
 from src.database import read_all, read_view, replace_view
+from config.governance import TRAINING_RUNS_COLLECTION
 from src.governance.ml_application._state import apply, initial_state
+from src.governance.ml_application.training import completeness
 from src.governance.ml_application.commands import AGGREGATE_TYPE
 
 _VIEW = "ml_application_view"
@@ -34,6 +36,12 @@ def _document(state) -> dict[str, Any]:
     data = dict(state.fields)
     for collection, items in state.collections.items():
         data[collection] = list(items)
+    # Derived, like a Product's identifier: computed here so the tab counter, the
+    # state on the page and anything that audits the estate all read one figure
+    # rather than three that can disagree. The most recent train is the one in
+    # force; earlier ones are history and are not re-scored.
+    runs = data.get(TRAINING_RUNS_COLLECTION) or []
+    data["training_completeness"] = completeness(runs[-1] if runs else None)
     return data
 
 

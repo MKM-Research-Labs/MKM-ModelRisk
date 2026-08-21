@@ -32,6 +32,7 @@ from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_
                                           VALIDATION_STATUS_LIST)
 from config.governance._ml import ML_REFERENCE_LISTS, ML_REFERENCE_SPECS
 from config.governance._standing_agenda import STANDING_AGENDA_ROLES
+from config.governance._vocabulary import status_vocabulary_spec as _status_vocabulary_spec
 from config.permissions import ROLES
 
 # Order: the Division/Line of Business org tree first, then the MRC committees
@@ -91,17 +92,6 @@ STATUS_VOCABULARIES = {
                      "How completely a review question has been answered."),
     VERSION_LIFECYCLE_LIST: ("Version lifecycle", "VL", VALID_VERSION_LIFECYCLE, "Where a version sits in its development arc."),
 }
-
-# The shape every one of them takes. ``value`` is immutable once the entry exists:
-# records already carry it, and editing it would orphan every one of them.
-def _status_vocabulary_spec(label: str, prefix: str) -> dict:
-    return {"label": label, "id_prefix": prefix, "display": "label", "value_key": "value",
-            "fields": [
-                {"key": "label", "label": "Shown as", "type": "text", "required": True},
-                {"key": "value", "label": "Stored as", "type": "text", "required": True,
-                 "immutable": True},
-            ]}
-
 
 REFERENCE_LISTS = (
     "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,

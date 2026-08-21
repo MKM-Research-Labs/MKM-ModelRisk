@@ -89,6 +89,7 @@ def bootstrap(config=None) -> None:
     from src.database import run_migrations
     from src.governance.reference import (ensure_default_estimators,
                                           ensure_default_ml_application_questions,
+                                          ensure_default_ml_training_vocabularies,
                                           ensure_default_model_types,
                                           ensure_default_reference_lists,
                                           ensure_default_review_questions,
@@ -109,6 +110,7 @@ def bootstrap(config=None) -> None:
     # vacuum" rule, for the ML side of the estate.
     ensure_default_estimators()
     ensure_default_ml_application_questions()
+    ensure_default_ml_training_vocabularies()
     reconcile_read_models(config)
 
 

@@ -34,6 +34,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (ML_APPLICATION_COLLECTION_SPECS, ML_APPLICATION_FIELD_SPECS,
+                               TRAINING_RUNS_COLLECTION,
                                ML_REVIEW_QUESTIONS_COLLECTION)
 from src.governance import report_blocks as rb
 from src.governance.latex import _section, _wrappable
@@ -54,7 +55,9 @@ LAYOUTS: dict[str, Any] = {
     "limitations": (0.46, 0.10, 0.22, 0.22),
     "model_weaknesses": "blocks",
     "remediation_steps": "blocks",
-    "version_history": (0.10, 0.12, 0.30, 0.14, 0.20, 0.14),
+    # Fifty-odd fields per train: blocks, never a table. A row per field is the only
+    # shape a reader can follow, and it is what the section layout on screen does too.
+    TRAINING_RUNS_COLLECTION: "blocks",
     "data_sources": (0.32, 0.68),
     "change_history": (0.12, 0.14, 0.18, 0.16, 0.40),
     "operational_failure_events": "blocks",
@@ -74,7 +77,7 @@ COLLECTIONS = (
     ("assumptions", None),
     ("limitations", None),
     ("model_weaknesses", None),
-    ("version_history", "Retrains"),
+    (TRAINING_RUNS_COLLECTION, "Trains"),
     ("data_sources", None),
     ("change_history", None),
     ("remediation_steps", None),

@@ -30,6 +30,7 @@ const MLAppDetail = {
   _audit: [],
   _risk: null,
   _mrc: null,
+  _reqIndex: null,
 
   collSpec(key) { return this._specs.collections.find((c) => c.key === key); },
 
@@ -92,8 +93,9 @@ const MLAppDetail = {
       ["overview", "Overview", null],
       // A retrain is this record's substantial change -- the same collection a model
       // versions through, under the word that actually describes what happened.
-      ["training", "Training", null],
-      ["version_history", "Retrains", n("version_history")],
+      ["training", "Training", (d.training_completeness || {}).total
+        ? (d.training_completeness.filled + "/" + d.training_completeness.total) : null],
+      ["training_runs", "Trains", n("training_runs")],
       ["review", "Review", cov],
       ["risk", "Risk Rating", null],
       ["linkage", "MRC linkage", n("signoff_history")],
@@ -114,12 +116,12 @@ const MLAppDetail = {
           "estimator_version", "vendor", "short_name", "category", "methodology",
           "estimator_rationale", "source_module"],
 
-  // What the model was fitted on and how well it does, plus how it is watched once in
-  // use -- monitoring sits beside performance because the question is the same one
-  // asked later. Its own tab: this is the substance a reviewer argues with.
-  _TRAINING: ["training_data", "training_period", "performance", "benchmark",
-              "misinterpretation", "unit_tests", "integration_tests", "benchmark_tests",
-              "monitoring_approach"],
+  // Testing evidence is asked of the review, not of the fit: whether the code is
+  // tested is a different question from how the model was trained, and mixing them
+  // dilutes both. Monitoring is how the fit is watched afterwards, so it sits with
+  // the trains.
+  _REVIEW_FIELDS: ["unit_tests", "integration_tests", "benchmark_tests"],
+  _TRAINS_FIELDS: ["monitoring_approach"],
 
   // Governance, in the model's order. Deliberately NOT here, exactly as on a model:
   // validation status, version, review frequency, last review, recertification and the
@@ -227,6 +229,164 @@ const MLAppDetail = {
       value + "</div></div>";
   },
 
+  // --- Training -------------------------------------------------------------
+  // The most recent train, in the six sections the schema declares, in the order a
+  // fit is actually performed. The order is governance: split (C) comes before the
+  // preprocessing it constrains, so a scaler fitted on the full dataset is visible
+  // above the metric it inflates rather than buried below it.
+  _latestTrain(d) {
+    const runs = d[this._specs.training.collection] || [];
+    return runs.length ? runs[runs.length - 1] : null;
+  },
+
+  _trainSpec(key) {
+    const coll = this.collSpec(this._specs.training.collection) || { fields: [] };
+    return coll.fields.find((f) => f.key === key);
+  },
+
+  // Whether a conditional field applies to this train, from the learning task it
+  // declares. Matched on the STORED value, so renaming a task in Admin does not
+  // change which fields it demands.
+  _requirement(key) {
+    if (!this._reqIndex) {
+      this._reqIndex = {};
+      (this._specs.training.requirements || []).forEach((r) => { this._reqIndex[r.key] = r; });
+    }
+    return this._reqIndex[key] || {};
+  },
+
+  _applies(key, train) {
+    const meta = this._requirement(key);
+    if (meta.requirement !== "C" || !meta.when) return true;
+    const task = (train || {}).learning_task || "";
+    if (meta.when === "classification") return /classification/i.test(task);
+    if (meta.when === "neural task") return task === "Sequence" || task === "Image";
+    return true;  // the rest depend on the data, not the task: always offered
+  },
+
+  _trainingSections(d) {
+    const train = this._latestTrain(d);
+    if (!train) {
+      return '<div class="empty">No train recorded yet. A train is one fit — its ' +
+        "snapshot, split, hyperparameters, seed and metrics. Record one on the Trains " +
+        "tab.</div>";
+    }
+    const self = this;
+    return '<p class="muted" style="font-size:12px;margin:0 0 10px">Train ' +
+      '<span class="code">' + esc(train.fit_id || train.item_id) + "</span>" +
+      " — the most recent fit. Earlier trains are on the Trains tab.</p>" +
+      this._completenessPanel(d) +
+      this._specs.training.sections.map((section) => {
+        const keys = (section.fields || []).filter((k) => self._applies(k, train));
+        if (!keys.length) return "";
+        return '<div class="section-header">' + esc(section.key + ". " + section.title) +
+          "</div>" + keys.map((k) => self._trainRow(k, train)).join("");
+      }).join("");
+  },
+
+  // What the evidence adds up to. Deliberately NOT the RAG rating: that is the risk
+  // the committee signed off, and a thin Training tab is a different fact from a
+  // risky model. Both appear on the record and a reader must be able to tell them
+  // apart, so this one is named for what it is.
+  _completenessPanel(d) {
+    const c = d.training_completeness || {};
+    const colour = c.state === "Complete" ? "#388e3c"
+      : (c.state === "Qualified" ? "#f57c00" : "var(--red)");
+    const quals = (c.qualifications || []).length
+      ? '<ul style="margin:6px 0 0 18px;padding:0;font-size:12px">' +
+        c.qualifications.map((q) => "<li>" + esc(q) + "</li>").join("") + "</ul>"
+      : "";
+    const owed = (c.missing || []).length
+      ? '<div class="muted" style="font-size:12px;margin-top:4px">' +
+        c.missing.length + " mandatory field" + (c.missing.length === 1 ? "" : "s") +
+        " still owed.</div>"
+      : "";
+    return '<div class="inforow" style="align-items:flex-start"><div class="k">Evidence' +
+      '</div><div class="v"><span class="badge" style="background:' + colour + '">' +
+      esc(c.state || "Incomplete") + "</span> " +
+      '<span class="muted">' + (c.filled || 0) + " of " + (c.total || 0) +
+      " applicable fields</span>" + owed + quals + "</div></div>";
+  },
+
+  // A field of the train. An empty one reads as an ordinary dash, whatever its
+  // requirement: a new record showing thirty red rows reads as failure, and the
+  // owner filling it in has done nothing wrong yet. What is still owed is stated
+  // ONCE, in the Evidence panel, where it is a count to work through rather than a
+  // wall of red to be discouraged by. The requirement itself is not softened -- the
+  // count, the state and the gap report all still read it.
+  _trainRow(key, train) {
+    const spec = this._trainSpec(key);
+    if (!spec) return "";
+    const value = train[key];
+    const shown = (value === null || value === undefined || value === "")
+      ? '<span class="muted">—</span>' : optionLabel(spec, value);
+    return DetailShell.row("tr-" + key, spec.label, shown, !this._record.retired);
+  },
+
+  _bindTrainEdits(d) {
+    if (this._record.retired) return;
+    const train = this._latestTrain(d);
+    if (!train) return;
+    const self = this;
+    const base = "/api/ml-applications/" + encodeURIComponent(this._record.ml_application_id) +
+      "/collections/" + this._specs.training.collection + "/" + train.item_id;
+    document.querySelectorAll("#mla-content [data-edit]").forEach(function (btn) {
+      const key = btn.getAttribute("data-edit").replace(/^tr-/, "");
+      const spec = self._trainSpec(key);
+      if (!spec) return;
+      btn.onclick = function () {
+        DetailShell.fieldEditor({
+          scope: "#mla-content", prefix: "mltr", spec: spec, current: train[key],
+          division: (self._record.data || {}).division, withSave: true,
+          onCancel: () => self._renderContent(),
+          onSave: (value, shown) => {
+            const fields = {}; fields[key] = value;
+            App.amend("Set " + spec.label + ' = "' + shown + '" on train ' +
+              (train.fit_id || train.item_id) + ".", "POST", base, { fields: fields },
+              () => self.refresh());
+          },
+        });
+      };
+    });
+  },
+
+  // --- Trains ---------------------------------------------------------------
+  // A view over the fits: enough of each to tell them apart and to see metric drift
+  // between them, which is the question the sequence exists to answer.
+  _trainsTable(d) {
+    const runs = d[this._specs.training.collection] || [];
+    const add = this._record.retired ? "" :
+      '<button class="btn small primary" id="mla-add-train">+ Record a train</button>';
+    if (!runs.length) {
+      return '<div class="empty">No trains recorded yet.</div>' + add;
+    }
+    const rows = runs.map((r) =>
+      "<tr><td>" + '<span class="code">' + esc(r.fit_id || r.item_id) + "</span></td>" +
+      "<td>" + fieldDisplay(r.run_date) + "</td>" +
+      "<td>" + fieldDisplay(r.learning_task) + "</td>" +
+      "<td>" + fieldDisplay(r.snapshot_id) + "</td>" +
+      "<td>" + fieldDisplay(r.primary_metric) + "</td>" +
+      "<td>" + fieldDisplay(r.metric_test) + "</td></tr>").join("");
+    return "<table><thead><tr><th>Train</th><th>Run date</th><th>Task</th>" +
+      "<th>Snapshot</th><th>Metric</th><th>On test</th></tr></thead><tbody>" +
+      rows + "</tbody></table>" + add;
+  },
+
+  _bindAddTrain() {
+    const btn = document.getElementById("mla-add-train");
+    if (!btn) return;
+    const self = this;
+    btn.onclick = function () {
+      const id = window.prompt("Identifier for this train (a fit id, commit or run name):");
+      if (!id) return;
+      App.amend("Record train " + id + " on " + self._record.ml_application_id + ".",
+        "POST", "/api/ml-applications/" +
+        encodeURIComponent(self._record.ml_application_id) + "/collections/" +
+        self._specs.training.collection, { fields: { fit_id: id } },
+        () => self.refresh());
+    };
+  },
+
   // The risk assessment, through the same shared table the model and product screens
   // use: one row per dimension, named and banded as the division's ratified policy
   // says, with the rationale beside each.
@@ -246,14 +406,8 @@ const MLAppDetail = {
     const box = document.getElementById("mla-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(); this._bindEdits(); return; }
     if (this._tab === "training") {
-      const self = this;
-      box.innerHTML =
-        '<div class="section-header">Training and performance</div>' +
-        '<p class="muted" style="font-size:12px;margin:0 0 8px">What the model was ' +
-        "fitted on, how it performs against a metric and a baseline, and where its " +
-        "output could be read as saying more than it does.</p>" +
-        this._TRAINING.map((k) => self._row(k)).join("");
-      this._bindEdits();
+      box.innerHTML = this._trainingSections(d);
+      this._bindTrainEdits(d);
       return;
     }
     if (this._tab === "risk") {
@@ -269,10 +423,17 @@ const MLAppDetail = {
       return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
-    if (this._tab === "version_history") {
-      box.innerHTML = DetailTabs.versions(d, this.collSpec("version_history"),
-                                          this._record.retired);
-      this._bindCollections(["version_history"]);
+    if (this._tab === "training_runs") {
+      box.innerHTML =
+        '<div class="section-header">Monitoring</div>' +
+        this._TRAINS_FIELDS.map((k) => this._row(k)).join("") +
+        '<div class="section-header" style="margin-top:16px">Trains</div>' +
+        '<p class="muted" style="font-size:12px;margin:0 0 8px">Every fit, each with ' +
+        "its own snapshot, seed and metrics. There is no version: the record of change " +
+        "is this sequence, and the Training tab shows the most recent one in full.</p>" +
+        this._trainsTable(d);
+      this._bindEdits();
+      this._bindAddTrain();
       return;
     }
     if (this._tab === "linkage") {
@@ -331,8 +492,20 @@ const MLAppDetail = {
       if (btn) btn.onclick = () => this._retire();
       return;
     }
+    if (this._tab === "review") {
+      box.innerHTML =
+        '<div class="section-header">Testing evidence</div>' +
+        this._REVIEW_FIELDS.map((k) => this._row(k)).join("") +
+        '<div class="section-header" style="margin-top:16px">Review questions</div>' +
+        '<div id="mla-questions"></div>';
+      this._bindEdits();
+      document.getElementById("mla-questions").innerHTML = Collections.render(
+        d, [this.collSpec("ml_review_questions")], this._record.retired, false, true);
+      this._bindCollections(["ml_review_questions"]);
+      return;
+    }
     // Everything else is an ordinary spec-driven collection.
-    const key = this._tab === "review" ? "ml_review_questions" : this._tab;
+    const key = this._tab;
     box.innerHTML = Collections.render(d, [this.collSpec(key)], this._record.retired,
                                        false, this._tab === "review");
     this._bindCollections([key]);

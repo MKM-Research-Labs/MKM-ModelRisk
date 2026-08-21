@@ -189,8 +189,7 @@ def test_collections_add_update_and_remove():
 _PROBE_FIELDS = ("tier", "materiality", "complexity", "rag_rating", "division", "owner",
                  "peer_reviewer", "next_review_date", "mrc_signoff_date")
 _PROBE_COLLECTIONS = ("assumptions", "limitations", "model_weaknesses",
-                      "remediation_steps", "version_history", "signoff_history",
-                      "review_notes")
+                      "remediation_steps", "signoff_history", "review_notes")
 
 
 @pytest.mark.parametrize("field", _PROBE_FIELDS)
@@ -203,6 +202,19 @@ def test_the_audit_probe_fields_are_spelled_as_a_model_spells_them(field):
 def test_the_audit_probe_collections_exist_on_the_record(collection):
     from config.governance import ML_APPLICATION_COLLECTION_SPECS
     assert collection in ML_APPLICATION_COLLECTION_SPECS
+
+
+def test_substantial_change_is_evidenced_by_trains_not_versions():
+    """An ML Application has no versions. COSO 15 is evidenced by its trains instead,
+    and the probe names both collections so it stays one lambda over one population
+    rather than growing a per-type branch."""
+    from config.governance import ML_APPLICATION_COLLECTION_SPECS, TRAINING_RUNS_COLLECTION
+    from src.governance.completeness.framework import PROBES
+
+    assert "version_history" not in ML_APPLICATION_COLLECTION_SPECS
+    assert TRAINING_RUNS_COLLECTION in ML_APPLICATION_COLLECTION_SPECS
+    estate = {"models": [{"data": {TRAINING_RUNS_COLLECTION: [{"fit_id": "TR-001"}]}}]}
+    assert PROBES["change"](estate) == (1, 1)
 
 
 def test_what_the_record_deliberately_does_not_carry():

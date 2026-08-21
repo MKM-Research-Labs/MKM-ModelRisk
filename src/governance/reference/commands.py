@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
+                               ML_TRAINING_VOCABULARIES,
                                DEFAULT_ESTIMATORS, ESTIMATOR_LIST,
                                ML_APPLICATION_QUESTIONS, ML_APPLICATION_QUESTION_LIST,
                                DEFAULT_MODEL_TYPES, DEFAULT_VENDORS,
@@ -186,6 +187,26 @@ def ensure_default_ml_application_questions(*, actor: str = SYSTEM_ACTOR, config
         add_option(list_name=ML_APPLICATION_QUESTION_LIST, fields=dict(question), actor=actor,
                    reason="Seed the ML Application questions on first run", config=config)
     return len(ML_APPLICATION_QUESTIONS)
+
+
+def ensure_default_ml_training_vocabularies(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the training enumerations on a fresh install; return how many were added.
+
+    Each seeded with its stored value EQUAL to its shown label, which is what makes
+    them migration-free: renaming one afterwards changes every screen and moves
+    nothing on record. Seeds a vacuum, never reconciles a curated list.
+    """
+    collections, _ = load(config)
+    added = 0
+    for list_name, (_label, _prefix, words, _hint) in ML_TRAINING_VOCABULARIES.items():
+        if collections.get(list_name):
+            continue
+        for word in words:
+            add_option(list_name=list_name, fields={"label": word, "value": word},
+                       actor=actor, reason="Seed the ML training vocabularies on first run",
+                       config=config)
+            added += 1
+    return added
 
 
 def ensure_default_standing_agenda(*, actor: str = SYSTEM_ACTOR, config=None) -> int:

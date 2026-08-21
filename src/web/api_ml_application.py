@@ -25,7 +25,9 @@ from datetime import date
 from flask import Blueprint, jsonify
 
 from config.governance import (ESTIMATOR_LIST, ML_APPLICATION_COLLECTION_SPECS,
-                               ML_APPLICATION_FIELD_SPECS, ML_APPLICATION_REGISTER_FIELDS)
+                               ML_APPLICATION_FIELD_SPECS, ML_APPLICATION_REGISTER_FIELDS,
+                               TRAINING_FIELD_SPECS, TRAINING_RUNS_COLLECTION,
+                               TRAINING_SECTIONS)
 from src.command import dispatch
 from src.governance.ml_application import (add_collection_item, get_ml_application,
                                            list_ml_applications,
@@ -70,6 +72,28 @@ def field_specs():
         "register": list(ML_APPLICATION_REGISTER_FIELDS),
         "collections": collection_field_specs(ML_APPLICATION_COLLECTION_SPECS),
         "versions_by_estimator": _versions_by_estimator(),
+        # The Training tab's structure, from the one place it is declared. The form
+        # renders the sections in this order and marks each field's requirement; the
+        # completeness count reads the same table, so the page and the score cannot
+        # disagree about what is being asked for.
+        # Each section carries its fields as an ORDERED list. A dict would be sorted
+        # in transit and the order here is the governance point: split comes before
+        # the preprocessing it constrains, so a scaler fitted on the full dataset is
+        # visible above the metric it inflates rather than buried below it.
+        "training": {
+            "collection": TRAINING_RUNS_COLLECTION,
+            "sections": [
+                {"key": key, "title": title,
+                 "fields": [f for f, spec in TRAINING_FIELD_SPECS.items()
+                            if spec["section"] == key]}
+                for key, title in TRAINING_SECTIONS
+            ],
+            "requirements": [
+                {"key": key, "requirement": spec["requirement"],
+                 **({"when": spec["when"]} if spec.get("when") else {})}
+                for key, spec in TRAINING_FIELD_SPECS.items()
+            ],
+        },
         **document_specs(),
     })
 

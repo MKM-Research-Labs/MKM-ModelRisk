@@ -131,7 +131,10 @@ PROBES = {
         e, lambda d: _filled(d, "mrc_signoff_date") or _any_entries(d, "signoff_history")),
     "challenge": lambda e: _share(
         e, lambda d: _any_entries(d, "review_notes", "signoff_history")),
-    "change": lambda e: _share(e, lambda d: _any_entries(d, "version_history")),
+    # A model records substantial change as a version; an ML Application has no
+    # versions and records it as a train. Both evidence COSO 15, and naming both here
+    # keeps this one lambda over one population rather than a per-type branch.
+    "change": lambda e: _share(e, lambda d: _any_entries(d, "version_history", "training_runs")),
     "monitoring": lambda e: _share(e, lambda d: _in_date(d, e["as_of"])),
     "treatment": lambda e: _share(
         e, lambda d: _any_entries(d, "remediation_steps"),
