@@ -46,6 +46,11 @@ What this record deliberately does NOT carry, and why:
 ``codebase`` / ``repo``     Application's provenance is its Estimator.
 ``validation_questions``    It has its own questionnaire (``ml_review_questions``
                             below), seeded from a different admin list.
+``raci_roles``              Accountability for an ML Application's use in production
+                            sits on the Product that consumes it, where the RACI
+                            operating model already lives. Carrying a second one here
+                            would ask the same question twice and let the two answers
+                            disagree.
 """
 from __future__ import annotations
 
@@ -169,11 +174,6 @@ ML_APPLICATION_COLLECTION_SPECS = {
     "version_history": COLLECTION_SPECS["version_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],
-    # Who is Responsible / Accountable / Consulted / Informed for this ML Application.
-    # Scaffolded at registration exactly as a Product's is, and shared unchanged --
-    # an ML Application is accountable to somebody in its own right, not only through
-    # whichever Product happens to consume it.
-    "raci_roles": COLLECTION_SPECS["raci_roles"],
     # The ML questionnaire, same shape as a model's validation questions but seeded
     # from its own admin list and held under its own name.
     ML_REVIEW_QUESTIONS_COLLECTION: COLLECTION_SPECS["validation_questions"],

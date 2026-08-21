@@ -88,7 +88,6 @@ const MLAppDetail = {
       // A retrain is this record's substantial change -- the same collection a model
       // versions through, under the word that actually describes what happened.
       ["version_history", "Retrains", n("version_history")],
-      ["raci_roles", "RACI", n("raci_roles")],
       ["review", "Review", cov],
       ["risk", "Risk Rating", null],
       ["linkage", "MRC linkage", n("signoff_history")],

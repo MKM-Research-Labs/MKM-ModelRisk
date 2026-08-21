@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import (DEFAULT_RACI, DEFAULT_VQ_STATUS,
+from config.governance import (DEFAULT_VQ_STATUS,
                                ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS,
                                ML_APPLICATION_QUESTIONS,
@@ -76,23 +76,15 @@ def _ml_questions(config) -> list[dict[str, str]]:
     return asked or [dict(q) for q in ML_APPLICATION_QUESTIONS]
 
 
-def _seed_registration_collections(ml_application_id, after_version, actor, config) -> None:
-    """Copy the ML questionnaire onto the record and scaffold its RACI, immediately
-    after registration -- the same two things a model and a Product are given, through
-    the same shared seeder."""
-    version = seed_items(
+def _seed_ml_review_questions(ml_application_id, after_version, actor, config) -> None:
+    """Copy the ML questionnaire onto the record, immediately after registration."""
+    seed_items(
         aggregate_type=AGGREGATE_TYPE, aggregate_id=ml_application_id,
         collection=ML_REVIEW_QUESTIONS_COLLECTION, id_prefix="MLQ",
         items=[{"short_label": q["short_label"], "question": q["question"],
                 "status": DEFAULT_VQ_STATUS} for q in _ml_questions(config)],
         after_version=after_version, actor=actor,
         reason="Seed the ML review questions", config=config)
-    seed_items(
-        aggregate_type=AGGREGATE_TYPE, aggregate_id=ml_application_id,
-        collection="raci_roles", id_prefix="RC",
-        items=[{"role": role, "raci": raci} for raci, role in DEFAULT_RACI],
-        after_version=version, actor=actor,
-        reason="Seed the four RACI accountabilities", config=config)
 
 
 def _check_reference_fields(fields: dict[str, Any], config=None) -> None:
@@ -114,7 +106,7 @@ def register_ml_application(*, ml_application_id: str, fields: dict[str, Any],
     state, version = _load(ml_application_id, config)
     decision = decide_register(state, ml_application_id=ml_application_id, fields=fields)
     event = _record(ml_application_id, decision, version, actor, reason, config)
-    _seed_registration_collections(ml_application_id, event.stream_seq, actor, config)
+    _seed_ml_review_questions(ml_application_id, event.stream_seq, actor, config)
     return event
 
 
