@@ -47,6 +47,9 @@ mechanism, same copy-at-registration snapshot, different content.
 """
 from __future__ import annotations
 
+from config.governance._ml_training import (ML_TRAINING_LISTS, ML_TRAINING_VOCABULARIES)
+from config.governance._vocabulary import status_vocabulary_spec
+
 ESTIMATOR_LIST = "estimator"
 ML_APPLICATION_QUESTION_LIST = "ml_application_questions"
 
@@ -125,4 +128,12 @@ ML_REFERENCE_SPECS = {
     ]},
 }
 
-ML_REFERENCE_LISTS = (ESTIMATOR_LIST, ML_APPLICATION_QUESTION_LIST)
+# The training enumerations are vocabularies like any other -- stored value, shown
+# label, editable in Admin. Folded in here so they reach REFERENCE_SPECS through the
+# same merge the Estimator list does.
+ML_REFERENCE_SPECS.update({
+    name: status_vocabulary_spec(label, prefix)
+    for name, (label, prefix, _words, _hint) in ML_TRAINING_VOCABULARIES.items()
+})
+
+ML_REFERENCE_LISTS = ((ESTIMATOR_LIST, ML_APPLICATION_QUESTION_LIST) + ML_TRAINING_LISTS)
