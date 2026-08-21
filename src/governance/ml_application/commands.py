@@ -101,12 +101,21 @@ def _check_reference_fields(fields: dict[str, Any], config=None) -> None:
 
 
 def register_ml_application(*, ml_application_id: str, fields: dict[str, Any],
-                            actor: str, reason: str = "", config=None) -> Event:
+                            actor: str, reason: str = "", seed_questions: bool = True,
+                            config=None) -> Event:
+    """Register an ML Application.
+
+    ``seed_questions`` is false only for a record migrating in from the inventory with
+    a questionnaire it has already answered. Seeding on top of that would leave the
+    record carrying two sets -- the ten it has not been asked and the nine it has --
+    and a reader cannot tell which the committee saw.
+    """
     _check_reference_fields(fields or {}, config)
     state, version = _load(ml_application_id, config)
     decision = decide_register(state, ml_application_id=ml_application_id, fields=fields)
     event = _record(ml_application_id, decision, version, actor, reason, config)
-    _seed_ml_review_questions(ml_application_id, event.stream_seq, actor, config)
+    if seed_questions:
+        _seed_ml_review_questions(ml_application_id, event.stream_seq, actor, config)
     return event
 
 

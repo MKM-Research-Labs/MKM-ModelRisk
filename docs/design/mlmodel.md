@@ -1,6 +1,7 @@
 # ML Applications — design and project plan
 
-**Status:** Phases 1–3 shipped on `main`; phase 4 (MRC) and phase 5 outstanding
+**Status:** Phases 1–3 shipped on `main`, plus screen parity and a migration path;
+phase 4 (MRC) and phase 5 outstanding
 **Date:** 2026-08-21
 **Area:** ML Applications / Products / MRC
 **Driver:** A named Moody's use case — a Product that draws on several models *and*
@@ -234,6 +235,34 @@ an admin-managed vocabulary on the back of it; it had been a fixed tuple in conf
 Housekeeping to decide at the same time: `product-as-components.md` follow-up 2 —
 remove the now-vestigial `binding_role` from `model_type`, deferred on 2026-08-11 until
 "Product functionality is reviewed". This is that review.
+
+### Between 3 and 4 — parity with the model screen, and a way in — SHIPPED
+
+Three things came out of reading the two screens side by side rather than reasoning
+about them:
+
+- **The ML Application carries what the inventory carries.** Repository, codebase,
+  source module, vendor, category, status, owner role, review status, the three
+  testing flags, validation and recertification dates, and the `data_sources` and
+  `change_history` collections. Not for completeness' sake — without them a model
+  moving across loses information, which is the test that actually matters.
+- **The screens are one screen.** `createRecordList` drives both registers (tiles,
+  filters, sortable table); `DetailShell.fieldEditor` and `.fieldValue` drive all
+  three detail views. The Overview mirrors `OVERVIEW_LEFT` / `OVERVIEW_RIGHT_TOP`
+  field for field, with the risk assessment on the Risk Rating tab where a model
+  and a product keep it.
+- **`scripts/migrate_model_to_ml_application.py`** moves a model across. Moody's will
+  need it repeatedly: an estate contains models that are really ML applications, and
+  the inventory is where they are today. The estimator is an argument because the
+  inventory does not record one — that is the information the ML register adds, and
+  inferring it from a methodology sentence would be a guess presented as a fact.
+  Dependencies and RACI do not travel; a value the target refuses is reported rather
+  than mangled (MKM-FC-001 holds `review_status = "Not Started"` against its own
+  vocabulary's "Not started" — a pre-existing inconsistency worth seeing).
+
+Data sources now carry `kind` (Internal / External). An external feed is a
+third-party dependency — provenance, licensing, and whether the fit could be
+reproduced if it changed — and an internal one is not. Blank means nobody has said.
 
 ### Phase 4 — MRC and sign-off
 

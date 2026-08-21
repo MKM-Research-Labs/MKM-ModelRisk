@@ -62,6 +62,12 @@ DEPENDENCIES_COLLECTION = "dependencies"
 # fields come from which source) can be layered on later without breaking this —
 # for now it is the recognition that the model pulls data from these sources.
 DATA_SOURCES_COLLECTION = "data_sources"
+# Whether a feed comes from inside the institution or from a third party. The
+# distinction is a governance one, not a label: an EXTERNAL source is a third-party
+# dependency, so the questions that follow are provenance, licensing, and whether the
+# fit could be reproduced if the feed changed or went away. An internal one raises
+# none of those. Blank means nobody has said yet, which is not the same as internal.
+VALID_DATA_SOURCE_KINDS = ("Internal", "External")
 # A version's place in the development lifecycle. "New" = a fresh version just
 # cut; "Being Enhanced" = active development against it; "No New Development" =
 # stable, still in use but frozen; "Marked for Removal" = scheduled to retire.

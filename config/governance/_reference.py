@@ -26,7 +26,7 @@ from __future__ import annotations
 from config.governance._collections import (IMPACT_LIST, PRIORITY_LIST, VERSION_LIFECYCLE_LIST, VALID_VERSION_LIFECYCLE,
                                             REMEDIATION_STATUS_LIST, VALID_IMPACT,
                                             VALID_PRIORITY, VALID_REMEDIATION_STATUS,
-                                            VALID_VQ_STATUSES, VQ_STATUS_LIST)
+                                            VALID_VQ_STATUSES, VQ_STATUS_LIST, VALID_DATA_SOURCE_KINDS)
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES,
                                           VALID_VALIDATION_STATUSES,
                                           VALIDATION_STATUS_LIST)
@@ -219,6 +219,7 @@ REFERENCE_SPECS = {
     # match on a defined id rather than on free-text spelling.
     DATA_SOURCE_LIST: {"label": "Data Source", "id_prefix": "DS", "display": "value", "fields": [
         {"key": "value", "label": "Data source", "type": "text", "required": True},
+        {"key": "kind", "label": "Internal or external", "type": "choice", "options": VALID_DATA_SOURCE_KINDS},
     ]},
     # --- Model classification ---
     # ``binding_role`` is the machine-readable half of a type: the name is for

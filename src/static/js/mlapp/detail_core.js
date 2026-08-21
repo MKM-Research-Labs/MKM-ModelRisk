@@ -29,17 +29,20 @@ const MLAppDetail = {
   _specs: null,
   _audit: [],
   _risk: null,
+  _mrc: null,
 
   collSpec(key) { return this._specs.collections.find((c) => c.key === key); },
 
   async show(id) {
     this._specs = MLApps._specs || await MLApps.specs();
-    const [record, audit, risk] = await Promise.all([
+    const [record, audit, risk, mrc] = await Promise.all([
       App.get("/api/ml-applications/" + encodeURIComponent(id)),
       App.get("/api/audit"),
       App.get("/api/ml-applications/" + encodeURIComponent(id) + "/risk-rating"),
+      App.get("/api/ml-applications/" + encodeURIComponent(id) + "/mrc"),
     ]);
     this._record = record;
+    this._mrc = mrc;
     this._audit = audit.filter((e) => e.aggregate_id === id);
     this._risk = risk;
     this._tab = "overview";
@@ -61,8 +64,10 @@ const MLAppDetail = {
       '<div class="card">' + this._header(d) + this._tabbar(d) +
       '<div id="mla-content" style="margin-top:14px"></div></div>';
     document.getElementById("mla-close").onclick = () => this.close();
+    // _render, not _renderContent: the tab bar carries the active marker, so drawing
+    // only the body leaves the underline on whichever tab was open before.
     document.querySelectorAll("[data-mlatab]").forEach((b) => {
-      b.onclick = () => { this._tab = b.getAttribute("data-mlatab"); this._renderContent(); };
+      b.onclick = () => { this._tab = b.getAttribute("data-mlatab"); this._render(); };
     });
     this._renderContent();
   },
@@ -98,32 +103,30 @@ const MLAppDetail = {
     ], this._tab, "data-mlatab");
   },
 
-  // Which fields sit where on the Overview, following the model and product screens
-  // rather than a layout of this screen's own: a full-width summary, then record
-  // details on the left and Governance on the right.
+  // The Overview mirrors the model's, field for field and column for column, because
+  // the two records are read side by side and a reader should not have to relearn the
+  // page. Compare OVERVIEW_LEFT / OVERVIEW_RIGHT_TOP in inventory/detail_core.js.
   //
-  // The risk assessment is NOT here. It lives on the Risk Rating tab beside the grid
-  // it drives -- one row per dimension in the Admin editor's Dimension / Rating /
-  // Rationale columns -- exactly as a model's and a product's do. Only the headline
-  // rag_rating stays on Overview.
-  _LEFT: [
-    ["ML Application", ["name", "short_name", "use_case"]],
-    ["Estimator", ["estimator", "estimator_version", "estimator_rationale"]],
-    ["Organisation", ["division", "line_of_business"]],
-    ["Monitoring", ["monitoring_approach"]],
-  ],
-  // What the model was fitted on and how well it does. Its own tab rather than a
-  // block on the Overview: this is the substance of an ML Application -- the part a
-  // reviewer actually argues with -- and it has room to grow into.
-  _TRAINING: ["training_data", "training_period", "performance", "benchmark",
-              "misinterpretation"],
+  // Left is what the thing IS: where it lives, what it is built on, how. ``estimator``
+  // sits where a model's ``type`` does, and ``estimator_rationale`` where its
+  // ``methodology_rationale`` does -- the same question, asked of an estimator.
+  _LEFT: ["division", "line_of_business", "repo_location", "codebase", "estimator",
+          "estimator_version", "vendor", "short_name", "category", "methodology",
+          "estimator_rationale", "source_module"],
 
-  _RIGHT: [
-    ["Governance",
-     ["rag_rating", "owner", "peer_reviewer", "lifecycle_stage", "validation_status",
-      "version", "review_frequency", "mrc_signoff_date", "next_review_date",
-      "last_review_date"]],
-  ],
+  // What the model was fitted on and how well it does, plus how it is watched once in
+  // use -- monitoring sits beside performance because the question is the same one
+  // asked later. Its own tab: this is the substance a reviewer argues with.
+  _TRAINING: ["training_data", "training_period", "performance", "benchmark",
+              "misinterpretation", "unit_tests", "integration_tests", "benchmark_tests",
+              "monitoring_approach"],
+
+  // Governance, in the model's order. Deliberately NOT here, exactly as on a model:
+  // validation status, version, review frequency, last review, recertification and the
+  // peer reviewer. The MRC sets sign-off and next review at sign-off, and the reviewer
+  // belongs on the tab where the review is actually run.
+  _RIGHT: ["rag_rating", "owner", "model_owner_role", "lifecycle_stage", "review_status"],
+
 
   _editLink(key) {
     return this._record.retired
@@ -173,15 +176,55 @@ const MLAppDetail = {
   _overview() {
     const d = this._record.data || {};
     const self = this;
-    const section = ([title, keys]) => DetailShell.section(title, keys, (k) => self._row(k));
-    // A full-width summary of what the ML Application does, spanning both columns --
-    // the same shape a model's Overview opens with.
-    const summary = DetailShell.row("description", "Summary", fieldDisplay(d.description),
-                                    !this._record.retired);
-    return '<div style="margin-bottom:14px">' + summary + "</div>" +
-      '<div class="grid2"><div>' + this._LEFT.map(section).join("") + "</div>" +
-      "<div>" + this._RIGHT.map(section).join("") + "</div></div>" +
+    const rows = (keys) => keys.map((k) => self._row(k)).join("");
+    const summary = '<div style="margin-bottom:14px">' +
+      DetailShell.row("description", "Summary", fieldDisplay(d.description),
+                      !this._record.retired) + "</div>";
+    return summary +
+      '<div class="grid2"><div><div class="section-header">ML Application Details</div>' +
+      rows(this._LEFT) + "</div>" +
+      '<div><div class="section-header">Governance</div>' +
+      this._mrcRow() + rows(this._RIGHT) + this._mrcStatusRow(d) +
+      this._row("next_review_date") + "</div></div>" +
       DetailShell.retiredFlag(this._record.retired);
+  },
+
+  // The committee responsible for this ML Application, derived from its Division and
+  // Line of Business exactly as a model's is. Flags red when none covers it: a record
+  // no committee sees is invisible to the governance meant to hold it.
+  _mrcRow() {
+    const m = this._mrc || {};
+    if (m.mrc) {
+      const c = m.mrc;
+      return '<div class="inforow"><div class="k">MRC</div><div class="v">' +
+        esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
+        '<span class="muted" style="font-size:11px">' + esc(m.level || "") +
+        "-level</span></div></div>";
+    }
+    const d = this._record.data || {};
+    const org = [d.division, d.line_of_business].filter(Boolean).join(" / ") ||
+      "no division / line of business set";
+    return '<div class="inforow"><div class="k">MRC</div>' +
+      '<div class="v" style="color:var(--red)">&#9888; No committee covers this ML ' +
+      "Application (" + esc(org) + "). Set one up under Admin &rarr; MRC.</div></div>";
+  },
+
+  // The committee's latest word on this record. Empty until phase 4 puts an ML
+  // Application on the sign-off route; the row exists now so the Overview reads the
+  // same as a model's rather than gaining a section later.
+  _mrcStatusRow(d) {
+    const hist = d.signoff_history || [];
+    const latest = hist.length ? hist[hist.length - 1] : null;
+    let value = '<span class="muted">Not yet before a committee</span>';
+    if (latest) {
+      const outcome = latest.outcome || "Approved";
+      const colour = outcome === "Rejected" ? "var(--red)" : "#388e3c";
+      value = '<span style="color:' + colour + ';font-weight:600">' + esc(outcome) +
+        "</span> at " + '<span class="code">' + esc(latest.meeting_id) + "</span>" +
+        (latest.date ? " (" + esc(latest.date) + ")" : "");
+    }
+    return '<div class="inforow"><div class="k">MRC status</div><div class="v">' +
+      value + "</div></div>";
   },
 
   // The risk assessment, through the same shared table the model and product screens

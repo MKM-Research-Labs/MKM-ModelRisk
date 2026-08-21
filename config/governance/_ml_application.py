@@ -56,6 +56,7 @@ from __future__ import annotations
 
 from config.governance._collections import COLLECTION_SPECS
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY,
+                                          VALID_REVIEW_STATUSES,
                                           VALID_LIFECYCLE_STAGES, VALID_MATERIALITY,
                                           VALID_RAG_RATINGS, VALID_REVIEW_FREQUENCIES,
                                           VALID_VALIDATION_STATUSES, VALIDATION_STATUS_LIST)
@@ -77,6 +78,12 @@ ML_APPLICATION_FIELD_SPECS = {
                  "reference": "division"},
     "line_of_business": {"label": "Line of Business", "type": "text",
                          "group": "Organisation", "reference": "line_of_business"},
+    # An ML Application has code in exactly the sense a model does -- something was
+    # fitted, and it lives somewhere. Same names and same references as the inventory.
+    "repo_location": {"label": "Repository location", "type": "text",
+                      "group": "Organisation"},
+    "codebase": {"label": "Codebase", "type": "text", "group": "Organisation",
+                 "reference": "codebase"},
     # --- Identity ---
     "name": {"label": "Name", "type": "text", "group": "Identity"},
     "short_name": {"label": "Short name", "type": "text", "group": "Identity"},
@@ -98,6 +105,16 @@ ML_APPLICATION_FIELD_SPECS = {
     # boosting machine where a logistic regression would have done is the single
     # most common finding against an ML estate.
     "estimator_rationale": {"label": "Why this estimator", "type": "textarea", "group": "ML"},
+    # The estimator names the class; the methodology says what was actually done with
+    # it ("Gradient Boosting Classification with binomial deviance loss"), which is
+    # more than the class name carries.
+    "methodology": {"label": "Methodology", "type": "text", "group": "ML"},
+    "source_module": {"label": "Source module", "type": "text", "group": "ML"},
+    # Who supplies the ML Application itself, as opposed to the estimator it is built
+    # on. Strict like a model's: it cannot name a vendor nobody has defined.
+    "vendor": {"label": "Vendor", "type": "text", "group": "ML",
+               "reference": "vendor", "strict_reference": True},
+    "category": {"label": "Category", "type": "text", "group": "ML"},
     "training_data": {"label": "Training data", "type": "textarea", "group": "ML"},
     "training_period": {"label": "Training period", "type": "text", "group": "ML"},
     # Deliberately not a named metric. Area under the curve is a CLASSIFICATION
@@ -134,6 +151,12 @@ ML_APPLICATION_FIELD_SPECS = {
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
     "peer_reviewer": {"label": "Peer reviewer", "type": "text", "group": "Governance",
                       "reference": "people"},
+    "model_owner_role": {"label": "Owner role", "type": "text", "group": "Governance"},
+    "status": {"label": "Status", "type": "text", "group": "Governance"},
+    # Where the review has got to. Carried so a record migrated from the inventory
+    # keeps it; the workflow that MOVES it arrives with the MRC route (phase 4).
+    "review_status": {"label": "Review status", "type": "choice",
+                      "options": VALID_REVIEW_STATUSES, "group": "Governance"},
     "lifecycle_stage": {"label": "Lifecycle stage", "type": "choice",
                         "options": VALID_LIFECYCLE_STAGES, "group": "Governance",
                         "reference": LIFECYCLE_STAGE_LIST},
@@ -147,6 +170,9 @@ ML_APPLICATION_FIELD_SPECS = {
                          "options": VALID_REVIEW_FREQUENCIES, "group": "Governance"},
     # --- Review dates. ``next_review_date`` is the monitoring probe. ---
     "last_review_date": {"label": "Last review", "type": "date", "group": "Review dates"},
+    "validation_date": {"label": "Validation date", "type": "date", "group": "Review dates"},
+    "recertification_date": {"label": "Recertification", "type": "date",
+                             "group": "Review dates"},
     "next_review_date": {"label": "Next review", "type": "date", "group": "Review dates"},
     "mrc_signoff_date": {"label": "MRC sign-off", "type": "date", "group": "Review dates"},
     "mrc_signoff_meeting": {"label": "MRC sign-off meeting", "type": "text",
@@ -156,6 +182,14 @@ ML_APPLICATION_FIELD_SPECS = {
     #     drift belongs -- the thing most likely to be what goes wrong. ---
     "monitoring_approach": {"label": "Monitoring approach", "type": "textarea",
                             "group": "Monitoring"},
+    # --- Testing. The same three flags a model carries; the evidence itself is
+    #     filed under the Testing document categories. ---
+    "unit_tests": {"label": "Unit tests", "type": "choice", "options": ("Yes", "No"),
+                   "group": "Testing"},
+    "integration_tests": {"label": "Integration tests", "type": "choice",
+                          "options": ("Yes", "No"), "group": "Testing"},
+    "benchmark_tests": {"label": "Benchmark tests", "type": "choice",
+                        "options": ("Yes", "No"), "group": "Testing"},
 }
 
 # The register form's minimum, besides the mandatory id. An ML Application is
@@ -172,6 +206,10 @@ ML_APPLICATION_COLLECTION_SPECS = {
     "model_weaknesses": COLLECTION_SPECS["model_weaknesses"],
     "remediation_steps": COLLECTION_SPECS["remediation_steps"],
     "version_history": COLLECTION_SPECS["version_history"],
+    # The feeds it draws on -- for an ML Application, where the training and scoring
+    # data comes from. Shared shape, so "which records share a source" is one query.
+    "data_sources": COLLECTION_SPECS["data_sources"],
+    "change_history": COLLECTION_SPECS["change_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],
     # The ML questionnaire, same shape as a model's validation questions but seeded

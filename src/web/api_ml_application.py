@@ -36,6 +36,7 @@ from src.governance.ml_application import (add_collection_item, get_ml_applicati
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.reference import get_reference_lists
 from src.web._helpers import (collection_field_specs, context_from_request,
+                              resolve_mrc_for_org,
                               document_specs, grouped_field_specs, json_body,
                               reference_options, resolve_field)
 
@@ -158,3 +159,15 @@ def risk_rating(ml_application_id: str):
     if record is None:
         return jsonify({"error": "ML Application not found"}), 404
     return jsonify(compute_risk_rating(record["data"] or {}, as_of=date.today().isoformat()))
+
+
+@ml_application_bp.get("/<ml_application_id>/mrc")
+def responsible_mrc(ml_application_id: str):
+    """The committee responsible for this ML Application, from its Division and Line of
+    Business — resolved the same way a model's is, so the two cannot disagree about
+    which committee covers the same org unit."""
+    record = get_ml_application(ml_application_id)
+    if record is None:
+        return jsonify({"error": "ML Application not found"}), 404
+    data = record["data"] or {}
+    return jsonify(resolve_mrc_for_org(data.get("division"), data.get("line_of_business")))
