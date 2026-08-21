@@ -280,7 +280,7 @@ const MLAppDetail = {
         const keys = (section.fields || []).filter((k) => self._applies(k, train));
         if (!keys.length) return "";
         return '<div class="section-header">' + esc(section.key + ". " + section.title) +
-          "</div>" + keys.map((k) => self._trainRow(k, train)).join("");
+          "</div>" + keys.map((k) => self._trainRow(k, train) + self._artefact(k)).join("");
       }).join("");
   },
 
@@ -320,7 +320,63 @@ const MLAppDetail = {
     const value = train[key];
     const shown = (value === null || value === undefined || value === "")
       ? '<span class="muted">—</span>' : optionLabel(spec, value);
-    return DetailShell.row("tr-" + key, spec.label, shown, !this._record.retired);
+    const edit = this._record.retired
+      ? "" : ' <span class="edit-btn" data-edit="tr-' + key + '">edit</span>';
+    return '<div class="inforow" id="row-tr-' + key + '"><div class="k">' +
+      esc(spec.label) + '</div><div class="v">' + shown + edit +
+      this._why(key) + "</div></div>";
+  },
+
+  // The short reason inline, the whole one behind the (i). Space to the right of the
+  // value is where a reader's eye already is when they are wondering why they are
+  // being asked for something, and a field nobody understands is a field filled in
+  // plausibly rather than honestly.
+  _why(key) {
+    const note = (this._specs.training.notes || {})[key] || "";
+    if (!note) return "";
+    const cut = note.indexOf(". ");
+    const short = cut > 0 ? note.slice(0, cut + 1) : note;
+    const more = note.length > short.length
+      ? ' <span class="edit-btn" data-why="' + key + '" title="Why this is asked">&#9432;</span>'
+      : "";
+    return '<span class="muted" style="margin-left:14px;font-size:11px">' +
+      esc(short) + more + "</span>" +
+      '<div class="muted" id="why-' + key + '" style="display:none;font-size:11px;' +
+      'margin-top:4px;max-width:52em">' + esc(note) + "</div>";
+  },
+
+  _bindWhy() {
+    document.querySelectorAll("#mla-content [data-why]").forEach(function (el) {
+      el.onclick = function () {
+        const box = document.getElementById("why-" + el.getAttribute("data-why"));
+        if (box) box.style.display = box.style.display === "none" ? "block" : "none";
+      };
+    });
+  },
+
+  // The plot or table behind a field  // The plot or table behind a field, filed beside it. A reliability curve IS the
+  // calibration evidence: a sentence saying the model is well calibrated is an
+  // assertion, and the curve is the thing a reviewer can disagree with. So the panel
+  // sits under the reading of it, never on a documents tab away from it.
+  _artefactOpts(key) {
+    const category = (this._specs.training.artefacts || {})[key];
+    if (!category) return null;
+    return { category: category, docs: (this._record.data || {}).documents || [],
+             base: "/api/ml-applications/", id: this._record.ml_application_id,
+             retired: this._record.retired, refresh: () => this.refresh() };
+  },
+
+  _artefact(key) {
+    const opts = this._artefactOpts(key);
+    return opts ? DocPanel.html(opts) : "";
+  },
+
+  _bindArtefacts() {
+    const self = this;
+    Object.keys(this._specs.training.artefacts || {}).forEach(function (key) {
+      const opts = self._artefactOpts(key);
+      if (opts) DocPanel.bind(opts);
+    });
   },
 
   _bindTrainEdits(d) {
@@ -408,6 +464,8 @@ const MLAppDetail = {
     if (this._tab === "training") {
       box.innerHTML = this._trainingSections(d);
       this._bindTrainEdits(d);
+      this._bindArtefacts();
+      this._bindWhy();
       return;
     }
     if (this._tab === "risk") {

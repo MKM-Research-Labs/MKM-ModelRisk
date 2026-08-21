@@ -73,6 +73,19 @@ TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", "Benc
 # the model's Risk Rating tab — so they are not offered as standalone Docs categories.
 EVIDENCE_DOC_CATEGORIES = ("Event Evidence", "Remediation Evidence")
 
+# The artefacts a train produces. Each is filed beside the field it evidences on the
+# Training tab, for the same reason the testing evidence is: a document belongs where
+# the work that produced it happened, and never in two places.
+#
+# These are plots and tables, not prose. A reliability curve IS the calibration
+# evidence — a sentence saying the model is well calibrated is an assertion, and the
+# curve is the thing a reviewer can disagree with.
+CALIBRATION_DOC_CATEGORY = "Calibration"
+CONVERGENCE_DOC_CATEGORY = "Convergence"
+SEGMENT_DOC_CATEGORY = "Segment analysis"
+TRAINING_DOC_CATEGORIES = (CALIBRATION_DOC_CATEGORY, CONVERGENCE_DOC_CATEGORY,
+                           SEGMENT_DOC_CATEGORY)
+
 # Which of the Docs tabs is a group, and over what. The label is not itself a
 # category — nothing is ever filed under "Testing" — so anything counting or
 # listing documents has to resolve the group to its real categories first.
@@ -85,7 +98,7 @@ DOC_TAB_GROUPS = {TESTING_TAB_LABEL: TESTING_DOC_CATEGORIES,
 # purpose: it names a panel, not a filing place.
 DOC_CATEGORIES = (tuple(c for c in DOC_TAB_CATEGORIES if c not in DOC_TAB_GROUPS)
                   + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
-                  + REVIEW_DOC_CATEGORIES)
+                  + REVIEW_DOC_CATEGORIES + TRAINING_DOC_CATEGORIES)
 
 # --- Artefacts: what the institution ISSUES ---------------------------------
 # The Documents tab's second panel. Filed per division, plus a company-wide shelf for

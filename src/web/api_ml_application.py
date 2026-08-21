@@ -28,6 +28,7 @@ from config.governance import (ESTIMATOR_LIST, ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS, ML_APPLICATION_REGISTER_FIELDS,
                                TRAINING_FIELD_SPECS, TRAINING_RUNS_COLLECTION,
                                TRAINING_SECTIONS)
+from config.governance._ml_training import TRAINING_ARTEFACTS
 from src.command import dispatch
 from src.governance.ml_application import (add_collection_item, get_ml_application,
                                            list_ml_applications,
@@ -88,6 +89,14 @@ def field_specs():
                             if spec["section"] == key]}
                 for key, title in TRAINING_SECTIONS
             ],
+            # Which field each artefact is filed against, so the panel appears beside
+            # the reading of the plot rather than on a documents tab away from it.
+            "artefacts": TRAINING_ARTEFACTS,
+            # Why each field is asked for. The first sentence reads inline; the whole
+            # note sits behind the (i). A form that explains itself is one somebody
+            # completes honestly rather than plausibly.
+            "notes": {key: spec.get("note", "")
+                      for key, spec in TRAINING_FIELD_SPECS.items()},
             "requirements": [
                 {"key": key, "requirement": spec["requirement"],
                  **({"when": spec["when"]} if spec.get("when") else {})}
