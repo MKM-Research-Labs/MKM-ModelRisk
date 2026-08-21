@@ -43,6 +43,7 @@ PAIRS = {
     "data_lineage.schema.json": "data_lineage.example.json",
     "field_lineage.schema.json": "field_lineage.example.json",
     "document.schema.json": "document.example.json",
+    "ml_training_run.schema.json": "ml_training_run.example.json",
 }
 
 

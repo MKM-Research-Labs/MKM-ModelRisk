@@ -1,0 +1,32 @@
+{
+  "ml_application_id": "MKM-FC-001",
+  "fit_id": "2026-03-03-v1.2",
+  "fields": {
+    "learning_task": "Binary classification",
+    "snapshot_id": "sha256:4d91c7e2b18a0f5c",
+    "row_count": 41200,
+    "feature_count": 4,
+    "missing_data": "Drop",
+    "scaling": "Standard",
+    "scaler_fit_point": "Train only",
+    "split_method": "Spatial-group",
+    "split_proportions": "60/20/20",
+    "cv_method": "Group k-fold",
+    "cv_folds": 5,
+    "cv_result": "0.9498 +/- 0.0072",
+    "hyperparameters": "{\"learning_rate\": \"0.05\", \"n_estimators\": \"400\", \"max_depth\": \"3\"}",
+    "search_method": "Random",
+    "random_seed": "20260303",
+    "determinism": "Reproducible to tolerance",
+    "run_date": "2026-03-03",
+    "run_duration": "412.7s",
+    "run_hardware": "macOS-15.5-arm64",
+    "primary_metric": "ROC-AUC",
+    "metric_train": "0.9741",
+    "metric_cv": "0.9498",
+    "metric_test": "0.9583",
+    "code_commit": "35bc2111359e367f24211f349fee52daa820fc03",
+    "environment": "python 3.13.1, sklearn 1.5.2, numpy 2.1.1, pandas 2.2.3",
+    "artefact": "models/flood_classifier_v1.2.joblib sha256:0b7e19aa"
+  }
+}

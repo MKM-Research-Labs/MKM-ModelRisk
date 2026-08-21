@@ -24,6 +24,7 @@ from src.web.api_ingest._bp import ingest_bp
 from src.web.api_ingest import (  # noqa: F401
     data_lineage,
     field_lineage,
+    ml_training,
     model_chain,
     status,
 )

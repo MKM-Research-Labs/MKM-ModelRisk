@@ -119,12 +119,42 @@ def _ingest_field_lineage(
     return get_receipt("field-lineage", source_repo, config=config), True
 
 
+def _ingest_ml_training_run(
+    payload: dict[str, Any], provenance: dict[str, Any], actor: str, config,
+) -> tuple[dict[str, Any] | None, bool]:
+    """One fit, reported by the code that performed it.
+
+    Not idempotent on content the way a chain is: a train is expected to be reported
+    more than once as a long fit progresses, and each report updates the same train.
+    The receipt records the last one.
+    """
+    from src.governance.ml_application import rebuild_ml_application_view
+    from src.governance.ml_application.capture import record_train
+
+    source_repo = provenance["source_repo"]
+    chash = content_hash(payload)
+    item_id, created = record_train(
+        ml_application_id=payload["ml_application_id"], fit_id=payload["fit_id"],
+        fields=payload.get("fields") or {}, actor=actor, config=config)
+    rebuild_ml_application_view(config=config)
+    record_receipt(
+        artifact="ml-training-run", source_repo=source_repo, content_hash=chash,
+        provenance=provenance,
+        summary={"ml_application_id": payload["ml_application_id"],
+                 "fit_id": payload["fit_id"], "item_id": item_id, "created": created},
+        actor=actor, reason="ingest ml-training-run", config=config,
+    )
+    rebuild_receipts_view(config=config)
+    return get_receipt("ml-training-run", source_repo, config=config), created
+
+
 # artifact -> handler(payload, provenance, actor, config) -> (receipt, created).
 # Only wired artifacts are reachable; others 422 via the guard below.
 _HANDLERS: dict[str, Callable[..., tuple[dict[str, Any] | None, bool]]] = {
     "data-lineage": _ingest_data_lineage,
     "field-lineage": _ingest_field_lineage,
     "model-chain": _ingest_model_chain,
+    "ml-training-run": _ingest_ml_training_run,
 }
 
 

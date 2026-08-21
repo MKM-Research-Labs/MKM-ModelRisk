@@ -33,11 +33,10 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import TRAINING_FIELD_SPECS
-from config.governance._ml_training import (CONDITIONAL_TASKS, FOUNDATION_SECTIONS,
-                                            MANDATORY, MIN_RATIONALE_CHARS,
-                                            TEST_EVALUATION_CAP, TRAINING_COMPLETE,
-                                            TRAINING_INCOMPLETE, TRAINING_QUALIFIED,
-                                            WHEN_CATEGORICAL, WHEN_PROBABILITY)
+from config.governance._ml_training import (CONDITIONAL_TASKS, MIN_RATIONALE_CHARS,
+                                            TEST_EVALUATION_CAP, TRAINING_CLEAN,
+                                            TRAINING_QUALIFIED, WHEN_CATEGORICAL,
+                                            WHEN_PROBABILITY)
 
 
 def _recorded(value: Any) -> bool:
@@ -75,7 +74,10 @@ def _qualifications(train: dict) -> list[str]:
                        "times, so it has become a validation set")
     except (TypeError, ValueError):
         pass
-    if not _recorded(train.get("reproduced_by")):
+    # Only once there is a result worth reproducing. Raising it against a train that
+    # has not reported a metric yet is telling somebody off for work they have not
+    # finished, which is how a tab teaches people to ignore it.
+    if _recorded(train.get("metric_test")) and not _recorded(train.get("reproduced_by")):
         out.append("nobody other than the developer has reproduced the fit")
     elif str(train.get("reproduced_matched") or "") == "No":
         out.append("the independent reproduction did not match")
@@ -83,24 +85,18 @@ def _qualifications(train: dict) -> list[str]:
 
 
 def completeness(train: dict | None) -> dict[str, Any]:
-    """``{filled, total, state, missing, qualifications}`` for one train."""
+    """``{filled, total, state, qualifications}`` for one train.
+
+    ``filled`` of ``total`` is progress, not a score. Fifty-one fields will not all be
+    populated on a real estate and saying so on every record helps nobody -- what a
+    reviewer needs is the count and, separately, the things recorded that they must be
+    told about.
+    """
     if not train:
-        return {"filled": 0, "total": 0, "state": TRAINING_INCOMPLETE,
-                "missing": [], "qualifications": []}
-    required = [key for key, spec in TRAINING_FIELD_SPECS.items()
-                if spec["requirement"] == MANDATORY or applies(key, train)]
-    applicable = [k for k in required if applies(k, train)]
-    filled = [k for k in applicable if _recorded(train.get(k))]
-    missing = [k for k in applicable
-               if k not in filled and TRAINING_FIELD_SPECS[k]["requirement"] == MANDATORY]
-    foundation = [k for k in missing
-                  if TRAINING_FIELD_SPECS[k]["section"] in FOUNDATION_SECTIONS]
+        return {"filled": 0, "total": 0, "state": TRAINING_CLEAN, "qualifications": []}
+    applicable = [key for key in TRAINING_FIELD_SPECS if applies(key, train)]
+    filled = [key for key in applicable if _recorded(train.get(key))]
     qualifications = _qualifications(train)
-    if foundation:
-        state = TRAINING_INCOMPLETE
-    elif missing or qualifications:
-        state = TRAINING_QUALIFIED
-    else:
-        state = TRAINING_COMPLETE
-    return {"filled": len(filled), "total": len(applicable), "state": state,
-            "missing": missing, "qualifications": qualifications}
+    return {"filled": len(filled), "total": len(applicable),
+            "state": TRAINING_QUALIFIED if qualifications else TRAINING_CLEAN,
+            "qualifications": qualifications}

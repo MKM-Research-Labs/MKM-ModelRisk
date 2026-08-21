@@ -246,22 +246,25 @@ supervisory guidance addressed to institutions, not a standard a product is cert
 against. The table states what the platform holds that evidences a clause and how
 much of the estate carries it. Nothing more.
 
-## 6b. Requirement levels are the institution's to set
+## 6b. Nothing is mandatory — settled
 
-Forty-one of fifty-one fields marked mandatory is the spec's view of what good looks
-like, and it is a fair one for a mature estate. It is not a fair opening position for
-an adopter: a record created today shows most of the tab outstanding, and a tab that
-opens by telling somebody they have failed is a tab they stop filling in.
+The spec marks most of its fields mandatory, which is a fair description of a mature
+estate and a poor opening position for an adopter. **A complete set of fifty-one will
+not be reached on a real estate**, so a tab that reports most of itself outstanding on
+every record is a tab people learn to ignore — and the one thing on it that genuinely
+needs reading gets ignored with it.
 
-Two things follow, and only the first is done:
+The requirement levels are gone. What the tab reports instead:
 
-1. **The page does not shout.** An empty field is a dash, whatever its requirement.
-   What is still owed is stated once, in the Evidence panel, as a count to work
-   through. The requirement itself is unchanged — the count, the state and the gap
-   report all still read it.
-2. **The levels should be adopter-configurable**, like every vocabulary on this
-   platform. An institution starting out marks a smaller set mandatory and tightens
-   it as the estate matures; ours are the seed, not the standard. This is not built.
+- **A count.** `Training (24/49)` — progress, not a score.
+- **Findings, separately.** What has been *recorded* that a reviewer must be told
+  about: a scaler fitted on the full dataset, a split rationale too short to be an
+  argument, a hold-out looked at more than three times, a fit nobody but the developer
+  has reproduced. These are statements about evidence that exists, not complaints
+  about evidence that does not.
+
+The distinction is the point. An empty field is work not yet done. A scaler fitted on
+the full dataset is a finding, and it does not become one by being mandatory.
 
 ## 7. What this does not change
 

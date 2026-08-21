@@ -247,17 +247,19 @@ const MLAppDetail = {
   // Whether a conditional field applies to this train, from the learning task it
   // declares. Matched on the STORED value, so renaming a task in Admin does not
   // change which fields it demands.
-  _requirement(key) {
+  // Which fields carry a conditional rule. Nothing is mandatory, so this is the only
+  // thing that decides whether a field is asked for at all.
+  _conditional(key) {
     if (!this._reqIndex) {
       this._reqIndex = {};
-      (this._specs.training.requirements || []).forEach((r) => { this._reqIndex[r.key] = r; });
+      (this._specs.training.applies || []).forEach((r) => { this._reqIndex[r.key] = r; });
     }
     return this._reqIndex[key] || {};
   },
 
   _applies(key, train) {
-    const meta = this._requirement(key);
-    if (meta.requirement !== "C" || !meta.when) return true;
+    const meta = this._conditional(key);
+    if (!meta.when) return true;
     const task = (train || {}).learning_task || "";
     if (meta.when === "classification") return /classification/i.test(task);
     if (meta.when === "neural task") return task === "Sequence" || task === "Image";
@@ -290,40 +292,39 @@ const MLAppDetail = {
   // apart, so this one is named for what it is.
   _completenessPanel(d) {
     const c = d.training_completeness || {};
-    const colour = c.state === "Complete" ? "#388e3c"
-      : (c.state === "Qualified" ? "#f57c00" : "var(--red)");
-    const quals = (c.qualifications || []).length
-      ? '<ul style="margin:6px 0 0 18px;padding:0;font-size:12px">' +
-        c.qualifications.map((q) => "<li>" + esc(q) + "</li>").join("") + "</ul>"
-      : "";
-    const owed = (c.missing || []).length
-      ? '<div class="muted" style="font-size:12px;margin-top:4px">' +
-        c.missing.length + " mandatory field" + (c.missing.length === 1 ? "" : "s") +
-        " still owed.</div>"
-      : "";
+    const findings = c.qualifications || [];
+    const detail = findings.length
+      ? '<span class="badge" style="background:#f57c00">' + findings.length +
+        " to tell a reviewer</span>" +
+        '<ul style="margin:6px 0 0 18px;padding:0;font-size:12px">' +
+        findings.map((q) => "<li>" + esc(q) + "</li>").join("") + "</ul>"
+      : '<span class="muted">Nothing recorded here that a reviewer must be told about.</span>';
     return '<div class="inforow" style="align-items:flex-start"><div class="k">Evidence' +
-      '</div><div class="v"><span class="badge" style="background:' + colour + '">' +
-      esc(c.state || "Incomplete") + "</span> " +
-      '<span class="muted">' + (c.filled || 0) + " of " + (c.total || 0) +
-      " applicable fields</span>" + owed + quals + "</div></div>";
+      '</div><div class="v"><span class="muted">' + (c.filled || 0) + " of " +
+      (c.total || 0) + ' fields recorded</span><div style="margin-top:4px">' +
+      detail + "</div></div></div>";
   },
 
-  // A field of the train. An empty one reads as an ordinary dash, whatever its
-  // requirement: a new record showing thirty red rows reads as failure, and the
-  // owner filling it in has done nothing wrong yet. What is still owed is stated
-  // ONCE, in the Evidence panel, where it is a count to work through rather than a
-  // wall of red to be discouraged by. The requirement itself is not softened -- the
-  // count, the state and the gap report all still read it.
+  // A field of the train. An empty one is an ordinary dash: nothing here is
+  // mandatory, so an unfilled field is work not yet done rather than a failure, and
+  // a tab that says otherwise on every record is one people stop reading.
   _trainRow(key, train) {
     const spec = this._trainSpec(key);
     if (!spec) return "";
     const value = train[key];
     const shown = (value === null || value === undefined || value === "")
       ? '<span class="muted">—</span>' : optionLabel(spec, value);
-    const edit = this._record.retired
+    // A field the run reported for itself is READ-ONLY. A value somebody can hand-edit
+    // is a value a validator has to verify separately, and the point of capturing it
+    // was that nobody had to be trusted to retype it.
+    const captured = (train.captured_fields || "").split(",").indexOf(key) >= 0;
+    const edit = (this._record.retired || captured)
       ? "" : ' <span class="edit-btn" data-edit="tr-' + key + '">edit</span>';
+    const mark = captured
+      ? ' <span class="pill" title="Reported by the run that produced it">captured</span>'
+      : "";
     return '<div class="inforow" id="row-tr-' + key + '"><div class="k">' +
-      esc(spec.label) + '</div><div class="v">' + shown + edit +
+      esc(spec.label) + '</div><div class="v">' + shown + mark + edit +
       this._why(key) + "</div></div>";
   },
 
