@@ -44,7 +44,8 @@ def _register(client, ml_application_id="MLA-0001", **overrides):
 def test_fields_publishes_groups_register_and_collections(client):
     res = client.get("/api/ml-applications/fields").get_json()
     groups = {g["group"] for g in res["groups"]}
-    assert {"Organisation", "Identity", "ML", "Classification", "Governance"} <= groups
+    assert {"Organisation", "Identity", "Estimator and method", "Classification",
+            "Governance"} <= groups
     assert res["register"] == ["name", "division", "owner", "estimator", "use_case"]
     keys = {c["key"] for c in res["collections"]}
     assert ML_REVIEW_QUESTIONS_COLLECTION in keys
