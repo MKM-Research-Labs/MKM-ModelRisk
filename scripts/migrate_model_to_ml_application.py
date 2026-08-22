@@ -178,8 +178,12 @@ def migrate(model_id: str, ml_application_id: str, estimator: str,
         if target not in ML_APPLICATION_COLLECTION_SPECS:
             # Reported, never dropped in silence: a collection the target cannot hold
             # is information the migration is losing, and the operator has to know.
-            counts.setdefault("NOT CARRIED (no home on the record)", []).append(
-                f"{name} ({len(items)})")
+            # ``documents`` is the exception -- it is not a collection spec at all, and
+            # is carried by its own step below. Naming it here cried wolf on the one
+            # thing that HAD come across, which teaches an operator to skim the list.
+            if name != "documents" and name not in DROPPED_COLLECTIONS:
+                counts.setdefault("NOT CARRIED (no home on the record)", []).append(
+                    f"{name} ({len(items)})")
             continue
         spec_keys = {f["key"] for f in ML_APPLICATION_COLLECTION_SPECS[target]["fields"]}
         for item in items:
