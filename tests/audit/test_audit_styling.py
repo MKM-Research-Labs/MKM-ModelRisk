@@ -22,8 +22,9 @@ from __future__ import annotations
 
 import re
 
-from audit.styling import (_COLOUR, colour_literal_findings,
-                           unconverted_colour_findings, undefined_token_findings)
+from audit.styling import (_COLOUR, _bare_hits, _without_comments,
+                           colour_literal_findings, unconverted_colour_findings,
+                           undefined_token_findings)
 
 
 def test_no_colour_literal_outside_the_theme_module():
@@ -63,3 +64,29 @@ def test_a_colour_inside_a_css_comment_is_not_a_finding():
     # as writing one.
     from audit.styling import _CSS_COMMENT
     assert not _COLOUR.search(_CSS_COMMENT.sub("", "/* never write #1976d2 here */"))
+
+
+def test_a_colour_spelled_without_a_hash_is_caught():
+    # How LaTeX writes one. \definecolor{mkmblue}{HTML}{1565C0} sat in latex.py for
+    # months and the "#"-anchored scan could not see it; nor could it see the bare
+    # "9E9E9E" fallback in the risk-policy document.
+    found = _bare_hits('c = "\\definecolor{brand}{HTML}{1565C0}"\nfallback = "9E9E9E"\n', "x.py")
+    assert {f["snippet"] for f in found} == {"1565C0", "9E9E9E"}
+
+
+def test_a_six_digit_number_is_not_mistaken_for_a_colour():
+    # An all-digit string is an identifier or a count. Requiring a hex letter is what
+    # keeps the gate off them.
+    assert _bare_hits('ref = "123456"\n', "x.py") == []
+
+
+def test_a_colour_named_in_a_python_comment_is_not_a_finding():
+    # Explaining the drift must not count as committing it — the same reason the CSS
+    # scan strips its comments. config/reporting.py names both blues in prose.
+    assert "#1976d2" not in _without_comments("x = 1  # the old accent was #1976d2\n")
+
+
+def test_a_colour_inside_a_python_string_survives_comment_stripping():
+    # The stripping must be token-aware: cutting at the first "#" would blank the
+    # literal itself and the gate would pass on exactly what it exists to catch.
+    assert "#1976d2" in _without_comments('X = "#1976d2"  # named here too: #ff0000\n')

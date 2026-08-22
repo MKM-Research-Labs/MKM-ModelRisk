@@ -27,6 +27,41 @@ once. The values here are what a fresh install prints until it does — the word
 that ships, not the wording that is fixed.
 """
 
+from config.theme import BRAND, RAG, TEXT
+
+# --- How a generated document looks (coding rule R10) -----------------------------
+# The PDFs are the most externally visible thing the platform produces — a committee
+# and, at one adopter, a regulator read them — and until now they carried their own
+# colours: a second brand blue (#1565C0 against the console's #1976d2), plus LaTeX's
+# built-in ``gray`` and ``red``. They draw from the same tokens the console does now,
+# so a report and the screen it came from cannot disagree.
+DOCUMENT_LINK_COLOUR = BRAND["accent"]
+DOCUMENT_CHROME_COLOUR = TEXT["muted"]
+DOCUMENT_CLASSIFICATION_COLOUR = RAG["red"]
+
+# What a band with no colour of its own falls back to, in the risk-policy tables.
+DOCUMENT_UNRATED_COLOUR = RAG["grey"]
+
+# Page setup, from the ``docs/Swaption.tex`` house template: 170mm of text with a
+# 20mm top, and a 25mm bottom so the footer rule the template omits has room.
+DOCUMENT_BASE_FONT_SIZE = "11pt"
+DOCUMENT_GEOMETRY = "a4paper, left=20mm, right=20mm, top=20mm, bottom=25mm"
+DOCUMENT_LINE_SPACING = "onehalfspacing"
+DOCUMENT_RULE_WIDTH = "0.4pt"
+
+# The template's large title fonts, used on the title page only.
+DOCUMENT_TITLE_FONT = "cmr12"
+DOCUMENT_TITLE_SIZE = "35pt"
+DOCUMENT_SUBTITLE_SIZE = "25pt"
+
+# The body typeface. Empty is the LaTeX default — Computer Modern, the serif face
+# every document has printed in to date. "sans" loads Helvetica and makes it the
+# default family, matching the console's Arial and closing the last divergence
+# between the screen and the page. That is a visible change to every generated
+# document, so it is a decision an adopter makes rather than a side effect of
+# putting the parameter in one place.
+DOCUMENT_BODY_FONT = ""
+
 # The classification banner stamped on the title page and page footer of every
 # generated document. Adopters to date have kept "CONFIDENTIAL".
 DEFAULT_CLASSIFICATION = "CONFIDENTIAL — PROPRIETARY"

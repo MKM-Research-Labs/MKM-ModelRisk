@@ -40,6 +40,7 @@ from src.governance.latex import (
     logo_asset,
     preamble,
 )
+from src.governance.latex_style import coloured
 from src.governance.mrc.pack import compile_tex
 from src.governance.risk_policy._store import load
 
@@ -64,16 +65,8 @@ def _dim_label(policy: dict, key: str) -> str:
     return dim.get("label") or key.replace("_", " ").capitalize()
 
 
-def _hex(colour) -> str:
-    """A 6-digit uppercase RRGGBB for xcolor's HTML model, defaulting to grey."""
-    h = str(colour or "").lstrip("#").upper()
-    if len(h) == 6 and all(c in "0123456789ABCDEF" for c in h):
-        return h
-    return "9E9E9E"
-
-
 def _swatch(colour) -> str:
-    return "\\textcolor[HTML]{" + _hex(colour) + "}{\\rule{9pt}{9pt}}"
+    return coloured(colour, "\\rule{9pt}{9pt}")
 
 
 def _band_table(bands: list[dict], score_label: str, caption: str) -> str:
@@ -93,7 +86,7 @@ def _band_table(bands: list[dict], score_label: str, caption: str) -> str:
 
 
 def _grid_cell(rating: str, colour) -> str:
-    return "\\textcolor[HTML]{" + _hex(colour) + "}{\\textbf{" + _esc(rating) + "}}" if rating else "---"
+    return coloured(colour, "\\textbf{" + _esc(rating) + "}") if rating else "---"
 
 
 def _grids(policy: dict) -> str:

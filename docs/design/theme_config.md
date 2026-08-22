@@ -1,15 +1,16 @@
 # Design: centralising look and feel into `config/theme`
 
-**Status:** Steps 1–7 shipped 2026-08-22 — the whole plan. **No colour literal remains
-anywhere in the console**, the type/spacing/radius scales and the typeface are tokens too,
-and rule **R10** gates the colour half of it. Only the PDFs (§9.1) are outstanding.
+**Status:** Complete, 2026-08-22. Steps 1–7 **and** the generated PDFs (§9.1). No colour
+literal remains anywhere in the platform — console or document — the type, spacing and
+radius scales and both typefaces are tokens, and rule **R10** gates all of it.
 **Date:** 2026-08-21
 **Area:** `src/static`, `src/templates`, `config/`, `audit/`
 **Driver:** An ERM vendor is cloning ModelRisk into their suite as a new pillar. Their
 visual language is close to ours but not ours, so every brand value has to be
 changeable without forking the code.
-**Scope:** the console only — the CSS and the JavaScript. The generated PDFs carry the
-same problem and are deliberately left out of this pass; see §9.
+**Scope:** originally the console only — the CSS and the JavaScript. The generated PDFs
+were deferred to §9.1 and have since been done too, so the scope is now everything the
+platform draws.
 
 ---
 
@@ -31,7 +32,7 @@ adopter changes one, every place the platform wrote it down becomes a lie.
 |---|---|---|
 | `src/static/css/app.css` | 286 lines, 1 file | 75 hex colours — **15** in `:root`, **60** bypassing it; 7 `rgba()`; 362 `px` |
 | `src/static/js/**` | 54 files, 11,375 lines | **190** hex colours, **493** inline `style="…"` attributes |
-| `src/governance/latex.py` *(out of scope, §9)* | PDF preamble + title page | `\definecolor{mkmblue}{HTML}{1565C0}`, `\textcolor{gray}` ×4 |
+| `src/governance/latex.py` ✅ *(done, §9.1)* | PDF preamble + title page | `\definecolor{mkmblue}{HTML}{1565C0}`, `\textcolor{gray}` ×4 |
 | `src/governance/risk_policy/_defaults.py` | lines 45–49 | 3 seeded colour maps, in `src/` rather than `config/` — an R1 violation on its own |
 
 Two findings matter more than the counts.
@@ -308,7 +309,7 @@ is picked up.
 None of these block the vendor. They are recorded here so the next pass is chosen
 deliberately rather than discovered by an adopter.
 
-### 9.1 The generated PDFs
+### 9.1 The generated PDFs — ✅ shipped 2026-08-22
 
 **The requirement.** Every governance artefact the platform issues — the Meeting Pack, the
 Model Risk Report, the Risk Categorisation PDF, the coding-rule and completeness audits —
@@ -350,6 +351,37 @@ gate (§7), which currently has to stop at `src/static` because `latex.py` would
 
 **When.** Worth doing before an adopter's first regulator-facing pack, not before the
 clone ships.
+
+**As built (2026-08-22).** The page parameters live in `config/reporting.py` — already the
+home for "shipped defaults for generated documents" — deriving their colours from
+`config/theme.py`, so colour still has exactly one source. `latex.py` gained a sibling,
+`src/governance/latex_style.py`, holding the conversion to xcolor's HTML model and the two
+wrappers that apply it; the split was forced by R2 (latex.py hit 301 lines) and is a
+better seam anyway: structure in one file, visual language in the other.
+
+Confirmed in a rendered PDF by decompressing its content streams, not by reading the
+LaTeX: `#1976D2` present, `#1565C0` **gone**, `#888888` chrome ink, `#D32F2F`
+classification, LaTeX's pure red gone.
+
+Three things the work turned up:
+
+- **A second bare-hex literal.** `risk_policy/document.py` had its own `_hex()` with a
+  `"9E9E9E"` fallback — the same colour as `--grey`, written down separately. Both it and
+  the preamble's `1565C0` were invisible to R10, whose scan was anchored on `#`. The gate
+  now sees `{HTML}{RRGGBB}` and bare six-digit hex strings in Python, and is comment-aware
+  so that naming a colour while explaining the rule is not breaking it.
+- **The typeface is a knob, not a change.** `DOCUMENT_BODY_FONT` defaults to `""` — the
+  Computer Modern every document has printed in. Setting it to `"sans"` loads Helvetica
+  and matches the console's Arial. Centralising the parameter should not silently restyle
+  every governance document, so the switch stays a decision.
+- **A bug the tests did not catch.** The first cut left `author_line + + coloured(...)`,
+  and every PDF raised `TypeError`. The preamble tests all passed, because none of them
+  built a title page. There is now one that does.
+
+**What actually changed on the page.** Three deliberate, visible shifts, all of them the
+document catching up with the console: links `#1565C0` → `#1976d2`; header, footer and
+subtitle ink from LaTeX's `gray` (`#808080`) → `#888888`; and the CONFIDENTIAL mark from
+LaTeX's pure `red` (`#FF0000`) → `#d32f2f`.
 
 ### 9.2 Runtime theming, not just deploy-time
 

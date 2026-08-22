@@ -226,7 +226,8 @@ registered person while `DB_NAME` is protected), which is designed but **not yet
 ## R10 — Every visual parameter comes from `config/theme`
 
 **Rule.** Colours, type sizes, spacing steps, corner radii and shadows live in
-`config/theme.py`. No colour literal — hex, `rgb()`, `rgba()`, `hsl()` — anywhere else:
+`config/theme.py`. No colour literal — hex, `rgb()`, `rgba()`, `hsl()`, or the bare
+`RRGGBB` LaTeX spells — anywhere else:
 not in `src/static/css`, not in `src/templates`, not in `src/static/js`, and not in a
 `.py` file. The stylesheet and the JavaScript name a **token**; the token is defined in one
 place and served from it.
@@ -261,9 +262,12 @@ define. `STYLING_GATED_SUFFIXES` in `config/audit.py` is the scope knob. The rul
 own report PDF (`audit_r10_styling.pdf`) and three rows in the audit's compliance summary,
 so it appears in the console's Audit Reports tab alongside R1–R8.
 
-`src/governance/latex.py` writes its colour without a leading `#` and is out of scope until
-the PDF work in the design note's §9.1 — the one place a colour still lives outside
-`config/theme.py`.
+This includes the generated PDFs. `src/governance/latex.py` and
+`src/governance/latex_style.py` take the brand colour, the header/footer ink and the
+classification mark from `config/reporting.py`, which derives them from the theme — so a
+report and the screen it came from cannot disagree. The scan is comment-aware and sees
+colours written without a `#`: both forms that escaped it for months (`{HTML}{1565C0}` in
+the preamble, a bare `"9E9E9E"` fallback in the risk-policy document) are now findings.
 
 ---
 
