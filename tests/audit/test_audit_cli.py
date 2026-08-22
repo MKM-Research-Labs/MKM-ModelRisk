@@ -31,6 +31,7 @@ _SECTIONS = {
     "embedded_js", "init_files", "init_inventory",
     "data_access", "path_definitions",
     "coverage", "duplication", "json_files",
+    "styling", "styling_backlog", "undefined_tokens",
 }
 
 
@@ -69,7 +70,7 @@ def test_pdf_flag_writes_the_full_report_set(tmp_path, monkeypatch, capsys):
     assert code in (0, 1)
     assert "coding_rule_audit.pdf" in names
     assert "json_files_report.pdf" in names          # standalone JSON-file audit
-    assert sum(n.startswith("audit_r") for n in names) == 8
+    assert sum(n.startswith("audit_r") for n in names) == 9
     assert "Generated" in out and str(tmp_path) in out
 
 

@@ -62,6 +62,20 @@ def _hardcoding_body(report: dict) -> str:
                              lambda f: [f["path"], f["line"], f["kind"], f["name"]])
 
 
+def _styling_body(report: dict) -> str:
+    return (
+        _findings_section("R10 — Colour literals outside config/theme", report["styling"],
+                          ["File", "Line", "Kind", "Colour"],
+                          lambda f: [f["path"], f["line"], f["kind"], f["snippet"]])
+        + _findings_section("R10 — Undefined design tokens", report["undefined_tokens"],
+                            ["File", "Line", "Token"],
+                            lambda f: [f["path"], f["line"], f["snippet"]])
+        + _findings_section("R10 — Colour literals in JavaScript (reported)",
+                            report["styling_backlog"], ["File", "Line", "Colour"],
+                            lambda f: [f["path"], f["line"], f["snippet"]])
+    )
+
+
 def _large_files_body(report: dict) -> str:
     return (
         _findings_section("R2 — Large source files (>300 lines)", report["large_source_files"],
@@ -177,6 +191,10 @@ REPORTS = [
     {"filename": "audit_r8_duplicate_code.pdf", "label": "R8 — Duplicate code",
      "title": "R8 — Duplicate Code",
      "subtitle": "No duplicated code; shared logic extracted", "body": _duplication_body},
+    {"filename": "audit_r10_styling.pdf", "label": "R10 — Styling",
+     "title": "R10 — Styling",
+     "subtitle": "Colours live only in config/theme, and every token resolves",
+     "body": _styling_body},
 ]
 
 # Standalone evidence reports rendered next to the R1–R8 set but kept out of the
@@ -226,6 +244,11 @@ def _summary_table(report: dict) -> str:
             ["R6", "Filesystem paths defined only in config", _reported(report["path_definitions"])],
             ["R7", "No JavaScript or CSS embedded in .py files", _result(report["embedded_js"])],
             ["R8", "No duplicated code; shared logic extracted", dup_result],
+            ["R10", "Colours live only in config/theme", _result(report["styling"])],
+            ["R10", "Every design token referenced is defined",
+             _result(report["undefined_tokens"])],
+            ["R10", "Colour literals still to convert (JavaScript)",
+             _reported(report["styling_backlog"])],
         ],
     )
 

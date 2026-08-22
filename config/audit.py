@@ -72,6 +72,20 @@ MAX_TEST_FILE_LINES = 400
 SOURCE_DIRS = ("config", "src", "scripts", "app")
 CONFIG_DIR = "config"
 
+# --- Coding rule R10: where a colour may be written down -------------------------
+# The one module allowed to name a colour. Everything else refers to a token.
+THEME_MODULE = "config/theme.py"
+
+# The front-end trees scanned for colour literals and token references.
+STYLING_ASSET_DIRS = ("src/static", "src/templates")
+
+# Suffixes whose colour literals are a GATED finding. ``.js`` is deliberately absent:
+# the stylesheet, the templates and the Python source are converted, and the rest of
+# the JavaScript is step 5 of docs/design/theme_config.md. Until then its literals are
+# reported with a count, so the remaining work is visible rather than silently passing.
+# Adding ".js" here is what closes that step.
+STYLING_GATED_SUFFIXES = (".css", ".html")
+
 # Package trees scanned for the R4 ``__init__.py`` inventory. Broader than
 # SOURCE_DIRS so the inventory lists every first-party package initialiser —
 # including the audit suite and the bundled packages/ — not just the app source.

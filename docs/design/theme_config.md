@@ -1,7 +1,8 @@
 # Design: centralising look and feel into `config/theme`
 
-**Status:** Steps 1–3 shipped 2026-08-22 (the token module, the served stylesheet, the
-risk-policy seed, and the status colours served from config); steps 4–7 outstanding
+**Status:** Steps 1–4 and 7 shipped 2026-08-22 — the stylesheet, the Python source and
+the status colours are converted, and rule **R10** gates them. Step 5 (the remaining
+JavaScript) and step 6 (inline styles) outstanding
 **Date:** 2026-08-21
 **Area:** `src/static`, `src/templates`, `config/`, `audit/`
 **Driver:** An ERM vendor is cloning ModelRisk into their suite as a new pillar. Their
@@ -111,10 +112,10 @@ Sequenced so the risky, high-value work lands first and every step ships on its 
 | 1 | ✅ `config/theme.py` + `/theme.css` route + expand `:root` to the full token set | Nothing changes visually; the vocabulary now exists |
 | 2 | ✅ `risk_policy/_defaults.py` reads from it | Small; removes seeded colour literals from `src/` (an R1 fix), and they reach the console through `/api/risk-policy` |
 | 3 | ✅ The six colour maps in `helpers.js` → `Theme` | 28 hexes in one file, and every badge on every screen inherits |
-| 4 | `app.css`'s 60 raw hexes → `var(--…)` | Mechanical, CSS-only, easy to eyeball |
+| 4 | ✅ `app.css`'s 60 raw hexes → `var(--…)` | Mechanical, CSS-only, easy to eyeball |
 | 5 | The remaining 162 JS hexes | Needs the SVG decision in §6 |
 | 6 | The 493 inline `style` attributes | Lowest value; cosmetic consistency, not rebrand-blocking |
-| 7 | `audit/styling.py` + rule **R10** | What makes all of the above hold |
+| 7 | ✅ `audit/styling.py` + rule **R10** (brought forward) | What makes all of the above hold |
 
 Steps 1–4 are what the vendor actually needs. 5 and 6 are ours to finish afterwards.
 
@@ -171,6 +172,29 @@ therefore a requirement wherever a colour is manipulated rather than merely used
 `Theme.tint()` built on `color-mix()` would lift that, and let a token be any CSS colour,
 at the cost of shifting the shade very slightly — worth doing when a token needs to be
 `rgb()` or a named colour, not before.
+
+**Steps 4 and 7, as built (2026-08-22).** `app.css` holds **no colour literal at all** —
+the 59 hexes and 7 `rgba()`s are gone, elevation is a whole `--shadow-*` token rather than
+a colour inside a shadow, and `#fff` resolved two ways by property: `--inverse` where it
+was text on a colour, `--panel` where it was a surface. Proven unchanged mechanically
+rather than by eye: resolving every token back and comparing declaration-by-declaration
+against `HEAD` gives **738 declarations, zero differences**, and all 21 token references
+resolve in the browser.
+
+R10 was brought forward to land with it, because the token set is a promise until
+something enforces it. `audit/styling.py` gates two things — colour literals in the
+converted surfaces (CSS, templates, all Python bar the theme module) and **any
+`var(--token)` naming a token that does not exist**. The second matters more: a literal is
+visible in a diff, an undefined token is not, and the browser drops the declaration in
+silence. Both sit at zero. The 157 JavaScript literals are *reported with a count*, so
+step 5's remaining work is visible instead of quietly passing; adding `".js"` to
+`STYLING_GATED_SUFFIXES` in `config/audit.py` is the single change that closes it.
+
+R10 also gets its own report PDF and three rows in the audit's compliance summary, so the
+governance artefact does not claim a completeness it lacks. Two near-duplicate pairs were
+deliberately **not** collapsed — `#f5c6c2`/`#f1c5c2` and `#fff8e1`/`#fef3c7` — because
+merging them would move pixels, and these steps are meant to be invisible; they are named
+distinctly so the duplication is at least legible.
 
 ## 6. Three traps to know before starting
 
