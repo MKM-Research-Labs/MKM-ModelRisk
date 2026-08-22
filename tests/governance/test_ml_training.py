@@ -50,6 +50,7 @@ def _complete_train(**overrides) -> dict:
     for key in TRAINING_FIELD_SPECS:
         train.setdefault(key, "recorded")
     train.update({"split_rationale": _GOOD_RATIONALE, "scaler_fit_point": "Train only",
+                  "missing_data_fit_point": "Train only",
                   "test_evaluations": "1", "reproduced_by": "Sam Okafor",
                   "reproduced_matched": "Yes"})
     train.update(overrides)
@@ -89,6 +90,24 @@ def test_a_scaler_fitted_on_the_full_dataset_is_called_out():
     c = completeness(_complete_train(scaler_fit_point="Full dataset"))
     assert c["state"] == TRAINING_QUALIFIED
     assert any("leaks" in q for q in c["qualifications"])
+
+
+def test_an_imputation_fitted_on_the_full_dataset_is_called_out():
+    """The same leak as the scaler, and a quieter one: nobody thinks of filling in a
+    blank as training on the answer."""
+    c = completeness(_complete_train(missing_data_fit_point="Full dataset"))
+    assert c["state"] == TRAINING_QUALIFIED
+    assert any("imputation" in q for q in c["qualifications"])
+
+
+def test_every_transform_says_where_it_was_fitted():
+    """Scaler and imputer both. A preprocessing step with no fit-point recorded is one
+    nobody can check for leakage."""
+    from config.governance._ml_training import SCALER_FIT_POINT_LIST
+
+    for key in ("scaler_fit_point", "missing_data_fit_point"):
+        assert TRAINING_FIELD_SPECS[key]["reference"] == SCALER_FIT_POINT_LIST
+        assert TRAINING_FIELD_SPECS[key]["section"] == "C", "after the split"
 
 
 def test_a_one_word_split_rationale_does_not_count_as_an_argument():
