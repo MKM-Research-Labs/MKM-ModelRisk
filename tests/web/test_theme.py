@@ -28,8 +28,7 @@ from __future__ import annotations
 
 import re
 
-from audit._walk import py_files, rel
-from config.audit import CONFIG_DIR, SOURCE_DIRS
+from audit.styling import colour_literal_findings
 from config.paths import STATIC_DIR, TEMPLATES_DIR
 from config.theme import (LEVEL_COLOURS, MISSION_CRITICALITY_COLOURS, RAG,
                           RISK_RATING_COLOURS, STATUS_COLOUR_DEFAULTS,
@@ -40,7 +39,6 @@ from src.web._theme import theme_css, theme_version
 _VAR_REFERENCE = re.compile(r"var\(\s*--([a-zA-Z0-9_-]+)")
 _COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _HEX_COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b")
-_THEME_MODULE = f"{CONFIG_DIR}/theme.py"
 _FRONT_END = (STATIC_DIR, TEMPLATES_DIR)
 
 
@@ -162,19 +160,11 @@ def test_mission_criticality_seeds_map_to_named_tokens():
 
 
 def test_no_python_source_declares_a_colour_of_its_own():
-    # The R1 half of what rule R10 will gate (docs/design/theme_config.md §7). Scoped
-    # to Python here; the front end is covered by the token checks above, and
-    # src/governance/latex.py spells its colour without a leading # — that one is
-    # deliberate scope, see §9.1.
-    offenders = {}
-    for path in py_files(*SOURCE_DIRS):
-        relpath = rel(path)
-        if relpath == _THEME_MODULE:
-            continue
-        found = _HEX_COLOUR.findall(path.read_text(encoding="utf-8"))
-        if found:
-            offenders[relpath] = found
-    assert not offenders, f"colour literals outside {_THEME_MODULE}: {offenders}"
+    # Delegates to the R10 gate rather than re-implementing the scan: that one strips
+    # comments (naming a colour while explaining the rule is not breaking it) and sees
+    # colours spelled without a "#", which is how LaTeX writes them. A second, weaker
+    # copy here would pass while the real gate failed, or the reverse.
+    assert colour_literal_findings() == []
 
 
 def test_every_status_maps_to_a_token_that_exists():
@@ -242,3 +232,53 @@ def test_the_typeface_is_a_token_not_a_literal():
     stylesheet = (STATIC_DIR / "css" / "app.css").read_text(encoding="utf-8")
     assert "var(--font)" in stylesheet and "var(--font-mono)" in stylesheet
     assert "Arial" not in stylesheet
+
+
+def test_the_generated_documents_take_their_colours_from_the_theme():
+    # The PDFs were the last surface with a palette of its own — a second brand blue
+    # plus LaTeX's built-in gray and red. A report and the screen it came from can no
+    # longer disagree.
+    from config.reporting import (DOCUMENT_CHROME_COLOUR, DOCUMENT_CLASSIFICATION_COLOUR,
+                                  DOCUMENT_LINK_COLOUR)
+    from src.governance.latex import preamble
+    assert DOCUMENT_LINK_COLOUR == THEME["accent"]
+    assert DOCUMENT_CHROME_COLOUR == THEME["muted"]
+    assert DOCUMENT_CLASSIFICATION_COLOUR == THEME["red"]
+    tex = preamble("A Report", org_name="Acme")
+    assert "\\definecolor{brand}{HTML}{1976D2}" in tex
+    assert "mkmblue" not in tex and "textcolor{gray}" not in tex
+
+
+def test_the_page_setup_is_configuration_not_source():
+    from config.reporting import DOCUMENT_GEOMETRY, DOCUMENT_RULE_WIDTH
+    from src.governance.latex import preamble
+    tex = preamble("A Report")
+    assert DOCUMENT_GEOMETRY in tex
+    assert "{" + DOCUMENT_RULE_WIDTH + "}" in tex
+
+
+def test_the_body_typeface_is_a_choice_the_adopter_makes():
+    # Empty ships today's Computer Modern; "sans" matches the console's Arial. The
+    # parameter exists so the switch is deliberate rather than a side effect.
+    from src.governance.latex_style import BODY_FONT_PACKAGES
+    assert "sans" in BODY_FONT_PACKAGES
+    assert "helvet" in BODY_FONT_PACKAGES["sans"]
+
+
+def test_an_unusable_colour_falls_back_to_the_theme_not_a_literal():
+    from src.governance.latex_style import latex_hex
+    assert latex_hex(None) == THEME["grey"].lstrip("#").upper()
+    assert latex_hex("#1976d2") == "1976D2"
+
+
+def test_the_title_page_builds_and_carries_the_theme_colours():
+    # Regression: the first cut of this change left "author_line + + coloured(...)" and
+    # every generated PDF raised TypeError. The preamble tests passed throughout,
+    # because none of them built a title page.
+    from src.governance.latex import title_page
+    page = title_page("A Report", "A subtitle", org_name="Acme", date="2026-08-22",
+                      author="System")
+    assert page.startswith("\\begin{titlepage}")
+    assert page.rstrip().endswith("\\end{titlepage}")
+    assert "textcolor[HTML]{" + THEME["red"].lstrip("#").upper() + "}" in page
+    assert "textcolor{red}" not in page and "textcolor{gray}" not in page

@@ -32,6 +32,7 @@ from typing import Any
 from src.governance.latex import (
     _esc, _section, _table, front_matter, history_page, logo_asset, preamble,
 )
+from src.governance.latex_style import chrome
 from src.governance.mrc.pack import compile_tex
 from src.governance.mrc_settings import get_settings
 
@@ -78,7 +79,7 @@ _GUIDANCE: list[tuple[str, list[str]]] = [
 
 def _guidance(prompts: list[str]) -> str:
     items = "".join("\\item " + _esc(p) + "\n" for p in prompts)
-    return ("\\textit{\\textcolor{gray}{To be completed:}}\n"
+    return ("\\textit{" + chrome("To be completed:") + "}\n"
             "\\begin{itemize}\n" + items + "\\end{itemize}\n")
 
 
@@ -116,7 +117,7 @@ def build_handover_tex(handoff: dict, provider: dict | None, consumer: dict | No
     lineage = _lineage_rows(handoff)
     lineage_tbl = (_table(["Provider field", "Type/units", "Consumer field", "Type/units", "Note"],
                           lineage, caption="Field lineage across the handover")
-                   if lineage else "\\textit{\\textcolor{gray}{No field mappings declared yet.}}\n")
+                   if lineage else "\\textit{" + chrome("No field mappings declared yet.") + "}\n")
 
     body = (
         _section("Executive Summary of the Handover",

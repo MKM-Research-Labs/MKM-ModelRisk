@@ -32,7 +32,9 @@ silence; see ``STYLING_GATED_SUFFIXES``.
 """
 from __future__ import annotations
 
+import io
 import re
+import tokenize
 
 from config.audit import (CONFIG_DIR, SOURCE_DIRS, STYLING_ASSET_DIRS,
                           STYLING_GATED_SUFFIXES, THEME_MODULE)
@@ -46,6 +48,13 @@ from audit._walk import REPO_ROOT, py_files, rel, walk
 # sign, not a colour, and its digits are all decimal.
 _COLOUR = re.compile(r"(?<!&)#[0-9a-fA-F]{3,8}(?![-\w])|\b(?:rgba?|hsla?)\s*\(")
 _VAR_REFERENCE = re.compile(r"var\(\s*--([a-zA-Z0-9_-]+)")
+# A colour written WITHOUT a leading "#", which is how LaTeX spells one. Both forms
+# below sat in the source for months and the "#"-anchored scan above could not see
+# either: \definecolor{mkmblue}{HTML}{1565C0} in latex.py, and a bare "9E9E9E"
+# fallback in the risk-policy document. Python only — a six-character hex string in
+# JavaScript is far more likely to be an identifier than a colour.
+_LATEX_COLOUR = re.compile(r"\{HTML\}\{([0-9A-Fa-f]{6})\}")
+_BARE_COLOUR = re.compile(r"[\"'\']([0-9A-Fa-f]{6})[\"'\']")
 _CSS_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _ASSET_SUFFIXES = (".css", ".js", ".html")
 # The audit's own regexes contain colour-shaped text; never flag the audit package.
@@ -57,6 +66,41 @@ def _asset_files():
         root = REPO_ROOT / directory
         for suffix in _ASSET_SUFFIXES:
             yield from walk(root, suffix)
+
+
+def _without_comments(text: str) -> str:
+    """``text`` with Python comments blanked, keeping every line in place.
+
+    Naming a colour while explaining why colours are not written down here must not
+    itself be a finding — the same reason the CSS scan strips ``/* … */``. Tokenising
+    rather than cutting at the first ``#`` is what keeps ``"#1976d2"`` inside a string
+    visible: only a real COMMENT token is removed.
+    """
+    lines = text.splitlines(keepends=True)
+    try:
+        comments = [tok for tok in tokenize.generate_tokens(io.StringIO(text).readline)
+                    if tok.type == tokenize.COMMENT]
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        return text
+    for tok in reversed(comments):
+        row, (start, end) = tok.start[0] - 1, (tok.start[1], tok.end[1])
+        lines[row] = lines[row][:start] + " " * (end - start) + lines[row][end:]
+    return "".join(lines)
+
+
+def _bare_hits(text: str, path: str) -> list[dict]:
+    """Colours spelled without a ``#`` — the LaTeX form the main scan cannot see."""
+    out = []
+    for index, line in enumerate(text.splitlines(), start=1):
+        for match in _LATEX_COLOUR.finditer(line):
+            out.append({"path": path, "line": index, "kind": "latex",
+                        "snippet": match.group(1)})
+        for match in _BARE_COLOUR.finditer(line):
+            # All six digits and at least one a-f: "123456" is a number, not a colour.
+            if any(c.isalpha() for c in match.group(1)):
+                out.append({"path": path, "line": index, "kind": "bare",
+                            "snippet": match.group(1)})
+    return out
 
 
 def _hits(text: str, path: str, kind: str) -> list[dict]:
@@ -82,7 +126,9 @@ def colour_literal_findings() -> list[dict]:
         relpath = rel(path)
         if relpath == THEME_MODULE or relpath.startswith(_SELF_PKG):
             continue
-        findings.extend(_hits(path.read_text(encoding="utf-8"), relpath, "python"))
+        text = _without_comments(path.read_text(encoding="utf-8"))
+        findings.extend(_hits(text, relpath, "python"))
+        findings.extend(_bare_hits(text, relpath))
     return findings
 
 

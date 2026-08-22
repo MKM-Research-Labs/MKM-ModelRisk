@@ -27,7 +27,7 @@ header/footer and the title-page legal notice.
 
 One preamble, one title page, one header/footer, so the Meeting Pack, the Model
 Risk Report and the interoperability handover all read as the same document family:
-the ``mkmblue`` brand colour, one-half spacing, a fancy header carrying the document
+the brand colour from ``config/theme``, one-half spacing, a fancy header carrying the document
 title, and a ``Page x of y`` / classification footer. Every title page carries a
 legal notice, which asserts rights over the *contents* of the generated document —
 the models, methodology and calculations it describes. That is separate from the
@@ -42,7 +42,15 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.reporting import DEFAULT_ORG
+from config.reporting import (DEFAULT_ORG, DOCUMENT_BASE_FONT_SIZE,
+                              DOCUMENT_BODY_FONT, DOCUMENT_CLASSIFICATION_COLOUR,
+                              DOCUMENT_GEOMETRY, DOCUMENT_LINE_SPACING,
+                              DOCUMENT_LINK_COLOUR, DOCUMENT_RULE_WIDTH,
+                              DOCUMENT_SUBTITLE_SIZE, DOCUMENT_TITLE_FONT,
+                              DOCUMENT_TITLE_SIZE)
+
+from src.governance.latex_style import (BODY_FONT_PACKAGES, chrome, coloured,
+                                        latex_hex)
 from src.governance.wording import report_wording
 
 _LATEX_REPLACEMENTS = {
@@ -181,7 +189,7 @@ def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") ->
     org = _esc(org_name or DEFAULT_ORG)
     classification = report_wording()["classification"]
     return (
-        "\\documentclass[11pt]{article}\n"
+        "\\documentclass[" + DOCUMENT_BASE_FONT_SIZE + "]{article}\n"
         "\\usepackage[utf8]{inputenc}\n"
         # Number and list sections/subsections down to the depth the template uses.
         "\\setcounter{tocdepth}{3}\\setcounter{secnumdepth}{3}\n"
@@ -195,19 +203,22 @@ def preamble(doc_title: str, *, doc_version: str = "1.0", org_name: str = "") ->
         # calc backs the \real{} column widths pandoc emits for the user guide's tables.
         "\\usepackage{calc}\n"
         # The template's large title fonts, used on the title page.
-        "\\font\\myverylargefont=cmr12 at 35pt\n\\font\\mylargefont=cmr12 at 25pt\n"
-        # The template's geometry (170mm text, 20mm top); we keep a 25mm bottom so the
-        # footer rule the template does not carry still has room.
-        "\\usepackage{geometry}\\geometry{a4paper, left=20mm, right=20mm, top=20mm, bottom=25mm}\n"
-        "\\usepackage{setspace}\\onehalfspacing\n"
-        "\\definecolor{mkmblue}{HTML}{1565C0}\n"
-        "\\hypersetup{colorlinks=true,linkcolor=mkmblue,citecolor=mkmblue,urlcolor=mkmblue}\n"
+        "\\font\\myverylargefont=" + DOCUMENT_TITLE_FONT + " at " + DOCUMENT_TITLE_SIZE +
+        "\n\\font\\mylargefont=" + DOCUMENT_TITLE_FONT + " at " + DOCUMENT_SUBTITLE_SIZE + "\n"
+        # The body typeface: the LaTeX default unless the adopter has chosen otherwise.
+        + BODY_FONT_PACKAGES.get(DOCUMENT_BODY_FONT, "") +
+        "\\usepackage{geometry}\\geometry{" + DOCUMENT_GEOMETRY + "}\n"
+        "\\usepackage{setspace}\\" + DOCUMENT_LINE_SPACING + "\n"
+        # The brand colour, from the same token the console's accent comes from.
+        "\\definecolor{brand}{HTML}{" + latex_hex(DOCUMENT_LINK_COLOUR) + "}\n"
+        "\\hypersetup{colorlinks=true,linkcolor=brand,citecolor=brand,urlcolor=brand}\n"
         "\\pagestyle{fancy}\\fancyhf{}\n"
-        "\\fancyhead[L]{\\small\\textcolor{gray}{" + org + "}}\n"
-        "\\fancyhead[R]{\\small\\textcolor{gray}{" + _esc(doc_title) + " --- v" + _esc(doc_version) + "}}\n"
-        "\\fancyfoot[C]{\\small\\textcolor{gray}{" + _esc(classification) + "}}\n"
-        "\\fancyfoot[R]{\\small\\textcolor{gray}{Page \\thepage\\ of \\pageref{LastPage}}}\n"
-        "\\renewcommand{\\headrulewidth}{0.4pt}\\renewcommand{\\footrulewidth}{0.4pt}\n"
+        "\\fancyhead[L]{\\small" + chrome(org) + "}\n"
+        "\\fancyhead[R]{\\small" + chrome(_esc(doc_title) + " --- v" + _esc(doc_version)) + "}\n"
+        "\\fancyfoot[C]{\\small" + chrome(_esc(classification)) + "}\n"
+        "\\fancyfoot[R]{\\small" + chrome("Page \\thepage\\ of \\pageref{LastPage}") + "}\n"
+        "\\renewcommand{\\headrulewidth}{" + DOCUMENT_RULE_WIDTH + "}"
+        "\\renewcommand{\\footrulewidth}{" + DOCUMENT_RULE_WIDTH + "}\n"
     )
 
 
@@ -230,11 +241,12 @@ def title_page(title: str, subtitle: str, *, org_name: str = "", version: str = 
         # (a model/product identifier and name) can be long, so it is allowed to wrap.
         "{\\mylargefont " + _esc(org_name or DEFAULT_ORG) + "\\par}\\vspace{2\\baselineskip}\n"
         "{\\LARGE\\bfseries " + _esc(title) + "\\par}\\vspace{1\\baselineskip}\n"
-        "{\\Large\\textcolor{gray}{" + _esc(subtitle) + "}\\par}\n"
+        "{\\Large" + chrome(_esc(subtitle)) + "\\par}\n"
         "\\vspace{\\stretch{2}}\n"
         "{\\large " + _esc(date) + "\\\\[0.3cm]Document Version " + _esc(version) + "\\par}\\vspace{0.8cm}\n"
-        + author_line +
-        "\\textcolor{red}{\\textbf{" + _esc(wording["classification"]) + "}}\\par\n"
+        + author_line
+        + coloured(DOCUMENT_CLASSIFICATION_COLOUR,
+                   "\\textbf{" + _esc(wording["classification"]) + "}") + "\\par\n"
         "\\end{center}\n" + legal_notice(wording["legal_notice"]) + "\\end{titlepage}\n"
     )
 

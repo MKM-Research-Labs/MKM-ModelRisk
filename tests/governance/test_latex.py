@@ -39,7 +39,10 @@ def test_preamble_carries_org_title_and_confidential_footer():
     tex = preamble("My Report", doc_version="2.0", org_name="Acme")
     assert "Acme" in tex and "My Report --- v2.0" in tex
     assert "CONFIDENTIAL" in tex and "\\pageref{LastPage}" in tex
-    assert "mkmblue" in tex
+    # The brand colour is defined from config/theme rather than named in the source;
+    # "mkmblue" was the literal it replaced (rule R10).
+    assert "\\definecolor{brand}{HTML}{" in tex
+    assert "mkmblue" not in tex
 
 
 def test_preamble_defaults_the_org():
