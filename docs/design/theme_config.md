@@ -1,7 +1,7 @@
 # Design: centralising look and feel into `config/theme`
 
-**Status:** Step 1 shipped 2026-08-22 (the token module, the served stylesheet and the
-vocabulary); steps 2–7 outstanding
+**Status:** Steps 1–2 shipped 2026-08-22 (the token module, the served stylesheet, and
+the risk-policy seed reading from it); steps 3–7 outstanding
 **Date:** 2026-08-21
 **Area:** `src/static`, `src/templates`, `config/`, `audit/`
 **Driver:** An ERM vendor is cloning ModelRisk into their suite as a new pillar. Their
@@ -109,7 +109,7 @@ Sequenced so the risky, high-value work lands first and every step ships on its 
 | # | Step | Why here |
 |---|---|---|
 | 1 | ✅ `config/theme.py` + `/theme.css` route + expand `:root` to the full token set | Nothing changes visually; the vocabulary now exists |
-| 2 | `risk_policy/_defaults.py` reads from it | Small; removes seeded colour literals from `src/` (an R1 fix), and they reach the console through `/api/risk-policy` |
+| 2 | ✅ `risk_policy/_defaults.py` reads from it | Small; removes seeded colour literals from `src/` (an R1 fix), and they reach the console through `/api/risk-policy` |
 | 3 | The six colour maps in `helpers.js` → `Theme` | 28 hexes in one file, and every badge on every screen inherits |
 | 4 | `app.css`'s 60 raw hexes → `var(--…)` | Mechanical, CSS-only, easy to eyeball |
 | 5 | The remaining 162 JS hexes | Needs the SVG decision in §6 |
@@ -129,6 +129,22 @@ unreferenced until then. `tests/web/test_theme.py` holds the load-bearing invari
 every `var(--…)` the front end reads resolves to a token that exists — a missing one is
 silently dropped by the browser, so a rename would otherwise reach a screen as a
 colour quietly falling back to black.
+
+**Step 2, as built (2026-08-22).** `src/governance/risk_policy/_defaults.py` carries no
+colour; the seed mappings live in `config/theme.py` as `RISK_RATING_COLOURS`,
+`MISSION_CRITICALITY_COLOURS`, `LEVEL_COLOURS` and `UNRATED_COLOUR`, deliberately outside
+`THEME_GROUPS` so they are seed data for the policy store rather than custom properties
+nothing would read. The seeded policy is byte-identical to the one `HEAD` produced,
+checked by running both modules against the same config. No Python file outside
+`config/theme.py` now declares a colour, and a test holds that — the R1 half of what R10
+will gate.
+
+The scan in §2 missed one thing worth recording: the seeded Materiality and Complexity
+bands used a **fourth** RAG-ish ramp — `#66bb6a`, `#ffa726`, `#ef5350` — lighter than the
+three the console uses and catalogued nowhere. It is now `--green-soft` / `--amber-soft` /
+`--red-soft`, and a test keeps it disjoint from the rating hues: those dimensions are an
+input to the rating, so an axis that renders in the rating's own colours stops being
+readable as an axis.
 
 ## 6. Three traps to know before starting
 

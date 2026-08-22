@@ -26,11 +26,18 @@ bands, the same Materiality×Complexity→rating grid per Mission-Criticality ba
 
 Every band is ``{name, colour, explanation, score}``. Mission Criticality replaces the old
 "Tier"; its band scores are the legacy tier integers (1/2/3) so a model's stored ``tier``
-maps to a band by score. Colours mirror the values currently hardcoded in ``helpers.js``
-(RAG_COLORS, TIER_COLORS); Materiality/Complexity gain a seed colour ramp (they had none).
+maps to a band by score. Colours come from ``config.theme`` (coding rule R1) — a seeded
+band and the console rendering it therefore cannot disagree, and an adopting institution
+recolours both from one place.
 """
 from __future__ import annotations
 
+from config.theme import (
+    LEVEL_COLOURS,
+    MISSION_CRITICALITY_COLOURS,
+    RISK_RATING_COLOURS,
+    UNRATED_COLOUR,
+)
 from config.governance import (
     AUDIT_POLICY_DEFAULTS,
     COMPLEXITY_ORDER,
@@ -40,13 +47,6 @@ from config.governance import (
     TIER_LABELS,
     VALID_RAG_RATINGS,
 )
-
-# Mirrors src/static/js/helpers.js RAG_COLORS.
-_RATING_COLOURS = {"Red": "#d32f2f", "Amber": "#f57c00", "Green": "#388e3c"}
-# Mirrors src/static/js/helpers.js TIER_COLORS for tiers 1/2/3.
-_MISSION_CRITICALITY_COLOURS = {1: "#d32f2f", 2: "#f57c00", 3: "#1976d2"}
-# New — Materiality/Complexity carried no colour before; seed a low→high ramp.
-_LEVEL_COLOURS = {"Low": "#66bb6a", "Medium": "#ffa726", "High": "#ef5350"}
 
 # Ratings ordered most-severe first, matching helpers.js RAG_ORDER (Red<Amber<Green).
 _RATING_ORDER = ("Red", "Amber", "Green")
@@ -79,7 +79,7 @@ def _level_bands(order: tuple[str, ...], which: str) -> list[dict]:
     """Low/Medium/High-style bands for Materiality or Complexity, scored by position."""
     explain = _LEVEL_EXPLANATION[which]
     return [
-        {"name": name, "colour": _LEVEL_COLOURS.get(name, "#9e9e9e"),
+        {"name": name, "colour": LEVEL_COLOURS.get(name, UNRATED_COLOUR),
          "explanation": explain.get(name, ""), "score": i}
         for i, name in enumerate(order, start=1)
     ]
@@ -88,7 +88,7 @@ def _level_bands(order: tuple[str, ...], which: str) -> list[dict]:
 def _mission_criticality_bands() -> list[dict]:
     """Bands for Mission Criticality (was Tier). Score == the legacy tier integer."""
     return [
-        {"name": TIER_LABELS[tier], "colour": _MISSION_CRITICALITY_COLOURS[tier],
+        {"name": TIER_LABELS[tier], "colour": MISSION_CRITICALITY_COLOURS[tier],
          "explanation": _MISSION_CRITICALITY_EXPLANATION.get(TIER_LABELS[tier], ""),
          "score": tier}
         for tier in sorted(TIER_LABELS)
@@ -98,7 +98,7 @@ def _mission_criticality_bands() -> list[dict]:
 def _risk_rating_bands() -> list[dict]:
     """The overall risk ratings; score == the completeness escalation multiplier."""
     return [
-        {"name": name, "colour": _RATING_COLOURS.get(name, "#9e9e9e"),
+        {"name": name, "colour": RISK_RATING_COLOURS.get(name, UNRATED_COLOUR),
          "explanation": _RATING_EXPLANATION.get(name, ""), "score": RAG_MULTIPLIERS[name]}
         for name in _RATING_ORDER if name in VALID_RAG_RATINGS
     ]

@@ -84,6 +84,13 @@ RAG = {
     "amber": "#f57c00",
     "red": "#d32f2f",
     "grey": "#9e9e9e",
+    # A lighter ramp of the same three hues. The seeded Materiality and Complexity
+    # bands use it so a dimension's low-to-high scale reads as related to the overall
+    # rating without competing with it — those bands are an input to the rating, not
+    # the rating itself.
+    "green-soft": "#66bb6a",
+    "amber-soft": "#ffa726",
+    "red-soft": "#ef5350",
 }
 
 # --- Banner and chip tints, keyed to the state they announce. ---------------------
@@ -160,6 +167,27 @@ SHADOW = {
     "shadow-ghost": "0 2px 8px rgba(0, 0, 0, 0.18)",
     "scrim": "rgba(0, 0, 0, 0.45)",
 }
+
+# --- Seed colours for the risk policy --------------------------------------------
+# The policy an institution starts with before an admin edits anything, assembled in
+# src/governance/risk_policy/_defaults.py and reaching the console through
+# /api/risk-policy. A division can recolour its own bands from Admin; these are what
+# it inherits until it does, and they are the same visual decision as everything
+# above — so they are named here rather than in the module that assembles the seed.
+#
+# Deliberately NOT emitted as custom properties: they are seed data for the policy
+# store, not tokens the stylesheet resolves against, so they are absent from
+# THEME_GROUPS below.
+RISK_RATING_COLOURS = {"Red": RAG["red"], "Amber": RAG["amber"], "Green": RAG["green"]}
+
+# Keyed by the legacy tier integer, which is the band's score.
+MISSION_CRITICALITY_COLOURS = {1: RAG["red"], 2: RAG["amber"], 3: BRAND["accent"]}
+
+LEVEL_COLOURS = {"Low": RAG["green-soft"], "Medium": RAG["amber-soft"],
+                 "High": RAG["red-soft"]}
+
+# What a band nobody has coloured falls back to — an absence, not a rating.
+UNRATED_COLOUR = RAG["grey"]
 
 # The groups in the order they are emitted, so the served stylesheet reads in the
 # same order as this file and a diff of either is legible.
