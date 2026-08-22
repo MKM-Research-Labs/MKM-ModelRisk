@@ -37,6 +37,8 @@ from audit.init_files import init_file_findings, init_file_inventory
 from audit.json_files import json_file_findings
 from audit.large_files import large_source_files, large_test_files, large_web_files
 from audit.path_definitions import path_definition_findings
+from audit.styling import (colour_literal_findings, unconverted_colour_findings,
+                           undefined_token_findings)
 from audit.pdf import (REPORTS, STANDALONE_REPORTS, render_audit_pdf,
                        render_report_pdf)
 
@@ -84,6 +86,9 @@ def build_report() -> dict:
         "coverage": coverage_summary(),
         "duplication": duplication_report(),
         "json_files": json_file_findings(),
+        "styling": colour_literal_findings(),
+        "styling_backlog": unconverted_colour_findings(),
+        "undefined_tokens": undefined_token_findings(),
     }
 
 
@@ -149,6 +154,10 @@ def main(argv=None) -> int:
     total += _print_init_inventory(report["init_inventory"], report["init_files"])
     total += _print_section("R7 embedded JavaScript / CSS", report["embedded_js"],
                             lambda f: f"{f['path']}:{f['line']}  {f['kind']} ({f['js_lines']} js lines)")
+    total += _print_section("R10 colour literals outside config/theme", report["styling"],
+                            lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
+    total += _print_section("R10 undefined design tokens", report["undefined_tokens"],
+                            lambda f: f"{f['path']}:{f['line']}  {f['snippet']}")
     # Reported (non-gating) sections — visibility only, not counted in ``total``.
     _print_section("R2 large web files (>300, reported)", report["large_web_files"],
                    lambda f: f"{f['lines']:>4}  {f['path']}")
@@ -158,6 +167,8 @@ def main(argv=None) -> int:
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     _print_section("R6 .json file I/O under source (reported)", report["json_files"],
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
+    _print_section("R10 colour literals in JavaScript (reported)", report["styling_backlog"],
+                   lambda f: f"{f['path']}:{f['line']}  {f['snippet']}")
     cov = report["coverage"]
     if cov["available"]:
         pct = cov["line_rate"] * 100

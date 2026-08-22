@@ -223,8 +223,50 @@ registered person while `DB_NAME` is protected), which is designed but **not yet
 
 ---
 
+## R10 — Every visual parameter comes from `config/theme`
+
+**Rule.** Colours, type sizes, spacing steps, corner radii and shadows live in
+`config/theme.py`. No colour literal — hex, `rgb()`, `rgba()`, `hsl()` — anywhere else:
+not in `src/static/css`, not in `src/templates`, not in a `.py` file, and (once step 5 of
+`docs/design/theme_config.md` lands) not in `src/static/js` either. The stylesheet and the
+JavaScript name a **token**; the token is defined in one place and served from it.
+
+Two corollaries that are part of the rule, not advice:
+
+- **Every `var(--token)` referenced must exist.** An undefined custom property is not an
+  error — the browser drops the declaration and the element renders with whatever it
+  inherits. A rename therefore reaches a screen as a colour quietly falling back, on
+  whichever control nobody happened to open.
+- **SVG presentation attributes do not accept `var()`.** `fill="var(--accent)"` renders
+  black. Anything drawing into a canvas uses a CSS class or a `style` attribute.
+
+**Why.** An adopting institution has to be able to rebrand without touching the front end
+— the driver is an ERM vendor cloning this platform into their own suite. Before this rule
+the accent existed as `#1976d2` in the CSS and the JavaScript and as `#1565C0` in the PDF
+preamble, in two letter-cases: the same decision, recorded four times, already disagreeing
+with itself. One home means a rebrand is a config change, and means it cannot half-happen.
+
+**How to comply.** Add the token to the right group in `config/theme.py` and refer to it.
+In CSS and in HTML `style` attributes, `var(--token)`. In JavaScript, `Theme.colour(domain,
+value)` for a status colour, `Theme.ref(token)` for a reference, and `Theme.hex(token)`
+only where the value is *manipulated* rather than used — the heatmap appends two hex digits
+of alpha, and `var(--red)22` means nothing. Which token a status is drawn in belongs in
+`STATUS_COLOUR_TOKENS`, not in a map in a `.js` file.
+
+**Verified by.** The styling audit (`python -m audit`, `audit/styling.py`). Colour literals
+in the converted surfaces and undefined token references are **gated**. Colour literals in
+`src/static/js` are **reported with a count** while step 5 is outstanding — adding `".js"`
+to `STYLING_GATED_SUFFIXES` in `config/audit.py` is what closes that step and turns the
+backlog into a gate. `src/governance/latex.py` writes its colour without a leading `#` and
+is out of scope until the PDF work in the design note's §9.1.
+
+---
+
 ## Change log
 
+- 2026-08-22 — Added R10 (visual parameters come from `config/theme`), with the styling
+  audit gating colour literals in CSS/templates/Python and undefined token references.
+  JavaScript literals are reported until step 5 of `docs/design/theme_config.md`.
 - 2026-08-07 — Added R9 (test against a restored backup, never the live database), after two
   ad-hoc debugging scripts wrote junk models into the production event log.
 

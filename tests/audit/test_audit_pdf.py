@@ -31,6 +31,7 @@ _CLEAN = {
     "hardcoding": [], "embedded_js": [], "init_files": [],
     "init_inventory": [{"path": "pkg/__init__.py", "lines": 6, "reexport": True}],
     "data_access": [], "path_definitions": [], "json_files": [],
+    "styling": [], "styling_backlog": [], "undefined_tokens": [],
     "coverage": {"available": True, "line_rate": 0.995, "lines_valid": 1000,
                  "lines_covered": 995, "by_package": []},
     "duplication": {"available": True, "percentage": 0.5, "clones": 3},
@@ -49,6 +50,10 @@ _FINDINGS = {
                           "snippet": "Path(__file__).parents[1]"}],
     "json_files": [{"path": "j.py", "line": 8, "kind": "load",
                     "snippet": "cfg = json.load(fh)"}],
+    "styling": [{"path": "a.css", "line": 2, "kind": "asset", "snippet": "#1976d2"}],
+    "styling_backlog": [{"path": "b.js", "line": 5, "kind": "js", "snippet": "#f57c00"}],
+    "undefined_tokens": [{"path": "a.css", "line": 3, "kind": "undefined_token",
+                          "snippet": "--ghost"}],
     "coverage": {"available": True, "line_rate": 0.90, "lines_valid": 200,
                  "lines_covered": 180,
                  "by_package": [{"package": "src.models", "rate": 60.0, "valid": 50,
@@ -72,7 +77,7 @@ def test_summary_table_lists_every_rule_in_order():
     # One row per audited rule, in ascending order. R5 (copyright headers) is
     # absent by design: it is checked by hand, not by this audit.
     markers = ["config package", "size limit", "test coverage", "init",
-               "src/database", "embedded in", "duplicated code"]
+               "src/database", "embedded in", "duplicated code", "config/theme"]
     positions = [tex.index(m) for m in markers]
     assert positions == sorted(positions)
     assert "Filesystem paths defined only in config" in tex   # R6 path row
@@ -101,7 +106,7 @@ def test_one_report_per_audit_rule():
     # Every audited rule gets its own standalone report, each with a stable
     # filename. R5 has none — the copyright-header check is not part of the audit.
     rules = {spec["filename"].split("_")[1] for spec in REPORTS}
-    assert rules == {"r1", "r2", "r3", "r4", "r6", "r7", "r8"}
+    assert rules == {"r1", "r2", "r3", "r4", "r6", "r7", "r8", "r10"}
     assert all(spec["filename"].endswith(".pdf") for spec in REPORTS)
     assert len({spec["filename"] for spec in REPORTS}) == len(REPORTS)
 

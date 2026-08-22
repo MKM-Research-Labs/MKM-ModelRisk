@@ -16,20 +16,20 @@ body {
 }
 .topbar {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 24px; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 12px 24px; background: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%);
   border-bottom: 1px solid var(--line);
 }
-.brand h1 { margin: 0; font-size: 20px; font-weight: 700; color: #2a3a4d; }
-.tagline { color: #5b6b7d; font-size: 12px; }
+.brand h1 { margin: 0; font-size: 20px; font-weight: 700; color: var(--header-ink); }
+.tagline { color: var(--header-sub); font-size: 12px; }
 .actor { display: flex; align-items: center; gap: 8px; }
 .actor label { color: var(--text-2); font-size: 12px; }
 .actor input { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; width: 200px; font: inherit; }
 .actor .hint { color: var(--muted); font-size: 11px; font-style: italic; }
 .org-scope { display: flex; align-items: center; gap: 8px; }
 .org-scope label { color: var(--text-2); font-size: 12px; }
-.org-scope select { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font: inherit; background: #fff; }
+.org-scope select { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; font: inherit; background: var(--panel); }
 .rgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.rcard { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fff; }
+.rcard { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); }
 .rlabel { font-weight: 700; color: var(--text); }
 .rmeta { color: var(--muted); font-size: 12px; margin-top: 4px; }
 .tabs { display: flex; gap: 4px; padding: 0 24px; background: var(--panel); border-bottom: 1px solid var(--line); }
@@ -39,12 +39,12 @@ body {
 main { padding: 20px; max-width: 1180px; margin: 0 auto; }
 .panel { display: none; }
 .panel.active { display: block; }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow-card); }
 .card h3 { margin: 0 0 12px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field label { color: var(--muted); font-size: 11px; }
-input, select, textarea { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; background: #fff; color: var(--text); }
+input, select, textarea { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; background: var(--panel); color: var(--text); }
 /* A tick-box in a list of them (an action's owners): the box sits beside its name.
    Beats `.field label` on specificity deliberately — inside a field these are values
    to pick from, not more field captions, so they must not render muted. */
@@ -54,7 +54,7 @@ input, select, textarea { border: 1px solid var(--line); border-radius: 6px; pad
    at the right, so the column of badges is scannable down the history. */
 #mact-list .prow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
 /* Read-only org-scope values in the register modal — look like a disabled field. */
-.reg-scope { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: #f4f5f7; color: var(--muted); min-height: 34px; box-sizing: border-box; display: flex; align-items: center; }
+.reg-scope { border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; background: var(--readonly); color: var(--muted); min-height: 34px; box-sizing: border-box; display: flex; align-items: center; }
 
 /* MRC meeting detail: persistent participants panel (left) + content (right). */
 .mtd-cols { display: flex; gap: 16px; align-items: flex-start; margin-top: 12px; }
@@ -66,21 +66,21 @@ input, select, textarea { border: 1px solid var(--line); border-radius: 6px; pad
 .mtd-left .pact select { font-size: 11px; padding: 2px 4px; height: auto; }
 .mtd-left .pguest { display: flex; gap: 6px; margin-top: 6px; }
 .mtd-left .pguest select { flex: 1; font-size: 11px; }
-.quorum-banner { background: #fdecea; color: #b71c1c; border: 1px solid #f5c6c2; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
+.quorum-banner { background: var(--danger-bg); color: var(--danger-ink); border: 1px solid var(--danger-line); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
 textarea { width: 100%; resize: vertical; }
-.btn { border: 1px solid var(--line); background: #f9f9f9; color: var(--text); padding: 7px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
+.btn { border: 1px solid var(--line); background: var(--control); color: var(--text); padding: 7px 14px; border-radius: 6px; cursor: pointer; font: inherit; }
 .btn:hover { border-color: var(--accent); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--inverse); font-weight: 600; }
 .btn.ghost { background: transparent; }
-.btn.danger { color: var(--red); border-color: #f1c5c2; }
+.btn.danger { color: var(--red); border-color: var(--danger-line-soft); }
 .btn.small { padding: 3px 9px; font-size: 11px; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); }
 th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; background: var(--raised); border-bottom: 2px solid var(--line); }
 tr.clickable { cursor: pointer; }
-tr.clickable:hover td { background: #f7fbff; }
+tr.clickable:hover td { background: var(--accent-wash); }
 .modelid { color: var(--accent); font-weight: 600; }
-.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; color: #fff; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; color: var(--inverse); }
 .ragdot { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; }
 .ragdot .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .pill { font-size: 10px; color: var(--muted); }
@@ -91,7 +91,7 @@ tr.clickable:hover td { background: #f7fbff; }
 .summary .scard .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
 .summary .scard .val { font-size: 20px; font-weight: 700; color: var(--text); }
 .summary .scard.clickable-tile { cursor: pointer; }
-.summary .scard.clickable-tile:hover { border-color: var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+.summary .scard.clickable-tile:hover { border-color: var(--accent); box-shadow: var(--shadow-card-hover); }
 /* Inventory filter bar + sortable column headers. */
 .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
 .filters input, .filters select { height: 30px; padding: 4px 8px; font-size: 12px; }
@@ -99,26 +99,26 @@ tr.clickable:hover td { background: #f7fbff; }
 .filters .fcount { color: var(--muted); font-size: 11px; margin-left: auto; }
 th.sortable { cursor: pointer; user-select: none; white-space: nowrap; }
 th.sortable:hover { color: var(--accent); }
-.detail-header { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-start; }
-.detail-header .name { font-size: 20px; font-weight: 700; color: #333; }
-.detail-header .sub { font-size: 12px; color: #5b6b7d; margin-top: 4px; }
+.detail-header { background: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-start; }
+.detail-header .name { font-size: 20px; font-weight: 700; color: var(--text); }
+.detail-header .sub { font-size: 12px; color: var(--header-sub); margin-top: 4px; }
 .detail-header .right { text-align: right; }
-.detail-header .right .olabel { font-size: 10px; color: #5b6b7d; text-transform: uppercase; }
-.detail-header .right .oname { font-size: 13px; font-weight: 600; color: #333; }
-.section-header { font-size: 11px; font-weight: 700; color: #333; text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--line-soft); }
-.inforow { display: flex; align-items: center; padding: 4px 0; font-size: 12px; border-bottom: 1px solid #f5f5f5; }
+.detail-header .right .olabel { font-size: 10px; color: var(--header-sub); text-transform: uppercase; }
+.detail-header .right .oname { font-size: 13px; font-weight: 600; color: var(--text); }
+.section-header { font-size: 11px; font-weight: 700; color: var(--text); text-transform: uppercase; letter-spacing: 0.5px; margin: 16px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--line-soft); }
+.inforow { display: flex; align-items: center; padding: 4px 0; font-size: 12px; border-bottom: 1px solid var(--sunken); }
 .inforow .k { min-width: 170px; color: var(--muted); flex-shrink: 0; }
 .inforow .v { color: var(--text); flex: 1; }
 /* Every .edit-btn renders as a small bordered button — never bare text, no
    matter where it sits (field rows, table row-actions, date chips, cards). */
-.edit-btn { display: inline-block; padding: 1px 7px; font-size: 10px; border: 1px solid var(--line); border-radius: 3px; background: #f9f9f9; color: var(--muted); cursor: pointer; }
+.edit-btn { display: inline-block; padding: 1px 7px; font-size: 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--control); color: var(--muted); cursor: pointer; }
 .edit-btn:hover { border-color: var(--accent); color: var(--accent); }
 .inforow .edit-btn { margin-left: 8px; }
 .inforow .editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; flex: 1; }
 /* Artefact tiles: what the institution issues, shown as cards rather than a table —
    a ToR or a presentation is a thing you pick up, not a row you scan. */
 .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; margin-top: 14px; }
-.tile { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: 14px; background: var(--panel); display: flex; flex-direction: column; gap: 6px; }
 .tile .tile-kind { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
 .tile .tile-title { font-weight: 700; font-size: 13px; word-break: break-word; }
 .tile .tile-note { font-size: 11px; color: var(--muted); flex: 1; }
@@ -127,8 +127,8 @@ th.sortable:hover { color: var(--accent); }
 /* A field shown but not editable here — granted by another process. */
 .ro { font-size: 12px; padding: 6px 0; color: var(--text); }
 /* Which risk policy a subject's Risk tab is showing (mirrors the Admin state chip). */
-.policy-note { font-size: 11px; color: var(--muted); background: #fafafa; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; margin: 0 0 10px; }
-.policy-note.draft { background: #fff8e1; border-color: var(--amber); }
+.policy-note { font-size: 11px; color: var(--muted); background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; margin: 0 0 10px; }
+.policy-note.draft { background: var(--warn-bg); border-color: var(--amber); }
 .policy-note b { color: var(--text); }
 /* Risk Assessment: dimension, the band picked, and why — the Admin band table's shape,
    with the owner's justification as the third column. */
@@ -137,29 +137,29 @@ th.sortable:hover { color: var(--accent); }
 .risk-assess thead th:first-child { width: 190px; }
 .risk-assess thead th:nth-child(2) { width: 40%; }
 /* The dimension reads as the admin wrote it — the global th rule shouts every header. */
-.risk-assess tbody th { text-align: left; font-weight: 400; color: var(--muted); font-size: 12px; padding: 8px; vertical-align: top; border-bottom: 1px solid #f5f5f5; text-transform: none; letter-spacing: 0; background: transparent; }
-.risk-assess td { font-size: 12px; padding: 8px; vertical-align: top; border-bottom: 1px solid #f5f5f5; }
+.risk-assess tbody th { text-align: left; font-weight: 400; color: var(--muted); font-size: 12px; padding: 8px; vertical-align: top; border-bottom: 1px solid var(--sunken); text-transform: none; letter-spacing: 0; background: transparent; }
+.risk-assess td { font-size: 12px; padding: 8px; vertical-align: top; border-bottom: 1px solid var(--sunken); }
 .risk-assess td .edit-btn { float: right; margin-left: 8px; }
 .risk-assess td .editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .risk-assess td .editor input[type="text"], .risk-assess td .editor > input:not([type]) { flex: 1; min-width: 200px; }
 /* Risk-dimension picker: the Admin band table's colour + name + explanation, as a choice
    the model/product owner makes. */
 .bandpick { display: flex; flex-direction: column; gap: 4px; width: 100%; margin: 2px 0 6px; }
-.bandopt { display: flex; align-items: center; gap: 8px; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; background: #fff; }
+.bandopt { display: flex; align-items: center; gap: 8px; font-size: 12px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; background: var(--panel); }
 .bandopt:hover { border-color: var(--accent); }
 .bandopt.on { border-color: var(--accent); background: var(--accent-soft); }
 .bandopt .bswatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 .bandopt .bname { font-weight: 700; min-width: 120px; }
 .bandopt .bexpl { color: var(--muted); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-.code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; background: #f0f0f0; padding: 2px 6px; border-radius: 3px; }
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 50; }
+.code { font-family: ui-monospace, Menlo, monospace; font-size: 11px; background: var(--code); padding: 2px 6px; border-radius: 3px; }
+.overlay { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; z-index: 50; }
 .overlay.hidden { display: none; }
-.modal { background: var(--panel); border-radius: 10px; padding: 22px; width: 460px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+.modal { background: var(--panel); border-radius: 10px; padding: 22px; width: 460px; box-shadow: var(--shadow-modal); }
 .modal h2 { margin-top: 0; font-size: 16px; }
 .modal label { display: block; color: var(--muted); font-size: 12px; margin: 10px 0 4px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
-.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: #323232; color: #fff; padding: 10px 18px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.25); z-index: 60; }
+.toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--toast-bg); color: var(--inverse); padding: 10px 18px; border-radius: 8px; box-shadow: var(--shadow-toast); z-index: 60; }
 .toast.hidden { display: none; }
 .toast.error { background: var(--red); }
 .toast.ok { background: var(--green); }
@@ -172,9 +172,9 @@ th.sortable:hover { color: var(--accent); }
 .dtab { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 8px 12px; cursor: pointer; font: inherit; font-size: 12px; }
 .dtab:hover { color: var(--text); }
 .dtab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
-.dh-dates { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(0, 0, 0, 0.12); }
+.dh-dates { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--rule); }
 .datechip { font-size: 11px; }
-.progress { height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin: 4px 0 12px; }
+.progress { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin: 4px 0 12px; }
 .progress .bar { height: 100%; border-radius: 4px; }
 .riskbanner { border: 2px solid; border-radius: 10px; padding: 18px; margin: 8px 0 16px; }
 .vbanner { background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: 6px; padding: 10px 14px; margin-bottom: 12px; }
@@ -189,9 +189,9 @@ td.num, th.num { text-align: center; }
 .dtab-danger.active { color: var(--red); border-bottom-color: var(--red); }
 .dtab-danger:hover { color: var(--red); }
 .danger-zone { border: 1px solid var(--red); border-radius: 8px; overflow: hidden; }
-.danger-zone .dz-header { background: var(--red); color: #fff; padding: 8px 16px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px 8px 0 0; }
+.danger-zone .dz-header { background: var(--red); color: var(--inverse); padding: 8px 16px; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 8px 8px 0 0; }
 .danger-zone .dz-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; }
-.danger-zone .dz-row + .dz-row { border-top: 1px solid #f1c5c2; }
+.danger-zone .dz-row + .dz-row { border-top: 1px solid var(--danger-line-soft); }
 .danger-zone .dz-text b { display: block; margin-bottom: 4px; }
 .danger-zone .dz-text p { margin: 0; font-size: 12px; }
 .danger-zone .dz-action { flex-shrink: 0; }
@@ -215,7 +215,7 @@ textarea { box-sizing: border-box; }
 .heatmap td.hcell { width: 90px; height: 60px; text-align: center; vertical-align: middle; border-radius: 6px; font-size: 12px; font-weight: 600; }
 
 /* Model Chain ("string of pearls") */
-.chain-canvas { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: #fff; }
+.chain-canvas { border: 1px solid var(--line); border-radius: 6px; padding: 12px; background: var(--panel); }
 .chain-swatch { display: inline-block; width: 13px; height: 13px; border-radius: 3px; border: 1.5px solid; vertical-align: -2px; margin-right: 4px; }
 /* Graph nodes open their model, so they carry the same affordance as a link. */
 .chain-node { cursor: pointer; }
@@ -226,12 +226,12 @@ textarea { box-sizing: border-box; }
    invisible hit-line makes the thin arrow comfortable to click. */
 .chain-edge { cursor: pointer; }
 .chain-edge-hit { stroke: transparent; stroke-width: 12; }
-.chain-edge-line { stroke: #94a3b8; stroke-width: 1.5; transition: stroke 0.1s ease, stroke-width 0.1s ease; }
+.chain-edge-line { stroke: var(--slate); stroke-width: 1.5; transition: stroke 0.1s ease, stroke-width 0.1s ease; }
 .chain-edge:hover .chain-edge-line { stroke: var(--accent); stroke-width: 2.5; }
 /* The neighbourhood canvas is also where declarations are made (see
    inventory/neighbourhood_edit.js). Bands and handles stay invisible at rest, so
    the picture is unchanged until a drag starts. */
-.nbhd-tray { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: #fbfcfe; }
+.nbhd-tray { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; background: var(--tray-bg); }
 .nbhd-tray-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .nbhd-filter { margin-left: auto; padding: 3px 8px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; width: 160px; }
 .nbhd-tray-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 6px; }
@@ -239,15 +239,15 @@ textarea { box-sizing: border-box; }
 .nbhd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .nbhd-chip { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 600; cursor: grab; border: 1.5px solid; user-select: none; touch-action: none; }
 .nbhd-chip:active { cursor: grabbing; }
-.nbhd-chip-model { background: #e3f2fd; border-color: #1976d2; color: #0d47a1; }
-.nbhd-chip-source { background: #fef3c7; border-color: #d97706; color: #92400e; }
-.nbhd-ghost { position: fixed; z-index: 9999; pointer-events: none; padding: 3px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 600; background: #e3f2fd; border: 1.5px solid #1976d2; color: #0d47a1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18); }
+.nbhd-chip-model { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+.nbhd-chip-source { background: var(--warn-bg-alt); border-color: var(--warn-line); color: var(--warn-ink); }
+.nbhd-ghost { position: fixed; z-index: 9999; pointer-events: none; padding: 3px 9px; border-radius: 12px; font-size: 11.5px; font-weight: 600; background: var(--accent-soft); border: 1.5px solid var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-ghost); }
 .nbhd-band { display: none; }
 .nbhd-canvas.nbhd-drop .nbhd-band { display: block; }
-.nbhd-band rect { fill: #eef2ff; fill-opacity: 0.82; stroke: #6366f1; stroke-width: 1.5; stroke-dasharray: 6 4; }
-.nbhd-band text { fill: #4338ca; font-weight: 600; }
+.nbhd-band rect { fill: var(--indigo-bg); fill-opacity: 0.82; stroke: var(--indigo); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.nbhd-band text { fill: var(--indigo-ink); font-weight: 600; }
 .nbhd-band.drop-over rect { fill-opacity: 0.95; stroke-width: 2.5; }
-.graph-handle { fill: #fff; stroke: #1976d2; stroke-width: 1.5; opacity: 0; cursor: crosshair; touch-action: none; }
+.graph-handle { fill: var(--panel); stroke: var(--accent); stroke-width: 1.5; opacity: 0; cursor: crosshair; touch-action: none; }
 .nbhd-node:hover .graph-handle, .chain-node:hover .graph-handle,
 .graph-wiring .graph-handle { opacity: 1; }
 .wire-target rect { stroke-width: 3.5; filter: brightness(0.96); }
@@ -255,13 +255,13 @@ textarea { box-sizing: border-box; }
    hit-test against the very node the wire is being dropped on. */
 .graph-rubber { pointer-events: none; }
 /* Staging a model onto the estate chain: the whole canvas is the drop target. */
-.chain-canvas.chain-staging { border-style: dashed; border-color: #6366f1; }
-.chain-canvas.chain-staging.drop-over { background: #f5f6ff; border-width: 2px; }
+.chain-canvas.chain-staging { border-style: dashed; border-color: var(--indigo); }
+.chain-canvas.chain-staging.drop-over { background: var(--indigo-wash); border-width: 2px; }
 /* Arrows carry the handoff, so they are clickable like the chain's. */
 .nbhd-edge { cursor: pointer; }
 .nbhd-hit { stroke: transparent; stroke-width: 14; }
 /* Drawn over the arrows, so the label carries a white halo to stay readable. */
-.nbhd-edge-label { fill: var(--muted); paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+.nbhd-edge-label { fill: var(--muted); paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
 .nbhd-edge:hover .nbhd-edge-label { fill: var(--accent); font-weight: 600; }
 /* On the whole-estate chain many edges converge on the same few nodes and their
    midpoints collide, so there the label is a hover reveal rather than always on.
@@ -269,7 +269,7 @@ textarea { box-sizing: border-box; }
 .chain-edge .nbhd-edge-label { opacity: 0; transition: opacity 0.1s ease; }
 .chain-edge:hover .nbhd-edge-label { opacity: 1; fill: var(--accent); font-weight: 600; }
 .chain-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-.chain-item { display: flex; align-items: baseline; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: #fff; }
-.chain-item:hover { border-color: var(--accent); background: #f7fbff; }
+.chain-item { display: flex; align-items: baseline; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; background: var(--panel); }
+.chain-item:hover { border-color: var(--accent); background: var(--accent-wash); }
 .chain-item-id { font-weight: 700; color: var(--text); }
 .chain-item-name { color: var(--muted); font-size: 13px; }
