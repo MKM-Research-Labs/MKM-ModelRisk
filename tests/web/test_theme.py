@@ -28,12 +28,18 @@ from __future__ import annotations
 
 import re
 
+from audit._walk import py_files, rel
+from config.audit import CONFIG_DIR, SOURCE_DIRS
 from config.paths import STATIC_DIR, TEMPLATES_DIR
-from config.theme import THEME, THEME_GROUPS
+from config.theme import (LEVEL_COLOURS, MISSION_CRITICALITY_COLOURS, RAG,
+                          RISK_RATING_COLOURS, THEME, THEME_GROUPS, UNRATED_COLOUR)
+from src.governance.risk_policy._defaults import default_policy
 from src.web._theme import theme_css, theme_version
 
 _VAR_REFERENCE = re.compile(r"var\(\s*--([a-zA-Z0-9_-]+)")
 _COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_HEX_COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b")
+_THEME_MODULE = f"{CONFIG_DIR}/theme.py"
 _FRONT_END = (STATIC_DIR, TEMPLATES_DIR)
 
 
@@ -122,3 +128,49 @@ def test_every_referenced_token_is_defined():
     unresolved = {name: sorted(where) for name, where in _referenced_tokens().items()
                   if name not in THEME}
     assert not unresolved, f"undefined design tokens referenced: {unresolved}"
+
+
+def test_the_seed_colours_are_not_emitted_as_custom_properties():
+    # They are seed data for the policy store, not tokens the stylesheet resolves
+    # against. Emitting them would put a --Red into :root that nothing ever reads.
+    assert "Red" not in THEME
+    assert "--Red" not in theme_css()
+
+
+def test_the_seeded_policy_takes_every_colour_from_the_theme():
+    values = set(THEME.values())
+    policy = default_policy()
+    coloured = [band for dimension in policy["dimensions"].values()
+                for band in dimension["bands"]] + policy["risk_ratings"]
+    assert coloured, "the seed policy declares no bands at all"
+    assert all(band["colour"] in values for band in coloured)
+
+
+def test_the_softer_ramp_is_the_one_the_seeded_level_bands_use():
+    # Materiality and Complexity feed the rating rather than being it, so they carry
+    # the lighter ramp. If these ever collapse onto the main RAG hues, the heatmap
+    # axes stop being distinguishable from the ratings they produce.
+    assert LEVEL_COLOURS == {"Low": RAG["green-soft"], "Medium": RAG["amber-soft"],
+                             "High": RAG["red-soft"]}
+    assert set(LEVEL_COLOURS.values()).isdisjoint(set(RISK_RATING_COLOURS.values()))
+
+
+def test_mission_criticality_seeds_map_to_named_tokens():
+    assert set(MISSION_CRITICALITY_COLOURS.values()) <= set(THEME.values())
+    assert UNRATED_COLOUR == RAG["grey"]
+
+
+def test_no_python_source_declares_a_colour_of_its_own():
+    # The R1 half of what rule R10 will gate (docs/design/theme_config.md §7). Scoped
+    # to Python here; the front end is covered by the token checks above, and
+    # src/governance/latex.py spells its colour without a leading # — that one is
+    # deliberate scope, see §9.1.
+    offenders = {}
+    for path in py_files(*SOURCE_DIRS):
+        relpath = rel(path)
+        if relpath == _THEME_MODULE:
+            continue
+        found = _HEX_COLOUR.findall(path.read_text(encoding="utf-8"))
+        if found:
+            offenders[relpath] = found
+    assert not offenders, f"colour literals outside {_THEME_MODULE}: {offenders}"
