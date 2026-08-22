@@ -161,13 +161,21 @@ TYPE = {
     "size-xl": "20px",
 }
 
+# A 2px step. The console reaches for every rung of it — 8px 82 times, 6px 41, 10px 38 —
+# so a scale that skipped the odd rungs would have forced half the markup to keep a
+# literal, which is how the type and spacing scales came to be undeclared in the first
+# place. An adopter tightens or loosens the whole interface by editing these.
 SPACE = {
-    "space-1": "4px",
-    "space-2": "6px",
-    "space-3": "8px",
-    "space-4": "12px",
-    "space-5": "16px",
-    "space-6": "24px",
+    "space-1": "2px",
+    "space-2": "4px",
+    "space-3": "6px",
+    "space-4": "8px",
+    "space-5": "10px",
+    "space-6": "12px",
+    "space-7": "14px",
+    "space-8": "16px",
+    "space-9": "18px",
+    "space-10": "24px",
 }
 
 RADIUS = {

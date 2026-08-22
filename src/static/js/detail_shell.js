@@ -129,6 +129,6 @@ const DetailShell = {
   // itself lives on the Danger tab; this is only the flag.
   retiredFlag(retired) {
     return retired
-      ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
+      ? '<div style="margin-top:var(--space-7)"><span class="pill">retired — read only</span></div>' : "";
   },
 };

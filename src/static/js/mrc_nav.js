@@ -147,13 +147,13 @@ const MrcNav = {
     let second = "";
     if (state.div && groups[state.div]) {
       second =
-        '<div class="dtabs" style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">' +
+        '<div class="dtabs" style="margin-top:var(--space-4);border-top:1px solid var(--line);padding-top:var(--space-4)">' +
         tab("All " + state.div, !state.mrc, 'data-divall="1"') +
         groups[state.div].map((c) =>
           tab(c.name || c.value, state.mrc === c.value, 'data-mrc="' + esc(c.value) + '"')).join("") +
         "</div>";
     }
-    return '<div class="card" style="padding:8px 12px;margin-bottom:12px">' +
+    return '<div class="card" style="padding:var(--space-4) var(--space-6);margin-bottom:var(--space-6)">' +
       '<div class="dtabs">' + top + "</div>" + second + "</div>";
   },
 

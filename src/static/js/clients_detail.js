@@ -86,7 +86,7 @@ Object.assign(Clients, {
     return '<div class="section-header">' + esc(spec.label) + "</div>" +
       (blurb ? '<p class="muted">' + esc(blurb) + "</p>" : "") +
       "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px;flex-wrap:wrap">' + addInputs +
+      '<div class="row" style="margin-top:var(--space-4);flex-wrap:wrap">' + addInputs +
       '<button class="btn small" data-add="' + esc(collKey) + '">Add</button></div>';
   },
 
@@ -109,7 +109,7 @@ Object.assign(Clients, {
       '<p class="muted">Link the Products and Models this client\'s pack should cover.</p>' +
       "<table><thead><tr><th>Type</th><th>Subject</th><th>Note</th><th></th></tr></thead><tbody>" +
       body + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px;align-items:flex-end">' +
+      '<div class="row" style="margin-top:var(--space-4);align-items:flex-end">' +
       '<div class="field"><label>Type</label><select id="clink-type">' +
       "<option>Product</option><option>Model</option></select></div>" +
       '<div class="field"><label>Product</label><select id="clink-product">' +
@@ -130,7 +130,7 @@ Object.assign(Clients, {
     box.innerHTML =
       '<div class="card"><div class="row" style="align-items:center">' +
       "<h3 style=\"margin:0\">" + esc((client.data || {}).name || clientId) + "</h3>" +
-      '<span class="muted" style="margin-left:10px">' + esc(clientId) + "</span></div>" +
+      '<span class="muted" style="margin-left:var(--space-5)">' + esc(clientId) + "</span></div>" +
       this._companyEditor(client) +
       this._section(client, "divisions", "The client's internal divisions (e.g. Risk).") +
       this._section(client, "departments", "Departments within a division (e.g. Model Validation).") +

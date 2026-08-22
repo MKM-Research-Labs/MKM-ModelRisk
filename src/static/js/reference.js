@@ -187,7 +187,7 @@ const Reference = {
     const name = (s.fields && s.fields.org_name) || "";
     const logoImg = s.logo
       ? '<img src="/api/mrc/logo?ts=' + Date.now() + '" alt="logo" style="max-height:64px;' +
-        'border:1px solid var(--line);border-radius:6px;padding:4px;background:var(--panel)">'
+        'border:1px solid var(--line);border-radius:var(--radius-md);padding:var(--space-2);background:var(--panel)">'
       : '<span class="muted">No logo uploaded.</span>';
     container.innerHTML =
       '<div class="section-header">Company</div>' +
@@ -196,10 +196,10 @@ const Reference = {
       '<div class="inforow" id="inst-name-row"><div class="k">Company name</div><div class="v">' +
       (name ? esc(name) : '<span class="muted">Not set</span>') +
       '</div><span class="edit-btn" id="inst-name-edit">edit</span></div>' +
-      '<div class="section-header" style="margin-top:16px">Logo</div>' +
+      '<div class="section-header" style="margin-top:var(--space-8)">Logo</div>' +
       '<p class="muted">Used in the Meeting Pack and Model Risk Report PDF headers.</p>' +
       '<div class="row" style="align-items:center">' + logoImg + "</div>" +
-      '<div class="row" style="margin-top:8px"><input type="file" id="inst-logo-file" accept="image/png,image/jpeg">' +
+      '<div class="row" style="margin-top:var(--space-4)"><input type="file" id="inst-logo-file" accept="image/png,image/jpeg">' +
       '<button class="btn small" id="inst-logo-upload">Upload logo</button></div>';
     document.getElementById("inst-name-edit").onclick = () => this._editInstitutionName(name);
     document.getElementById("inst-logo-upload").onclick = () => this._uploadInstitutionLogo();
@@ -265,9 +265,9 @@ const Reference = {
       inputControl("add-" + spec.key + "-" + f.key, f) + "</div>").join("");
     container.innerHTML =
       '<div class="section-header">' + esc(spec.label) + "</div>" +
-      (intro ? '<p class="muted" style="font-size:12px">' + intro + "</p>" : "") +
+      (intro ? '<p class="muted" style="font-size:var(--size-sm)">' + intro + "</p>" : "") +
       "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px">' + addInputs +
+      '<div class="row" style="margin-top:var(--space-4)">' + addInputs +
       '<button class="btn small" data-add="' + esc(spec.key) + '">Add&hellip;</button></div>';
     container.querySelector('[data-add="' + spec.key + '"]').onclick = () => {
       const fields = {};

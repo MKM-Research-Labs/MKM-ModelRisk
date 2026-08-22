@@ -101,24 +101,24 @@ const RiskEditor = {
       '" data-rp-sub="' + k + '">' + label + "</button>";
     this._box.innerHTML =
       '<div class="row" style="justify-content:space-between;align-items:center">' +
-      '<div class="row" style="align-items:center;gap:8px"><label class="muted" style="font-size:11px">Division</label>' +
+      '<div class="row" style="align-items:center;gap:var(--space-4)"><label class="muted" style="font-size:var(--size-xs)">Division</label>' +
       divSel + '<a href="/api/risk-policy/' + encodeURIComponent(this._division) +
-      '/categorisation.pdf" target="_blank" style="font-size:12px">↓ Categorisation PDF</a></div>' +
+      '/categorisation.pdf" target="_blank" style="font-size:var(--size-sm)">↓ Categorisation PDF</a></div>' +
       '<div id="rp-status"></div></div>' +
-      '<p class="lead muted" style="font-size:12px;max-width:74ch">Define this division\'s risk ' +
+      '<p class="lead muted" style="font-size:var(--size-sm);max-width:74ch">Define this division\'s risk ' +
       "vocabulary. Edits save as a draft and are proposed to the division's MRC — models keep " +
       "using the last approved (or firm-wide seed) policy until the committee signs it off.</p>" +
       // Three sub-tabs, matching the Admin mockup: Dimensions | Risk Ratings | Risk Tables.
       '<div class="dtabs" id="rp-subtabs">' + sub("dimensions", "Dimensions") +
       sub("ratings", "Risk Ratings") + sub("grids", "Risk Tables") +
       sub("audit", "Audit") + "</div>" +
-      '<section data-rp="dimensions"><p class="muted" style="font-size:11px">Each dimension ' +
+      '<section data-rp="dimensions"><p class="muted" style="font-size:var(--size-xs)">Each dimension ' +
       "is an ordered set of bands — set each band's name, colour, explanation and score, and " +
       'add or remove bands as the division needs.</p><div id="rp-dims"></div></section>' +
-      '<section data-rp="ratings"><p class="muted" style="font-size:11px">The ratings a model ' +
+      '<section data-rp="ratings"><p class="muted" style="font-size:var(--size-xs)">The ratings a model ' +
       "can carry. The score is the completeness-audit escalation multiplier.</p>" +
       '<div id="rp-ratings"></div></section>' +
-      '<section data-rp="grids"><p class="muted" style="font-size:11px">Generated from the ' +
+      '<section data-rp="grids"><p class="muted" style="font-size:var(--size-xs)">Generated from the ' +
       "dimensions — one " + esc(this._dimName("materiality")) + " × " +
       esc(this._dimName("complexity")) + " table per " +
       esc(this._dimName("mission_criticality")) + " band. Pick each cell\'s rating." +
@@ -127,7 +127,7 @@ const RiskEditor = {
       // The written policy document now lives on Documents -> Artefacts, filed on its
       // division's shelf with the rest of what that division issues. This tab configures
       // the categorisation; it is no longer also a filing cabinet.
-      '<p class="muted" style="font-size:11px;margin-top:18px">The division\'s formal ' +
+      '<p class="muted" style="font-size:var(--size-xs);margin-top:var(--space-9)">The division\'s formal ' +
       "written Risk Policy document is filed under Documents &rarr; Artefacts, on the " +
       esc(this._division) + " shelf.</p>";
     document.getElementById("rp-div").onchange = (e) => {
@@ -166,7 +166,7 @@ const RiskEditor = {
       seed: ['<span class="muted">On the firm-wide seed — edits start a draft.</span>'],
       draft: ['<span class="badge" style="background:var(--amber)">Draft — awaiting MRC sign-off</span>'],
       approved: ['<span class="badge" style="background:var(--green)">Approved</span>' +
-        '<span class="muted" style="margin-left:6px">edits start a new draft</span>'],
+        '<span class="muted" style="margin-left:var(--space-3)">edits start a new draft</span>'],
     };
     el.innerHTML = (map[this._state] || [""])[0];
   },
@@ -188,9 +188,9 @@ const RiskEditor = {
     host.innerHTML = this._dimKeys().map((key) => {
       const dim = this._policy.dimensions[key];
       return '<div class="dim" data-dim="' + key + '" style="border:1px solid var(--line);' +
-        'border-radius:8px;padding:12px 14px;margin-bottom:12px">' +
-        '<div class="row" style="align-items:center;gap:10px;margin-bottom:6px">' +
-        '<label class="muted" style="font-size:10px;text-transform:uppercase">Dimension name</label>' +
+        'border-radius:var(--radius-lg);padding:var(--space-6) var(--space-7);margin-bottom:var(--space-6)">' +
+        '<div class="row" style="align-items:center;gap:var(--space-5);margin-bottom:var(--space-3)">' +
+        '<label class="muted" style="font-size:var(--size-xxs);text-transform:uppercase">Dimension name</label>' +
         '<input data-dimname="' + key + '" value="' + esc(dim.label) +
         '" style="font-weight:700;width:220px"></div>' +
         this._bandTable(key, dim.bands, false) + "</div>";
@@ -216,7 +216,7 @@ const RiskEditor = {
       '<tr data-scope="' + scope + '" data-i="' + i + '">' +
       '<td><input data-f="name" value="' + esc(b.name) + '" style="font-weight:600;width:150px"></td>' +
       '<td><input data-f="colour" type="color" value="' + esc(b.colour || Theme.value("grey")) +
-      '" style="width:44px;height:28px;padding:2px"></td>' +
+      '" style="width:44px;height:28px;padding:var(--space-1)"></td>' +
       '<td><textarea data-f="explanation" rows="3" style="width:100%;resize:vertical;overflow-y:auto">' +
       esc(b.explanation || "") + "</textarea></td>" +
       '<td><input data-f="score" value="' + esc(b.score) +
@@ -232,7 +232,7 @@ const RiskEditor = {
     return '<table><thead><tr><th style="width:160px">Name</th><th style="width:60px">Colour</th>' +
       "<th>Explanation</th><th style=\"width:90px;text-align:right\">" + scoreHead +
       '</th><th style="width:76px"></th></tr></thead><tbody>' + rows + "</tbody></table>" +
-      '<div style="margin-top:6px"><button class="btn small" data-add="' + scope + '">+ Add ' +
+      '<div style="margin-top:var(--space-3)"><button class="btn small" data-add="' + scope + '">+ Add ' +
       label + "</button></div>";
   },
 
@@ -350,16 +350,16 @@ const RiskEditor = {
     const mcLabel = this._dimName("mission_criticality");
     const bands = p.dimensions.mission_criticality.bands;
     document.getElementById("rp-grids").innerHTML =
-      '<p class="muted" style="font-size:11px;margin:0 0 12px">' + bands.length +
+      '<p class="muted" style="font-size:var(--size-xs);margin:0 0 var(--space-6)">' + bands.length +
       " tables — one per " + esc(mcLabel) + " band (rows = " +
       esc(this._dimName("materiality")) + ", columns = " +
       esc(this._dimName("complexity")) + ").</p>" +
       '<div style="display:flex;flex-wrap:wrap;gap:22px">' +
       bands.map((b) =>
-        '<div><div class="grid-cap" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
-        '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' +
+        '<div><div class="grid-cap" style="display:flex;align-items:center;gap:var(--space-4);margin-bottom:var(--space-3)">' +
+        '<span style="display:inline-block;width:12px;height:12px;border-radius:var(--radius-sm);background:' +
         esc(b.colour || Theme.value("grey")) + '"></span>' +
-        '<span style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em">' +
+        '<span style="font-size:var(--size-xxs);text-transform:uppercase;color:var(--muted);letter-spacing:.04em">' +
         esc(mcLabel) + "</span>" +
         '<span style="font-size:14px;font-weight:700;color:var(--text)">' + esc(b.name) + "</span></div>" +
         '<table class="heatmap"><thead><tr><th></th>' +

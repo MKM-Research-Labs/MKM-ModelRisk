@@ -43,14 +43,14 @@ const ProductMap = {
   _status(m) {
     const comps = m.components.length, total = m.nodes.length;
     const feeds = total - comps;
-    return '<div style="margin-bottom:10px"><b>' + esc(m.product_name) + "</b> " +
-      '<span class="muted" style="font-size:12px">references ' + comps + " model" +
+    return '<div style="margin-bottom:var(--space-5)"><b>' + esc(m.product_name) + "</b> " +
+      '<span class="muted" style="font-size:var(--size-sm)">references ' + comps + " model" +
       (comps === 1 ? "" : "s") + " directly" +
       (feeds > 0 ? ", drawing in " + feeds + " more up the chain" : "") + ".</span></div>";
   },
 
   _legend() {
-    return '<div class="row" style="gap:18px;align-items:center;margin-bottom:10px;font-size:12px">' +
+    return '<div class="row" style="gap:var(--space-9);align-items:center;margin-bottom:var(--space-5);font-size:var(--size-sm)">' +
       '<span><span class="chain-swatch" style="background:var(--product-bg);border-color:var(--product);border-width:2px"></span> product</span>' +
       '<span><span class="chain-swatch" style="background:var(--warn-bg-alt);border-color:var(--warn-line)"></span> data source</span>' +
       '<span><span class="chain-swatch" style="background:var(--accent-border);border-color:var(--accent);border-width:2px"></span> component (in this product)</span>' +

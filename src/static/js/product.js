@@ -22,8 +22,8 @@
 function productStatusBadge(status, retired) {
   if (retired) return '<span class="pill">retired</span>';
   const c = Theme.colour("product_status", status);
-  return '<span style="display:inline-block;padding:2px 9px;border-radius:10px;color:var(--inverse);' +
-    'font-size:12px;background:' + c + '">' + esc(status || "—") + "</span>";
+  return '<span style="display:inline-block;padding:var(--space-1) 9px;border-radius:var(--radius-xl);color:var(--inverse);' +
+    'font-size:var(--size-sm);background:' + c + '">' + esc(status || "—") + "</span>";
 }
 
 // Products (Product Valuation Models): one Analytics Model can underpin many Products.
@@ -69,7 +69,7 @@ const Product = {
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Product Valuation Models</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="product-register">+ Register Product</button></div>' +
-      '<div id="product-list" style="margin-top:12px"></div></div></div>' +
+      '<div id="product-list" style="margin-top:var(--space-6)"></div></div></div>' +
       '<div id="product-detail"></div>';
     document.getElementById("product-register").onclick = () => this.openRegister();
     await this.loadList();

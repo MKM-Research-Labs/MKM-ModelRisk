@@ -61,7 +61,7 @@ const ModelDocs = {
     const opts = (cat) => ({ category: cat, docs: this._docs, base: this._base,
       id: this._id, retired: this._retired, refresh: this._refresh });
     document.getElementById("docs-cat").innerHTML = members.map((cat) =>
-      '<div class="section-header" style="margin-top:12px">' + esc(cat) + "</div>" +
+      '<div class="section-header" style="margin-top:var(--space-6)">' + esc(cat) + "</div>" +
       DocPanel.html(opts(cat))).join("");
     members.forEach((cat) => DocPanel.bind(opts(cat)));
   },
@@ -86,7 +86,7 @@ const ModelDocs = {
       (this._retired ? "" : ' <button class="btn small danger" data-rmdoc="' + esc(d.item_id) + '">Delete</button>') +
       "</td></tr>").join("") : '<tr><td colspan="5" class="empty">No documents.</td></tr>';
     const upload = this._retired ? "" :
-      '<div class="row" style="align-items:center;margin-bottom:10px"><input type="file" id="doc-file">' +
+      '<div class="row" style="align-items:center;margin-bottom:var(--space-5)"><input type="file" id="doc-file">' +
       '<input id="doc-desc" placeholder="Description (optional)" style="flex:1">' +
       '<button class="btn small primary" id="doc-upload">Upload</button></div>';
     document.getElementById("docs-cat").innerHTML = upload +

@@ -76,13 +76,13 @@ const Neighbourhood = {
     const counts = src + " data source" + (src === 1 ? "" : "s") + " · " +
       up + " feeding in · " + down + " fed";
     const metaLine = f.vendor
-      ? '<div class="muted" style="font-size:12px;margin-top:2px">Vendor: ' + esc(f.vendor) + "</div>" : "";
-    return '<div style="margin-bottom:10px"><b>' + esc(position) + "</b> " +
-      '<span class="muted" style="font-size:12px">(' + counts + ")</span>" + metaLine + "</div>";
+      ? '<div class="muted" style="font-size:var(--size-sm);margin-top:var(--space-1)">Vendor: ' + esc(f.vendor) + "</div>" : "";
+    return '<div style="margin-bottom:var(--space-5)"><b>' + esc(position) + "</b> " +
+      '<span class="muted" style="font-size:var(--size-sm)">(' + counts + ")</span>" + metaLine + "</div>";
   },
 
   _legend() {
-    return '<div class="row" style="gap:18px;align-items:center;margin-bottom:10px;font-size:12px">' +
+    return '<div class="row" style="gap:var(--space-9);align-items:center;margin-bottom:var(--space-5);font-size:var(--size-sm)">' +
       '<span><span class="chain-swatch" style="background:var(--warn-bg-alt);border-color:var(--warn-line)"></span> data source</span>' +
       '<span><span class="chain-swatch" style="background:var(--accent-soft);border-color:var(--accent)"></span> model</span>' +
       '<span><span class="chain-swatch" style="background:var(--teal-bg);border-color:var(--teal)"></span> terminal (chain end)</span>' +

@@ -74,7 +74,7 @@ const MRC = {
     const card = (label, value, color) =>
       '<div class="scard" style="border-left-color:' + color + ';flex:1"><div class="lbl">' +
       label + '</div><div class="val" style="font-size:15px">' + fieldDisplay(value) + "</div></div>";
-    return '<div class="summary" style="margin-bottom:14px">' +
+    return '<div class="summary" style="margin-bottom:var(--space-7)">' +
       card("MRC", (c.name || c.value) + " · " + fieldDisplay(c.level) +
         (c.scope_value ? " (" + esc(c.scope_value) + ")" : ""), Theme.value("accent")) +
       card("CHAIR", c.chair, Theme.value("accent")) +
@@ -83,7 +83,7 @@ const MRC = {
 
   _torCard(c) {
     if (!c.tor_filename) return "";
-    return '<div class="card" style="display:flex;align-items:center;gap:12px">' +
+    return '<div class="card" style="display:flex;align-items:center;gap:var(--space-6)">' +
       "<span><b>Terms of Reference:</b> " +
       '<a href="/api/reference/collections/mrc/' + esc(c.item_id) + '/tor" target="_blank">&darr; ' +
       esc(c.tor_original_name || "Terms of Reference") + "</a></span></div>";

@@ -223,3 +223,22 @@ def test_the_javascript_names_no_colour_of_its_own():
     offenders = {name: _HEX_COLOUR.findall((STATIC_DIR / name).read_text(encoding="utf-8"))
                  for name in converted}
     assert not any(offenders.values()), f"colour literals remain: {offenders}"
+
+
+def test_the_type_spacing_and_radius_scales_are_all_consumed():
+    # A scale nobody refers to is a scale that has quietly stopped being true. Every
+    # rung exists because the console reaches for it; if one falls out of use, either
+    # the markup regressed to a literal or the rung should go.
+    referenced = set(_referenced_tokens())
+    scale = {name for name in THEME
+             if name.startswith(("size-", "space-", "radius-"))}
+    assert scale, "the scales vanished from the theme"
+    assert not scale - referenced, f"scale tokens nothing uses: {sorted(scale - referenced)}"
+
+
+def test_the_typeface_is_a_token_not_a_literal():
+    # The face an adopter changes first. A literal stack in app.css would mean the
+    # rebrand stops at the colours.
+    stylesheet = (STATIC_DIR / "css" / "app.css").read_text(encoding="utf-8")
+    assert "var(--font)" in stylesheet and "var(--font-mono)" in stylesheet
+    assert "Arial" not in stylesheet

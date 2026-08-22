@@ -30,9 +30,9 @@ Object.assign(Detail, {
       OVERVIEW_RIGHT_TOP.map((k) => this._row(k, d)).join("") +
       this._mrcStatusRow(d) + this._row("next_review_date", d);
     const status = this._model.retired
-      ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
+      ? '<div style="margin-top:var(--space-7)"><span class="pill">retired — read only</span></div>' : "";
     // Full-width summary of what the model does, spanning both columns.
-    const summary = '<div class="inforow" id="row-description" style="margin-bottom:14px">' +
+    const summary = '<div class="inforow" id="row-description" style="margin-bottom:var(--space-7)">' +
       '<div class="k">Summary</div><div class="v">' + fieldDisplay(d.description) + "</div>" +
       this._editLink("description") + "</div>";
     return summary +
@@ -73,7 +73,7 @@ Object.assign(Detail, {
       const c = m.mrc;
       return '<div class="inforow"><div class="k">MRC</div><div class="v">' +
         esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
-        '<span class="muted" style="font-size:11px">' + esc(m.level || "") + "-level</span></div></div>";
+        '<span class="muted" style="font-size:var(--size-xs)">' + esc(m.level || "") + "-level</span></div></div>";
     }
     const d = this._model.data || {};
     const org = [d.division, d.line_of_business].filter(Boolean).join(" / ") || "no division / line of business set";
@@ -158,14 +158,14 @@ Object.assign(Detail, {
       // it is not typed here — it links to the tab that moves it instead.
       return '<div class="inforow" id="row-review_status"><div class="k">' + esc(f.label) +
         '</div><div class="v">' + value +
-        ' <a href="#" data-goreview="1" style="font-size:12px">open review</a></div></div>';
+        ' <a href="#" data-goreview="1" style="font-size:var(--size-sm)">open review</a></div></div>';
     }
     if (key === "rag_rating") {
       // Show the owner's RAG alongside what the tier heatmap ("the table") says,
       // so any divergence needing MRC sign-off is visible at a glance.
       const tableRag = (this._risk.heatmap || {}).rag;
-      value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key], d.division) +
-        '<span class="muted" style="font-size:11px;margin-left:12px">Table</span> ' +
+      value = '<span class="muted" style="font-size:var(--size-xs)">Owner</span> ' + ragBadge(d[key], d.division) +
+        '<span class="muted" style="font-size:var(--size-xs);margin-left:var(--space-6)">Table</span> ' +
         (tableRag ? ragBadge(tableRag, d.division) : '<span class="muted">&mdash;</span>');
       // A proposed rating waits for the committee, so the stored rating does not
       // move when it is raised. Saying so here is the difference between "my
@@ -176,7 +176,7 @@ Object.assign(Detail, {
                (r.status === "Pending" || r.status === "Attached"));
       if (pending.length) {
         const p = pending[pending.length - 1];
-        value += '<div class="muted" style="font-size:11px;margin-top:4px">Proposed ' +
+        value += '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-2)">Proposed ' +
           ragBadge(p.proposed_rag, d.division) + " &mdash; awaiting " +
           esc(p.target_mrc || "MRC") +
           (p.meeting_id ? " at " + esc(p.meeting_id) : " (not yet on an agenda)") +

@@ -43,10 +43,10 @@ const DetailTabs = {
     // Captioned the way Admin → Risk captions the same table: the band's colour, the
     // dimension it belongs to, then the band itself.
     const tierCaption = hm.tier_label
-      ? '<div class="grid-cap" style="display:flex;align-items:center;gap:8px;margin:14px 0 6px">' +
-        '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' +
+      ? '<div class="grid-cap" style="display:flex;align-items:center;gap:var(--space-4);margin:var(--space-7) 0 var(--space-3)">' +
+        '<span style="display:inline-block;width:12px;height:12px;border-radius:var(--radius-sm);background:' +
         esc(hm.tier_colour || Theme.value("grey")) + '"></span>' +
-        '<span style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em">' +
+        '<span style="font-size:var(--size-xxs);text-transform:uppercase;color:var(--muted);letter-spacing:.04em">' +
         esc(labels.mission_criticality) + "</span>" +
         '<span style="font-size:14px;font-weight:700">' + esc(hm.tier_label) + "</span></div>"
       : "";
@@ -67,7 +67,7 @@ const DetailTabs = {
         const style = "background:" + bg + "22;color:" + bg + ";" +
           (here ? "outline:3px solid " + bg + ";outline-offset:-3px;font-weight:800;" : "");
         return '<td class="hcell" style="' + style + '">' + esc(rag || "—") +
-          (here ? '<br><span style="font-size:10px">YOU</span>' : "") + "</td>";
+          (here ? '<br><span style="font-size:var(--size-xxs)">YOU</span>' : "") + "</td>";
       }).join("");
       return "<tr><th>" + esc(m) + "</th>" + cells + "</tr>";
     }).join("");
@@ -82,7 +82,7 @@ const DetailTabs = {
       cols.map((c) => "<th>" + esc(c) + "</th>").join("") +
       "</tr></thead><tbody>" + table + "</tbody></table>" +
       "</div></div>" +
-      '<div class="muted" style="font-size:11px;margin-top:2px">' +
+      '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-1)">' +
       esc(labels.materiality) + " and " + esc(labels.complexity) +
       " are set above; this table is the division's policy, not a per-model setting.</div>";
   },
@@ -128,13 +128,13 @@ const DetailTabs = {
         esc(hm.complexity) + "</b></div></div>"
       : '<div class="riskbanner" style="border-color:var(--grey);background:' + Theme.value("grey") + '14">' +
         '<div class="muted" style="text-align:center">HEATMAP RATING</div>' +
-        '<div style="text-align:center;font-size:16px" class="muted">Set ' +
+        '<div style="text-align:center;font-size:var(--size-lg)" class="muted">Set ' +
         esc(labels.materiality) + " and " + esc(labels.complexity) + " above to place this " +
         subject + " on the heatmap.</div>" +
         "</div>";
     // Events are a product-level (production) concern, so the count shows only on
     // products, not models.
-    const events = showEvents ? '<div class="row" style="gap:16px;margin:12px 0"><div class="scard" ' +
+    const events = showEvents ? '<div class="row" style="gap:var(--space-8);margin:var(--space-6) 0"><div class="scard" ' +
       'style="border-left-color:var(--accent)"><div class="lbl">Events (past ' + rating.events_window_days +
       ' days)</div><div class="val">' + rating.events_in_window + "</div></div></div>" : "";
     const signoff = this._signoffPanel(rating);
@@ -143,7 +143,7 @@ const DetailTabs = {
     const reclassify = rating.needs_reclassification
       ? '<div class="riskbanner" style="border-color:var(--amber);background:var(--warn-bg)">' +
         '<div style="font-weight:700;color:var(--warn-ink-alt)">Re-classification needed</div>' +
-        '<div class="muted" style="font-size:12px">The division\'s risk categorisation has ' +
+        '<div class="muted" style="font-size:var(--size-sm)">The division\'s risk categorisation has ' +
         "changed since this " + subject + " was signed off. Re-confirm " +
         esc(labels.materiality) + ", " + esc(labels.complexity) + " and " +
         esc(labels.mission_criticality) +
@@ -169,7 +169,7 @@ const DetailTabs = {
           (pending.meeting_date ? " (" + esc(pending.meeting_date) + ")" : "")
         : "queued for <b>" + esc(pending.target_mrc || "its MRC") +
           "</b> — it will be added to that committee's next scheduled meeting";
-      return '<div class="dz-row" style="border:1px solid var(--amber);background:var(--warn-bg);padding:10px 14px;border-radius:6px;margin:8px 0">' +
+      return '<div class="dz-row" style="border:1px solid var(--amber);background:var(--warn-bg);padding:var(--space-5) var(--space-7);border-radius:var(--radius-md);margin:var(--space-4) 0">' +
         '<div class="dz-text"><b>Pending MRC sign-off</b>' +
         '<p class="muted">Proposed <b>' + esc(pending.proposed_rag) + "</b> " + detail + ".</p></div></div>";
     }
@@ -178,7 +178,7 @@ const DetailTabs = {
     // model, which moves the heatmap, which asks the MRC to sign off the new cell —
     // and that request appears below on its own.
     if (rating.signed_off) {
-      return '<div class="dz-row" style="border:1px solid var(--green);background:var(--ok-bg);padding:10px 14px;border-radius:6px;margin:8px 0">' +
+      return '<div class="dz-row" style="border:1px solid var(--green);background:var(--ok-bg);padding:var(--space-5) var(--space-7);border-radius:var(--radius-md);margin:var(--space-4) 0">' +
         '<div class="dz-text"><b>MRC signed off — ' + esc(proposed) + "</b>" +
         '<p class="muted">This rating has current MRC sign-off. To change it, revise the ' +
         "classification above; the heatmap moves and the new cell is sent to the MRC for " +
@@ -193,7 +193,7 @@ const DetailTabs = {
     const sub = differs
       ? "Request an MRC sign-off to promote the heatmap rating to the approved rating."
       : "Owner and heatmap agree, but this rating still needs formal MRC sign-off.";
-    return '<div class="dz-row" style="border:1px solid var(--line);padding:10px 14px;border-radius:6px;margin:8px 0">' +
+    return '<div class="dz-row" style="border:1px solid var(--line);padding:var(--space-5) var(--space-7);border-radius:var(--radius-md);margin:var(--space-4) 0">' +
       '<div class="dz-text"><b>' + headline + "</b>" +
       '<p class="muted">' + sub + "</p></div>" +
       '<div class="dz-action"><button class="btn small primary" id="req-signoff" data-proposed="' +
@@ -211,7 +211,7 @@ const DetailTabs = {
         fieldDisplay(v.description) + '</div><div class="muted">Author: ' + fieldDisplay(v.author) +
         (v.ref_document ? " · Ref: " + esc(v.ref_document) : "") + "</div>" + rm + "</div>";
     }).join("") : '<div class="empty">No version history yet.</div>';
-    const add = retired ? "" : '<div class="row" style="margin-top:10px">' +
+    const add = retired ? "" : '<div class="row" style="margin-top:var(--space-5)">' +
       spec.fields.map((f) => '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
         inputControl("add-version_history-" + f.key, f) + "</div>").join("") +
       '<button class="btn small" data-add="version_history">Add version…</button></div>';

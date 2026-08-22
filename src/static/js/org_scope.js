@@ -30,7 +30,7 @@ const OrgScope = {
       const s = await App.get("/api/mrc/settings");
       if (s && s.logo) {
         logo = '<img src="/api/mrc/logo?ts=' + Date.now() + '" alt="logo" ' +
-          'style="max-height:28px;vertical-align:middle;margin-right:8px;border-radius:4px">';
+          'style="max-height:28px;vertical-align:middle;margin-right:var(--space-4);border-radius:4px">';
       }
       if (s && s.fields && s.fields.org_name) {
         name = '<b style="vertical-align:middle">' + esc(s.fields.org_name) + "</b>";

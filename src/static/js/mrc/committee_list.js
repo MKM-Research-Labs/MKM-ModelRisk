@@ -84,7 +84,7 @@ const Committees = {
       '<p class="muted">Each committee is anchored to an org tier and carries its chair, cadence ' +
       "and Terms of Reference. Click a row to open its detail.</p>" +
       "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px">' + addInputs +
+      '<div class="row" style="margin-top:var(--space-4)">' + addInputs +
       '<button class="btn small" id="cadd">Add committee&hellip;</button></div>' +
       '<div id="committee-detail"></div>';
     container.querySelectorAll("tr.clickable").forEach((tr) => {

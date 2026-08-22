@@ -112,7 +112,7 @@ const Chain = {
 
   _chainBody() {
     const legend =
-      '<div class="row" style="gap:18px;align-items:center;margin-bottom:10px;font-size:12px">' +
+      '<div class="row" style="gap:var(--space-9);align-items:center;margin-bottom:var(--space-5);font-size:var(--size-sm)">' +
       '<span><span class="chain-swatch" style="background:var(--accent-soft);border-color:var(--accent)"></span> model in the chain</span>' +
       '<span><span class="chain-swatch" style="background:var(--teal-bg);border-color:var(--teal)"></span> terminal output (no downstream)</span>' +
       '<span><span class="chain-swatch" style="background:var(--sunken);border-color:var(--node-retired)"></span> hibernated</span>' +
@@ -212,7 +212,7 @@ const Chain = {
         '<td><button class="btn small" data-edge="' + esc(l.from) + "|" + esc(l.to) +
         '">' + (h ? "Edit handoff" : "Define handoff") + "</button></td></tr>";
     }).join("");
-    return '<div class="section-header" style="margin-top:16px">Handoffs</div>' +
+    return '<div class="section-header" style="margin-top:var(--space-8)">Handoffs</div>' +
       '<p class="muted">Each edge can carry the field lineage that crosses it and a ' +
       "compatibility note the MRC reviews.</p>" +
       "<table><thead><tr><th>Edge</th><th>Status</th><th>Field lineage</th><th></th></tr></thead>" +

@@ -114,12 +114,12 @@ const Detail = {
       // The RAG rating is the governed
       // one, and a second, differently-derived verdict in the header invited the
       // question "where does that come from?" without answering it.
-      '<div style="margin-top:8px">' + tierBadge(d.tier, d.division) + ' <span class="muted">' +
+      '<div style="margin-top:var(--space-4)">' + tierBadge(d.tier, d.division) + ' <span class="muted">' +
       esc(tierFullLabel(d.tier, d.division)) + "</span></div>" +
       '<div class="dh-dates">' + dates + "</div></div>" +
       '<div class="right"><div class="olabel">OWNER</div>' +
       '<div class="oname">' + fieldDisplay(d.owner) + "</div>" +
-      '<div style="margin-top:6px">' + ragBadge(d.rag_rating, d.division) + "</div></div></div>";
+      '<div style="margin-top:var(--space-3)">' + ragBadge(d.rag_rating, d.division) + "</div></div></div>";
   },
 
   _tabbar(d) {
@@ -155,16 +155,16 @@ const Detail = {
     if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
     if (this._tab === "connections") {
       box.innerHTML =
-        '<p class="muted" style="font-size:12px;margin-bottom:10px">This model\'s neighbourhood: ' +
+        '<p class="muted" style="font-size:var(--size-sm);margin-bottom:var(--space-5)">This model\'s neighbourhood: ' +
         "what feeds it, what it feeds, and the models it shares a data source with. Drag a model or " +
         "a data source from the tray onto the canvas to connect it, or drag from a node’s handle " +
         "onto another node. Click an arrow to state what crosses it; click a model to re-centre.</p>" +
         '<div id="nbhd-host"></div>' +
         '<div id="nbhd-handoff"></div>' +
-        '<p class="muted" style="font-size:12px;margin-top:16px">The declarations behind the picture. ' +
+        '<p class="muted" style="font-size:var(--size-sm);margin-top:var(--space-8)">The declarations behind the picture. ' +
         "Every feed drawn above is one of these rows, on this model or on the model at the other end.</p>" +
         this._collSection("dependencies", d) +
-        '<p class="muted" style="font-size:12px;margin-top:16px">The feeds this model pulls its inputs ' +
+        '<p class="muted" style="font-size:var(--size-sm);margin-top:var(--space-8)">The feeds this model pulls its inputs ' +
         "from. Any model that draws on the same source is linked to it above.</p>" +
         this._collSection("data_sources", d);
       Neighbourhood.render(this._id, "nbhd-host");
@@ -174,7 +174,7 @@ const Detail = {
     if (this._tab === "risk") {
       box.innerHTML =
         '<div class="section-header">Risk assessment</div>' +
-        '<p class="muted" style="font-size:12px;margin:0 0 8px">The owner sets these; they place ' +
+        '<p class="muted" style="font-size:var(--size-sm);margin:0 0 var(--space-4)">The owner sets these; they place ' +
         "the model on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
         policyNotice(d.division) +
         this._riskTable(d) +
@@ -194,8 +194,8 @@ const Detail = {
       // is offered as an action rather than filed as one more uploaded row that
       // could go stale against the record it describes.
       box.innerHTML =
-        '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">' +
-        '<span class="muted" style="font-size:12px">The full write-up for this model, ' +
+        '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-5)">' +
+        '<span class="muted" style="font-size:var(--size-sm)">The full write-up for this model, ' +
         "generated from the current record — on its own, or zipped with its PDF evidence " +
         "to send on.</span>" +
         '<span><a class="btn small" href="/api/models/' + esc(this._id) +
@@ -249,7 +249,7 @@ const Detail = {
     const docOpts = { category: docCat, docs: d.documents || [], base: "/api/models/", id: this._id,
       retired: this._model.retired,
       refresh: () => this.show(this._id, this._tab, { scroll: false }) };
-    if (docCat) html += '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
+    if (docCat) html += '<div class="section-header" style="margin-top:var(--space-7)">Supporting documents</div>' +
       DocPanel.html(docOpts);
     box.innerHTML = html;
     this._bindCollection(this._tab);
@@ -278,7 +278,7 @@ const Detail = {
             ? ' &middot; <a href="/api/meetings/' + esc(a.meeting_id) + "/models/" + esc(this._id) +
               '/analysis" target="_blank" rel="noopener">analysis paper</a>'
             : "";
-          return '<div class="prow"><div style="font-size:12px"><b>' + esc(a.meeting_id) + "</b> " +
+          return '<div class="prow"><div style="font-size:var(--size-sm)"><b>' + esc(a.meeting_id) + "</b> " +
             '<span class="muted">' + esc(a.meeting_date || "") + "</span> &mdash; " +
             esc(a.analysis_status || "Pending") +
             (a.presenter ? ' <span class="muted">presented by ' + esc(a.presenter) + "</span>" : "") +
@@ -291,7 +291,7 @@ const Detail = {
     const outstanding = outstandingActions(this._mrcActions);
     const settled = (this._mrcActions || []).length - outstanding.length;
     const settledNote = settled
-      ? '<p class="muted" style="font-size:11px">' + settled + " closed action" +
+      ? '<p class="muted" style="font-size:var(--size-xs)">' + settled + " closed action" +
         (settled === 1 ? "" : "s") + " not shown — the meeting that agreed each one still " +
         "holds it.</p>"
       : "";

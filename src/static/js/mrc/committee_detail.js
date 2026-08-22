@@ -31,25 +31,25 @@ Object.assign(Committees, {
       '</div><div class="v">' + fieldDisplay(item[f.key]) +
       '</div><span class="edit-btn" data-ced="' + f.key + '">edit</span></div>').join("");
     const tor = item.tor_filename
-      ? '<div class="row" style="align-items:center;margin-top:8px">' +
+      ? '<div class="row" style="align-items:center;margin-top:var(--space-4)">' +
         '<a href="/api/reference/collections/mrc/' + esc(itemId) + '/tor" target="_blank">&darr; ' +
         esc(item.tor_original_name || "Terms of Reference") + "</a>" +
         '<button class="btn small" id="ctor-replace" style="margin-left:auto">Replace&hellip;</button></div>'
-      : '<div class="muted" style="margin-top:8px">No Terms of Reference uploaded.</div>';
+      : '<div class="muted" style="margin-top:var(--space-4)">No Terms of Reference uploaded.</div>';
     const archived = this._isArchived(item);
     const archiveBtn = archived
       ? '<button class="btn small" id="carch">Unarchive committee</button>'
       : '<button class="btn small danger" id="carch">Archive committee</button>';
     document.getElementById("committee-detail").innerHTML =
-      '<div class="card" style="margin-top:14px"><div class="row" style="align-items:center">' +
+      '<div class="card" style="margin-top:var(--space-7)"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">' + esc(item.name || item.value) + "</h3>" +
-      '<span class="muted" style="margin-left:8px">' + esc(item.value) + "</span>" +
-      (archived ? ' <span class="badge" style="background:var(--muted);margin-left:8px">Archived</span>' : "") +
+      '<span class="muted" style="margin-left:var(--space-4)">' + esc(item.value) + "</span>" +
+      (archived ? ' <span class="badge" style="background:var(--muted);margin-left:var(--space-4)">Archived</span>' : "") +
       '<span style="flex:1"></span>' + archiveBtn + "</div>" + rows +
       this._membershipSection(item) +
       this._quorumSection(item) +
-      '<div class="section-header" style="margin-top:16px">Terms of Reference</div>' + tor +
-      '<div class="row" style="margin-top:6px"><input type="file" id="ctor-file">' +
+      '<div class="section-header" style="margin-top:var(--space-8)">Terms of Reference</div>' + tor +
+      '<div class="row" style="margin-top:var(--space-3)"><input type="file" id="ctor-file">' +
       '<button class="btn small primary" id="ctor-upload">Upload ToR</button></div></div>';
     this._bindDetail(item);
   },
@@ -84,8 +84,8 @@ Object.assign(Committees, {
     const scope = item.level === "Company" || !item.level
       ? "the institution"
       : esc(item.level) + " (" + esc(item.scope_value || "—") + ")";
-    return '<div class="section-header" style="margin-top:16px">Membership</div>' +
-      '<p class="muted" style="font-size:12px">Members are people in ' + scope + ".</p>" +
+    return '<div class="section-header" style="margin-top:var(--space-8)">Membership</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">Members are people in ' + scope + ".</p>" +
       single("chair", "Chair") + single("secretary", "Secretary") +
       multi("voting_members", "Voting members") + multi("non_voting_members", "Non-voting members");
   },
@@ -99,8 +99,8 @@ Object.assign(Committees, {
       control = '<span class="muted">No people in this committee\'s scope yet — add them under People.</span>';
     } else if (isMulti) {
       const cur = item[key] || [];
-      control = '<div class="row" style="flex-wrap:wrap;gap:10px;flex:1">' +
-        people.map((p) => '<label style="font-size:12px;font-weight:400"><input type="checkbox" class="mem-chk" value="' +
+      control = '<div class="row" style="flex-wrap:wrap;gap:var(--space-5);flex:1">' +
+        people.map((p) => '<label style="font-size:var(--size-sm);font-weight:400"><input type="checkbox" class="mem-chk" value="' +
           esc(p.name) + '"' + (cur.indexOf(p.name) >= 0 ? " checked" : "") + "> " + esc(p.name) + "</label>").join("") +
         "</div>";
     } else {
@@ -162,8 +162,8 @@ Object.assign(Committees, {
         '</div><div class="v">' + shown +
         '</div><span class="edit-btn" data-ced="' + key + '">edit</span></div>';
     };
-    return '<div class="section-header" style="margin-top:16px">Quorum</div>' +
-      '<p class="muted" style="font-size:12px">Minimum attendance for a meeting to be quorate and ' +
+    return '<div class="section-header" style="margin-top:var(--space-8)">Quorum</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">Minimum attendance for a meeting to be quorate and ' +
       'proceed. Default: Chair + Secretary + 2 voting members (non-voting members do not count).</p>' +
       row("quorum_require_chair", "Requires chair", "Yes") +
       row("quorum_require_secretary", "Requires secretary", "Yes") +

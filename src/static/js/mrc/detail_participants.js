@@ -95,7 +95,7 @@ Object.assign(MeetingDetail, {
     const badge = q.met
       ? '<span class="badge" style="background:var(--green)">Quorum met</span>'
       : '<span class="badge" style="background:var(--red)">Quorum not met</span>' +
-        (q.missing.length ? '<div class="muted" style="font-size:11px;margin-top:4px">Needs: ' +
+        (q.missing.length ? '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-2)">Needs: ' +
           esc(q.missing.join(", ")) + "</div>" : "");
     const statusSel = (i) => {
       const opts = ["Invited", "Attended", "Apologies", "Declined"].map((s) =>
@@ -111,7 +111,7 @@ Object.assign(MeetingDetail, {
             ? ' <button class="btn small danger" data-guestrm="' + esc(i.item_id) +
               '" title="Remove guest">&times;</button>' : "") +
           "</div></div>").join("")
-      : '<div class="empty" style="font-size:12px">No members yet — set them under Admin &rarr; MRC.</div>';
+      : '<div class="empty" style="font-size:var(--size-sm)">No members yet — set them under Admin &rarr; MRC.</div>';
     // Guest candidates: people in the register who are neither invitees already.
     const present = {};
     inv.forEach((i) => { present[i.name] = true; });
@@ -121,10 +121,10 @@ Object.assign(MeetingDetail, {
     const picker = candidates.length
       ? '<div class="pguest"><select id="guest-pick">' + options + "</select>" +
         '<button class="btn small" id="guest-add">Add guest</button></div>'
-      : '<p class="muted" style="font-size:11px;margin-top:8px">Everyone in the register is already an invitee.</p>';
+      : '<p class="muted" style="font-size:var(--size-xs);margin-top:var(--space-4)">Everyone in the register is already an invitee.</p>';
     return '<div class="mtd-left"><div class="section-header">Participants (' + inv.length + ")</div>" +
-      '<div style="margin:6px 0">' + badge + "</div>" + rows +
-      '<div class="section-header" style="margin-top:12px;font-size:11px">Add guest</div>' + picker + "</div>";
+      '<div style="margin:var(--space-3) 0">' + badge + "</div>" + rows +
+      '<div class="section-header" style="margin-top:var(--space-6);font-size:var(--size-xs)">Add guest</div>' + picker + "</div>";
   },
 
   _bindParticipantsPanel(d) {

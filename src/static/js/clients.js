@@ -57,12 +57,12 @@ const Clients = {
     el.innerHTML =
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Clients</h3>' +
-      '<span class="muted" style="margin-left:12px">External companies a client pack is prepared for. ' +
+      '<span class="muted" style="margin-left:var(--space-6)">External companies a client pack is prepared for. ' +
       "Click a row to open a client, set up its contact org tree and links, and generate its pack.</span>" +
       "</div>" +
       "<table><thead><tr><th>ID</th><th>Client</th><th>Sector</th><th>Status</th></tr></thead><tbody>" +
       rows + "</tbody></table>" +
-      '<div class="row" style="margin-top:10px;align-items:flex-end">' +
+      '<div class="row" style="margin-top:var(--space-5);align-items:flex-end">' +
       '<div class="field"><label>New client name *</label><input id="client-add-name"></div>' +
       '<button class="btn" id="client-add">Add client&hellip;</button></div>' +
       "</div>" +

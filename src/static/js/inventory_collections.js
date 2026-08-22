@@ -95,7 +95,7 @@ const Collections = {
     const inputs = this._visible(c).map((f) =>
       '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
       inputControl("add-" + c.key + "-" + f.key, f) + "</div>").join("");
-    return '<div class="row" style="margin-top:8px">' + inputs +
+    return '<div class="row" style="margin-top:var(--space-4)">' + inputs +
       '<button class="btn small" data-add="' + c.key + '">Add…</button></div>';
   },
 
@@ -108,10 +108,10 @@ const Collections = {
         "<td>" + inputControl("badd-" + c.key + "-" + r + "-" + f.key, f) + "</td>").join("");
       rows.push("<tr>" + cells + "</tr>");
     }
-    return '<div class="section-header" style="margin-top:14px">Add up to ' + BULK_ROWS +
+    return '<div class="section-header" style="margin-top:var(--space-7)">Add up to ' + BULK_ROWS +
       " at once</div>" +
       "<table><thead><tr>" + head + "</tr></thead><tbody>" + rows.join("") + "</tbody></table>" +
-      '<div class="row" style="margin-top:8px">' +
+      '<div class="row" style="margin-top:var(--space-4)">' +
       '<button class="btn small primary" data-bulk-add="' + c.key + '">Save&hellip;</button></div>';
   },
 

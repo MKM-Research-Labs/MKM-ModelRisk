@@ -63,7 +63,7 @@ const GovVendorDocs = {
   },
 
   _uploadRow() {
-    return '<div class="row" style="align-items:center;margin-top:14px">' +
+    return '<div class="row" style="align-items:center;margin-top:var(--space-7)">' +
       '<select id="gv-vendor">' + this._vendorOptions(false) + "</select>" +
       '<input type="file" id="gv-file">' +
       '<input id="gv-desc" placeholder="Description (optional)" style="flex:1">' +
@@ -72,15 +72,15 @@ const GovVendorDocs = {
 
   shell(panelTabs) {
     const body = this._vendors.length
-      ? '<div class="row" style="align-items:center;margin-bottom:8px">' +
-        '<label class="muted" style="margin-right:6px">Filter:</label>' +
+      ? '<div class="row" style="align-items:center;margin-bottom:var(--space-4)">' +
+        '<label class="muted" style="margin-right:var(--space-3)">Filter:</label>' +
         '<select id="gv-filter">' + this._vendorOptions(true) + "</select></div>" +
         "<table><thead><tr><th>Vendor</th><th>Name</th><th>Description</th>" +
         "<th>Date Added</th><th>Size</th><th>Actions</th></tr></thead>" +
         '<tbody id="gv-rows">' + this._rowsHtml() + "</tbody></table>" + this._uploadRow()
       : this._noVendors();
     return '<div class="card"><h3>Documents</h3>' + panelTabs +
-      '<p class="muted" style="margin-top:10px">What a third-party supplier gives ' +
+      '<p class="muted" style="margin-top:var(--space-5)">What a third-party supplier gives ' +
       "us &mdash; contracts, assurance reports, the vendor's own model documentation. " +
       "Filed against the vendor it came from; manage the vendor list in Admin " +
       "&rsaquo; Vendor.</p>" + body + "</div>";

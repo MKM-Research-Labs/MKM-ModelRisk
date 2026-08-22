@@ -69,12 +69,12 @@ Object.assign(Detail, {
       '<button class="dtab' + (s.key === this._reviewStage ? " active" : "") +
       '" data-rstage="' + s.key + '">' + s.n + ". " + esc(s.label) +
       this._stageBadge(s.key, d) + "</button>").join("");
-    return '<p class="muted" style="font-size:12px;margin:0 0 8px">The review, in the order it ' +
+    return '<p class="muted" style="font-size:var(--size-sm);margin:0 0 var(--space-4)">The review, in the order it ' +
       "runs. Each stage is agreed between the model owner and the reviewer before the review " +
       "moves on; the reviewer signs off at the end and the report goes to the MRC with the " +
       "risk rating.</p>" +
       '<div class="dtabs">' + rail + "</div>" +
-      '<div id="review-stage" style="margin-top:12px"></div>';
+      '<div id="review-stage" style="margin-top:var(--space-6)"></div>';
   },
 
   // What the stage has to show for itself: a tick once agreed, else a count of
@@ -107,13 +107,13 @@ Object.assign(Detail, {
     };
     if (this._reviewStage === "documents") {
       box.innerHTML = '<div class="section-header">The brief</div>' +
-        '<p class="muted" style="font-size:12px">What this review is for, who is doing it, and ' +
+        '<p class="muted" style="font-size:var(--size-sm)">What this review is for, who is doing it, and ' +
         "by when. A reviewer handed a model and no brief writes the review they imagine is " +
         "wanted.</p>" +
         REVIEW_BRIEF_FIELDS.map((k) => this._row(k, d)).join("") +
         this._newVersionChecklist(d) +
-        '<div class="section-header" style="margin-top:16px">Preliminary documents</div>' +
-        '<p class="muted" style="font-size:12px">The pack the reviewer works from. These are ' +
+        '<div class="section-header" style="margin-top:var(--space-8)">Preliminary documents</div>' +
+        '<p class="muted" style="font-size:var(--size-sm)">The pack the reviewer works from. These are ' +
         "the review's own working papers — the model's documentation lives on the Docs tab.</p>" +
         DocPanel.html(docOpts) + this._thread("documents", d) + this._stageApproval("documents", d);
       DocPanel.bind(docOpts);
@@ -123,7 +123,7 @@ Object.assign(Detail, {
       return;
     }
     if (this._reviewStage === "assumptions") {
-      box.innerHTML = '<p class="muted" style="font-size:12px">What the model takes to be true ' +
+      box.innerHTML = '<p class="muted" style="font-size:var(--size-sm)">What the model takes to be true ' +
         "for its results to hold &mdash; and what is watched, or done, if one stops holding. " +
         "The sixth of the nine questions asks whether these are documented and justified, which " +
         "is why they are agreed before the questions rather than after.</p>" +
@@ -143,7 +143,7 @@ Object.assign(Detail, {
       return;
     }
     if (this._reviewStage === "weaknesses") {
-      box.innerHTML = '<p class="muted" style="font-size:12px">What the model does badly, or ' +
+      box.innerHTML = '<p class="muted" style="font-size:var(--size-sm)">What the model does badly, or ' +
         "not at all &mdash; proposed by the owner, agreed with the reviewer.</p>" +
         this._collSection("model_weaknesses", d) + this._thread("weaknesses", d) + this._stageApproval("weaknesses", d);
       this._bindCollections(["model_weaknesses"]);
@@ -152,7 +152,7 @@ Object.assign(Detail, {
       return;
     }
     if (this._reviewStage === "limitations") {
-      box.innerHTML = '<p class="muted" style="font-size:12px">Where the model may and may not ' +
+      box.innerHTML = '<p class="muted" style="font-size:var(--size-sm)">Where the model may and may not ' +
         "be used, with the trigger that would surface a breach and the control that compensates.</p>" +
         this._collSection("limitations", d) + this._thread("limitations", d) + this._stageApproval("limitations", d);
       this._bindCollections(["limitations"]);
@@ -162,7 +162,7 @@ Object.assign(Detail, {
     }
     if (this._reviewStage === "monitoring") {
       box.innerHTML = '<div class="section-header">Monitoring approach</div>' +
-        '<p class="muted" style="font-size:12px">How this model will be watched once it is in ' +
+        '<p class="muted" style="font-size:var(--size-sm)">How this model will be watched once it is in ' +
         "use, in your own words &mdash; what would be looked at, how often, and what would " +
         "prompt a second look.</p>" + this._row("monitoring_approach", d) +
         this._thread("monitoring", d) + this._stageApproval("monitoring", d);
@@ -173,7 +173,7 @@ Object.assign(Detail, {
     }
     if (this._reviewStage === "remediation") {
       box.innerHTML = '<div class="section-header">Remediation</div>' +
-        '<p class="muted" style="font-size:12px">What the review found that has to be put ' +
+        '<p class="muted" style="font-size:var(--size-sm)">What the review found that has to be put ' +
         "right, and where each step has got to. The committee sees these before it signs the " +
         "review off.</p>" +
         this._collSection("remediation_steps", d) +
@@ -211,7 +211,7 @@ Object.assign(Detail, {
   _reportLink(d, signoff) {
     const doc = (d.documents || []).find((x) => x.filename === signoff.report_filename);
     if (!doc) return "";
-    return '<a class="btn small" style="margin-top:6px" target="_blank" rel="noopener" href="/api/models/' +
+    return '<a class="btn small" style="margin-top:var(--space-3)" target="_blank" rel="noopener" href="/api/models/' +
       esc(this._id) + "/documents/" + esc(doc.item_id) +
       '/download">&darr; Model Review Report</a>';
   },
@@ -221,7 +221,7 @@ Object.assign(Detail, {
     const history = signed.map((s) =>
       '<div class="inforow"><div class="k">' + esc((s.signed_at || "").slice(0, 10)) +
       '</div><div class="v"><b>' + esc(s.signed_by || "") + "</b>" +
-      '<div style="white-space:pre-wrap;margin-top:4px">' + esc(s.commentary || "") + "</div>" +
+      '<div style="white-space:pre-wrap;margin-top:var(--space-2)">' + esc(s.commentary || "") + "</div>" +
       this._reportLink(d, s) + "</div></div>").join("");
     const blockers = this._signoffBlockers(d);
     const gate = blockers.length
@@ -229,17 +229,17 @@ Object.assign(Detail, {
         esc(blockers.join("; ")) + ".</div>"
       : "";
     const form = this._model.retired ? "" :
-      '<div class="field" style="margin-top:8px"><label for="rs-commentary">Final commentary</label>' +
+      '<div class="field" style="margin-top:var(--space-4)"><label for="rs-commentary">Final commentary</label>' +
       '<textarea id="rs-commentary" rows="4" placeholder="What the reviewer concludes, in ' +
       'their own words — this is printed in the report the committee reads"></textarea></div>' +
       '<button class="btn small primary" id="rs-signoff"' +
       (blockers.length ? " disabled" : "") + ">Sign off &amp; file the report&hellip;</button>";
     return this._nextCycle(d) + '<div class="section-header">Reviewer sign-off</div>' +
-      '<p class="muted" style="font-size:12px">Signing off files the Model Review Report ' +
+      '<p class="muted" style="font-size:var(--size-sm)">Signing off files the Model Review Report ' +
       "against this model &mdash; every stage, both sides of the nine questions, the registers " +
       "and the record of challenge. The MRC receives that report and signs off the risk " +
       "rating; it does not adjudicate the review.</p>" +
-      (history ? '<div class="section-header" style="margin-top:12px">Signed</div>' + history : "") +
+      (history ? '<div class="section-header" style="margin-top:var(--space-6)">Signed</div>' + history : "") +
       gate + form + this._thread("signoff", d);
   },
 
@@ -253,7 +253,7 @@ Object.assign(Detail, {
     if (!signed || this._model.retired) return "";
     if (started > signed - 1 && d.review_status !== "Signed off") return "";
     return '<div class="section-header">Start the next review</div>' +
-      '<p class="muted" style="font-size:12px">This review is signed off. Starting another ' +
+      '<p class="muted" style="font-size:var(--size-sm)">This review is signed off. Starting another ' +
       "clears the stages for the new one &mdash; nothing is erased: the approvals, the " +
       "record of challenge and the report just signed stay on the model.</p>" +
       '<div class="row" style="align-items:center">' +
@@ -303,9 +303,9 @@ Object.assign(Detail, {
           ';color:var(--inverse)">' + (isOpen ? "Challenge — open" : "Challenge — answered") + "</span> "
         : "";
       const answers = n.resolves
-        ? '<span class="muted" style="font-size:11px"> answering ' + esc(n.resolves) + "</span>" : "";
-      return '<div style="padding:8px 0;border-bottom:1px solid var(--line)">' +
-        '<div class="muted" style="font-size:11px">' + esc(n.author_role || "") + " &middot; " +
+        ? '<span class="muted" style="font-size:var(--size-xs)"> answering ' + esc(n.resolves) + "</span>" : "";
+      return '<div style="padding:var(--space-4) 0;border-bottom:1px solid var(--line)">' +
+        '<div class="muted" style="font-size:var(--size-xs)">' + esc(n.author_role || "") + " &middot; " +
         esc(n.author || "") + " &middot; " + esc((n.posted_at || "").replace("T", " ").slice(0, 16)) +
         " &middot; " + esc(n.item_id) + answers + "</div>" +
         tag + '<span style="white-space:pre-wrap">' + esc(n.text || "") + "</span></div>";
@@ -319,15 +319,15 @@ Object.assign(Detail, {
       '<option value="' + esc(n.item_id) + '">answers ' + esc(n.item_id) + " — " +
       esc((n.text || "").slice(0, 60)) + "</option>").join("");
     const composer = this._model.retired ? "" :
-      '<div class="row" style="margin-top:8px;align-items:flex-start">' +
+      '<div class="row" style="margin-top:var(--space-4);align-items:flex-start">' +
       '<textarea id="rn-text-' + stage + '" rows="2" placeholder="Add a note, or raise a challenge" ' +
       'style="flex:1;resize:vertical"></textarea>' +
       '<select id="rn-kind-' + stage + '"><option>Note</option><option>Challenge</option></select>' +
       (answering ? '<select id="rn-resolves-' + stage + '"><option value="">&mdash;</option>' +
         answering + "</select>" : "") +
       '<button class="btn small primary" id="rn-post-' + stage + '">Post</button></div>';
-    return '<div class="section-header" style="margin-top:16px">Record of challenge</div>' +
-      '<p class="muted" style="font-size:12px">What the owner and the reviewer said to each ' +
+    return '<div class="section-header" style="margin-top:var(--space-8)">Record of challenge</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">What the owner and the reviewer said to each ' +
       "other about this stage. Append-only, and printed in the report the MRC receives.</p>" +
       banner +
       (notes.length ? notes.map(line).join("") : '<div class="empty">Nothing said yet.</div>') +
@@ -383,10 +383,10 @@ Object.assign(Detail, {
         ? vqBadge(q.status) + '<div class="muted">' + fieldDisplay(q.rationale) + "</div>"
         : ownerSelect(q) +
           '<textarea data-vq-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
-          '-rationale" rows="3" style="width:100%;resize:vertical;overflow-y:auto;margin-top:4px">' +
+          '-rationale" rows="3" style="width:100%;resize:vertical;overflow-y:auto;margin-top:var(--space-2)">' +
           esc(q.rationale || "") + "</textarea>";
       const stamp = q.reviewed_by
-        ? '<div class="muted" style="font-size:11px">' + esc(q.reviewed_by) + " &middot; " +
+        ? '<div class="muted" style="font-size:var(--size-xs)">' + esc(q.reviewed_by) + " &middot; " +
           esc((q.reviewed_at || "").slice(0, 10)) + "</div>"
         : "";
       const reviewer = readOnly
@@ -395,7 +395,7 @@ Object.assign(Detail, {
         : verdictSelect(q) +
           '<textarea data-vq-verdict-item="' + esc(q.item_id) + '" id="vq-' + esc(q.item_id) +
           '-comment" rows="3" placeholder="Reviewer\'s comment" ' +
-          'style="width:100%;resize:vertical;overflow-y:auto;margin-top:4px">' +
+          'style="width:100%;resize:vertical;overflow-y:auto;margin-top:var(--space-2)">' +
           esc(q.reviewer_comment || "") + "</textarea>" + stamp;
       return "<tr><td>" + (i + 1) + "</td><td><b>" + fieldDisplay(q.short_label) +
         '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" +
@@ -409,7 +409,7 @@ Object.assign(Detail, {
       card("Not Addressed", counts["Not Addressed"], Theme.value("red")) +
       card("Accepted", accepted, Theme.value("accent")) +
       card("Challenged", challenged, Theme.value("violet")) + "</div>" +
-      '<div class="muted" style="margin-bottom:6px">Owner coverage: ' + counts.Addressed +
+      '<div class="muted" style="margin-bottom:var(--space-3)">Owner coverage: ' + counts.Addressed +
       "/" + total + " (" + pct + "%)</div>" +
       '<div class="progress"><div class="bar" style="width:' + pct + "%;background:" +
       barColor(pct) + '"></div></div>' +
@@ -453,13 +453,13 @@ Object.assign(Detail, {
       review_sensitivities_updated: DocLinks.countIn(d.documents, ["Sensitivity"]),
       review_test_docs_updated: DocLinks.countIn(d.documents, ["Test Results"]),
     };
-    return '<div class="section-header" style="margin-top:16px">New version checklist</div>' +
-      '<p class="muted" style="font-size:12px">This review follows a new version, so the ' +
+    return '<div class="section-header" style="margin-top:var(--space-8)">New version checklist</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">This review follows a new version, so the ' +
       "model's own documents need to have caught up with it. The count beside each is what " +
       "is on file today.</p>" +
       NEW_VERSION_CHECKLIST.map((k) =>
         this._row(k, d).replace("</div><span class=\"edit-btn\"",
-          '<span class="muted" style="font-size:11px;margin-left:10px">' +
+          '<span class="muted" style="font-size:var(--size-xs);margin-left:var(--space-5)">' +
           held[k] + " on file</span></div><span class=\"edit-btn\"")).join("");
   },
 
@@ -470,16 +470,16 @@ Object.assign(Detail, {
     const given = (d.review_progress || []).filter((r) => r.stage === stageKey).slice(-1)[0];
     const label = REVIEW_STAGES.find((s) => s.key === stageKey).label;
     const record = given
-      ? '<div class="muted" style="font-size:12px">Interim approval by <b>' +
+      ? '<div class="muted" style="font-size:var(--size-sm)">Interim approval by <b>' +
         esc(given.approved_by || "") + "</b> on " + esc((given.approved_at || "").slice(0, 10)) +
         (given.note ? ' &mdash; "' + esc(given.note) + '"' : "") + "</div>"
-      : '<div class="muted" style="font-size:12px">Not yet agreed.</div>';
-    if (this._model.retired) return '<div style="margin-top:16px">' + record + "</div>";
-    return '<div class="section-header" style="margin-top:18px">Interim approval</div>' +
-      '<p class="muted" style="font-size:12px">The reviewer agrees ' + esc(label.toLowerCase()) +
+      : '<div class="muted" style="font-size:var(--size-sm)">Not yet agreed.</div>';
+    if (this._model.retired) return '<div style="margin-top:var(--space-8)">' + record + "</div>";
+    return '<div class="section-header" style="margin-top:var(--space-9)">Interim approval</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">The reviewer agrees ' + esc(label.toLowerCase()) +
       " and the review moves on. This does not close the stage &mdash; it stays open if you " +
       "need to come back to it.</p>" + record +
-      '<div class="row" style="margin-top:8px"><input id="rv-note" placeholder="Note (optional)" ' +
+      '<div class="row" style="margin-top:var(--space-4)"><input id="rv-note" placeholder="Note (optional)" ' +
       'style="flex:1"><button class="btn small primary" data-rapprove="' + esc(stageKey) + '">' +
       (given ? "Approve again&hellip;" : "Interim approval&hellip;") + "</button></div>";
   },

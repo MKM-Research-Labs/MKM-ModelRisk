@@ -38,10 +38,10 @@ Object.assign(MeetingDetail, {
   },
 
   _agendaShell(item, idx, body, actions) {
-    return '<div class="card" style="margin-bottom:8px" id="agrow-' + esc(item.item_id) + '">' +
+    return '<div class="card" style="margin-bottom:var(--space-4)" id="agrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b>" +
-      (item.description ? '<div class="muted" style="margin-top:2px">' + esc(item.description) + "</div>" : "") +
+      (item.description ? '<div class="muted" style="margin-top:var(--space-1)">' + esc(item.description) + "</div>" : "") +
       '</div><div class="rowact">' + (actions || "") + "</div></div>" + (body || "") + "</div>";
   },
 
@@ -53,15 +53,15 @@ Object.assign(MeetingDetail, {
       const actions = done ? statusBadge("Completed")
         : '<button class="btn small primary" data-ag-confirm="rollcall" data-ag-id="' + esc(item.item_id) + '"' +
           (q.met ? "" : ' disabled title="Quorum not met"') + ">Confirm meeting open</button>";
-      const body = '<div class="muted" style="margin-top:8px;font-size:12px">Chair calls the meeting to order; ' +
+      const body = '<div class="muted" style="margin-top:var(--space-4);font-size:var(--size-sm)">Chair calls the meeting to order; ' +
         "secretary confirms quorum. " + (q.met ? "Quorate." : "Not yet quorate.") + "</div>";
       return this._agendaShell(item, idx, body, actions);
     }
     if (kind === "minutes_signoff") {
       const actions = done ? statusBadge("Completed")
         : '<button class="btn small primary" data-ag-confirm="minutes" data-ag-id="' + esc(item.item_id) + '">Sign off</button>';
-      const body = '<div style="margin-top:8px;font-size:12px">' + this._prevMinutesPicker(item) +
-        '<div style="margin-top:6px">' + this._agendaDoc(item) + "</div></div>";
+      const body = '<div style="margin-top:var(--space-4);font-size:var(--size-sm)">' + this._prevMinutesPicker(item) +
+        '<div style="margin-top:var(--space-3)">' + this._agendaDoc(item) + "</div></div>";
       return this._agendaShell(item, idx, body, actions);
     }
     const complete = (label) => done ? statusBadge("Completed")
@@ -73,7 +73,7 @@ Object.assign(MeetingDetail, {
     if (kind === "completeness_audit") return this._completenessAuditCard(item, idx, done);
     if (kind === "membership") return this._membershipCard(item, idx, done);
     return this._agendaShell(item, idx,   // aob
-      '<div class="muted" style="margin-top:8px;font-size:12px">Any other business raised by members.</div>' +
+      '<div class="muted" style="margin-top:var(--space-4);font-size:var(--size-sm)">Any other business raised by members.</div>' +
       this._categorisationAob(),
       complete("Complete"));
   },
@@ -99,27 +99,27 @@ Object.assign(MeetingDetail, {
   _signoffStatusList() {
     const items = this._signoffItems();
     if (!items.length) {
-      return '<div class="muted" style="margin-top:8px;font-size:12px">No sign-offs routed to this meeting.</div>';
+      return '<div class="muted" style="margin-top:var(--space-4);font-size:var(--size-sm)">No sign-offs routed to this meeting.</div>';
     }
-    return '<div style="margin-top:8px">' + items.map((it) => {
+    return '<div style="margin-top:var(--space-4)">' + items.map((it) => {
       const subj = subjectOf(it);
-      return '<div class="prow"><div style="font-size:12px">' + this._subjectLabelHtml(subj) + " &rarr; " +
+      return '<div class="prow"><div style="font-size:var(--size-sm)">' + this._subjectLabelHtml(subj) + " &rarr; " +
         ragBadge(it.proposed_rag) + "</div>" + statusBadge(it.status) + "</div>";
     }).join("") +
-      '</div><p class="muted" style="font-size:11px;margin-top:6px">Decisions are taken in the Models tab (Approvals).</p>';
+      '</div><p class="muted" style="font-size:var(--size-xs);margin-top:var(--space-3)">Decisions are taken in the Models tab (Approvals).</p>';
   },
 
   // Read-only list of in-scope models and their analysis outcome.
   _analysisStatusList() {
     const models = this._models || [];
     if (!models.length) {
-      return '<div class="muted" style="margin-top:8px;font-size:12px">No models in scope.</div>';
+      return '<div class="muted" style="margin-top:var(--space-4);font-size:var(--size-sm)">No models in scope.</div>';
     }
-    return '<div style="margin-top:8px">' + models.map((m) =>
-      '<div class="prow"><div style="font-size:12px"><span class="code">' + esc(m.model_id) + "</span>" +
+    return '<div style="margin-top:var(--space-4)">' + models.map((m) =>
+      '<div class="prow"><div style="font-size:var(--size-sm)"><span class="code">' + esc(m.model_id) + "</span>" +
       (m.name ? " " + esc(m.name) : "") + "</div>" +
       statusBadge(m.analysis_status || "Pending") + "</div>").join("") +
-      '</div><p class="muted" style="font-size:11px;margin-top:6px">Outcomes are recorded in the Models tab (Analysis).</p>';
+      '</div><p class="muted" style="font-size:var(--size-xs);margin-top:var(--space-3)">Outcomes are recorded in the Models tab (Analysis).</p>';
   },
 
   // Committee membership and roles: the changes Admin has proposed for the people this
@@ -129,20 +129,20 @@ Object.assign(MeetingDetail, {
   _membershipCard(item, idx, done) {
     const proposals = this._membership || [];
     const body = proposals.length
-      ? '<div style="margin-top:8px">' + proposals.map((p) => {
+      ? '<div style="margin-top:var(--space-4)">' + proposals.map((p) => {
           const roles = (list) => list.length
             ? list.map((r) => '<span class="pill">' + esc(r) + "</span>").join(" ")
             : '<span class="muted">none</span>';
-          return '<div class="prow"><div style="font-size:12px"><b>' + esc(p.name || "") + "</b>" +
+          return '<div class="prow"><div style="font-size:var(--size-sm)"><b>' + esc(p.name || "") + "</b>" +
             (p.division ? ' <span class="muted">' + esc(p.division) + "</span>" : "") +
-            '<div style="margin-top:2px">' + roles(p.holds) +
+            '<div style="margin-top:var(--space-1)">' + roles(p.holds) +
             ' <span class="muted">&rarr;</span> ' + roles(p.proposed) + "</div></div>" +
             '<div class="rowact"><button class="btn small primary" data-mem-ratify="' +
             esc(p.item_id) + '">Ratify&hellip;</button> ' +
             '<button class="btn small" data-mem-decline="' + esc(p.item_id) +
             '">Decline&hellip;</button></div></div>';
         }).join("") + "</div>"
-      : '<div class="muted" style="margin-top:8px;font-size:12px">No membership or role ' +
+      : '<div class="muted" style="margin-top:var(--space-4);font-size:var(--size-sm)">No membership or role ' +
         "changes are waiting on this committee. Changes are proposed in Admin &rarr; People.</div>";
     const actions = done ? statusBadge("Completed")
       : '<button class="btn small primary" data-ag-confirm="membership" data-ag-id="' +
@@ -161,20 +161,20 @@ Object.assign(MeetingDetail, {
     const nProducts = (d.products_in_scope || []).length;
     const has = !!item.audit_filename;
     const latest = has
-      ? '<div style="font-size:12px">Version ' + esc(item.audit_version || "1") +
+      ? '<div style="font-size:var(--size-sm)">Version ' + esc(item.audit_version || "1") +
         " &middot; generated by " + esc(item.audit_generated_by || "—") +
         (item.audit_generated_at ? " at " + esc(item.audit_generated_at) : "") +
         " &middot; " + esc(item.audit_entities || "0") + " record(s), " +
         esc(item.audit_findings || "0") + " finding(s) &middot; " +
         '<a href="/api/meetings/' + esc(this._id) +
         '/completeness-audit.pdf" target="_blank" rel="noopener">View / download</a></div>'
-      : '<div class="muted" style="font-size:12px">Not yet run.</div>';
+      : '<div class="muted" style="font-size:var(--size-sm)">Not yet run.</div>';
     const dis = closed ? " disabled" : "";
-    const body = '<div style="margin-top:8px">' +
-      '<div class="muted" style="font-size:12px">Scoped to ' + nModels + " model(s) and " +
+    const body = '<div style="margin-top:var(--space-4)">' +
+      '<div class="muted" style="font-size:var(--size-sm)">Scoped to ' + nModels + " model(s) and " +
       nProducts + " product(s) in scope for this committee.</div>" +
-      '<div style="margin-top:6px">' + latest + "</div>" +
-      '<div class="field" style="margin-top:8px"><label>Committee notes on the audit outcome</label>' +
+      '<div style="margin-top:var(--space-3)">' + latest + "</div>" +
+      '<div class="field" style="margin-top:var(--space-4)"><label>Committee notes on the audit outcome</label>' +
       '<textarea data-audit-note="' + esc(item.item_id) + '" rows="2" style="width:100%;resize:vertical"' +
       dis + ">" + esc(item.audit_notes || "") + "</textarea></div></div>";
     const runBtn = '<button class="btn small" data-audit-run="' + esc(item.item_id) + '"' +
