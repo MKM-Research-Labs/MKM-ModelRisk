@@ -125,11 +125,11 @@ def test_the_record_keeps_the_questions_it_was_actually_asked():
 
 def test_a_field_can_be_edited_and_an_unknown_one_cannot():
     _register()
-    update_ml_application_field(ml_application_id="MLA-0001", field="training_data",
-                               value="Retail book, 2019-2025, 1.2m applications.",
+    update_ml_application_field(ml_application_id="MLA-0001", field="estimator_rationale",
+                               value="Gradient boosting: the alternatives were not scored.",
                                actor="admin")
     rebuild_ml_application_view()
-    assert _data()["training_data"].startswith("Retail book")
+    assert _data()["estimator_rationale"].startswith("Gradient boosting")
     with pytest.raises(DomainError, match="not editable"):
         update_ml_application_field(ml_application_id="MLA-0001", field="learning_rate",
                                    value="0.05", actor="admin")
@@ -145,7 +145,7 @@ def test_retiring_marks_the_record_and_freezes_it():
     # Marked for Removal has no "Retired" for us to write.
     assert not _data().get("lifecycle_stage")
     with pytest.raises(DomainError, match="retired"):
-        update_ml_application_field(ml_application_id="MLA-0001", field="training_data",
+        update_ml_application_field(ml_application_id="MLA-0001", field="estimator_rationale",
                                    value="anything", actor="admin")
 
 

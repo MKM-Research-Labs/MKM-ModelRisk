@@ -96,11 +96,11 @@ def test_a_field_can_be_edited_through_the_api(client):
     ensure_default_estimators()
     _register(client)
     res = client.post("/api/ml-applications/MLA-0001/field",
-                      json={"field": "training_data",
-                            "value": "Retail book, 2019-2025.", "confirmed": True},
+                      json={"field": "estimator_rationale",
+                            "value": "Gradient boosting, unscored alternatives.", "confirmed": True},
                       headers=HEADERS)
     assert res.status_code == 200
-    assert res.get_json()["data"]["training_data"] == "Retail book, 2019-2025."
+    assert res.get_json()["data"]["estimator_rationale"] == "Gradient boosting, unscored alternatives."
 
 
 def test_collections_can_be_added_and_removed(client):
