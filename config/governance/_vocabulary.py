@@ -30,13 +30,18 @@ a second copy of this shape is a second thing to keep in step.
 from __future__ import annotations
 
 
-def status_vocabulary_spec(label: str, prefix: str) -> dict:
+def status_vocabulary_spec(label: str, prefix: str, hint: str = "") -> dict:
     """A two-column vocabulary: the word shown, and the word records carry.
 
     ``value`` is immutable once the entry exists: records already carry it, and
     editing it would orphan every one of them.
+
+    ``hint`` says what the list is FOR. Several vocabularies share one admin page, and
+    without it a reader meets eleven tables of words with nothing to say which governs
+    what -- the definition already exists in config and simply was not being shown.
     """
     return {"label": label, "id_prefix": prefix, "display": "label", "value_key": "value",
+            "hint": hint,
             "fields": [
                 {"key": "label", "label": "Shown as", "type": "text", "required": True},
                 {"key": "value", "label": "Stored as", "type": "text", "required": True,

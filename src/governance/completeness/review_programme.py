@@ -58,14 +58,28 @@ def _open_challenges(data: dict) -> int:
                if n.get("kind") == "Challenge" and n.get("item_id") not in answered)
 
 
+def record_id(record: dict) -> str:
+    """The row's own identifier, whichever register it came from.
+
+    The clause probes read a record's DATA, which a model and an ML Application spell
+    the same way. Its id is the one thing they do not: a view row is keyed by the
+    aggregate it belongs to. Naming both here is what lets one population carry both
+    rather than the probes growing a per-type branch.
+    """
+    for key in ("model_id", "ml_application_id", "product_id"):
+        if record.get(key):
+            return str(record[key])
+    return ""
+
+
 def model_state(model: dict) -> dict:
-    """One model's position in the programme."""
+    """One record's position in the programme."""
     data = model.get("data") or {}
     agreed = _stages_agreed(data)
     signoffs = data.get(REVIEW_SIGNOFFS) or []
     started = bool(data.get(REVIEW_PROGRESS) or signoffs)
     return {
-        "entity_id": model["model_id"],
+        "entity_id": record_id(model),
         "entity_name": (data.get("name") or ""),
         "reviewer": data.get("peer_reviewer") or "",
         "trigger": data.get("review_trigger") or "",

@@ -43,7 +43,7 @@ from src.governance.completeness._method import appendix, method_section
 from src.governance.completeness.framework_report import framework_section
 from src.governance.completeness.review_programme import programme
 from src.governance.completeness.scan import (findings, ratified_divisions, scan,
-                                              scoped_models)
+                                              coverage_population, scoped_models)
 from src.governance.latex import (_para_table, _section, _subsection, front_matter,
                                   history_page, logo_asset, preamble)
 from src.governance.mrc import pack
@@ -231,6 +231,7 @@ def _review_programme(models: list) -> str:
 
 def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
                            logo: bool = False, models: list | None = None,
+                           coverage: list | None = None,
                            ratified=()) -> str:
     """LaTeX source for the completeness audit.
 
@@ -256,7 +257,10 @@ def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
         + _section("Findings by record",
                    "".join(_dossier(row) for row in rows))
         + _review_programme(models or [])
-        + framework_section(rows, models or [], as_of, ratified)
+        # The clause coverage counts ML Applications beside models; the review
+        # programme above it does not, because that reports on the inventory's own
+        # review cycle. Two populations, two questions, said so here.
+        + framework_section(rows, coverage or models or [], as_of, ratified)
         + appendix()
         + "\\end{document}\n"
     )
@@ -280,5 +284,6 @@ def render_completeness_pdf(settings: dict, as_of: str, rows=None, models=None,
     models = scoped_models(model_ids) if models is None else models
     return pack.compile_tex(
         build_completeness_tex(rows, settings, as_of, logo=bool(assets), models=models,
+                               coverage=coverage_population(model_ids),
                                ratified=ratified_divisions(models)),
         assets)

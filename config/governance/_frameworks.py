@@ -95,6 +95,7 @@ TREATABLE_RATINGS = ("Red", "Amber")
 # ---------------------------------------------------------------------------
 ISO_31000 = "ISO 31000:2018"
 COSO_ERM = "COSO ERM (2017)"
+BCBS_239 = "BCBS 239 (2013)"
 
 # (reference, clause title, probe, note)
 #
@@ -204,18 +205,66 @@ COSO_ERM_PRINCIPLES = (
      "Append-only event log, issued governance documents and this audit."),
 )
 
+# BCBS 239's fourteen principles, in the Committee's own grouping. Principles 12-14
+# are addressed to SUPERVISORS rather than to the bank, so they are reported as
+# outside the platform rather than scored -- marking a product down for not holding a
+# supervisor's review is measuring the wrong thing, and pretending otherwise would
+# inflate the count with rows nobody can act on.
+#
+# The lineage principles are the ones the ML Training tab actually moves: a snapshot
+# identifier and a source-dataset reference are what 3 and 4 ask for, and free-text
+# training notes cannot supply either.
+BCBS_239_PRINCIPLES = (
+    ("1", "Governance", "committee",
+     "Committee sign-off recorded against the record."),
+    ("2", "Data architecture and IT infrastructure", "partial",
+     "A record names its data sources and its place in the model chain, but the "
+     "firm's data architecture is not described here and no probe could stand for it."),
+    ("3", "Accuracy and integrity", "identification",
+     "Assumptions, limitations and weaknesses recorded. For an ML Application the "
+     "train's snapshot identifier ties a reported figure to the data it came from."),
+    ("4", "Completeness", "inventory",
+     "Records on the register and under governance."),
+    ("5", "Timeliness", "monitoring",
+     "Review scheduled and not overdue. Note this measures the governance cycle, not "
+     "the latency of the underlying risk data, which the platform does not see."),
+    ("6", "Adaptability", "absent",
+     "Nothing here answers an ad hoc request for risk data. The register is queryable "
+     "by record, not by exposure."),
+    ("7", "Accuracy (reporting)", "reporting",
+     "Append-only event log, issued governance documents and this audit."),
+    ("8", "Comprehensiveness", "analysis",
+     "Every dimension rated on every record."),
+    ("9", "Clarity and usefulness", "reporting",
+     "Issued documents are generated from the record rather than transcribed from it."),
+    ("10", "Frequency", "review",
+     "Review under way or signed off, on the cycle the record carries."),
+    ("11", "Distribution", "partial",
+     "Documents are filed against the record and tabled at the committee, but who "
+     "received a report, and when, is not tracked."),
+    ("12", "Review", "institution",
+     "A supervisory principle: addressed to the supervisor, not to the bank."),
+    ("13", "Remedial actions and supervisory measures", "treatment",
+     "Remediation recorded where the rating calls for it."),
+    ("14", "Home/host cooperation", "institution",
+     "A supervisory principle, and one between authorities rather than within a firm."),
+)
+
 # The frameworks the coverage section reports, in the order it reports them.
 FRAMEWORK_COVERAGE = (
     (ISO_31000, ISO_31000_CLAUSES),
     (COSO_ERM, COSO_ERM_PRINCIPLES),
+    (BCBS_239, BCBS_239_PRINCIPLES),
 )
 
 # What the coverage section says it is and is not. Held here with the table it
 # qualifies, because an adopter who re-points the table must re-word this with it.
 COVERAGE_BASIS = (
-    "Neither framework certifies a software product: ISO 31000 states in its own "
-    "scope that it is guidance rather than requirements, and COSO is assessed at "
-    "the institution. This section therefore makes no compliance claim. It states, "
+    "No framework here certifies a software product: ISO 31000 states in its own "
+    "scope that it is guidance rather than requirements, COSO is assessed at the "
+    "institution, and BCBS 239 is supervisory guidance addressed to banks and their "
+    "supervisors -- its own principles 12 to 14 are written for the supervisor. This "
+    "section therefore makes no compliance claim. It states, "
     "clause by clause, what the platform holds that evidences the clause and how "
     "much of the estate actually carries it -- so that the institution's own "
     "assessment has something to cite, and so that the clauses nothing evidences "

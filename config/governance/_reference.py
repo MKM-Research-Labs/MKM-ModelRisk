@@ -281,8 +281,8 @@ REFERENCE_SPECS = {
 }
 
 REFERENCE_SPECS.update({
-    name: _status_vocabulary_spec(label, prefix)
-    for name, (label, prefix, _words, _hint) in STATUS_VOCABULARIES.items()
+    name: _status_vocabulary_spec(label, prefix, hint)
+    for name, (label, prefix, _words, hint) in STATUS_VOCABULARIES.items()
 })
 
 # The Estimator menu and the ML questionnaire, kept in their own module so the ML

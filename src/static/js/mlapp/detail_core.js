@@ -317,8 +317,19 @@ const MLAppDetail = {
     const spec = this._trainSpec(key);
     if (!spec) return "";
     const value = train[key];
-    const shown = (value === null || value === undefined || value === "")
+    let shown = (value === null || value === undefined || value === "")
       ? '<span class="muted">—</span>' : optionLabel(spec, value);
+    // Linked features carry their count inline, and the count the run reported is
+    // checked against them: more features fitted than linked means the register is
+    // behind what actually went into the model, which is worth seeing on the page.
+    if (key === "features" && Array.isArray(value) && value.length) {
+      shown += ' <span class="muted">(' + value.length + " linked)</span>";
+      const counted = parseInt(train.feature_count, 10);
+      if (!isNaN(counted) && counted > value.length) {
+        shown += ' <span class="badge" style="background:#f57c00">' +
+          (counted - value.length) + " not in the register</span>";
+      }
+    }
     // A field the run reported for itself is READ-ONLY. A value somebody can hand-edit
     // is a value a validator has to verify separately, and the point of capturing it
     // was that nobody had to be trusted to retype it.

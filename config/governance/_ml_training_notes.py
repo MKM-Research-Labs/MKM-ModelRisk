@@ -37,8 +37,13 @@ TRAINING_NOTES = {
     "target_definition": "The label AS CONSTRUCTED, in physical units and with its "
                          "thresholds. Two teams can build the same-sounding target and "
                          "predict different things.",
-    "feature_count": "How many inputs the fit had. A jump between trains is a change of "
-                     "model, not a refresh of one.",
+    "features": "Which inputs, from the feature register. Linked rather than pasted, so "
+                "a feature that turns out to be wrong or to have leaked can be traced to "
+                "every fit that used it at once.",
+    "feature_count": "How many inputs the fit had, as the run counted them. A jump between "
+                     "trains is a change of model, not a refresh of one -- and a count "
+                     "that exceeds the features linked above says the register is behind "
+                     "what was actually fitted.",
     "intended_use": "What the output may be used for. Every other judgement on this tab "
                     "is made against it.",
     "excluded_use": "What it may NOT be used for. An explicit exclusion can be policed; "

@@ -51,6 +51,16 @@ from config.governance._ml_training import (ML_TRAINING_LISTS, ML_TRAINING_VOCAB
 from config.governance._vocabulary import status_vocabulary_spec
 
 ESTIMATOR_LIST = "estimator"
+# The features an ML Application is fitted on, as a register rather than a vocabulary:
+# each entry is a thing with properties -- what type it is, where it comes from, how it
+# is derived -- not a word with a label.
+#
+# It earns its keep beyond A.4's dropdown. A feature used by several ML Applications is
+# the ML estate's version of "two models share a data source", and the same
+# correlated-failure question follows from it: a feature that turns out to be wrong, or
+# to have leaked, is wrong everywhere it is used at once. That question is only
+# askable if the uses are recorded against one entry rather than typed into fifty.
+FEATURE_LIST = "feature"
 ML_APPLICATION_QUESTION_LIST = "ml_application_questions"
 
 # The menu of industry norms, seeded on a fresh install. Scope is classical /
@@ -112,6 +122,8 @@ ML_APPLICATION_QUESTIONS = (
 # what a dropdown shows and what a record stores, so the estimator name is the key.
 # Estimator names are distinctive across libraries in practice (GradientBoostingRegressor
 # is scikit-learn's, XGBRegressor is XGBoost's), so the name alone identifies a row.
+FEATURE_TYPES = ("Numeric", "Categorical", "Boolean", "Datetime", "Text", "Derived")
+
 ML_REFERENCE_SPECS = {
     ESTIMATOR_LIST: {"label": "Estimator", "id_prefix": "EST", "display": "value", "fields": [
         {"key": "value", "label": "Estimator", "type": "text", "required": True},
@@ -121,6 +133,14 @@ ML_REFERENCE_SPECS = {
     ]},
     # Same shape as REVIEW_QUESTION_LIST -- ``short_label`` is the topic shown in bold
     # above the question, exactly as a record's own copy renders it.
+    # Not seeded. An institution's features are its own, and a starter list of ours
+    # would be somebody else's model described in their register.
+    FEATURE_LIST: {"label": "Feature", "id_prefix": "FT", "display": "value", "fields": [
+        {"key": "value", "label": "Feature", "type": "text", "required": True},
+        {"key": "data_type", "label": "Type", "type": "choice", "options": FEATURE_TYPES},
+        {"key": "data_source", "label": "Source", "type": "text", "reference": "data_source"},
+        {"key": "derivation", "label": "How it is derived", "type": "textarea"},
+    ]},
     ML_APPLICATION_QUESTION_LIST: {"label": "ML Application questions", "id_prefix": "MLQ",
                                    "display": "short_label", "fields": [
         {"key": "short_label", "label": "Topic", "type": "text", "required": True},
@@ -132,8 +152,9 @@ ML_REFERENCE_SPECS = {
 # label, editable in Admin. Folded in here so they reach REFERENCE_SPECS through the
 # same merge the Estimator list does.
 ML_REFERENCE_SPECS.update({
-    name: status_vocabulary_spec(label, prefix)
-    for name, (label, prefix, _words, _hint) in ML_TRAINING_VOCABULARIES.items()
+    name: status_vocabulary_spec(label, prefix, hint)
+    for name, (label, prefix, _words, hint) in ML_TRAINING_VOCABULARIES.items()
 })
 
-ML_REFERENCE_LISTS = ((ESTIMATOR_LIST, ML_APPLICATION_QUESTION_LIST) + ML_TRAINING_LISTS)
+ML_REFERENCE_LISTS = ((ESTIMATOR_LIST, FEATURE_LIST, ML_APPLICATION_QUESTION_LIST)
+                      + ML_TRAINING_LISTS)

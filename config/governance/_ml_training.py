@@ -168,6 +168,7 @@ _F = (
     # A. Task and target
     ("learning_task", "A", "Learning task", "choice", LEARNING_TASK_LIST, None),
     ("target_definition", "A", "Target definition", "textarea", None, None),
+    ("features", "A", "Features", "multichoice", "feature", None),
     ("feature_count", "A", "Feature count", "number", None, None),
     ("intended_use", "A", "Intended use", "textarea", None, None),
     ("excluded_use", "A", "Excluded use", "textarea", None, None),
