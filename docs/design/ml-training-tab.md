@@ -20,10 +20,17 @@ cannot answer *"which models were fitted with a random split on spatially correl
 data?"*. That is an estate-level question a committee should be able to run, and no
 amount of extra prose makes it answerable.
 
-**The ordering is governance, not pedagogy.** Split before preprocessing makes the
-leakage question visible on the page: a scaler fitted before the split inflates the
-test metric and everything below it becomes unreliable. A tab that lists the fields
-in any other order lets that pass unnoticed.
+**The ordering is governance, not pedagogy.** The split is established before the
+preprocessing that depends on it, so the leakage question is visible on the page: a
+scaler fitted before the split inflates the test metric and everything below it
+becomes unreliable. A tab that lists the fields in any other order lets that pass.
+
+*The spec contradicts itself here and we followed the better half.* Its §2 puts the
+split before scaling; its §4 schema puts scaling at B.8 and the split at C.1, which
+is the opposite. Section C now reads "Split, preprocessing and validation" and
+carries encoding, scaling and the scaler fit-point after the split rationale. The
+finding fires either way — `scaler_fit_point = "Full dataset"` is flagged wherever
+the row sits — but a reader meets it already knowing what the split was.
 
 ## 2. Two translations the spec needs
 

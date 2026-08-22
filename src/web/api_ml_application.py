@@ -78,9 +78,9 @@ def field_specs():
         # completeness count reads the same table, so the page and the score cannot
         # disagree about what is being asked for.
         # Each section carries its fields as an ORDERED list. A dict would be sorted
-        # in transit and the order here is the governance point: split comes before
-        # the preprocessing it constrains, so a scaler fitted on the full dataset is
-        # visible above the metric it inflates rather than buried below it.
+        # in transit and the order here is the governance point: the split is
+        # established before the preprocessing that depends on it, so "fitted on: full
+        # dataset" is read by somebody who already knows what the split was.
         #
         # ``applies`` says which fields this fit is asked for at all -- a regression is
         # not asked for a loss curve. Nothing is mandatory: a complete set of fifty-one
