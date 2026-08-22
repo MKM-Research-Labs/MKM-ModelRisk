@@ -1,0 +1,124 @@
+# Copyright (c) 2022-2026 MKM Research Labs.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""Tests for the design tokens and the stylesheet they are served as.
+
+The load-bearing claim is the last test: every ``var(--…)`` the front end reads
+resolves to a token that exists. A missing token is not an error anywhere — the
+browser silently drops the declaration — so a rename would otherwise reach a screen
+as a colour quietly falling back to black.
+"""
+from __future__ import annotations
+
+import re
+
+from config.paths import STATIC_DIR, TEMPLATES_DIR
+from config.theme import THEME, THEME_GROUPS
+from src.web._theme import theme_css, theme_version
+
+_VAR_REFERENCE = re.compile(r"var\(\s*--([a-zA-Z0-9_-]+)")
+_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
+_FRONT_END = (STATIC_DIR, TEMPLATES_DIR)
+
+
+def _referenced_tokens() -> dict[str, set[str]]:
+    """Every ``--token`` the stylesheet, the JavaScript or the template reads."""
+    found: dict[str, set[str]] = {}
+    for root in _FRONT_END:
+        for path in sorted(root.rglob("*")):
+            if path.suffix not in (".css", ".js", ".html"):
+                continue
+            for match in _VAR_REFERENCE.finditer(path.read_text(encoding="utf-8")):
+                found.setdefault(match.group(1), set()).add(str(path))
+    return found
+
+
+def test_token_names_are_unique_across_the_groups():
+    # The groups organise config/theme.py; they do not namespace it, so a name
+    # reused in two groups would have one silently win.
+    declared = sum(len(group) for _, group in THEME_GROUPS)
+    assert declared == len(THEME)
+
+
+def test_every_token_has_a_non_empty_string_value():
+    # Values go straight into CSS, so a stray None or int would emit a broken
+    # declaration rather than raise.
+    assert all(isinstance(value, str) and value.strip() for value in THEME.values())
+
+
+def test_theme_css_is_a_single_root_block():
+    css = theme_css()
+    assert css.startswith(":root {\n")
+    assert css.rstrip().endswith("}")
+    # A serialiser, not a stylesheet: no rules of its own (rule R7).
+    assert css.count("{") == 1
+
+
+def test_theme_css_declares_every_token():
+    css = theme_css()
+    for name, value in THEME.items():
+        assert f"  --{name}: {value};" in css
+
+
+def test_theme_css_carries_the_accent_the_console_was_built_around():
+    assert "--accent: #1976d2;" in theme_css()
+
+
+def test_theme_version_is_stable_for_unchanged_tokens():
+    assert theme_version() == theme_version()
+
+
+def test_theme_version_moves_when_a_token_changes():
+    # The whole point of the stamp: a rebrand must not be masked by a browser cache.
+    rebranded = dict(THEME, accent="#7e57c2")
+    assert theme_version(rebranded) != theme_version()
+
+
+def test_theme_route_serves_the_tokens_as_css(client):
+    response = client.get("/theme.css")
+    assert response.status_code == 200
+    assert response.mimetype == "text/css"
+    assert b"--accent: #1976d2;" in response.data
+
+
+def test_index_links_the_tokens_before_the_stylesheet(client):
+    # Ordering is load-bearing: app.css resolves its var(--…) against this block,
+    # so a link placed after it would leave the first paint unstyled.
+    html = client.get("/").get_data(as_text=True)
+    assert "/theme.css?v=" in html
+    assert html.index("/theme.css") < html.index("css/app.css")
+
+
+def test_index_stamps_the_theme_link_with_its_own_version(client):
+    html = client.get("/").get_data(as_text=True)
+    assert f"/theme.css?v={theme_version()}" in html
+
+
+def test_the_stylesheet_no_longer_declares_its_own_root_block():
+    # One source of truth: a :root here would shadow the served tokens. Comments are
+    # stripped first — the file's own header warns against reintroducing one, and
+    # naming the thing it forbids must not read as doing it.
+    stylesheet = (STATIC_DIR / "css" / "app.css").read_text(encoding="utf-8")
+    assert ":root" not in _COMMENT.sub("", stylesheet)
+
+
+def test_every_referenced_token_is_defined():
+    unresolved = {name: sorted(where) for name, where in _referenced_tokens().items()
+                  if name not in THEME}
+    assert not unresolved, f"undefined design tokens referenced: {unresolved}"

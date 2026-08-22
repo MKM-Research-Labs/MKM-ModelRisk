@@ -11,6 +11,10 @@
   <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml" />
   <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" sizes="any" />
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}" />
+  <!-- The design tokens (config/theme.py), generated so the values live in exactly
+       one place. Must precede app.css: every rule below resolves its var(--…)
+       against this block, and its own stamp changes when a token does. -->
+  <link rel="stylesheet" href="{{ url_for('views.theme_stylesheet') }}?v={{ theme_version }}" />
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v=asset_version) }}" />
 </head>
 <body>

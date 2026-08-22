@@ -20,10 +20,12 @@
 """HTML views (the single-page governance console)."""
 from __future__ import annotations
 
-from flask import Blueprint, current_app, render_template, request, send_from_directory
+from flask import (Blueprint, Response, current_app, render_template, request,
+                   send_from_directory)
 
 from src.identity import resolve_principal
 from src.web._assets import asset_version
+from src.web._theme import CSS_MIMETYPE, theme_css, theme_version
 
 views_bp = Blueprint("views", __name__)
 
@@ -40,7 +42,16 @@ def index():
         "index.html",
         actor_default=resolve_principal(request.headers).actor,
         asset_version=asset_version(),
+        theme_version=theme_version(),
     )
+
+
+# The design tokens (config/theme.py), served as the ``:root`` block that app.css
+# and every inline style resolve their ``var(--…)`` references against. Linked
+# ahead of app.css, so a token is defined before the first rule that reads it.
+@views_bp.get("/theme.css")
+def theme_stylesheet():
+    return Response(theme_css(), mimetype=CSS_MIMETYPE)
 
 
 # Browsers and iOS ask the site root for these regardless of what index.html

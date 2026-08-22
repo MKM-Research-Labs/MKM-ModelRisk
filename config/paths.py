@@ -40,6 +40,12 @@ CONTRACTS_V1_DIR = _REPO_ROOT / "contracts" / "ingest" / "v1"
 # The console's served static assets (JS/CSS), fingerprinted for cache-busting.
 STATIC_DIR = _REPO_ROOT / "src" / "static"
 
+# The console's Jinja templates. The app factory points Flask at these folders
+# relatively (rule R7); this is the absolute path, for the checks that read the
+# front end as files and must not depend on the working directory — a worktree
+# and the main checkout both have one, and a relative path finds the wrong tree.
+TEMPLATES_DIR = _REPO_ROOT / "src" / "templates"
+
 # The internal-disk backup script the app runs on a timer (see model.py).
 BACKUP_SCRIPT = _REPO_ROOT / "scripts" / "backup_db.sh"
 

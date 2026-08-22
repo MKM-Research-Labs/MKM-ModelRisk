@@ -1,6 +1,7 @@
 # Design: centralising look and feel into `config/theme`
 
-**Status:** Proposed — not started
+**Status:** Step 1 shipped 2026-08-22 (the token module, the served stylesheet and the
+vocabulary); steps 2–7 outstanding
 **Date:** 2026-08-21
 **Area:** `src/static`, `src/templates`, `config/`, `audit/`
 **Driver:** An ERM vendor is cloning ModelRisk into their suite as a new pillar. Their
@@ -107,7 +108,7 @@ Sequenced so the risky, high-value work lands first and every step ships on its 
 
 | # | Step | Why here |
 |---|---|---|
-| 1 | `config/theme.py` + `/theme.css` route + expand `:root` to the full token set | Nothing changes visually; the vocabulary now exists |
+| 1 | ✅ `config/theme.py` + `/theme.css` route + expand `:root` to the full token set | Nothing changes visually; the vocabulary now exists |
 | 2 | `risk_policy/_defaults.py` reads from it | Small; removes seeded colour literals from `src/` (an R1 fix), and they reach the console through `/api/risk-policy` |
 | 3 | The six colour maps in `helpers.js` → `Theme` | 28 hexes in one file, and every badge on every screen inherits |
 | 4 | `app.css`'s 60 raw hexes → `var(--…)` | Mechanical, CSS-only, easy to eyeball |
@@ -116,6 +117,18 @@ Sequenced so the risky, high-value work lands first and every step ships on its 
 | 7 | `audit/styling.py` + rule **R10** | What makes all of the above hold |
 
 Steps 1–4 are what the vendor actually needs. 5 and 6 are ours to finish afterwards.
+
+**Step 1, as built (2026-08-22).** 72 tokens in `config/theme.py`, serialised by
+`src/web/_theme.py` and served at `/theme.css`, which `index.html` links immediately
+ahead of `app.css` under its own content-hash stamp (`asset_version` watches files
+under `src/static` and cannot see a generated route, so the theme carries its own).
+`app.css` no longer declares a `:root` block. All 15 tokens it used to define carry
+through byte-identical; `--head-bg` was renamed `--raised` and its one reference
+updated. The remaining 57 tokens are the vocabulary steps 3–5 will consume, and are
+unreferenced until then. `tests/web/test_theme.py` holds the load-bearing invariant:
+every `var(--…)` the front end reads resolves to a token that exists — a missing one is
+silently dropped by the browser, so a rename would otherwise reach a screen as a
+colour quietly falling back to black.
 
 ## 6. Three traps to know before starting
 
