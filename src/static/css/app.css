@@ -1,23 +1,12 @@
 /* Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE. */
-/* Visual language mirrors the PhysicalRisk governance panel: light theme,
-   Arial, #1976d2 accent, card-based, RAG dots and tier badges. */
-:root {
-  --bg: #eef1f5;
-  --panel: #ffffff;
-  --line: #e0e0e0;
-  --line-soft: #eeeeee;
-  --text: #333333;
-  --text-2: #555555;
-  --muted: #888888;
-  --accent: #1976d2;
-  --accent-soft: #e3f2fd;
-  --accent-border: #bbdefb;
-  --green: #388e3c;
-  --amber: #f57c00;
-  --red: #d32f2f;
-  --grey: #9e9e9e;
-  --head-bg: #fafafa;
-}
+/* Visual language mirrors the PhysicalRisk governance panel: a light, card-based
+   theme with RAG dots and tier badges.
+
+   Every --token this file reads is defined in config/theme.py and served as
+   /theme.css, which index.html links immediately above this stylesheet. Do not
+   reintroduce a :root block here, and do not write a colour, size or radius
+   literal below — name a token instead, so an adopting institution rebrands in
+   one place. See docs/design/theme_config.md. */
 * { box-sizing: border-box; }
 body {
   margin: 0;
@@ -87,7 +76,7 @@ textarea { width: 100%; resize: vertical; }
 .btn.small { padding: 3px 9px; font-size: 11px; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); }
-th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; background: var(--head-bg); border-bottom: 2px solid var(--line); }
+th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; background: var(--raised); border-bottom: 2px solid var(--line); }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: #f7fbff; }
 .modelid { color: var(--accent); font-weight: 600; }
