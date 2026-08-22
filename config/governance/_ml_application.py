@@ -96,43 +96,43 @@ ML_APPLICATION_FIELD_SPECS = {
     # What decision this informs, and what it is not to be used for. First because
     # it is the question every other answer is judged against: a performance figure
     # means nothing until somebody has said what the thing is for.
-    "use_case": {"label": "Use case", "type": "textarea", "group": "ML"},
+    "use_case": {"label": "Use case", "type": "textarea", "group": "Estimator and method"},
     # Strict, like a model's ``type``: an ML Application cannot name an estimator
     # nobody has defined in Admin. The version is free text for now -- constraining
     # it to the chosen estimator's own list is a dependent dropdown, which nothing
     # in the reference specs does yet.
-    "estimator": {"label": "Estimator", "type": "text", "group": "ML",
+    "estimator": {"label": "Estimator", "type": "text", "group": "Estimator and method",
                   "reference": ESTIMATOR_LIST, "strict_reference": True},
-    "estimator_version": {"label": "Estimator version", "type": "text", "group": "ML"},
+    "estimator_version": {"label": "Estimator version", "type": "text", "group": "Estimator and method"},
     # SR 26-2 asks for the reasoning behind a choice, not just the choice. For an ML
     # Application the choice that most needs defending is the estimator: a gradient
     # boosting machine where a logistic regression would have done is the single
     # most common finding against an ML estate.
-    "estimator_rationale": {"label": "Why this estimator", "type": "textarea", "group": "ML"},
+    "estimator_rationale": {"label": "Why this estimator", "type": "textarea", "group": "Estimator and method"},
     # The estimator names the class; the methodology says what was actually done with
     # it ("Gradient Boosting Classification with binomial deviance loss"), which is
     # more than the class name carries.
-    "methodology": {"label": "Methodology", "type": "text", "group": "ML"},
-    "source_module": {"label": "Source module", "type": "text", "group": "ML"},
+    "methodology": {"label": "Methodology", "type": "text", "group": "Estimator and method"},
+    "source_module": {"label": "Source module", "type": "text", "group": "Estimator and method"},
     # Who supplies the ML Application itself, as opposed to the estimator it is built
     # on. Strict like a model's: it cannot name a vendor nobody has defined.
-    "vendor": {"label": "Vendor", "type": "text", "group": "ML",
+    "vendor": {"label": "Vendor", "type": "text", "group": "Estimator and method",
                "reference": "vendor", "strict_reference": True},
-    "category": {"label": "Category", "type": "text", "group": "ML"},
-    "training_data": {"label": "Training data", "type": "textarea", "group": "ML"},
-    "training_period": {"label": "Training period", "type": "text", "group": "ML"},
+    "category": {"label": "Category", "type": "text", "group": "Estimator and method"},
+    "training_data": {"label": "Training data", "type": "textarea", "group": "Estimator and method"},
+    "training_period": {"label": "Training period", "type": "text", "group": "Estimator and method"},
     # Deliberately not a named metric. Area under the curve is a CLASSIFICATION
     # metric; a regression model has RMSE, MAE and R-squared, and much of this
     # estate is regression. The record asks which metric and what it said, so both
     # can answer honestly.
     "performance": {"label": "Performance (metric and result)", "type": "textarea",
-                    "group": "ML"},
-    "benchmark": {"label": "Benchmark comparison", "type": "textarea", "group": "ML"},
+                    "group": "Estimator and method"},
+    "benchmark": {"label": "Benchmark comparison", "type": "textarea", "group": "Estimator and method"},
     # Where the output could be read as saying more than it does. Its own field
     # rather than a weakness because it is a risk of USE, not a defect of the
     # model -- the model can be sound and still be misread.
     "misinterpretation": {"label": "Scope for misinterpretation", "type": "textarea",
-                          "group": "ML"},
+                          "group": "Estimator and method"},
     # --- Classification. The same three dimensions, bands and heatmap a model
     #     carries, so an ML Application's categorisation is challenged on the same
     #     terms -- and so the ``analysis`` and ``evaluation`` probes count it. ---

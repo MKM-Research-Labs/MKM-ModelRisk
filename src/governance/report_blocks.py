@@ -77,18 +77,39 @@ def field_group(data: dict, title: str, keys: list[str], extra: list, *,
     return heading(title, _para_table(["Field", "Value"], rows, [0.28, 0.72], caption=title))
 
 
+def _shown(value: Any) -> str:
+    """A value as a reader should meet it.
+
+    A multi-value field is a list on the record and must not reach the page as one:
+    ``['rainfall_mm', 'soil_moisture']`` is a Python repr, not a sentence.
+    """
+    if isinstance(value, (list, tuple)):
+        return _wrappable(", ".join(str(v) for v in value))
+    return _wrappable(value)
+
+
+def visible(fields: list[dict]) -> list[dict]:
+    """The fields a reader should see.
+
+    A hidden field is bookkeeping the record keeps for itself -- which of a train's
+    values arrived by capture, a committee's stored file names. The screens already
+    filter them; a document that does not puts internal keys in front of a client.
+    """
+    return [f for f in fields if not f.get("hidden")]
+
+
 def blocks(entries: list[dict], fields: list[dict]) -> str:
     """One labelled block per item, each field on its own line so long rationales
     and evidence citations wrap instead of being squeezed into a table column."""
     out = []
     for index, item in enumerate(entries, start=1):
         lines = ["\\textbf{" + _esc(str(index)) + ".}\\quad "]
-        for field in fields:
+        for field in visible(fields):
             recorded = item.get(field["key"])
-            if recorded is None or recorded == "":
+            if recorded is None or recorded == "" or recorded == []:
                 continue
             lines.append("\\textbf{" + _esc(field["label"]) + ":} " +
-                         _wrappable(recorded) + " \\\\\n")
+                         _shown(recorded) + " \\\\\n")
         out.append("".join(lines).rstrip(" \\\n") + "\n\n")
     return "".join(out)
 
@@ -98,7 +119,7 @@ def collection(data: dict, name: str, label: str | None, *, specs: dict,
                entries: list[dict] | None = None) -> str:
     """One collection, as a table or as blocks depending on its declared layout."""
     spec = specs[name]
-    fields = spec["fields"]
+    fields = visible(spec["fields"])
     entries = items(data, name) if entries is None else entries
     title = label or spec["label"]
     if not entries:
@@ -106,7 +127,8 @@ def collection(data: dict, name: str, label: str | None, *, specs: dict,
     layout = layouts[name]
     if layout == "blocks":
         return heading(title, blocks(entries, fields))
-    rows = [[item.get(f["key"], "") for f in fields] for item in entries]
+    rows = [[_shown(item.get(f["key"], "")) if isinstance(item.get(f["key"]), (list, tuple))
+              else item.get(f["key"], "") for f in fields] for item in entries]
     return heading(title, _para_table([f["label"] for f in fields], rows, list(layout),
                                       caption=title))
 
