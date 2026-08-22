@@ -74,7 +74,7 @@ const ProductDetail = {
     const listview = document.getElementById("product-listview");
     if (listview) listview.style.display = "none";
     document.getElementById("product-detail").innerHTML =
-      '<div style="margin-bottom:12px"><button class="btn small" id="product-back">&lsaquo; All Products</button></div>' +
+      '<div style="margin-bottom:var(--space-6)"><button class="btn small" id="product-back">&lsaquo; All Products</button></div>' +
       '<div class="card">' + this._header(d) + this._tabbar(d) + '<div id="pt-content"></div></div>';
     document.getElementById("product-back").onclick = () => ProductDetail.close();
     document.querySelectorAll("[data-ptab]").forEach((b) => {
@@ -96,7 +96,7 @@ const ProductDetail = {
       '<div class="name">' + fieldDisplay(d.product) + "</div>" +
       '<div class="sub"><span class="code">' + fieldDisplay(d.identifier) + "</span> · " + esc(this._id) +
       (d.product_id ? " · " + esc(d.product_id) : "") + "</div>" +
-      '<div style="margin-top:8px">' + productStatusBadge(d.status, this._product.retired) + "</div></div>" +
+      '<div style="margin-top:var(--space-4)">' + productStatusBadge(d.status, this._product.retired) + "</div></div>" +
       '<div class="right"><div class="olabel">OWNER</div>' +
       '<div class="oname">' + fieldDisplay(d.owner) + "</div></div></div>";
   },
@@ -135,7 +135,7 @@ const ProductDetail = {
     }
     if (this._tab === "model_map") {
       box.innerHTML =
-        '<p class="muted" style="font-size:12px;margin-bottom:10px">The models this product is built ' +
+        '<p class="muted" style="font-size:var(--size-sm);margin-bottom:var(--space-5)">The models this product is built ' +
         "from (its components) and the feed-chain they sit in. Data sources sit on top and supply the models " +
         "beneath them (amber arrows); grey arrows run producer &rarr; consumer. Click any model to open it.</p>" +
         '<div id="pmap-host"></div>';
@@ -146,7 +146,7 @@ const ProductDetail = {
     if (this._tab === "risk") {
       box.innerHTML =
         '<div class="section-header">Risk assessment</div>' +
-        '<p class="muted" style="font-size:12px;margin:0 0 8px">The owner sets these; they place ' +
+        '<p class="muted" style="font-size:var(--size-sm);margin:0 0 var(--space-4)">The owner sets these; they place ' +
         "the product on the heatmap below, which becomes its rating once the MRC signs it off.</p>" +
         policyNotice(d.division) +
         this._riskTable(d) +
@@ -165,8 +165,8 @@ const ProductDetail = {
       // rows that could go stale — and the pack pulls in the full pack of every
       // model the product binds.
       box.innerHTML =
-        '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">' +
-        '<span class="muted" style="font-size:12px">The full write-up for this product, ' +
+        '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-5)">' +
+        '<span class="muted" style="font-size:var(--size-sm)">The full write-up for this product, ' +
         "generated from the current record — on its own, or zipped with the full pack of every " +
         "model it binds, to send on.</span>" +
         '<span><a class="btn small" href="/api/products/' + esc(this._id) +
@@ -207,7 +207,7 @@ const ProductDetail = {
     const refresh = () => this.show(this._id, this._tab, { scroll: false });
     const docOpts = { category: docCat, docs: d.documents || [], base: "/api/products/", id: this._id,
       retired: this._product.retired, refresh: refresh };
-    if (docCat) html += '<div class="section-header" style="margin-top:14px">Supporting documents</div>' +
+    if (docCat) html += '<div class="section-header" style="margin-top:var(--space-7)">Supporting documents</div>' +
       DocPanel.html(docOpts);
     box.innerHTML = html;
     Collections.bind("/api/products/" + this._id + "/collections/", { collections: [spec] },
@@ -232,7 +232,7 @@ const ProductDetail = {
       this._mrcRow(d) + this._mrcStatusRow(d);
     // Retire lives on the Danger tab; the Overview only flags a retired Product.
     const status = this._product.retired
-      ? '<div style="margin-top:14px"><span class="pill">retired — read only</span></div>' : "";
+      ? '<div style="margin-top:var(--space-7)"><span class="pill">retired — read only</span></div>' : "";
     return '<div class="grid2"><div>' + left + "</div><div>" + right + "</div></div>" + status;
   },
 
@@ -245,7 +245,7 @@ const ProductDetail = {
       const c = m.mrc;
       return head + '<div class="inforow"><div class="k">Committee</div><div class="v">' +
         esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
-        '<span class="muted" style="font-size:11px">' + esc(m.level || "") + "-level</div></div>";
+        '<span class="muted" style="font-size:var(--size-xs)">' + esc(m.level || "") + "-level</div></div>";
     }
     const org = [d.division, d.line_of_business].filter(Boolean).join(" / ") || "no division / line of business set";
     return head + '<div class="inforow"><div class="v" style="color:var(--red)">&#9888; ' +
@@ -262,7 +262,7 @@ const ProductDetail = {
     let value;
     if (latest) {
       const outcome = latest.outcome || "Approved";
-      const color = outcome === "Rejected" ? "var(--red)" : "#388e3c";
+      const color = outcome === "Rejected" ? "var(--red)" : Theme.value("green");
       value = '<span style="color:' + color + ';font-weight:600">' + esc(outcome) + "</span> at " +
         '<span class="code">' + esc(latest.meeting_id) + "</span>" +
         (latest.date ? " (" + esc(latest.date) + ")" : "");

@@ -59,7 +59,7 @@ Object.assign(MeetingDetail, {
       presenterOpts + "</select></div>" +
       '<div class="field"><label>Related model / product</label><select id="' + prefix + '-related">' +
       this._relatedOptions(related) + "</select></div></div>" +
-      '<div class="field" style="margin-top:8px"><label>Minutes</label>' +
+      '<div class="field" style="margin-top:var(--space-4)"><label>Minutes</label>' +
       '<textarea id="' + prefix + '-text" rows="5" style="width:100%;box-sizing:border-box">' +
       esc(item.text || "") + "</textarea></div>";
   },
@@ -78,9 +78,9 @@ Object.assign(MeetingDetail, {
     let num = 0;
     const self = this;
     const section = (heading, list) =>
-      '<div class="section-header" style="margin-top:14px">' + heading + "</div>" +
+      '<div class="section-header" style="margin-top:var(--space-7)">' + heading + "</div>" +
       (list.length ? list.map((it) => self._minuteCard(it, num++)).join("")
-        : '<div class="muted" style="font-size:12px;margin:4px 0 10px">— no minutes recorded —</div>');
+        : '<div class="muted" style="font-size:var(--size-sm);margin:var(--space-2) 0 var(--space-5)">— no minutes recorded —</div>');
     let html = '<div id="minutes-list">';
     agenda.forEach((a) => { html += section(esc(a.title || ""), byAgenda[a.item_id] || []); delete byAgenda[a.item_id]; });
     const general = Object.keys(byAgenda).reduce((acc, k) => acc.concat(byAgenda[k]), []);
@@ -89,10 +89,10 @@ Object.assign(MeetingDetail, {
     const agendaOpts = ['<option value="">— General —</option>'].concat(agenda.map((a) =>
       '<option value="' + esc(a.item_id) + '">' + esc(a.title || a.item_id) + "</option>")).join("");
     return html +
-      '<div class="section-header" style="margin-top:16px">Add minute</div>' +
+      '<div class="section-header" style="margin-top:var(--space-8)">Add minute</div>' +
       '<div class="field"><label>Agenda item</label><select id="madd-agenda">' + agendaOpts + "</select></div>" +
       this._minuteForm("madd", null) +
-      '<div class="row" style="margin-top:8px"><button class="btn small primary" id="madd-btn">Add&hellip;</button></div>';
+      '<div class="row" style="margin-top:var(--space-4)"><button class="btn small primary" id="madd-btn">Add&hellip;</button></div>';
   },
 
   _minuteCard(item, idx) {
@@ -106,13 +106,13 @@ Object.assign(MeetingDetail, {
     const signoff = (item.title || "").indexOf("Sign-off approved") === 0;
     const remove = signoff ? "" :
       ' <button class="btn small danger" data-minrm="' + esc(item.item_id) + '">Remove</button>';
-    return '<div class="card" style="margin-bottom:8px" id="minrow-' + esc(item.item_id) + '">' +
+    return '<div class="card" style="margin-bottom:var(--space-4)" id="minrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b></div>" +
       '<div class="rowact"><button class="btn small" data-mined="' + esc(item.item_id) + '">Edit</button>' +
       remove + "</div></div>" +
-      '<div class="muted" style="margin-top:6px">' + meta.join(" &nbsp;·&nbsp; ") + "</div>" +
-      (item.text ? '<div style="margin-top:6px;white-space:pre-wrap">' + esc(item.text) + "</div>" : "") +
+      '<div class="muted" style="margin-top:var(--space-3)">' + meta.join(" &nbsp;·&nbsp; ") + "</div>" +
+      (item.text ? '<div style="margin-top:var(--space-3);white-space:pre-wrap">' + esc(item.text) + "</div>" : "") +
       "</div>";
   },
 
@@ -127,7 +127,7 @@ Object.assign(MeetingDetail, {
   _minuteEdit(item) {
     const card = document.getElementById("minrow-" + item.item_id);
     card.innerHTML = this._minuteForm("med", item) +
-      '<div class="row" style="margin-top:8px">' +
+      '<div class="row" style="margin-top:var(--space-4)">' +
       '<button class="btn small primary" id="med-save">Save&hellip;</button> ' +
       '<button class="btn small" id="med-cancel">Cancel</button></div>';
     document.getElementById("med-cancel").onclick = () => this.show(this._id, "minutes");

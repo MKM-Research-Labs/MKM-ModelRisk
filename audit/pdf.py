@@ -70,7 +70,7 @@ def _styling_body(report: dict) -> str:
         + _findings_section("R10 — Undefined design tokens", report["undefined_tokens"],
                             ["File", "Line", "Token"],
                             lambda f: [f["path"], f["line"], f["snippet"]])
-        + _findings_section("R10 — Colour literals in JavaScript (reported)",
+        + _findings_section("R10 — Colour literals in ungated asset types (reported)",
                             report["styling_backlog"], ["File", "Line", "Colour"],
                             lambda f: [f["path"], f["line"], f["snippet"]])
     )
@@ -247,7 +247,7 @@ def _summary_table(report: dict) -> str:
             ["R10", "Colours live only in config/theme", _result(report["styling"])],
             ["R10", "Every design token referenced is defined",
              _result(report["undefined_tokens"])],
-            ["R10", "Colour literals still to convert (JavaScript)",
+            ["R10", "Colour literals in asset types outside the gate",
              _reported(report["styling_backlog"])],
         ],
     )

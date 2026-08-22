@@ -59,8 +59,8 @@ Object.assign(ProductDetail, {
       // Owner's RAG alongside the heatmap ("Table") RAG — any divergence needing
       // MRC sign-off is visible at a glance, exactly as on a model.
       const tableRag = (this._risk.heatmap || {}).rag;
-      value = '<span class="muted" style="font-size:11px">Owner</span> ' + ragBadge(d[key], d.division) +
-        '<span class="muted" style="font-size:11px;margin-left:12px">Table</span> ' +
+      value = '<span class="muted" style="font-size:var(--size-xs)">Owner</span> ' + ragBadge(d[key], d.division) +
+        '<span class="muted" style="font-size:var(--size-xs);margin-left:var(--space-6)">Table</span> ' +
         (tableRag ? ragBadge(tableRag, d.division) : '<span class="muted">&mdash;</span>');
     } else if (DetailShell.fieldValue(key, f, d) !== null) {
       // The three risk dimensions, shown as the admin defined the band (colour, name,

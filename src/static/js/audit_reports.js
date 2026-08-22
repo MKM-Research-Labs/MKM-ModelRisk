@@ -36,7 +36,7 @@ const AuditReports = {
       "JUnit results and the Test Report. Files are written to uploads/audit/ (gitignored)." +
       "</p>" +
       '<p class="muted" id="ar-cov-note"></p>' +
-      '<div class="rgrid" style="margin-top:12px">' + cards + "</div></div>";
+      '<div class="rgrid" style="margin-top:var(--space-6)">' + cards + "</div></div>";
     document.getElementById("ar-generate").onclick = () => this._generate();
     this._resumeCoverage();          // reflect an in-flight coverage refresh, if any
   },
@@ -59,7 +59,7 @@ const AuditReports = {
       actions = view + '<a class="btn small" href="' + url + '" download>Download</a>';
     }
     return '<div class="rcard"><div class="rlabel">' + esc(r.label) + "</div>" + meta +
-      '<div class="row" style="margin-top:10px">' + actions + "</div></div>";
+      '<div class="row" style="margin-top:var(--space-5)">' + actions + "</div></div>";
   },
 
   // Poll the background coverage refresh: show progress, and re-render (so the

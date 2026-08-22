@@ -74,16 +74,16 @@ const MRC = {
     const card = (label, value, color) =>
       '<div class="scard" style="border-left-color:' + color + ';flex:1"><div class="lbl">' +
       label + '</div><div class="val" style="font-size:15px">' + fieldDisplay(value) + "</div></div>";
-    return '<div class="summary" style="margin-bottom:14px">' +
+    return '<div class="summary" style="margin-bottom:var(--space-7)">' +
       card("MRC", (c.name || c.value) + " · " + fieldDisplay(c.level) +
-        (c.scope_value ? " (" + esc(c.scope_value) + ")" : ""), "#1976d2") +
-      card("CHAIR", c.chair, "#1976d2") +
-      card("FREQUENCY", c.frequency, "#f57c00") + "</div>";
+        (c.scope_value ? " (" + esc(c.scope_value) + ")" : ""), Theme.value("accent")) +
+      card("CHAIR", c.chair, Theme.value("accent")) +
+      card("FREQUENCY", c.frequency, Theme.value("amber")) + "</div>";
   },
 
   _torCard(c) {
     if (!c.tor_filename) return "";
-    return '<div class="card" style="display:flex;align-items:center;gap:12px">' +
+    return '<div class="card" style="display:flex;align-items:center;gap:var(--space-6)">' +
       "<span><b>Terms of Reference:</b> " +
       '<a href="/api/reference/collections/mrc/' + esc(c.item_id) + '/tor" target="_blank">&darr; ' +
       esc(c.tor_original_name || "Terms of Reference") + "</a></span></div>";
@@ -129,9 +129,9 @@ const MRC = {
       '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
       lbl + '</div><div class="val">' + v + "</div></div>";
     return '<div class="summary">' +
-      card("Total", meetings.length, "#1976d2") +
-      card("Scheduled", c("Scheduled"), "#1976d2") +
-      card("Completed", c("Completed"), "#388e3c") + "</div>";
+      card("Total", meetings.length, Theme.value("accent")) +
+      card("Scheduled", c("Scheduled"), Theme.value("accent")) +
+      card("Completed", c("Completed"), Theme.value("green")) + "</div>";
   },
 
   async loadList() {

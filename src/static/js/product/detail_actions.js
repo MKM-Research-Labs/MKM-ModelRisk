@@ -27,7 +27,7 @@ Object.assign(ProductDetail, {
       ? actions.map((a) => this._actionCard(a)).join("")
       : '<div class="empty">No actions yet.</div>';
     const add = this._product.retired ? "" :
-      '<div class="section-header" style="margin-top:14px">Add action</div>' +
+      '<div class="section-header" style="margin-top:var(--space-7)">Add action</div>' +
       '<div class="row" style="flex-wrap:wrap;align-items:flex-end">' +
       '<div class="field"><label>Action *</label><input id="pact-desc"></div>' +
       '<div class="field"><label>Owner</label><input id="pact-owner"></div>' +
@@ -42,28 +42,28 @@ Object.assign(ProductDetail, {
     const retired = this._product.retired;
     const updates = a.updates || [];
     const hist = updates.length
-      ? updates.map((u) => '<div class="prow"><div style="font-size:12px">' +
+      ? updates.map((u) => '<div class="prow"><div style="font-size:var(--size-sm)">' +
           (u.date ? '<span class="code">' + esc(u.date) + "</span> " : "") + esc(u.note || "") +
           (u.target_date ? ' <span class="muted">→ target ' + esc(u.target_date) + "</span>" : "") +
           "</div>" + statusBadge(u.status) + "</div>").join("")
-      : '<div class="muted" style="font-size:11px">No updates yet.</div>';
+      : '<div class="muted" style="font-size:var(--size-xs)">No updates yet.</div>';
     const addUpd = retired ? "" :
-      '<div class="row" style="margin-top:6px;flex-wrap:wrap;align-items:flex-end">' +
+      '<div class="row" style="margin-top:var(--space-3);flex-wrap:wrap;align-items:flex-end">' +
       '<div class="field"><label>Update note</label><input id="pupd-note-' + esc(a.item_id) + '"></div>' +
       '<div class="field"><label>Revised target</label><input type="date" id="pupd-target-' + esc(a.item_id) + '"></div>' +
       '<div class="field"><label>Status</label><select id="pupd-status-' + esc(a.item_id) + '">' +
       ["Open", "Closed"].map((s) => "<option" + (s === a.status ? " selected" : "") + ">" + s + "</option>").join("") +
       '</select></div><button class="btn small" data-pact-update="' + esc(a.item_id) + '">Add update</button></div>';
-    return '<div class="card" style="margin-bottom:8px">' +
+    return '<div class="card" style="margin-bottom:var(--space-4)">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + esc(a.description) + "</b>" +
-      '<div class="muted" style="font-size:11px;margin-top:2px">' +
+      '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-1)">' +
       (a.owner ? "Owner: " + esc(a.owner) + " &nbsp;·&nbsp; " : "") +
       "Target: " + fieldDisplay(a.target_date) + "</div></div>" +
       '<div class="rowact">' + statusBadge(a.status) +
       (retired ? "" : ' <button class="btn small danger" data-pact-rm="' + esc(a.item_id) + '">Remove</button>') +
       "</div></div>" +
-      '<div class="section-header" style="margin-top:8px;font-size:11px">Update history</div>' + hist + addUpd +
+      '<div class="section-header" style="margin-top:var(--space-4);font-size:var(--size-xs)">Update history</div>' + hist + addUpd +
       "</div>";
   },
 

@@ -167,7 +167,8 @@ def main(argv=None) -> int:
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     _print_section("R6 .json file I/O under source (reported)", report["json_files"],
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
-    _print_section("R10 colour literals in JavaScript (reported)", report["styling_backlog"],
+    _print_section("R10 colour literals in ungated asset types (reported)",
+                   report["styling_backlog"],
                    lambda f: f"{f['path']}:{f['line']}  {f['snippet']}")
     cov = report["coverage"]
     if cov["available"]:

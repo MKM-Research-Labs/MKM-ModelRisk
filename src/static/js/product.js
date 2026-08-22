@@ -21,10 +21,9 @@
 // A coloured status pill (shared with the Product detail view).
 function productStatusBadge(status, retired) {
   if (retired) return '<span class="pill">retired</span>';
-  const colors = { Active: "#388e3c", Proposed: "#0288d1", Suspended: "#f57c00", Retired: "#9e9e9e" };
-  const c = colors[status] || "#9e9e9e";
-  return '<span style="display:inline-block;padding:2px 9px;border-radius:10px;color:#fff;' +
-    'font-size:12px;background:' + c + '">' + esc(status || "—") + "</span>";
+  const c = Theme.colour("product_status", status);
+  return '<span style="display:inline-block;padding:var(--space-1) 9px;border-radius:var(--radius-xl);color:var(--inverse);' +
+    'font-size:var(--size-sm);background:' + c + '">' + esc(status || "—") + "</span>";
 }
 
 // Products (Product Valuation Models): one Analytics Model can underpin many Products.
@@ -70,7 +69,7 @@ const Product = {
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Product Valuation Models</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="product-register">+ Register Product</button></div>' +
-      '<div id="product-list" style="margin-top:12px"></div></div></div>' +
+      '<div id="product-list" style="margin-top:var(--space-6)"></div></div></div>' +
       '<div id="product-detail"></div>';
     document.getElementById("product-register").onclick = () => this.openRegister();
     await this.loadList();
@@ -112,11 +111,11 @@ const Product = {
       '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
       lbl + '</div><div class="val">' + v + "</div></div>";
     return '<div class="summary">' +
-      card("Total", products.length, "#1976d2") +
-      card("Active", n("Active"), "#388e3c") +
-      card("Proposed", n("Proposed"), "#0288d1") +
-      card("Suspended", n("Suspended"), "#f57c00") +
-      card("Retired", products.filter((p) => p.retired).length, "#9e9e9e") +
+      card("Total", products.length, Theme.value("accent")) +
+      card("Active", n("Active"), Theme.value("green")) +
+      card("Proposed", n("Proposed"), Theme.value("info")) +
+      card("Suspended", n("Suspended"), Theme.value("amber")) +
+      card("Retired", products.filter((p) => p.retired).length, Theme.value("grey")) +
       "</div>";
   },
 

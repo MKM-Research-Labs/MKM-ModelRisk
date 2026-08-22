@@ -51,10 +51,10 @@ Object.assign(MeetingDetail, {
       : "";
     const model = action.model_id
       ? " " + this._subjectLabelHtml(action.model_id) + " &middot;" : "";
-    return '<div class="prow"><div style="font-size:12px">' +
+    return '<div class="prow"><div style="font-size:var(--size-sm)">' +
       '<span class="code">' + esc(action.item_id) + "</span>" + model + " " +
       esc(action.description || "") +
-      '<div class="muted" style="font-size:11px">Owners: ' +
+      '<div class="muted" style="font-size:var(--size-xs)">Owners: ' +
       (owners.length ? esc(owners.join(", ")) : "unassigned") + from + "</div></div>" +
       '<div class="rowact">' + (trailing || statusBadge(action.status)) + "</div></div>";
   },
@@ -66,21 +66,21 @@ Object.assign(MeetingDetail, {
     const rows = this._outstandingActions();
     let body;
     if (rows === null) {
-      body = '<div class="muted" style="font-size:12px">Loading outstanding actions…</div>';
+      body = '<div class="muted" style="font-size:var(--size-sm)">Loading outstanding actions…</div>';
     } else {
       const requested = closureRequestedActions(rows);
       const still = rows.filter((a) => requested.indexOf(a) < 0);
-      body = '<div class="section-header" style="margin-top:8px;font-size:11px">' +
+      body = '<div class="section-header" style="margin-top:var(--space-4);font-size:var(--size-xs)">' +
         "Outstanding (" + still.length + ")</div>" +
         (still.length ? still.map((a) => this._outstandingRow(a)).join("")
-          : '<div class="muted" style="font-size:11px">Nothing outstanding.</div>') +
-        '<div class="section-header" style="margin-top:10px;font-size:11px">' +
+          : '<div class="muted" style="font-size:var(--size-xs)">Nothing outstanding.</div>') +
+        '<div class="section-header" style="margin-top:var(--space-5);font-size:var(--size-xs)">' +
         "Closure requested (" + requested.length + ")</div>" +
         (requested.length
           ? requested.map((a) => this._outstandingRow(a)).join("") +
-            '<div class="muted" style="font-size:11px;margin-top:4px">Ratify or decline ' +
+            '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-2)">Ratify or decline ' +
             "each of these under Signoff &rarr; Action closures.</div>"
-          : '<div class="muted" style="font-size:11px">None awaiting the committee.</div>');
+          : '<div class="muted" style="font-size:var(--size-xs)">None awaiting the committee.</div>');
     }
     const actions = done ? statusBadge("Completed")
       : '<button class="btn small primary" data-ag-confirm="actions_review" data-ag-id="' +
@@ -93,7 +93,7 @@ Object.assign(MeetingDetail, {
   _closureSignoffRows() {
     const rows = this._outstandingActions();
     if (rows === null) {
-      return '<div class="muted" style="font-size:12px">Loading closure requests…</div>';
+      return '<div class="muted" style="font-size:var(--size-sm)">Loading closure requests…</div>';
     }
     const requested = closureRequestedActions(rows);
     if (!requested.length) {
@@ -105,7 +105,7 @@ Object.assign(MeetingDetail, {
         '" data-clsrc="' + esc(a.meeting_id || this._id) + '">Approve</button> ' +
         '<button class="btn small danger" data-clreject="' + esc(a.item_id) +
         '" data-clsrc="' + esc(a.meeting_id || this._id) + '">Reject</button>';
-      return '<div class="card" style="margin-bottom:8px">' +
+      return '<div class="card" style="margin-bottom:var(--space-4)">' +
         this._outstandingRow(a, decide) + this._closureEvidence(a) + "</div>";
     }).join("");
   },
@@ -115,11 +115,11 @@ Object.assign(MeetingDetail, {
   _closureEvidence(action) {
     const withFiles = (action.updates || []).filter((u) => u.filename);
     if (!withFiles.length) {
-      return '<div class="muted" style="font-size:11px">No supporting evidence attached.</div>';
+      return '<div class="muted" style="font-size:var(--size-xs)">No supporting evidence attached.</div>';
     }
     const base = "/api/meetings/" + encodeURIComponent(action.meeting_id || this._id) +
       "/collections/actions/" + encodeURIComponent(action.item_id) + "/evidence/";
-    return '<div style="font-size:11px">Evidence: ' + withFiles.map((u) =>
+    return '<div style="font-size:var(--size-xs)">Evidence: ' + withFiles.map((u) =>
       '<a href="' + base + encodeURIComponent(u.filename) + '">&darr; ' +
       esc(u.original_name || u.filename) + "</a>").join(" &nbsp; ") + "</div>";
   },

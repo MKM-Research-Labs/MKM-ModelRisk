@@ -76,7 +76,7 @@ Object.assign(MeetingDetail, {
   _ownerBoxes(group, ticked) {
     const people = this._actionField("owner").options || [];
     if (!people.length) {
-      return '<span class="muted" style="font-size:11px">No people in the directory — ' +
+      return '<span class="muted" style="font-size:var(--size-xs)">No people in the directory — ' +
         "add them under Admin &rarr; People.</span>";
     }
     return people.map((person) =>
@@ -117,17 +117,17 @@ Object.assign(MeetingDetail, {
 
   _actionAddForm() {
     if (this._actionsLocked()) {
-      return '<p class="muted" style="margin-top:12px">This meeting is closed — its actions ' +
+      return '<p class="muted" style="margin-top:var(--space-6)">This meeting is closed — its actions ' +
         "can no longer be changed.</p>";
     }
-    return '<div class="section-header" style="margin-top:14px">Agree an action</div>' +
+    return '<div class="section-header" style="margin-top:var(--space-7)">Agree an action</div>' +
       '<div class="row" style="flex-wrap:wrap;align-items:flex-end">' +
       '<div class="field"><label>Model</label>' + this._actionModelSelect("mact-model", "") + "</div>" +
       '<div class="field" style="flex:1;min-width:240px"><label>Action *</label>' +
       '<input id="mact-desc" style="width:100%"></div></div>' +
-      '<div class="field" style="margin-top:6px"><label>Owners</label>' +
+      '<div class="field" style="margin-top:var(--space-3)"><label>Owners</label>' +
       '<div id="mact-owners">' + this._ownerBoxes("mact-owners", []) + "</div></div>" +
-      '<div class="row" style="margin-top:8px">' +
+      '<div class="row" style="margin-top:var(--space-4)">' +
       '<div class="field"><label>Status</label>' + this._actionStatusSelect("mact-status", "") +
       "</div>" +
       '<button class="btn small primary" id="mact-add">Add&hellip;</button></div>';
@@ -139,19 +139,19 @@ Object.assign(MeetingDetail, {
       ? "Model: " + this._subjectLabelHtml(action.model_id) + " &nbsp;·&nbsp; " : "";
     const remove = this._actionsLocked() ? "" :
       ' <button class="btn small danger" data-mact-rm="' + esc(action.item_id) + '">Remove</button>';
-    return '<div class="card" style="margin-bottom:8px">' +
+    return '<div class="card" style="margin-bottom:var(--space-4)">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + esc(action.description || "") + "</b>" +
-      '<div class="muted" style="font-size:11px;margin-top:2px">' + model +
+      '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-1)">' + model +
       "Owners: " + (owners.length ? esc(owners.join(", ")) : "unassigned") + "</div></div>" +
       '<div class="rowact">' + statusBadge(action.status) + remove + "</div></div>" +
-      '<div class="section-header" style="margin-top:8px;font-size:11px">Update history</div>' +
+      '<div class="section-header" style="margin-top:var(--space-4);font-size:var(--size-xs)">Update history</div>' +
       this._actionUpdates(action) + this._actionUpdateForm(action) + "</div>";
   },
 
   _actionUpdates(action) {
     const updates = action.updates || [];
-    if (!updates.length) return '<div class="muted" style="font-size:11px">No updates yet.</div>';
+    if (!updates.length) return '<div class="muted" style="font-size:var(--size-xs)">No updates yet.</div>';
     const base = "/api/meetings/" + this._id + "/collections/actions/" +
       encodeURIComponent(action.item_id) + "/evidence/";
     return updates.map((u) => {
@@ -159,7 +159,7 @@ Object.assign(MeetingDetail, {
         ? ' <a href="' + base + encodeURIComponent(u.filename) + '">&darr; ' +
           esc(u.original_name || u.filename) + "</a>"
         : "";
-      return '<div class="prow"><div style="font-size:12px">' +
+      return '<div class="prow"><div style="font-size:var(--size-sm)">' +
         (u.date ? '<span class="code">' + esc(u.date) + "</span> " : "") + esc(u.note || "") +
         (u.owners ? ' <span class="muted">→ ' + esc(u.owners) + "</span>" : "") +
         evidence + "</div>" + statusBadge(u.status) + "</div>";
@@ -176,17 +176,17 @@ Object.assign(MeetingDetail, {
     // meeting, not something an owner does by posting one more update — offering the
     // form here would let a ratified closure be undone without anyone ratifying that.
     if (action.status === CLOSED_ACTION_STATUS) {
-      return '<div class="muted" style="font-size:11px;margin-top:6px">Closed by the ' +
+      return '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-3)">Closed by the ' +
         "committee. Reopening it is a decision for a meeting.</div>";
     }
     const id = esc(action.item_id);
     const awaiting = action.status === REQUESTED_CLOSURE_ACTION_STATUS
-      ? '<div class="muted" style="font-size:11px;margin-top:6px">Closure requested — ' +
+      ? '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-3)">Closure requested — ' +
         "the committee ratifies it at its next meeting; until then the action stays " +
         "outstanding.</div>"
       : "";
     return awaiting +
-      '<div class="row" style="margin-top:6px;flex-wrap:wrap;align-items:flex-end">' +
+      '<div class="row" style="margin-top:var(--space-3);flex-wrap:wrap;align-items:flex-end">' +
       '<div class="field" style="flex:1;min-width:200px"><label>Update note</label>' +
       '<input id="mupd-note-' + id + '" style="width:100%"></div>' +
       '<div class="field"><label>Supporting evidence</label>' +

@@ -47,25 +47,25 @@ Object.assign(MeetingDetail, {
     // Finalise/distribute bar: once the chair/secretary locks the agenda it is
     // read-only and can be downloaded as a distribution pack (ZIP) for members.
     const bar = locked
-      ? '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">' +
-        '<span class="badge" style="background:#388e3c">Agenda finalised</span><span>' +
+      ? '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-5)">' +
+        '<span class="badge" style="background:var(--green)">Agenda finalised</span><span>' +
         '<a class="btn small primary" href="/api/meetings/' + esc(this._id) +
         '/distribution.zip">&darr; Distribution pack (ZIP)</a> ' +
         '<button class="btn small" data-agenda-unlock="1">Unlock</button></span></div>'
-      : '<div class="row" style="justify-content:flex-end;margin-bottom:10px">' +
+      : '<div class="row" style="justify-content:flex-end;margin-bottom:var(--space-5)">' +
         '<button class="btn small" data-agenda-lock="1">Finalise agenda for distribution&hellip;</button></div>';
     let html = bar + '<div id="agenda-list">' + cards + "</div>" + this._eventReviewSection();
     if (!locked) {
       const names = this._participantNames(this._meeting.data || {});
       const presenterOpts = ['<option value=""></option>'].concat(
         names.map((n) => "<option>" + esc(n) + "</option>")).join("");
-      html += '<div class="section-header" style="margin-top:14px">Add agenda item</div>' +
+      html += '<div class="section-header" style="margin-top:var(--space-7)">Add agenda item</div>' +
         '<div class="row" style="flex-wrap:wrap;align-items:flex-end">' +
         '<div class="field"><label>Title *</label><input id="ag-add-title"></div>' +
         '<div class="field"><label>Description</label><input id="ag-add-description"></div>' +
         '<div class="field"><label>Presenter</label><select id="ag-add-presenter">' + presenterOpts + "</select></div>" +
         '<button class="btn small primary" id="ag-add">Add&hellip;</button></div>' +
-        '<p class="muted" style="font-size:11px;margin-top:4px">Attach a document from the item once added.</p>';
+        '<p class="muted" style="font-size:var(--size-xs);margin-top:var(--space-2)">Attach a document from the item once added.</p>';
     }
     return html;
   },
@@ -83,13 +83,13 @@ Object.assign(MeetingDetail, {
       '<button class="btn small danger" data-agrm="' + esc(item.item_id) + '">Remove</button> ') +
       (done ? "" : '<button class="btn small primary" data-agdone="' + esc(item.item_id) +
         '">Mark reviewed</button>');
-    return '<div class="card" style="margin-bottom:8px" id="agrow-' + esc(item.item_id) + '">' +
+    return '<div class="card" style="margin-bottom:var(--space-4)" id="agrow-' + esc(item.item_id) + '">' +
       '<div class="row" style="justify-content:space-between;align-items:flex-start">' +
       "<div><b>" + (idx + 1) + ". " + esc(item.title || "") + "</b>" +
-      (item.description ? '<div class="muted" style="margin-top:2px">' + esc(item.description) + "</div>" : "") +
+      (item.description ? '<div class="muted" style="margin-top:var(--space-1)">' + esc(item.description) + "</div>" : "") +
       '</div><div class="rowact">' + actions + "</div></div>" +
-      '<div class="muted" style="margin-top:8px">' + meta.join(" &nbsp;·&nbsp; ") + "</div>" +
-      '<div style="margin-top:6px;font-size:12px">' + this._agendaDoc(item) + "</div></div>";
+      '<div class="muted" style="margin-top:var(--space-4)">' + meta.join(" &nbsp;·&nbsp; ") + "</div>" +
+      '<div style="margin-top:var(--space-3);font-size:var(--size-sm)">' + this._agendaDoc(item) + "</div></div>";
   },
 
   // Operational events fed up from products (allocated when the meeting was
@@ -101,7 +101,7 @@ Object.assign(MeetingDetail, {
   _eventReviewSection() {
     const items = this._eventReviewItems();
     if (!items.length) return "";
-    return '<div class="section-header" style="margin-top:16px">Operational events for review</div>' +
+    return '<div class="section-header" style="margin-top:var(--space-8)">Operational events for review</div>' +
       '<p class="muted">Events raised on this committee’s products. Receive each one, ' +
       "recording comments and any action items from the discussion.</p>" +
       items.map((it) => this._eventCard(it)).join("");
@@ -110,12 +110,12 @@ Object.assign(MeetingDetail, {
   _eventCard(item) {
     const title = "<b>" + esc(item.title || "") + "</b>";
     if (item.status === "Completed") {
-      return '<div class="card" style="margin-bottom:8px">' + title +
-        ' <span class="badge" style="background:#388e3c">Received</span></div>';
+      return '<div class="card" style="margin-bottom:var(--space-4)">' + title +
+        ' <span class="badge" style="background:var(--green)">Received</span></div>';
     }
     const id = esc(item.item_id);
-    return '<div class="card" style="margin-bottom:8px" id="evrow-' + id + '">' + title +
-      '<div class="field" style="max-width:none;margin-top:8px"><label>Comments</label>' +
+    return '<div class="card" style="margin-bottom:var(--space-4)" id="evrow-' + id + '">' + title +
+      '<div class="field" style="max-width:none;margin-top:var(--space-4)"><label>Comments</label>' +
       '<textarea id="ev-comments-' + id + '" rows="2"></textarea></div>' +
       '<div class="field" style="max-width:none"><label>Action items (one per line)</label>' +
       '<textarea id="ev-actions-' + id + '" rows="2" placeholder="e.g. Add a feed heartbeat alarm"></textarea></div>' +

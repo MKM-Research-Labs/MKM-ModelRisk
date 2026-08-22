@@ -106,6 +106,20 @@ STATE = {
     "warn-bg-alt": "#fef3c7",
     "warn-ink": "#92400e",
     "warn-line": "#d97706",
+    # A heavier warn ink for a heading, where warn-ink on a pale ground reads too light.
+    "warn-ink-alt": "#b26a00",
+    # The success counterpart of danger-bg: a confirmed row rather than a warned one.
+    "ok-bg": "#e8f5e9",
+}
+
+# --- Hues that distinguish a state without asserting a risk rating ----------------
+# Deliberately outside RAG: a Product being "Proposed" or a challenge being open is a
+# lifecycle fact, and drawing it in a rating colour would read as a rating.
+HUE = {
+    "info": "#0288d1",
+    "violet": "#8e24aa",
+    "blue-grey": "#607d8b",
+    "gold": "#b8860b",
 }
 
 # --- The graph canvases (model chain, neighbourhood, product component map). ------
@@ -123,6 +137,13 @@ GRAPH = {
     "node-sub": "#4b5563",
     "tray-bg": "#fbfcfe",
     "toast-bg": "#323232",
+    # A hibernated node: drawn on the sunken surface with a stroke that recedes.
+    "node-retired": "#bbbbbb",
+    # The Product box on a component map, and the edges running into it.
+    "product": "#5e35b1",
+    "product-bg": "#ede7f6",
+    "product-ink": "#4527a0",
+    "product-edge": "#7e57c2",
 }
 
 # --- Type. ``family`` is the whole stack, so an adopter's face and its fallbacks ---
@@ -140,13 +161,21 @@ TYPE = {
     "size-xl": "20px",
 }
 
+# A 2px step. The console reaches for every rung of it — 8px 82 times, 6px 41, 10px 38 —
+# so a scale that skipped the odd rungs would have forced half the markup to keep a
+# literal, which is how the type and spacing scales came to be undeclared in the first
+# place. An adopter tightens or loosens the whole interface by editing these.
 SPACE = {
-    "space-1": "4px",
-    "space-2": "6px",
-    "space-3": "8px",
-    "space-4": "12px",
-    "space-5": "16px",
-    "space-6": "24px",
+    "space-1": "2px",
+    "space-2": "4px",
+    "space-3": "6px",
+    "space-4": "8px",
+    "space-5": "10px",
+    "space-6": "12px",
+    "space-7": "14px",
+    "space-8": "16px",
+    "space-9": "18px",
+    "space-10": "24px",
 }
 
 RADIUS = {
@@ -213,6 +242,10 @@ STATUS_COLOUR_TOKENS = {
                   "Not placed": "grey", "Approved": "green"},
     "lifecycle": {"New": "accent", "Being Enhanced": "amber",
                   "No New Development": "grey", "Marked for Removal": "red"},
+    "product_status": {"Active": "green", "Proposed": "info", "Suspended": "amber",
+                       "Retired": "grey"},
+    # A reviewer's challenge: outstanding, or answered by the owner.
+    "review_thread": {"open": "violet", "answered": "blue-grey"},
 }
 
 # What an unrecognised value is drawn in, per domain. A domain absent from here has no
@@ -222,6 +255,7 @@ STATUS_COLOUR_DEFAULTS = {
     "validation_question": "grey",
     "mrc_state": "grey",
     "lifecycle": "grey",
+    "product_status": "grey",
 }
 
 # The groups in the order they are emitted, so the served stylesheet reads in the
@@ -233,6 +267,7 @@ THEME_GROUPS = (
     ("rag", RAG),
     ("state", STATE),
     ("graph", GRAPH),
+    ("hue", HUE),
     ("type", TYPE),
     ("space", SPACE),
     ("radius", RADIUS),

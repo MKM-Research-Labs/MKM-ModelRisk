@@ -40,13 +40,13 @@ const DocPanel = {
           (d.description ? ' <span class="muted">— ' + esc(d.description) + "</span>" : "") +
           (opts.retired ? "" : ' <button class="btn small danger" data-' + p + '-rm="' +
             esc(d.item_id) + '">&times;</button>') + "</div>").join("")
-      : '<div class="muted" style="font-size:12px">No documents.</div>';
+      : '<div class="muted" style="font-size:var(--size-sm)">No documents.</div>';
     const upload = opts.retired ? "" :
-      '<div class="row" style="align-items:center;margin-top:6px;gap:6px">' +
-      '<input type="file" id="' + p + '-file" style="font-size:12px">' +
-      '<input id="' + p + '-desc" placeholder="Description (optional)" style="flex:1;font-size:12px">' +
+      '<div class="row" style="align-items:center;margin-top:var(--space-3);gap:var(--space-3)">' +
+      '<input type="file" id="' + p + '-file" style="font-size:var(--size-sm)">' +
+      '<input id="' + p + '-desc" placeholder="Description (optional)" style="flex:1;font-size:var(--size-sm)">' +
       '<button class="btn small primary" id="' + p + '-upload">Upload</button></div>';
-    return '<div class="dp-panel" style="margin:4px 0 12px">' + rows + upload + "</div>";
+    return '<div class="dp-panel" style="margin:var(--space-2) 0 var(--space-6)">' + rows + upload + "</div>";
   },
 
   bind(opts) {

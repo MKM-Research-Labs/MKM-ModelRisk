@@ -52,7 +52,7 @@ const RiskPolicyAudit = {
   render(host, policy, onChange) {
     const audit = policy.audit || (policy.audit = {});
     host.innerHTML =
-      '<p class="muted" style="font-size:11px">What the completeness audit scores this ' +
+      '<p class="muted" style="font-size:var(--size-xs)">What the completeness audit scores this ' +
       "division against. Blank means the firm-wide value, so a division only states what " +
       "it has decided differently. Percentages are written as percentages; the rest are " +
       "multipliers, where 1 leaves a score unchanged.</p>" +

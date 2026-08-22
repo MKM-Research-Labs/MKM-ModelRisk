@@ -1,8 +1,8 @@
 # Design: centralising look and feel into `config/theme`
 
-**Status:** Steps 1–4 and 7 shipped 2026-08-22 — the stylesheet, the Python source and
-the status colours are converted, and rule **R10** gates them. Step 5 (the remaining
-JavaScript) and step 6 (inline styles) outstanding
+**Status:** Steps 1–7 shipped 2026-08-22 — the whole plan. **No colour literal remains
+anywhere in the console**, the type/spacing/radius scales and the typeface are tokens too,
+and rule **R10** gates the colour half of it. Only the PDFs (§9.1) are outstanding.
 **Date:** 2026-08-21
 **Area:** `src/static`, `src/templates`, `config/`, `audit/`
 **Driver:** An ERM vendor is cloning ModelRisk into their suite as a new pillar. Their
@@ -113,8 +113,8 @@ Sequenced so the risky, high-value work lands first and every step ships on its 
 | 2 | ✅ `risk_policy/_defaults.py` reads from it | Small; removes seeded colour literals from `src/` (an R1 fix), and they reach the console through `/api/risk-policy` |
 | 3 | ✅ The six colour maps in `helpers.js` → `Theme` | 28 hexes in one file, and every badge on every screen inherits |
 | 4 | ✅ `app.css`'s 60 raw hexes → `var(--…)` | Mechanical, CSS-only, easy to eyeball |
-| 5 | The remaining 162 JS hexes | Needs the SVG decision in §6 |
-| 6 | The 493 inline `style` attributes | Lowest value; cosmetic consistency, not rebrand-blocking |
+| 5 | ✅ The remaining JS hexes | Needs the SVG decision in §6 |
+| 6 | ✅ The inline `style` attributes — type, spacing and radius | Lowest value; cosmetic consistency, not rebrand-blocking |
 | 7 | ✅ `audit/styling.py` + rule **R10** (brought forward) | What makes all of the above hold |
 
 Steps 1–4 are what the vendor actually needs. 5 and 6 are ours to finish afterwards.
@@ -172,6 +172,66 @@ therefore a requirement wherever a colour is manipulated rather than merely used
 `Theme.tint()` built on `color-mix()` would lift that, and let a token be any CSS colour,
 at the cost of shifting the shade very slightly — worth doing when a token needs to be
 `rgb()` or a named colour, not before.
+
+**One thing the blue collapse cost.** `#1565c0` was drift in eight of its nine sites, but
+in `product/model_map.js` it was doing work: the legend distinguished *component (in this
+product)* from *upstream model* by border colour as well as by fill and border width. With
+both now `--accent`, those two node types are separated by fill (`--accent-border` against
+`--accent-soft`) and stroke width (2.5 against 1.5) only. Still legible, but one signal
+poorer. `--accent-ink` (`#0d47a1`) is available if the distinction is worth restoring
+deliberately rather than by accident.
+
+**Step 5, as built (2026-08-22).** 153 literals across 21 files, of which 112 already had a
+token. The rest named a vocabulary nobody had written down: the three SVG builders share
+one node taxonomy — model, terminal, data source, component, retired, product — so those
+became tokens (`--product`/`--product-bg`/`--product-ink`/`--product-edge`,
+`--node-retired`) alongside a small `HUE` group for states that are *not* risk ratings
+(`--info`, `--violet`, `--blue-grey`, `--gold`): a Product being "Proposed" is a lifecycle
+fact, and drawing it in a rating colour would read as a rating.
+
+Two more status maps surfaced and joined `STATUS_COLOUR_TOKENS` — Product status in
+`product.js` and review-thread state in `inventory/review.js`, taking the table from six
+domains to eight. Conversion respected the §6 constraint: `var()` in HTML `style`
+attributes, `Theme.value()` in SVG `fill`/`stroke` presentation attributes. Verified on a
+restored estate — the chain (23 nodes), the neighbourhood canvas and the component map all
+render with resolved hex in every attribute, no `var(--…)` leaked into one and no
+`undefined`, and every file passes `node --check`.
+
+`".js"` then joined `STYLING_GATED_SUFFIXES`, so all three R10 checks now gate at zero and
+the reported bucket is empty. It stays in place as the landing spot for a new asset type,
+which should surface rather than be exempted in silence.
+
+**The scanner had a bug, found by looking at its own output.** Four of the "157" were
+`&#9888;` and `&#9432;` — the warning sign and the information mark, HTML numeric
+character references whose digits are decimal. The regex matched the `#9888` inside them
+because `;` is not a word character. Gating `.js` would have made those four unfixable
+findings. A `(?<!&)` lookbehind fixes it; the real count was 153.
+
+**Step 6, as built (2026-08-22).** The survey split the 493 inline styles in two. About
+120 are pure layout — `align-items`, `flex`, `justify-content`, `width`, `text-align` —
+with nothing to theme, and they were left alone. The rest are scale: 146 `font-size`, 234
+margin/padding/gap, plus radii, and those are a brand parameter (an adopter sets the
+interface denser, or on a different type ramp).
+
+Step 1's `SPACE` had six rungs; the console actually reaches for a **2px step** — 8px 82
+times, 6px 41, 10px 38, 14px 20 — so a six-rung scale would have forced half the markup to
+keep a literal, which is how these scales came to be undeclared in the first place. Since
+nothing consumed `SPACE` yet, it was corrected to `space-1`…`space-10` before use.
+
+Converted across the JavaScript **and** `app.css`: 673 declarations, checked by resolving
+every token back and diffing against the previous commit — **zero differences**. Twelve
+literals remain in the JS and are genuinely off-scale one-offs (`11.5px`, a `28px` stat
+number, a `1px` hairline); they are left as literals rather than given a token each, which
+would relocate the noise instead of removing it.
+
+Two things fell out. `app.css` dropped from 362 `px` literals to 117 — the remainder are
+widths, heights, borders and positions, which are layout, not scale. And **the typeface
+was still a literal**: `font: 13px/1.5 Arial…` in `app.css`, with `--font`, `--font-mono`
+and `--line-height` defined since step 1 and never referenced. The face is the first thing
+an adopter changes, so a rebrand would have stopped at the colours. It is now
+`font: var(--size-md)/var(--line-height) var(--font)`, and a test holds that `app.css`
+never again names a typeface. All 21 scale tokens are consumed, and a test fails if one
+falls out of use — a scale nobody refers to has quietly stopped being true.
 
 **Steps 4 and 7, as built (2026-08-22).** `app.css` holds **no colour literal at all** —
 the 59 hexes and 7 `rgba()`s are gone, elevation is a whole `--shadow-*` token rather than

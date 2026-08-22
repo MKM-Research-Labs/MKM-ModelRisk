@@ -56,7 +56,7 @@ Object.assign(MeetingDetail, {
   _modelsTab() {
     if (this._analysisKind === "handoff") {
       return this._approvalsSection() +
-        '<div class="section-header" style="margin-top:18px">Analysis</div>' +
+        '<div class="section-header" style="margin-top:var(--space-9)">Analysis</div>' +
         this._analysisSubtabs("handoff") + this._handoffAnalysis();
     }
     const cfg = this._scopeCfg(this._analysisKind === "product" ? "product" : "model");
@@ -68,9 +68,9 @@ Object.assign(MeetingDetail, {
       this._loadReviewableDocs(cfg).then(() => this._render());
     }
     return this._approvalsSection() +
-      '<div class="section-header" style="margin-top:18px">Analysis</div>' +
+      '<div class="section-header" style="margin-top:var(--space-9)">Analysis</div>' +
       this._analysisSubtabs(cfg.kind) +
-      '<p class="muted" style="font-size:12px">Choose the ' + cfg.label.toLowerCase() +
+      '<p class="muted" style="font-size:var(--size-sm)">Choose the ' + cfg.label.toLowerCase() +
       "s in scope, then record the confirmation to proceed and any follow-on actions.</p>" +
       this._scopeTable(cfg) + this._analysisReview(cfg);
   },
@@ -82,25 +82,25 @@ Object.assign(MeetingDetail, {
   _handoffAnalysis() {
     const items = this._signoffItems("handoff");
     if (!items.length) {
-      return '<div class="muted" style="font-size:12px;margin-top:8px">No handoffs ' +
+      return '<div class="muted" style="font-size:var(--size-sm);margin-top:var(--space-4)">No handoffs ' +
         "tabled at this meeting. They arrive by being raised for compatibility sign-off.</div>";
     }
     const rows = items.map((it) => {
       const pair = String(it.subject_handoff_id || "").split("~");
-      return '<div class="card" style="margin-bottom:8px">' +
+      return '<div class="card" style="margin-bottom:var(--space-4)">' +
         '<div class="row" style="justify-content:space-between;align-items:center">' +
         "<div>" + this._subjectLabelHtml(pair[0] || "") +
         ' <span class="muted">&rarr;</span> ' + this._subjectLabelHtml(pair[1] || "") + "</div>" +
         "<div>" + statusBadge(it.status) + "</div></div></div>";
     }).join("");
-    return '<p class="muted" style="font-size:12px">The producer &rarr; consumer handoffs ' +
+    return '<p class="muted" style="font-size:var(--size-sm)">The producer &rarr; consumer handoffs ' +
       "tabled here, with the committee's compatibility decision.</p>" + rows;
   },
 
   _analysisSubtabs(kind) {
     const btn = (k, label) => '<button class="dtab' + (k === kind ? " active" : "") +
       '" data-atab="' + k + '">' + label + "</button>";
-    return '<div class="dtabs" style="margin-bottom:8px">' +
+    return '<div class="dtabs" style="margin-bottom:var(--space-4)">' +
       btn("model", "Models") + btn("product", "Products") +
       btn("handoff", "Handoffs") + "</div>";
   },
@@ -110,7 +110,7 @@ Object.assign(MeetingDetail, {
   _analysisReview(cfg) {
     const inScope = cfg.inScope;
     if (!inScope.length) {
-      return '<div class="muted" style="font-size:12px;margin-top:8px">Add ' + cfg.label.toLowerCase() +
+      return '<div class="muted" style="font-size:var(--size-sm);margin-top:var(--space-4)">Add ' + cfg.label.toLowerCase() +
         "s to scope above to record their analysis outcome and remediation.</div>";
     }
     const byId = {};
@@ -121,10 +121,10 @@ Object.assign(MeetingDetail, {
       const id = m[cfg.idKey];
       const steps = byId[id] || [];
       const stepList = steps.length
-        ? steps.map((a) => '<div class="prow"><div style="font-size:12px">' + esc(a.description) +
-            ' <span class="muted" style="font-size:10px">' +
+        ? steps.map((a) => '<div class="prow"><div style="font-size:var(--size-sm)">' + esc(a.description) +
+            ' <span class="muted" style="font-size:var(--size-xxs)">' +
             (a.due_date ? "due " + esc(a.due_date) + " · " : "") + esc(a.status || "Open") + "</span></div></div>").join("")
-        : '<div class="muted" style="font-size:11px">No remediation yet.</div>';
+        : '<div class="muted" style="font-size:var(--size-xs)">No remediation yet.</div>';
       // One line per item, expanding to its review block. A committee works
       // through these one at a time, so seven open blocks is six too many.
       const open = this._reviewOpen === id;
@@ -133,29 +133,29 @@ Object.assign(MeetingDetail, {
         "<div><span class=\"muted\">" + (open ? "&minus;" : "+") + "</span> " +
         '<b class="modelid">' + esc(id) + "</b>" +
         (m.name ? ' <span class="muted">' + esc(m.name) + "</span>" : "") + "</div>" +
-        '<div><span class="muted" style="font-size:11px">Outcome</span> ' +
+        '<div><span class="muted" style="font-size:var(--size-xs)">Outcome</span> ' +
         '<select data-analysis-status="' + esc(id) + '">' + opts(m.analysis_status) + "</select></div></div>";
-      if (!open) return '<div class="card" style="margin-bottom:6px">' + head + "</div>";
+      if (!open) return '<div class="card" style="margin-bottom:var(--space-3)">' + head + "</div>";
       // The presenter's supporting analysis: a document uploaded against this
       // meeting item, shown as a download link once present.
       const fileLink = m.analysis_filename
         ? '<a href="/api/meetings/' + this._id + "/" + cfg.base + "/" + esc(id) +
           '/analysis" target="_blank" rel="noopener">' +
           esc(m.analysis_original_name || m.analysis_filename) + "</a>"
-        : '<span class="muted" style="font-size:12px">None uploaded.</span>';
-      return '<div class="card" style="margin-bottom:8px">' + head +
+        : '<span class="muted" style="font-size:var(--size-sm)">None uploaded.</span>';
+      return '<div class="card" style="margin-bottom:var(--space-4)">' + head +
         // Note and basis auto-save on change (blur / Enter) — no Save button.
-        '<div class="field" style="margin-top:6px"><label>Discussion note</label>' +
+        '<div class="field" style="margin-top:var(--space-3)"><label>Discussion note</label>' +
         '<input data-analysis-note="' + esc(id) + '" value="' + esc(m.analysis_note || "") +
         '" style="width:100%"></div>' +
         // What the MRC is allowing the presenter to proceed on the basis of.
-        '<div class="field" style="margin-top:6px">' +
+        '<div class="field" style="margin-top:var(--space-3)">' +
         "<label>Basis the MRC is allowing the presenter to proceed on</label>" +
         '<textarea data-analysis-basis="' + esc(id) + '" rows="2" style="width:100%;resize:vertical">' +
         esc(m.proceed_basis || "") + "</textarea></div>" +
         // The presenter uploads their supporting analysis here.
-        '<div class="field" style="margin-top:6px"><label>Supporting analysis</label>' +
-        '<div class="row" style="align-items:center;gap:8px">' + fileLink +
+        '<div class="field" style="margin-top:var(--space-3)"><label>Supporting analysis</label>' +
+        '<div class="row" style="align-items:center;gap:var(--space-4)">' + fileLink +
         '<input type="file" id="an-file-' + esc(id) + '" style="display:none">' +
         '<button class="btn small" data-an-upload="' + esc(id) + '">' +
         (m.analysis_filename ? "Replace" : "Upload") + "&hellip;</button>" +
@@ -163,8 +163,8 @@ Object.assign(MeetingDetail, {
           ? '<button class="btn small danger" data-an-remove="' + esc(id) + '">Remove</button>'
           : "") +
         "</div></div>" +
-        '<div class="section-header" style="margin-top:8px;font-size:11px">Follow-on remediation</div>' + stepList +
-        '<div class="row" style="margin-top:6px;flex-wrap:wrap;align-items:flex-end">' +
+        '<div class="section-header" style="margin-top:var(--space-4);font-size:var(--size-xs)">Follow-on remediation</div>' + stepList +
+        '<div class="row" style="margin-top:var(--space-3);flex-wrap:wrap;align-items:flex-end">' +
         '<div class="field"><label>Remediation</label><input id="act-desc-' + esc(id) + '"></div>' +
         '<div class="field"><label>Owner</label><input id="act-owner-' + esc(id) + '"></div>' +
         '<div class="field"><label>Due date</label><input type="date" id="act-date-' + esc(id) + '"></div>' +

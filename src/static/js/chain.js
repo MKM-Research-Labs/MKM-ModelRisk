@@ -112,11 +112,11 @@ const Chain = {
 
   _chainBody() {
     const legend =
-      '<div class="row" style="gap:18px;align-items:center;margin-bottom:10px;font-size:12px">' +
-      '<span><span class="chain-swatch" style="background:#e3f2fd;border-color:#1976d2"></span> model in the chain</span>' +
-      '<span><span class="chain-swatch" style="background:#e0f2f1;border-color:#00897b"></span> terminal output (no downstream)</span>' +
-      '<span><span class="chain-swatch" style="background:#f5f5f5;border-color:#bbb"></span> hibernated</span>' +
-      '<span><span class="chain-swatch" style="background:#fff;border-color:#6366f1"></span> staged (not yet connected)</span>' +
+      '<div class="row" style="gap:var(--space-9);align-items:center;margin-bottom:var(--space-5);font-size:var(--size-sm)">' +
+      '<span><span class="chain-swatch" style="background:var(--accent-soft);border-color:var(--accent)"></span> model in the chain</span>' +
+      '<span><span class="chain-swatch" style="background:var(--teal-bg);border-color:var(--teal)"></span> terminal output (no downstream)</span>' +
+      '<span><span class="chain-swatch" style="background:var(--sunken);border-color:var(--node-retired)"></span> hibernated</span>' +
+      '<span><span class="chain-swatch" style="background:var(--panel);border-color:var(--indigo)"></span> staged (not yet connected)</span>' +
       "</div>";
     // The graph shows models in a chain, plus any staged from the tray.
     const staged = (this._chain.nodes || []).filter((n) => this._staged[n.model_id]);
@@ -212,7 +212,7 @@ const Chain = {
         '<td><button class="btn small" data-edge="' + esc(l.from) + "|" + esc(l.to) +
         '">' + (h ? "Edit handoff" : "Define handoff") + "</button></td></tr>";
     }).join("");
-    return '<div class="section-header" style="margin-top:16px">Handoffs</div>' +
+    return '<div class="section-header" style="margin-top:var(--space-8)">Handoffs</div>' +
       '<p class="muted">Each edge can carry the field lineage that crosses it and a ' +
       "compatibility note the MRC reviews.</p>" +
       "<table><thead><tr><th>Edge</th><th>Status</th><th>Field lineage</th><th></th></tr></thead>" +
@@ -301,12 +301,12 @@ const Chain = {
     }).join("");
     const boxes = nodes.map((n) => {
       const p = pos[n.model_id];
-      let fill = "#e3f2fd", stroke = "#1976d2";
-      if (!hasDownstream[n.model_id]) { fill = "#e0f2f1"; stroke = "#00897b"; }
+      let fill = Theme.value("accent-soft"), stroke = Theme.value("accent");
+      if (!hasDownstream[n.model_id]) { fill = Theme.value("teal-bg"); stroke = Theme.value("teal"); }
       // A staged model is on the canvas but in no chain yet — drawn hollow so it
       // never reads as a declaration that has already been made.
-      if (this._staged[n.model_id]) { fill = "#fff"; stroke = "#6366f1"; }
-      if (n.retired) { fill = "#f5f5f5"; stroke = "#bbb"; }
+      if (this._staged[n.model_id]) { fill = Theme.value("panel"); stroke = Theme.value("indigo"); }
+      if (n.retired) { fill = Theme.value("sunken"); stroke = Theme.value("node-retired"); }
       // The whole node is a click target onto that model's Overview; the title
       // gives the same affordance on hover for anyone using a pointer.
       return '<g class="chain-node" data-open="' + esc(n.model_id) + '" data-node="' +
@@ -317,9 +317,9 @@ const Chain = {
         '" rx="7" fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"' +
         (n.retired ? ' stroke-dasharray="4 3"' : "") + "/>" +
         '<text x="' + (p.x + BOX_W / 2) + '" y="' + (p.y + 17) +
-        '" text-anchor="middle" font-size="11" font-weight="700" fill="#1f2937">' + esc(n.model_id) + "</text>" +
+        '" text-anchor="middle" font-size="11" font-weight="700" fill="' + Theme.value("node-ink") + '">' + esc(n.model_id) + "</text>" +
         '<text x="' + (p.x + BOX_W / 2) + '" y="' + (p.y + 31) +
-        '" text-anchor="middle" font-size="9.5" fill="#4b5563">' + esc(this._short(n.name)) + "</text>" +
+        '" text-anchor="middle" font-size="9.5" fill="' + Theme.value("node-sub") + '">' + esc(this._short(n.name)) + "</text>" +
         '<circle class="graph-handle" data-handle="' + esc(n.model_id) + '" cx="' + (p.x + BOX_W) +
         '" cy="' + (p.y + BOX_H / 2) + '" r="5"><title>Drag onto another model to ' +
         "declare that this one feeds it</title></circle></g>";
@@ -327,7 +327,7 @@ const Chain = {
     return '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + " " + height +
       '" xmlns="http://www.w3.org/2000/svg"><defs>' +
       '<marker id="chain-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" ' +
-      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#94a3b8" ' +
+      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="' + Theme.value("slate") + '" ' +
       'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>' +
       edges + boxes + '<g class="graph-rubber"></g></svg>';
   },

@@ -43,22 +43,22 @@ const ProductMap = {
   _status(m) {
     const comps = m.components.length, total = m.nodes.length;
     const feeds = total - comps;
-    return '<div style="margin-bottom:10px"><b>' + esc(m.product_name) + "</b> " +
-      '<span class="muted" style="font-size:12px">references ' + comps + " model" +
+    return '<div style="margin-bottom:var(--space-5)"><b>' + esc(m.product_name) + "</b> " +
+      '<span class="muted" style="font-size:var(--size-sm)">references ' + comps + " model" +
       (comps === 1 ? "" : "s") + " directly" +
       (feeds > 0 ? ", drawing in " + feeds + " more up the chain" : "") + ".</span></div>";
   },
 
   _legend() {
-    return '<div class="row" style="gap:18px;align-items:center;margin-bottom:10px;font-size:12px">' +
-      '<span><span class="chain-swatch" style="background:#ede7f6;border-color:#5e35b1;border-width:2px"></span> product</span>' +
-      '<span><span class="chain-swatch" style="background:#fef3c7;border-color:#d97706"></span> data source</span>' +
-      '<span><span class="chain-swatch" style="background:#bbdefb;border-color:#1565c0;border-width:2px"></span> component (in this product)</span>' +
-      '<span><span class="chain-swatch" style="background:#e3f2fd;border-color:#1976d2"></span> upstream model</span>' +
-      '<span><span class="chain-swatch" style="background:#e0f2f1;border-color:#00897b"></span> terminal (chain end)</span>' +
-      '<span><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#94a3b8" stroke-width="1.5" ' +
+    return '<div class="row" style="gap:var(--space-9);align-items:center;margin-bottom:var(--space-5);font-size:var(--size-sm)">' +
+      '<span><span class="chain-swatch" style="background:var(--product-bg);border-color:var(--product);border-width:2px"></span> product</span>' +
+      '<span><span class="chain-swatch" style="background:var(--warn-bg-alt);border-color:var(--warn-line)"></span> data source</span>' +
+      '<span><span class="chain-swatch" style="background:var(--accent-border);border-color:var(--accent);border-width:2px"></span> component (in this product)</span>' +
+      '<span><span class="chain-swatch" style="background:var(--accent-soft);border-color:var(--accent)"></span> upstream model</span>' +
+      '<span><span class="chain-swatch" style="background:var(--teal-bg);border-color:var(--teal)"></span> terminal (chain end)</span>' +
+      '<span><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="' + Theme.value("slate") + '" stroke-width="1.5" ' +
       'marker-end="url(#pmap-arrow)"/></svg> feeds</span>' +
-      '<span><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#d97706" stroke-width="1.5" ' +
+      '<span><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="' + Theme.value("warn-line") + '" stroke-width="1.5" ' +
       'marker-end="url(#pmap-src-arrow)"/></svg> supplies data</span></div>';
   },
 
@@ -187,54 +187,54 @@ const ProductMap = {
         ? '<text class="nbhd-edge-label" x="' + ((a.x + b.x) / 2 + 6) + '" y="' +
           ((a.y + b.y) / 2) + '" font-size="9.5">' + esc(GraphWire.label(ch.link.handoff)) + "</text>"
         : "";
-      return '<path d="' + vPath(pts) + '" fill="none" stroke="#94a3b8" stroke-width="1.5" ' +
+      return '<path d="' + vPath(pts) + '" fill="none" stroke="' + Theme.value("slate") + '" stroke-width="1.5" ' +
         'marker-end="url(#pmap-arrow)"/>' + label;
     }).join("");
     const supplyEdges = srcP.map((sp) => (sp.s.models || []).map((id) => {
       const c = coord[id]; if (!c) return "";
       return '<path d="' + vPath([{ x: sp.x + SW / 2, y: sp.y + SH }, { x: c.cx, y: c.top }]) +
-        '" fill="none" stroke="#d97706" stroke-width="1.5" marker-end="url(#pmap-src-arrow)"/>';
+        '" fill="none" stroke="' + Theme.value("warn-line") + '" stroke-width="1.5" marker-end="url(#pmap-src-arrow)"/>';
     }).join("")).join("");
     const productEdges = (m.components || []).map((id) => {
       const c = coord[id]; if (!c) return "";
       return '<path d="' + hPath({ x: c.cx + W / 2, y: c.cy }, { x: pX, y: pY + H / 2 }) +
-        '" fill="none" stroke="#7e57c2" stroke-width="1.5" marker-end="url(#pmap-prod-arrow)"/>';
+        '" fill="none" stroke="' + Theme.value("product-edge") + '" stroke-width="1.5" marker-end="url(#pmap-prod-arrow)"/>';
     }).join("");
 
     const boxes = nodes.map((n) => {
       const c = coord[n.model_id];
-      let fill = "#e3f2fd", stroke = "#1976d2", sw = 1.5;
-      if (n.terminal) { fill = "#e0f2f1"; stroke = "#00897b"; }
-      if (components.has(n.model_id)) { fill = "#bbdefb"; stroke = "#1565c0"; sw = 2.5; }
-      if (n.retired) { fill = "#f5f5f5"; stroke = "#bbb"; }
+      let fill = Theme.value("accent-soft"), stroke = Theme.value("accent"), sw = 1.5;
+      if (n.terminal) { fill = Theme.value("teal-bg"); stroke = Theme.value("teal"); }
+      if (components.has(n.model_id)) { fill = Theme.value("accent-border"); stroke = Theme.value("accent"); sw = 2.5; }
+      if (n.retired) { fill = Theme.value("sunken"); stroke = Theme.value("node-retired"); }
       const x = c.cx - W / 2;
       return '<g class="chain-node" data-open="' + esc(n.model_id) + '">' +
         "<title>" + esc(n.model_id) + (components.has(n.model_id) ? " — product component" : "") + " — open this model</title>" +
         '<rect x="' + x + '" y="' + c.top + '" width="' + W + '" height="' + H + '" rx="7" fill="' + fill +
         '" stroke="' + stroke + '" stroke-width="' + sw + '"' + (n.retired ? ' stroke-dasharray="4 3"' : "") + "/>" +
-        '<text x="' + c.cx + '" y="' + (c.top + 18) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#1f2937">' + esc(n.model_id) + "</text>" +
-        '<text x="' + c.cx + '" y="' + (c.top + 33) + '" text-anchor="middle" font-size="9.5" fill="#4b5563">' + esc(this._short(n.name)) + "</text></g>";
+        '<text x="' + c.cx + '" y="' + (c.top + 18) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + Theme.value("node-ink") + '">' + esc(n.model_id) + "</text>" +
+        '<text x="' + c.cx + '" y="' + (c.top + 33) + '" text-anchor="middle" font-size="9.5" fill="' + Theme.value("node-sub") + '">' + esc(this._short(n.name)) + "</text></g>";
     }).join("");
     const srcNodes = srcP.map((sp) =>
       '<g><title>Data source — ' + esc(sp.s.name) + "</title>" +
-      '<rect x="' + sp.x + '" y="' + sp.y + '" width="' + SW + '" height="' + SH + '" rx="16" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>' +
-      '<text x="' + (sp.x + SW / 2) + '" y="' + (sp.y + SH / 2 + 4) + '" text-anchor="middle" font-size="11" font-weight="600" fill="#92400e">' + esc(sp.s.name) + "</text></g>").join("");
+      '<rect x="' + sp.x + '" y="' + sp.y + '" width="' + SW + '" height="' + SH + '" rx="16" fill="' + Theme.value("warn-bg-alt") + '" stroke="' + Theme.value("warn-line") + '" stroke-width="1.5"/>' +
+      '<text x="' + (sp.x + SW / 2) + '" y="' + (sp.y + SH / 2 + 4) + '" text-anchor="middle" font-size="11" font-weight="600" fill="' + Theme.value("warn-ink") + '">' + esc(sp.s.name) + "</text></g>").join("");
     const productNode =
       '<g><title>' + esc(m.product_name) + " — this product</title>" +
-      '<rect x="' + pX + '" y="' + pY + '" width="' + PW + '" height="' + H + '" rx="7" fill="#ede7f6" stroke="#5e35b1" stroke-width="2.5"/>' +
-      '<text x="' + (pX + PW / 2) + '" y="' + (pY + 18) + '" text-anchor="middle" font-size="10" font-weight="700" fill="#4527a0">PRODUCT</text>' +
-      '<text x="' + (pX + PW / 2) + '" y="' + (pY + 33) + '" text-anchor="middle" font-size="10" fill="#4527a0">' + esc(this._short(m.product_name)) + "</text></g>";
+      '<rect x="' + pX + '" y="' + pY + '" width="' + PW + '" height="' + H + '" rx="7" fill="' + Theme.value("product-bg") + '" stroke="' + Theme.value("product") + '" stroke-width="2.5"/>' +
+      '<text x="' + (pX + PW / 2) + '" y="' + (pY + 18) + '" text-anchor="middle" font-size="10" font-weight="700" fill="' + Theme.value("product-ink") + '">PRODUCT</text>' +
+      '<text x="' + (pX + PW / 2) + '" y="' + (pY + 33) + '" text-anchor="middle" font-size="10" fill="' + Theme.value("product-ink") + '">' + esc(this._short(m.product_name)) + "</text></g>";
 
     return '<svg width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + " " + height +
       '" xmlns="http://www.w3.org/2000/svg"><defs>' +
       '<marker id="pmap-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" ' +
-      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#94a3b8" ' +
+      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="' + Theme.value("slate") + '" ' +
       'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
       '<marker id="pmap-src-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" ' +
-      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#d97706" ' +
+      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="' + Theme.value("warn-line") + '" ' +
       'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
       '<marker id="pmap-prod-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" ' +
-      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#7e57c2" ' +
+      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="' + Theme.value("product-edge") + '" ' +
       'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>' +
       supplyEdges + feedEdges + productEdges + srcNodes + boxes + productNode + "</svg>";
   },

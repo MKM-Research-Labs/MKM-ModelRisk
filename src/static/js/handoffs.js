@@ -75,19 +75,19 @@ const Handoffs = {
   _signoffPanel(d) {
     const status = d.status || "Draft";
     if (status === "Approved") {
-      return '<div class="dz-row" style="border:1px solid #388e3c;background:#e8f5e9;padding:10px 14px;border-radius:6px;margin:8px 0">' +
+      return '<div class="dz-row" style="border:1px solid var(--green);background:var(--ok-bg);padding:var(--space-5) var(--space-7);border-radius:var(--radius-md);margin:var(--space-4) 0">' +
         '<div class="dz-text"><b>MRC compatibility sign-off — approved</b>' +
         '<p class="muted">Ratified at ' + esc(d.mrc_signoff_meeting || "a meeting") +
         (d.mrc_signoff_date ? " (" + esc(d.mrc_signoff_date) + ")" : "") +
         ". Editing the field lineage or note does not currently re-open sign-off.</p></div></div>";
     }
     if (status === "Pending sign-off") {
-      return '<div class="dz-row" style="border:1px solid #f57c00;background:#fff8e1;padding:10px 14px;border-radius:6px;margin:8px 0">' +
+      return '<div class="dz-row" style="border:1px solid var(--amber);background:var(--warn-bg);padding:var(--space-5) var(--space-7);border-radius:var(--radius-md);margin:var(--space-4) 0">' +
         '<div class="dz-text"><b>Pending MRC sign-off</b>' +
         '<p class="muted">Queued for the consumer model\'s committee — it will be taken at that ' +
         "committee's next scheduled meeting.</p></div></div>";
     }
-    return '<div class="dz-row" style="border:1px solid var(--line);padding:10px 14px;border-radius:6px;margin:8px 0">' +
+    return '<div class="dz-row" style="border:1px solid var(--line);padding:var(--space-5) var(--space-7);border-radius:var(--radius-md);margin:var(--space-4) 0">' +
       '<div class="dz-text"><b>Not yet submitted for sign-off</b>' +
       '<p class="muted">When the field lineage and compatibility note are ready, ask the MRC to ' +
       "ratify the handoff's compatibility.</p></div>" +
@@ -106,10 +106,10 @@ const Handoffs = {
       '<div class="field"><label>' + esc(f.label) + "</label>" +
       '<input id="fl-' + f.key + '" placeholder="' + esc(f.ph) + '"></div>').join("");
     document.getElementById(this._host).innerHTML =
-      '<div class="card" style="margin-top:14px">' +
+      '<div class="card" style="margin-top:var(--space-7)">' +
       '<div class="row" style="align-items:center;justify-content:space-between">' +
       "<h3>Handoff &mdash; " + esc(d.from_model) + " &rarr; " + esc(d.to_model) + "</h3>" +
-      '<div class="row" style="gap:8px">' +
+      '<div class="row" style="gap:var(--space-4)">' +
       '<a class="btn small" href="/api/handoffs/' + encodeURIComponent(this._hid) +
       '/handover.pdf" target="_blank">↓ Handover document</a>' +
       '<button class="btn small" id="ho-close">Close</button></div></div>' +
@@ -119,16 +119,16 @@ const Handoffs = {
       this._signoffPanel(d) +
       '<div class="field" style="max-width:none"><label>Compatibility note</label>' +
       '<textarea id="ho-compat" rows="3">' + esc(d.compatibility || "") + "</textarea>" +
-      '<button class="btn small primary" id="ho-compat-save" style="margin-top:6px">Save note</button></div>' +
+      '<button class="btn small primary" id="ho-compat-save" style="margin-top:var(--space-3)">Save note</button></div>' +
       '<div class="section-header">Field lineage</div>' +
       '<table><thead><tr><th>Provider &mdash; ' + esc(d.from_model) + "</th><th>Consumer &mdash; " +
       esc(d.to_model) + "</th><th>Mapping / compatibility</th><th></th></tr></thead>" +
       "<tbody>" + rows + "</tbody></table>" +
-      '<div class="row" style="gap:16px;margin-top:10px;align-items:flex-end">' +
-      '<div><div class="muted" style="font-size:11px;margin-bottom:2px">PROVIDER FIELD</div>' +
-      '<div class="row" style="gap:8px">' + side(FL_PROVIDER) + "</div></div>" +
-      '<div><div class="muted" style="font-size:11px;margin-bottom:2px">CONSUMER FIELD</div>' +
-      '<div class="row" style="gap:8px">' + side(FL_CONSUMER) + "</div></div>" +
+      '<div class="row" style="gap:var(--space-8);margin-top:var(--space-5);align-items:flex-end">' +
+      '<div><div class="muted" style="font-size:var(--size-xs);margin-bottom:var(--space-1)">PROVIDER FIELD</div>' +
+      '<div class="row" style="gap:var(--space-4)">' + side(FL_PROVIDER) + "</div></div>" +
+      '<div><div class="muted" style="font-size:var(--size-xs);margin-bottom:var(--space-1)">CONSUMER FIELD</div>' +
+      '<div class="row" style="gap:var(--space-4)">' + side(FL_CONSUMER) + "</div></div>" +
       '<div class="field"><label>Note</label><input id="fl-note" placeholder="mapping / compatibility"></div>' +
       '<button class="btn small primary" id="fl-add">Add mapping</button></div></div>';
     this._bind();

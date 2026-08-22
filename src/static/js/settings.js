@@ -31,16 +31,16 @@ const Settings = {
       '</div><div class="v">' + fieldDisplay(s.fields[f.key]) +
       '</div><span class="edit-btn" data-sed="' + f.key + '">edit</span></div>').join("");
     const tor = s.tor
-      ? '<div class="row" style="align-items:center;margin-top:8px">' +
+      ? '<div class="row" style="align-items:center;margin-top:var(--space-4)">' +
         '<a href="/api/mrc/tor" target="_blank">&darr; ' + esc(s.tor.original_name) + "</a>" +
         '<button class="btn small" id="tor-replace" style="margin-left:auto">Replace&hellip;</button></div>'
-      : '<div class="muted" style="margin-top:8px">No Terms of Reference uploaded.</div>';
+      : '<div class="muted" style="margin-top:var(--space-4)">No Terms of Reference uploaded.</div>';
     container.innerHTML =
       '<div class="card"><h3>MRC detail</h3>' +
       '<p class="muted">These populate the console header cards and the Meeting Pack PDF header. ' +
       "The company logo is set on the Company tab.</p>" + rows +
-      '<div class="section-header" style="margin-top:16px">Terms of Reference</div>' + tor +
-      '<div class="row" style="margin-top:6px"><input type="file" id="tor-file">' +
+      '<div class="section-header" style="margin-top:var(--space-8)">Terms of Reference</div>' + tor +
+      '<div class="row" style="margin-top:var(--space-3)"><input type="file" id="tor-file">' +
       '<button class="btn small primary" id="tor-upload">Upload ToR</button></div>' +
       "</div>";
     this._bind(s);

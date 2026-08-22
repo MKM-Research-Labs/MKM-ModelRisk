@@ -41,7 +41,7 @@ Object.assign(Clients, {
     return '<div class="section-header">Client pack</div>' +
       '<p class="muted">Preview the full evidence pack, add any extra documents, then ' +
       "generate it. Each generation is timestamped and retained below.</p>" +
-      '<div class="row" style="margin-bottom:8px">' +
+      '<div class="row" style="margin-bottom:var(--space-4)">' +
       '<button class="btn" id="cpack-preview">Generate client pack&hellip;</button></div>' +
       "<table><thead><tr><th>Generated at</th><th>As of</th><th>Size</th><th></th></tr></thead>" +
       "<tbody>" + rows + "</tbody></table>";
@@ -71,8 +71,8 @@ Object.assign(Clients, {
 
   _list(items) {
     return items.length
-      ? '<ul style="margin:4px 0 0 18px">' + items.join("") + "</ul>"
-      : '<p class="muted" style="margin:4px 0">None.</p>';
+      ? '<ul style="margin:var(--space-2) 0 0 var(--space-9)">' + items.join("") + "</ul>"
+      : '<p class="muted" style="margin:var(--space-2) 0">None.</p>';
   },
 
   _previewBody(m) {
@@ -87,16 +87,16 @@ Object.assign(Clients, {
       esc(d.item_id) + '">Remove</button></li>');
     const warn = (m.warnings || []).length
       ? '<div class="section-header">Warnings</div>' +
-        '<ul style="margin:4px 0 0 18px;color:#b8860b">' +
+        '<ul style="margin:var(--space-2) 0 0 var(--space-9);color:var(--gold)">' +
         m.warnings.map((w) => "<li>" + esc(w) + "</li>").join("") + "</ul>"
       : "";
     return '<div class="section-header">Model documentation &amp; evidence</div>' + this._list(models) +
       '<div class="section-header">Supplementary documents</div>' + this._list(supp) +
-      '<div class="row" style="margin:6px 0 2px;align-items:center">' +
+      '<div class="row" style="margin:var(--space-3) 0 var(--space-1);align-items:center">' +
       '<input type="file" id="cpack-supp-file">' +
       '<button class="btn small" id="cpack-supp-add">Add document</button></div>' +
       '<div class="section-header">Also included</div>' +
-      '<ul style="margin:4px 0 0 18px">' +
+      '<ul style="margin:var(--space-2) 0 0 var(--space-9)">' +
       "<li>Recent MRC minutes: " + m.minutes.length + "</li>" +
       "<li>Operational-event write-ups: " + m.event_count + " event(s)</li>" +
       "<li>MRC Terms of Reference: " + (m.tor.present ? esc(m.tor.name) : "none uploaded") + "</li>" +
@@ -117,7 +117,7 @@ Object.assign(Clients, {
     ov.innerHTML = '<div class="modal" style="width:680px;max-width:92vw;max-height:85vh;' +
       'text-align:left;display:flex;flex-direction:column">' +
       '<h2 style="flex:0 0 auto">Client pack — preview</h2>' +
-      '<div style="overflow-y:auto;flex:1 1 auto;margin:0 -4px;padding:0 4px">' +
+      '<div style="overflow-y:auto;flex:1 1 auto;margin:0 -var(--space-2);padding:0 var(--space-2)">' +
       this._previewBody(m) + "</div>" +
       '<div class="modal-actions" style="flex:0 0 auto">' +
       '<button id="cpack-cancel" class="btn ghost">Cancel</button>' +

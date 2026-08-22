@@ -47,7 +47,7 @@ const MLApps = {
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">ML Applications</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="mlapp-register">+ Register ML Application</button>' +
-      '</div><div id="mlapp-list" style="margin-top:12px"></div></div></div>' +
+      '</div><div id="mlapp-list" style="margin-top:var(--space-6)"></div></div></div>' +
       '<div id="mlapp-detail"></div>';
     document.getElementById("mlapp-register").onclick = () => this.openRegister();
     await this.loadList();

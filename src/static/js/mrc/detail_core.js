@@ -126,7 +126,7 @@ const MeetingDetail = {
       ' <span class="edit-btn" data-minfo="title">rename</span>';
     return '<div class="detail-header"><div>' +
       '<button class="btn small" id="mt-back">&larr; Back</button> ' +
-      '<span class="name" id="minfo-title" style="margin-left:8px">' +
+      '<span class="name" id="minfo-title" style="margin-left:var(--space-4)">' +
       esc(d.title || m.meeting_id) + rename + "</span> " +
       statusBadge(m.status) + "</div>" +
       '<div class="right">' + right.join(" ") + "</div></div>";
@@ -231,17 +231,17 @@ const MeetingDetail = {
       ? '<a href="/api/risk-policy/' + encodeURIComponent(division) + '/document" target="_blank">↓ ' +
         esc(detail.document.original_name) + "</a>"
       : '<span class="muted">none uploaded</span>';
-    return '<div style="margin-top:10px;padding:10px 12px;border:1px solid var(--amber);' +
-      'border-radius:6px;background:#fff8e1">' +
+    return '<div style="margin-top:var(--space-5);padding:var(--space-5) var(--space-6);border:1px solid var(--amber);' +
+      'border-radius:var(--radius-md);background:var(--warn-bg)">' +
       '<b>Risk categorisation sign-off &mdash; ' + esc(division) + "</b>" +
-      '<p class="muted" style="font-size:12px;margin:4px 0">' + esc(division) + " has proposed a " +
+      '<p class="muted" style="font-size:var(--size-sm);margin:var(--space-2) 0">' + esc(division) + " has proposed a " +
       "revised risk categorisation. Approving it makes it live for this division's models; the " +
       "current categorisation stays in force until then.</p>" +
-      '<div style="font-size:12px">Ratings: ' + ratings + "</div>" +
-      '<div style="font-size:12px;margin-top:4px">Risk Policy document: ' + doc + " &nbsp;|&nbsp; " +
+      '<div style="font-size:var(--size-sm)">Ratings: ' + ratings + "</div>" +
+      '<div style="font-size:var(--size-sm);margin-top:var(--space-2)">Risk Policy document: ' + doc + " &nbsp;|&nbsp; " +
       '<a href="/api/risk-policy/' + encodeURIComponent(division) +
       '/categorisation.pdf" target="_blank">↓ Proposed categorisation (PDF)</a></div>' +
-      '<div class="row" style="margin-top:8px;gap:8px">' +
+      '<div class="row" style="margin-top:var(--space-4);gap:var(--space-4)">' +
       '<button class="btn small primary" id="aob-cat-approve">Approve &amp; make live</button>' +
       '<button class="btn small danger" id="aob-cat-reject">Reject</button></div></div>';
   },

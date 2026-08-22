@@ -63,7 +63,7 @@ const MLAppDetail = {
     const d = this._record.data || {};
     document.getElementById("mlapp-detail").innerHTML =
       '<div class="card">' + this._header(d) + this._tabbar(d) +
-      '<div id="mla-content" style="margin-top:14px"></div></div>';
+      '<div id="mla-content" style="margin-top:var(--space-7)"></div></div>';
     document.getElementById("mla-close").onclick = () => this.close();
     // _render, not _renderContent: the tab bar carries the active marker, so drawing
     // only the body leaves the underline on whichever tab was open before.
@@ -77,7 +77,7 @@ const MLAppDetail = {
     return '<div class="row" style="align-items:center">' +
       "<h3 style=\"margin:0\">" + esc(this._record.ml_application_id) + " — " +
       fieldDisplay(d.name) + "</h3>" +
-      '<span style="margin-left:10px">' + tierBadge(d.tier, d.division) + " " +
+      '<span style="margin-left:var(--space-5)">' + tierBadge(d.tier, d.division) + " " +
       ragBadge(d.rag_rating, d.division) + " " +
       (this._record.retired ? '<span class="pill">retired</span>'
         : optionLabel(MLApps.fieldSpec("lifecycle_stage"), d.lifecycle_stage)) + "</span>" +
@@ -184,7 +184,7 @@ const MLAppDetail = {
     const d = this._record.data || {};
     const self = this;
     const rows = (keys) => keys.map((k) => self._row(k)).join("");
-    const summary = '<div style="margin-bottom:14px">' +
+    const summary = '<div style="margin-bottom:var(--space-7)">' +
       DetailShell.row("description", "Summary", fieldDisplay(d.description),
                       !this._record.retired) + "</div>";
     return summary +
@@ -205,7 +205,7 @@ const MLAppDetail = {
       const c = m.mrc;
       return '<div class="inforow"><div class="k">MRC</div><div class="v">' +
         esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
-        '<span class="muted" style="font-size:11px">' + esc(m.level || "") +
+        '<span class="muted" style="font-size:var(--size-xs)">' + esc(m.level || "") +
         "-level</span></div></div>";
     }
     const d = this._record.data || {};
@@ -225,7 +225,7 @@ const MLAppDetail = {
     let value = '<span class="muted">Not yet before a committee</span>';
     if (latest) {
       const outcome = latest.outcome || "Approved";
-      const colour = outcome === "Rejected" ? "var(--red)" : "#388e3c";
+      const colour = outcome === "Rejected" ? "var(--red)" : Theme.value("green");
       value = '<span style="color:' + colour + ';font-weight:600">' + esc(outcome) +
         "</span> at " + '<span class="code">' + esc(latest.meeting_id) + "</span>" +
         (latest.date ? " (" + esc(latest.date) + ")" : "");
@@ -295,7 +295,7 @@ const MLAppDetail = {
       '" data-tsec="' + section.key + '">' + (i + 1) + ". " + esc(section.title) +
       self._sectionBadge(section, train) + "</button>").join("");
     const keys = (open.fields || []).filter((k) => self._applies(k, train));
-    return '<p class="muted" style="font-size:12px;margin:0 0 10px">Train ' +
+    return '<p class="muted" style="font-size:var(--size-sm);margin:0 0 var(--space-5)">Train ' +
       '<span class="code">' + esc(train.fit_id || train.item_id) + "</span>" +
       " — the most recent fit. Earlier trains are on the Trains tab.</p>" +
       this._completenessPanel(d) +
@@ -336,14 +336,14 @@ const MLAppDetail = {
     const c = d.training_completeness || {};
     const findings = c.qualifications || [];
     const detail = findings.length
-      ? '<span class="badge" style="background:#f57c00">' + findings.length +
+      ? '<span class="badge" style="background:var(--amber)">' + findings.length +
         " to tell a reviewer</span>" +
-        '<ul style="margin:6px 0 0 18px;padding:0;font-size:12px">' +
+        '<ul style="margin:var(--space-3) 0 0 var(--space-9);padding:0;font-size:var(--size-sm)">' +
         findings.map((q) => "<li>" + esc(q) + "</li>").join("") + "</ul>"
       : '<span class="muted">Nothing recorded here that a reviewer must be told about.</span>';
     return '<div class="inforow" style="align-items:flex-start"><div class="k">Evidence' +
       '</div><div class="v"><span class="muted">' + (c.filled || 0) + " of " +
-      (c.total || 0) + ' fields recorded</span><div style="margin-top:4px">' +
+      (c.total || 0) + ' fields recorded</span><div style="margin-top:var(--space-2)">' +
       detail + "</div></div></div>";
   },
 
@@ -363,7 +363,7 @@ const MLAppDetail = {
       shown += ' <span class="muted">(' + value.length + " linked)</span>";
       const counted = parseInt(train.feature_count, 10);
       if (!isNaN(counted) && counted > value.length) {
-        shown += ' <span class="badge" style="background:#f57c00">' +
+        shown += ' <span class="badge" style="background:var(--amber)">' +
           (counted - value.length) + " not in the register</span>";
       }
     }
@@ -393,10 +393,10 @@ const MLAppDetail = {
     const more = note.length > short.length
       ? ' <span class="edit-btn" data-why="' + key + '" title="Why this is asked">&#9432;</span>'
       : "";
-    return '<span class="muted" style="margin-left:14px;font-size:11px">' +
+    return '<span class="muted" style="margin-left:var(--space-7);font-size:var(--size-xs)">' +
       esc(short) + more + "</span>" +
-      '<div class="muted" id="why-' + key + '" style="display:none;font-size:11px;' +
-      'margin-top:4px;max-width:52em">' + esc(note) + "</div>";
+      '<div class="muted" id="why-' + key + '" style="display:none;font-size:var(--size-xs);' +
+      'margin-top:var(--space-2);max-width:52em">' + esc(note) + "</div>";
   },
 
   _bindWhy() {
@@ -544,7 +544,7 @@ const MLAppDetail = {
     if (this._tab === "risk") {
       box.innerHTML =
         '<div class="section-header">Risk assessment</div>' +
-        '<p class="muted" style="font-size:12px;margin:0 0 8px">The owner sets these; they ' +
+        '<p class="muted" style="font-size:var(--size-sm);margin:0 0 var(--space-4)">The owner sets these; they ' +
         "place the ML Application on the heatmap below, which becomes its rating once the " +
         "MRC signs it off.</p>" +
         policyNotice(d.division) +
@@ -558,8 +558,8 @@ const MLAppDetail = {
       box.innerHTML =
         '<div class="section-header">Monitoring</div>' +
         this._TRAINS_FIELDS.map((k) => this._row(k)).join("") +
-        '<div class="section-header" style="margin-top:16px">Trains</div>' +
-        '<p class="muted" style="font-size:12px;margin:0 0 8px">Every fit, each with ' +
+        '<div class="section-header" style="margin-top:var(--space-8)">Trains</div>' +
+        '<p class="muted" style="font-size:var(--size-sm);margin:0 0 var(--space-4)">Every fit, each with ' +
         "its own snapshot, seed and metrics. There is no version: the record of change " +
         "is this sequence, and the Training tab shows the most recent one in full.</p>" +
         this._trainsTable(d);
@@ -582,8 +582,8 @@ const MLAppDetail = {
       // trail shows what the record said on the day the document went out.
       const id = this._record.ml_application_id;
       box.innerHTML =
-        '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">' +
-        '<span class="muted" style="font-size:12px">The full write-up for this ML ' +
+        '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:var(--space-5)">' +
+        '<span class="muted" style="font-size:var(--size-sm)">The full write-up for this ML ' +
         "Application \u2014 its use case, the estimator it is built on, what it was trained " +
         "on, and every register \u2014 generated from the current record.</span>" +
         '<span><a class="btn small primary" target="_blank" rel="noopener" id="mla-issue" ' +
@@ -618,7 +618,7 @@ const MLAppDetail = {
         ? '<div class="empty">This ML Application is retired.</div>'
         : '<div class="section-header">Retire</div><p class="muted">Retiring stops all ' +
           'further edits. The record and its history are kept.</p>' +
-          '<button class="btn small" id="mla-retire" style="color:#d32f2f">Retire</button>';
+          '<button class="btn small" id="mla-retire" style="color:var(--red)">Retire</button>';
       const btn = document.getElementById("mla-retire");
       if (btn) btn.onclick = () => this._retire();
       return;
@@ -627,7 +627,7 @@ const MLAppDetail = {
       box.innerHTML =
         '<div class="section-header">Testing evidence</div>' +
         this._REVIEW_FIELDS.map((k) => this._row(k)).join("") +
-        '<div class="section-header" style="margin-top:16px">Review questions</div>' +
+        '<div class="section-header" style="margin-top:var(--space-8)">Review questions</div>' +
         '<div id="mla-questions"></div>';
       this._bindEdits();
       document.getElementById("mla-questions").innerHTML = Collections.render(

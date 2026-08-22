@@ -76,11 +76,11 @@ const GovDocs = {
 
   _chip(label, on, attrs) {
     const style = on
-      ? "background:#1565C0;color:#fff;border:1px solid #1565C0"
-      : "background:#fff;color:#1565C0;border:1px solid #1565C0";
+      ? "background:var(--accent);color:var(--inverse);border:1px solid var(--accent)"
+      : "background:var(--panel);color:var(--accent);border:1px solid var(--accent)";
     return '<span class="mtype-chip" ' + (attrs || "") +
-      ' style="display:inline-block;padding:1px 8px;margin:1px 3px 1px 0;border-radius:10px;' +
-      "font-size:12px;" + style + '">' + esc(label) + "</span>";
+      ' style="display:inline-block;padding:1px var(--space-4);margin:1px 3px 1px 0;border-radius:var(--radius-xl);' +
+      "font-size:var(--size-sm);" + style + '">' + esc(label) + "</span>";
   },
 
   // Static chips shown in a row's Model Type cell.
@@ -122,18 +122,18 @@ const GovDocs = {
       .concat(this._types.map((t) => '<option value="' + esc(t) + '">' + esc(t) + "</option>"))
       .join("");
     return '<div class="card"><h3>Documents</h3>' + this._panelTabs() +
-      '<p class="muted" style="margin-top:10px">The external reference material this ' +
+      '<p class="muted" style="margin-top:var(--space-5)">The external reference material this ' +
       "framework is built on, tagged by model type. Manage the type list in " +
       "Admin &rsaquo; MRC settings.</p>" +
       // Upload row
-      '<div class="row" style="align-items:center;margin-bottom:6px"><input type="file" id="gd-file">' +
+      '<div class="row" style="align-items:center;margin-bottom:var(--space-3)"><input type="file" id="gd-file">' +
       '<button class="btn small primary" id="gd-upload">Upload</button></div>' +
-      '<div id="gd-uptypes" style="margin-bottom:12px">' +
-      '<span class="muted" style="margin-right:6px">Model types:</span>' +
+      '<div id="gd-uptypes" style="margin-bottom:var(--space-6)">' +
+      '<span class="muted" style="margin-right:var(--space-3)">Model types:</span>' +
       this._chipsPicker([], "up") + "</div>" +
       // Filter
-      '<div class="row" style="align-items:center;margin-bottom:8px">' +
-      '<label class="muted" style="margin-right:6px">Filter:</label>' +
+      '<div class="row" style="align-items:center;margin-bottom:var(--space-4)">' +
+      '<label class="muted" style="margin-right:var(--space-3)">Filter:</label>' +
       '<select id="gd-filter">' + opts + "</select></div>" +
       "<table><thead><tr><th>Name</th><th>Model Type</th><th>Date Added</th><th>Size</th>" +
       "<th>Actions</th></tr></thead><tbody id=\"gd-rows\"></tbody></table></div>";
@@ -143,17 +143,17 @@ const GovDocs = {
   // division's terms of reference are not another's, and Company-wide holds what belongs
   // to the institution rather than to one division.
   _artefactsShell() {
-    const shelfTabs = '<div class="dtabs" style="margin-top:10px">' + this._shelves.map((sh) =>
+    const shelfTabs = '<div class="dtabs" style="margin-top:var(--space-5)">' + this._shelves.map((sh) =>
       '<button class="dtab' + (sh === this._shelf ? " active" : "") + '" data-gdshelf="' +
       esc(sh) + '">' + esc(sh) + " (" + ((this._artefacts[sh] || []).length) + ")</button>")
       .join("") + "</div>";
     const kindOpts = this._kinds.map((k) => "<option>" + esc(k) + "</option>").join("");
     return '<div class="card"><h3>Documents</h3>' + this._panelTabs() +
-      '<p class="muted" style="margin-top:10px">What this institution issues &mdash; terms ' +
+      '<p class="muted" style="margin-top:var(--space-5)">What this institution issues &mdash; terms ' +
       "of reference, committee presentations, policies and guides. Filed per division; " +
       "Company-wide holds what belongs to the institution as a whole.</p>" + shelfTabs +
       '<div class="tiles" id="gd-tiles">' + this._tiles() + "</div>" +
-      '<div class="row" style="align-items:center;margin-top:14px">' +
+      '<div class="row" style="align-items:center;margin-top:var(--space-7)">' +
       '<input type="file" id="ga-file">' +
       '<select id="ga-kind">' + kindOpts + "</select>" +
       '<input id="ga-desc" placeholder="Description (optional)" style="flex:1">' +
@@ -207,7 +207,7 @@ const GovDocs = {
     // The policy document belongs to the risk-policy record, not to this shelf, so its
     // tile replaces it in place rather than filing a second copy here.
     const upload = t.upload === "policy"
-      ? '<div class="row" style="margin-top:6px;gap:6px"><input type="file" id="gp-file" ' +
+      ? '<div class="row" style="margin-top:var(--space-3);gap:var(--space-3)"><input type="file" id="gp-file" ' +
         'accept=".pdf,.doc,.docx" style="max-width:150px">' +
         '<button class="btn small" id="gp-upload">Replace</button></div>'
       : "";
@@ -302,8 +302,8 @@ const GovDocs = {
       el.onclick = function () {
         const on = el.getAttribute("data-on") === "1";
         el.setAttribute("data-on", on ? "0" : "1");
-        el.style.background = on ? "#fff" : "#1565C0";
-        el.style.color = on ? "#1565C0" : "#fff";
+        el.style.background = on ? "var(--panel)" : "var(--accent)";
+        el.style.color = on ? "var(--accent)" : "var(--inverse)";
       };
     });
   },
@@ -333,7 +333,7 @@ const GovDocs = {
     const doc = this._docs.find((d) => d.item_id === itemId);
     const cell = document.querySelector('.mt-cell[data-mt="' + itemId + '"]');
     cell.innerHTML = '<div data-editor="1">' + this._chipsPicker(doc.model_types || [], "ed") +
-      '<div style="margin-top:4px"><button class="btn small primary" id="mt-save">Save…</button>' +
+      '<div style="margin-top:var(--space-2)"><button class="btn small primary" id="mt-save">Save…</button>' +
       ' <button class="btn small" id="mt-cancel">Cancel</button></div></div>';
     this._bindPicker("ed");
     document.getElementById("mt-cancel").onclick = function () { self._renderRows(); };

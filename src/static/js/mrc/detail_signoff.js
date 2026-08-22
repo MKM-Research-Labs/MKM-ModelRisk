@@ -82,9 +82,9 @@ Object.assign(MeetingDetail, {
     const subjectId = subjectOf(item);
     const pending = item.status === "Pending";
     const nextReview = (pending && this._signoffKind(item) === "rag")
-      ? '<span class="muted" style="font-size:11px">Next review</span> ' +
+      ? '<span class="muted" style="font-size:var(--size-xs)">Next review</span> ' +
         '<input type="date" id="ag-nextreview-' + esc(item.item_id) + '" value="' + oneYearAhead() +
-        '" style="padding:3px 6px;font-size:11px"> '
+        '" style="padding:3px var(--space-3);font-size:var(--size-xs)"> '
       : "";
     const decision = pending
       ? nextReview +
@@ -95,7 +95,7 @@ Object.assign(MeetingDetail, {
       ? ' &nbsp;·&nbsp; <a href="/api/meetings/' + esc(this._id) + "/agenda/" + esc(item.item_id) +
         '/document" target="_blank">' + esc(item.document_original_name) + "</a>"
       : "";
-    return '<div class="card" style="margin-bottom:8px"><div class="row" ' +
+    return '<div class="card" style="margin-bottom:var(--space-4)"><div class="row" ' +
       'style="justify-content:space-between;align-items:center">' +
       "<div>" + this._subjectLabelHtml(subjectId) + " " + this._signoffAsk(item) +
       doc + '</div><div class="rowact">' + decision + "</div></div></div>";
@@ -111,7 +111,7 @@ Object.assign(MeetingDetail, {
       return '<button class="dtab' + (k === current ? " active" : "") +
         '" data-sgtab="' + k + '">' + label + " (" + n + ")</button>";
     };
-    return '<div class="dtabs" style="margin-bottom:8px">' +
+    return '<div class="dtabs" style="margin-bottom:var(--space-4)">' +
       btn("model", "Models") + btn("product", "Products") + btn("handoff", "Handoffs") +
       btn("owner", "Model Owner") +
       // Beside the model-owner changes: both are things an owner raises and the
@@ -125,7 +125,7 @@ Object.assign(MeetingDetail, {
     // meetings — so they bring their own rows rather than going through _signoffRow.
     const rows = kind === "closure" ? this._closureSignoffRows() : this._signoffRowsFor(kind);
     return '<div class="section-header">Approvals — MRC sign-offs</div>' +
-      '<p class="muted" style="font-size:12px">Owner-raised requests routed to this committee — ' +
+      '<p class="muted" style="font-size:var(--size-sm)">Owner-raised requests routed to this committee — ' +
       "risk-rating sign-offs, retirements, reactivations, handoff compatibility, and the " +
       "closure of actions their owners believe are done. " +
       "Approving carries out the decision and records a minute.</p>" +

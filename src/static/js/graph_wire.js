@@ -70,7 +70,7 @@ const GraphWire = {
     const g = d.host.querySelector(".graph-rubber");
     if (g) {
       g.innerHTML = '<line x1="' + d.x0 + '" y1="' + d.y0 + '" x2="' + p.x + '" y2="' + p.y +
-        '" stroke="#1976d2" stroke-width="2" stroke-dasharray="5 4"/>';
+        '" stroke="' + Theme.value("accent") + '" stroke-width="2" stroke-dasharray="5 4"/>';
     }
     const node = this._nodeUnder(ev);
     if (node) node.classList.add("wire-target");

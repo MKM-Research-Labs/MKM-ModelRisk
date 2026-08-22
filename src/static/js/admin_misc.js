@@ -49,7 +49,7 @@ const AdminMisc = {
       "its paragraphs. Save a field empty to drop that line from your documents.</p>" +
       this._rows(s, report) +
       (other.length
-        ? '<div class="section-header" style="margin-top:16px">Documents</div>' +
+        ? '<div class="section-header" style="margin-top:var(--space-8)">Documents</div>' +
           '<p class="muted">The comma-separated tag taxonomy offered on the Documents tab.</p>' +
           this._rows(s, other)
         : "");

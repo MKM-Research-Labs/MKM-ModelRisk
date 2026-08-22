@@ -34,7 +34,7 @@ Object.assign(MeetingDetail, {
   // the scope is settled, so it is not offered at all.
   _scopeTable(cfg) {
     if (this._agendaLocked()) {
-      return '<div class="muted" style="font-size:12px;margin-bottom:8px">Agenda ' +
+      return '<div class="muted" style="font-size:var(--size-sm);margin-bottom:var(--space-4)">Agenda ' +
         "locked for distribution — scope is settled. " + cfg.inScope.length + " " +
         cfg.label.toLowerCase() + (cfg.inScope.length === 1 ? "" : "s") + " in scope.</div>";
     }
@@ -42,9 +42,9 @@ Object.assign(MeetingDetail, {
     const toggle = '<button class="btn small" data-scope-toggle="' + cfg.kind + '">' +
       (open ? "&minus; Hide" : "+ Add") + " " + cfg.label.toLowerCase() +
       "s to scope</button> " +
-      '<span class="muted" style="font-size:12px">' + cfg.inScope.length + " in scope.</span>";
-    if (!open) return '<div style="margin-bottom:10px">' + toggle + "</div>";
-    return '<div style="margin-bottom:10px">' + toggle + "</div>" + this._scopePanel(cfg);
+      '<span class="muted" style="font-size:var(--size-sm)">' + cfg.inScope.length + " in scope.</span>";
+    if (!open) return '<div style="margin-bottom:var(--space-5)">' + toggle + "</div>";
+    return '<div style="margin-bottom:var(--space-5)">' + toggle + "</div>" + this._scopePanel(cfg);
   },
 
   _scopePanel(cfg) {
@@ -55,11 +55,11 @@ Object.assign(MeetingDetail, {
     const mrcNote = mrc ? " for MRC <b>" + esc(mrc) + "</b>" : "";
     const lc = cfg.label.toLowerCase();
     const banner = filter
-      ? '<div class="muted" style="margin-bottom:6px">Showing ' + lc + "s the MRC oversees" +
+      ? '<div class="muted" style="margin-bottom:var(--space-3)">Showing ' + lc + "s the MRC oversees" +
         mrcNote + " — " + esc(filter.key) + " <b>" + esc(filter.value) + "</b>. " +
-        '<label style="margin-left:8px"><input type="checkbox" data-show-all="' + cfg.kind + '"' +
+        '<label style="margin-left:var(--space-4)"><input type="checkbox" data-show-all="' + cfg.kind + '"' +
         (this[cfg.showAllKey] ? " checked" : "") + "> Show all</label></div>"
-      : '<div class="muted" style="margin-bottom:6px">Company-wide MRC' + mrcNote +
+      : '<div class="muted" style="margin-bottom:var(--space-3)">Company-wide MRC' + mrcNote +
         " — every " + lc + " is a candidate.</div>";
     const docBy = {}, presBy = {};
     cfg.inScope.forEach((r) => {
@@ -81,14 +81,14 @@ Object.assign(MeetingDetail, {
     const rowPx = 34, headPx = 38;
     return banner +
       '<input id="scope-search-' + cfg.kind + '" placeholder="Search ' + esc(lc) +
-      's by id or name&hellip;" style="width:100%;margin-bottom:6px">' +
+      's by id or name&hellip;" style="width:100%;margin-bottom:var(--space-3)">' +
       '<div class="scope-scroll" style="max-height:' + (this._SCOPE_ROWS * rowPx + headPx) +
-      'px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:6px">' +
+      'px;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-md)">' +
       "<table><thead><tr><th></th><th>" + cfg.label + " ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
       "<th>Presenter</th><th>Analysis</th></tr></thead><tbody>" + rows + "</tbody></table></div>" +
-      '<div class="row" style="margin-top:10px">' +
+      '<div class="row" style="margin-top:var(--space-5)">' +
       '<button class="btn small primary" data-save-scope="' + cfg.kind + '">Save selection&hellip;</button>' +
-      '<span class="muted" style="margin-left:8px">' + inScope.size + " in scope.</span></div>";
+      '<span class="muted" style="margin-left:var(--space-4)">' + inScope.size + " in scope.</span></div>";
   },
 
   // Presenter per in-scope item: a dropdown of people from the register.
@@ -105,11 +105,11 @@ Object.assign(MeetingDetail, {
   // reviewing what the model actually has on file, and two copies drift apart.
   // Uploading a new one is done on the model's Docs tab, where it belongs.
   _analysisCell(cfg, id, inScope, byId) {
-    if (!inScope) return '<span class="muted" style="font-size:11px">add to scope first</span>';
+    if (!inScope) return '<span class="muted" style="font-size:var(--size-xs)">add to scope first</span>';
     const docs = (this._reviewableDocs || {})[id];
-    if (docs === undefined) return '<span class="muted" style="font-size:11px">&hellip;</span>';
+    if (docs === undefined) return '<span class="muted" style="font-size:var(--size-xs)">&hellip;</span>';
     if (!docs.length) {
-      return '<span class="muted" style="font-size:11px">no analysis on the ' +
+      return '<span class="muted" style="font-size:var(--size-xs)">no analysis on the ' +
         esc(cfg.label.toLowerCase()) + "</span>";
     }
     const chosen = byId[id] || "";

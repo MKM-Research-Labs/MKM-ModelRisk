@@ -25,8 +25,10 @@ the browser drops the declaration silently, so the element renders with whatever
 inherits, and nobody notices until an adopter's rebrand leaves one control the old
 colour. Both are checked here.
 
-``.js`` colour literals are reported rather than gated while step 5 of
-docs/design/theme_config.md is outstanding — see ``STYLING_GATED_SUFFIXES``.
+Every asset type the console serves — ``.css``, ``.js`` and ``.html`` — is gated as of
+step 5 of docs/design/theme_config.md. The reported bucket holds anything scanned but
+not yet gated, so adding a new asset type surfaces it rather than exempting it in
+silence; see ``STYLING_GATED_SUFFIXES``.
 """
 from __future__ import annotations
 
@@ -38,9 +40,11 @@ from config.theme import THEME
 
 from audit._walk import REPO_ROOT, py_files, rel, walk
 
-# A CSS colour. The trailing guard keeps ``#abc`` in ``#abc-panel`` — an id selector
-# whose first characters happen to be hex digits — from reading as a colour.
-_COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}(?![-\w])|\b(?:rgba?|hsla?)\s*\(")
+# A CSS colour. Two guards, both learned from false positives on this repo's own
+# markup: the trailing one keeps ``#abc`` in the id selector ``#abc-panel`` out, and the
+# leading one keeps the numeric character references out — ``&#9888;`` is the warning
+# sign, not a colour, and its digits are all decimal.
+_COLOUR = re.compile(r"(?<!&)#[0-9a-fA-F]{3,8}(?![-\w])|\b(?:rgba?|hsla?)\s*\(")
 _VAR_REFERENCE = re.compile(r"var\(\s*--([a-zA-Z0-9_-]+)")
 _CSS_COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 _ASSET_SUFFIXES = (".css", ".js", ".html")

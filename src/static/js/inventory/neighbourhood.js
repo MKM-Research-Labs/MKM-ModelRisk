@@ -76,19 +76,19 @@ const Neighbourhood = {
     const counts = src + " data source" + (src === 1 ? "" : "s") + " · " +
       up + " feeding in · " + down + " fed";
     const metaLine = f.vendor
-      ? '<div class="muted" style="font-size:12px;margin-top:2px">Vendor: ' + esc(f.vendor) + "</div>" : "";
-    return '<div style="margin-bottom:10px"><b>' + esc(position) + "</b> " +
-      '<span class="muted" style="font-size:12px">(' + counts + ")</span>" + metaLine + "</div>";
+      ? '<div class="muted" style="font-size:var(--size-sm);margin-top:var(--space-1)">Vendor: ' + esc(f.vendor) + "</div>" : "";
+    return '<div style="margin-bottom:var(--space-5)"><b>' + esc(position) + "</b> " +
+      '<span class="muted" style="font-size:var(--size-sm)">(' + counts + ")</span>" + metaLine + "</div>";
   },
 
   _legend() {
-    return '<div class="row" style="gap:18px;align-items:center;margin-bottom:10px;font-size:12px">' +
-      '<span><span class="chain-swatch" style="background:#fef3c7;border-color:#d97706"></span> data source</span>' +
-      '<span><span class="chain-swatch" style="background:#e3f2fd;border-color:#1976d2"></span> model</span>' +
-      '<span><span class="chain-swatch" style="background:#e0f2f1;border-color:#00897b"></span> terminal (chain end)</span>' +
-      '<span><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#94a3b8" stroke-width="1.5" ' +
+    return '<div class="row" style="gap:var(--space-9);align-items:center;margin-bottom:var(--space-5);font-size:var(--size-sm)">' +
+      '<span><span class="chain-swatch" style="background:var(--warn-bg-alt);border-color:var(--warn-line)"></span> data source</span>' +
+      '<span><span class="chain-swatch" style="background:var(--accent-soft);border-color:var(--accent)"></span> model</span>' +
+      '<span><span class="chain-swatch" style="background:var(--teal-bg);border-color:var(--teal)"></span> terminal (chain end)</span>' +
+      '<span><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="' + Theme.value("slate") + '" stroke-width="1.5" ' +
       'marker-end="url(#nbhd-arrow)"/></svg> feeds</span>' +
-      '<span><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="#d97706" stroke-width="1.5" ' +
+      '<span><svg width="26" height="10"><line x1="0" y1="5" x2="26" y2="5" stroke="' + Theme.value("warn-line") + '" stroke-width="1.5" ' +
       'marker-end="url(#nbhd-src-arrow)"/></svg> supplies data</span>' +
       "</div>";
   },
@@ -162,7 +162,7 @@ const Neighbourhood = {
     return '<g class="nbhd-edge" data-edge="' + esc(e.from || "") + "|" + esc(e.to || "") + '">' +
       "<title>" + esc(e.from || "") + " → " + esc(e.to || "") + " — open the handoff</title>" +
       '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
-      '" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#nbhd-arrow)"/>' +
+      '" stroke="' + Theme.value("slate") + '" stroke-width="1.5" marker-end="url(#nbhd-arrow)"/>' +
       '<line class="nbhd-hit" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"/>' +
       '<text class="nbhd-edge-label" x="' + (mx + 6) + '" y="' + my + '" font-size="9.5">' +
       esc(label) + "</text></g>";
@@ -170,14 +170,14 @@ const Neighbourhood = {
 
   _supplyEdge(s, to) {
     return '<line x1="' + (s.x + s.w / 2) + '" y1="' + (s.y + s.h) + '" x2="' + (to.x + to.w / 2) +
-      '" y2="' + to.y + '" stroke="#d97706" stroke-width="1.5" marker-end="url(#nbhd-src-arrow)"/>';
+      '" y2="' + to.y + '" stroke="' + Theme.value("warn-line") + '" stroke-width="1.5" marker-end="url(#nbhd-src-arrow)"/>';
   },
 
   _modelNode(p, n, isFocus) {
     const m = isFocus ? n.focus : p.m;
-    let fill = "#e3f2fd", stroke = "#1976d2";
-    if (isFocus && n.focus.terminal) { fill = "#e0f2f1"; stroke = "#00897b"; }
-    if (m.retired) { fill = "#f5f5f5"; stroke = "#bbb"; }
+    let fill = Theme.value("accent-soft"), stroke = Theme.value("accent");
+    if (isFocus && n.focus.terminal) { fill = Theme.value("teal-bg"); stroke = Theme.value("teal"); }
+    if (m.retired) { fill = Theme.value("sunken"); stroke = Theme.value("node-retired"); }
     const W = p.w, H = p.h;
     return '<g class="chain-node nbhd-node" data-open="' + esc(m.model_id) + '" data-node="' +
       esc(m.model_id) + '" data-x="' + p.x + '" data-y="' + p.y + '">' +
@@ -186,9 +186,9 @@ const Neighbourhood = {
       '" stroke="' + stroke + '" stroke-width="' + (isFocus ? 2.5 : 1.5) + '"' +
       (m.retired ? ' stroke-dasharray="4 3"' : "") + "/>" +
       '<text x="' + (p.x + W / 2) + '" y="' + (p.y + 18) + '" text-anchor="middle" font-size="11" ' +
-      'font-weight="700" fill="#1f2937">' + esc(m.model_id) + "</text>" +
+      'font-weight="700" fill="' + Theme.value("node-ink") + '">' + esc(m.model_id) + "</text>" +
       '<text x="' + (p.x + W / 2) + '" y="' + (p.y + 33) + '" text-anchor="middle" font-size="9.5" ' +
-      'fill="#4b5563">' + esc(this._short(m.name)) + "</text>" +
+      'fill="' + Theme.value("node-sub") + '">' + esc(this._short(m.name)) + "</text>" +
       '<circle class="graph-handle" data-handle="' + esc(m.model_id) + '" cx="' + (p.x + W) +
       '" cy="' + (p.y + H / 2) + '" r="5"><title>Drag onto another model to connect them</title>' +
       "</circle></g>";
@@ -212,17 +212,17 @@ const Neighbourhood = {
       '<g class="nbhd-src" data-source="' + esc(sp.m.name) + '"><title>Data source — ' +
       esc(sp.m.name) + "</title>" +
       '<rect x="' + sp.x + '" y="' + sp.y + '" width="' + sp.w + '" height="' + sp.h + '" rx="16" ' +
-      'fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>' +
+      'fill="' + Theme.value("warn-bg-alt") + '" stroke="' + Theme.value("warn-line") + '" stroke-width="1.5"/>' +
       '<text x="' + (sp.x + sp.w / 2) + '" y="' + (sp.y + sp.h / 2 + 4) + '" text-anchor="middle" ' +
-      'font-size="11" font-weight="600" fill="#92400e">' + esc(sp.m.name) + "</text></g>").join("");
+      'font-size="11" font-weight="600" fill="' + Theme.value("warn-ink") + '">' + esc(sp.m.name) + "</text></g>").join("");
 
     return '<svg class="nbhd-svg" width="' + L.width + '" height="' + L.height + '" viewBox="0 0 ' +
       L.width + " " + L.height + '" xmlns="http://www.w3.org/2000/svg"><defs>' +
       '<marker id="nbhd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" ' +
-      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#94a3b8" ' +
+      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="' + Theme.value("slate") + '" ' +
       'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>' +
       '<marker id="nbhd-src-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" ' +
-      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="#d97706" ' +
+      'orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10" fill="none" stroke="' + Theme.value("warn-line") + '" ' +
       'stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>' +
       // Bands last, so that while a chip is being dragged they sit above the nodes
       // and a drop lands on the band rather than on whatever it happens to cover.
