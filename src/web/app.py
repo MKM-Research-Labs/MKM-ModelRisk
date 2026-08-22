@@ -49,6 +49,7 @@ from src.web import api_product_risk  # noqa: F401 — attaches endpoints to pro
 from src.web import api_product_documents  # noqa: F401 — attaches endpoints to product_bp
 from src.web.api_ingest import ingest_bp
 from src.web.api_reference import reference_bp
+from src.web.api_theme import theme_bp
 from src.web.api_risk_policy import risk_policy_bp
 from src.web.api_vendor_documents import vendor_documents_bp
 from src.web.views import views_bp
@@ -90,6 +91,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     # Front-end assets live under src/static and src/templates (coding rule R7).
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
     app.register_blueprint(views_bp)
+    app.register_blueprint(theme_bp)
     app.register_blueprint(models_bp)
     app.register_blueprint(handoffs_bp)
     app.register_blueprint(product_bp)

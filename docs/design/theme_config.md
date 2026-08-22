@@ -1,7 +1,7 @@
 # Design: centralising look and feel into `config/theme`
 
-**Status:** Steps 1–2 shipped 2026-08-22 (the token module, the served stylesheet, and
-the risk-policy seed reading from it); steps 3–7 outstanding
+**Status:** Steps 1–3 shipped 2026-08-22 (the token module, the served stylesheet, the
+risk-policy seed, and the status colours served from config); steps 4–7 outstanding
 **Date:** 2026-08-21
 **Area:** `src/static`, `src/templates`, `config/`, `audit/`
 **Driver:** An ERM vendor is cloning ModelRisk into their suite as a new pillar. Their
@@ -110,7 +110,7 @@ Sequenced so the risky, high-value work lands first and every step ships on its 
 |---|---|---|
 | 1 | ✅ `config/theme.py` + `/theme.css` route + expand `:root` to the full token set | Nothing changes visually; the vocabulary now exists |
 | 2 | ✅ `risk_policy/_defaults.py` reads from it | Small; removes seeded colour literals from `src/` (an R1 fix), and they reach the console through `/api/risk-policy` |
-| 3 | The six colour maps in `helpers.js` → `Theme` | 28 hexes in one file, and every badge on every screen inherits |
+| 3 | ✅ The six colour maps in `helpers.js` → `Theme` | 28 hexes in one file, and every badge on every screen inherits |
 | 4 | `app.css`'s 60 raw hexes → `var(--…)` | Mechanical, CSS-only, easy to eyeball |
 | 5 | The remaining 162 JS hexes | Needs the SVG decision in §6 |
 | 6 | The 493 inline `style` attributes | Lowest value; cosmetic consistency, not rebrand-blocking |
@@ -145,6 +145,32 @@ three the console uses and catalogued nowhere. It is now `--green-soft` / `--amb
 `--red-soft`, and a test keeps it disjoint from the rating hues: those dimensions are an
 input to the rating, so an axis that renders in the rating's own colours stops being
 readable as an axis.
+
+**Step 3, as built (2026-08-22).** The six maps were **27 entries drawn in five colours** —
+six spellings of one vocabulary, and `MRC_STATE_COLORS` had already been half-converted to
+`var(--red)` by hand, so one map spoke both dialects. They are now a single
+`STATUS_COLOUR_TOKENS` table in `config/theme.py` naming a *token* per value, served with
+the token values at `GET /api/theme` (`src/web/api_theme.py`) and consumed by a `Theme`
+registry in `helpers.js` — the same shape as `Policy`, and loaded beside it in the same
+`Promise.all` before the first render. Precedence is unchanged, and was confirmed against a
+restored estate: a division's policy still wins, and the theme is only the platform
+fallback beneath it.
+
+`STATUS_COLOUR_DEFAULTS` covers `validation_question`, `mrc_state` and `lifecycle` only.
+The other three domains have no default deliberately — an unknown rating or an unrated
+tier must render as a dash, because a grey badge asserts a classification nobody made.
+
+Step 3 reached three files, not one: `inventory_tabs.js` and `inventory/list.js` also read
+those maps. `helpers.js` and `inventory/list.js` now hold no colour literal at all;
+`inventory_tabs.js` keeps ten of its own, which are step 5.
+
+**One constraint this surfaced.** The heatmap shades a cell by appending two hex digits of
+alpha to the colour (`bg + "22"`), and `var(--red)22` is meaningless — so those sites take
+`Theme.hex()` (the literal value) rather than `Theme.ref()`. Hex-valued tokens are
+therefore a requirement wherever a colour is manipulated rather than merely used. A
+`Theme.tint()` built on `color-mix()` would lift that, and let a token be any CSS colour,
+at the cost of shifting the shade very slightly — worth doing when a token needs to be
+`rgb()` or a named colour, not before.
 
 ## 6. Three traps to know before starting
 

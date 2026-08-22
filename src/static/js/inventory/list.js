@@ -109,7 +109,8 @@ const InventoryList = {
   _mcBands() {
     const scoped = (typeof MrcNav !== "undefined" && MrcNav.state) ? MrcNav.state.div : null;
     const seed = () => Policy.dimensionBands("mission_criticality", null) ||
-      [1, 2, 3].map((t) => ({ name: "Tier " + t, score: t, colour: TIER_COLORS[t] }));
+      [1, 2, 3].map((t) => ({ name: "Tier " + t, score: t,
+                              colour: Theme.hex("mission_criticality", t) }));
     if (scoped) return Policy.dimensionBands("mission_criticality", scoped) || seed();
     const byScore = new Map();
     [...new Set(this._models.map((m) => m.d.division).filter(Boolean))].forEach((division) =>
@@ -150,8 +151,8 @@ const InventoryList = {
     // categorisation the division has since replaced, is not covered by a sign-off. Counting
     // the last historical outcome instead read 25/25 while the column beside it said Pending.
     const approved = live.filter((m) => mrcState(m.d) === "Approved").length;
-    const ragCount = (r) => '<span style="color:' + (r.colour || RAG_COLORS[r.name] ||
-      "#9e9e9e") + '">' + byRag(r.name) + "</span>";
+    const ragCount = (r) => '<span style="color:' + (r.colour ||
+      Theme.hex("rag", r.name) || Theme.value("grey")) + '">' + byRag(r.name) + "</span>";
     const ragVal = ratings.map(ragCount).join(" / ");
     const ragLabel = ratings.map((r) => r.name.charAt(0)).join(" / ");
     const tile = (lbl, val, color, filter) =>
@@ -159,11 +160,12 @@ const InventoryList = {
       (filter ? ' data-tile="' + filter + '"' : "") + '><div class="lbl">' + lbl +
       '</div><div class="val">' + val + "</div></div>";
     return '<div class="summary">' +
-      tile("Total " + this._cfg.noun, live.length, "#1976d2", "") +
+      tile("Total " + this._cfg.noun, live.length, Theme.value("accent"), "") +
       this._mcBands().map((b) => tile(esc(b.name), byTier(b.score),
-        b.colour || TIER_COLORS[b.score] || "#9e9e9e", "tier=" + b.score)).join("") +
-      tile(esc(ragLabel), ragVal, "#388e3c", "") +
-      tile("Approved", approved + " / " + live.length, "#388e3c", "") +
+        b.colour || Theme.hex("mission_criticality", b.score) || Theme.value("grey"),
+        "tier=" + b.score)).join("") +
+      tile(esc(ragLabel), ragVal, Theme.value("green"), "") +
+      tile("Approved", approved + " / " + live.length, Theme.value("green"), "") +
       "</div>";
   },
 

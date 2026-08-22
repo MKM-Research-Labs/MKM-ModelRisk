@@ -91,9 +91,11 @@ document.addEventListener("DOMContentLoaded", function () {
     if (document.getElementById("m-list")) Inventory.loadList();
   };
   OrgScope.onChange(refreshInventory);
-  // Load the risk policy first so badges/heatmaps colour from it on the first render,
-  // then show the inventory. Failure is non-fatal — helpers fall back to the palette.
-  Policy.load().then(function () { showTab("inventory"); });
+  // Load the risk policy and the theme first so badges/heatmaps colour from them on the
+  // first render, then show the inventory. The theme carries which token each status is
+  // drawn in (config/theme.py); the policy overrides it per division. Failure of either
+  // is non-fatal — a badge with no colour renders as the dash an unrated record shows.
+  Promise.all([Policy.load(), Theme.load()]).then(function () { showTab("inventory"); });
   // Populate the scope dropdowns, then re-filter (applies any saved selection).
   OrgScope.init().then(refreshInventory);
   // The actor picker lists real People, so it loads with the reference data.
