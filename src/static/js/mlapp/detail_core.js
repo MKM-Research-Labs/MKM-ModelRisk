@@ -112,15 +112,24 @@ const MLAppDetail = {
   // Left is what the thing IS: where it lives, what it is built on, how. ``estimator``
   // sits where a model's ``type`` does, and ``estimator_rationale`` where its
   // ``methodology_rationale`` does -- the same question, asked of an estimator.
-  _LEFT: ["division", "line_of_business", "repo_location", "codebase", "estimator",
-          "estimator_version", "vendor", "short_name", "category", "methodology",
-          "estimator_rationale", "source_module"],
+  // ``use_case`` leads: what the thing is FOR is the question every other answer on
+  // the record is judged against, and it has no equivalent on a model — so it goes
+  // above the fields borrowed from the inventory rather than being left off the page
+  // because the model has nothing to put there.
+  _LEFT: ["use_case", "division", "line_of_business", "repo_location", "codebase",
+          "estimator", "estimator_version", "vendor", "short_name", "category",
+          "methodology", "estimator_rationale", "source_module"],
 
   // Testing evidence is asked of the review, not of the fit: whether the code is
   // tested is a different question from how the model was trained, and mixing them
   // dilutes both. Monitoring is how the fit is watched afterwards, so it sits with
   // the trains.
-  _REVIEW_FIELDS: ["unit_tests", "integration_tests", "benchmark_tests"],
+  // The reviewer belongs on the tab where the review is run, as on a model — and
+  // this one is not optional furniture: the completeness audit scores INDEPENDENCE by
+  // comparing it against the owner, so a record with nowhere to set it is a record
+  // marked down for a field nobody can reach.
+  _REVIEW_FIELDS: ["peer_reviewer", "validation_status", "unit_tests",
+                   "integration_tests", "benchmark_tests"],
   _TRAINS_FIELDS: ["monitoring_approach"],
 
   // Governance, in the model's order. Deliberately NOT here, exactly as on a model:
@@ -282,9 +291,26 @@ const MLAppDetail = {
   _trainingSections(d) {
     const train = this._latestTrain(d);
     if (!train) {
-      return '<div class="empty">No train recorded yet. A train is one fit — its ' +
-        "snapshot, split, hyperparameters, seed and metrics. Record one on the Trains " +
-        "tab.</div>";
+      // Start here, not somewhere else. Sending an owner to another tab to find a
+      // button before the fields will even appear is a tab nobody gets past — the
+      // evidence is entered here, so the first train is started here too.
+      if (this._record.retired) {
+        return '<div class="empty">No train recorded. This ML Application is ' +
+          "retired.</div>";
+      }
+      return '<div class="empty" style="text-align:left">' +
+        "<p style=\"margin:0 0 8px\"><b>No train recorded yet.</b> A train is one fit " +
+        "— what it was fitted on, how it was split, its hyperparameters, seed and " +
+        "metrics. Name this fit and the six sections open for you to fill in.</p>" +
+        '<div class="row" style="align-items:center;gap:6px">' +
+        '<input id="mla-first-fit" placeholder="Identifier for this fit — a run name, ' +
+        'a version or a commit" style="flex:1;min-width:320px">' +
+        '<button class="btn small primary" id="mla-start-train">Start a train</button>' +
+        "</div>" +
+        '<p class="muted" style="font-size:12px;margin:8px 0 0">Most of it can report ' +
+        "itself: a fit that calls <span class=\"code\">modelrisk.capture</span> fills " +
+        "the snapshot, hyperparameters, seed, environment, commit and metrics without " +
+        "anyone typing them.</p></div>";
     }
     const self = this;
     const sections = this._specs.training.sections;
@@ -316,6 +342,25 @@ const MLAppDetail = {
         !(Array.isArray(v) && !v.length);
     }).length;
     return " (" + filled + "/" + keys.length + ")";
+  },
+
+  // Start the first train from the Training tab itself.
+  _bindFirstTrain() {
+    const input = document.getElementById("mla-first-fit");
+    const btn = document.getElementById("mla-start-train");
+    if (!btn || !input) return;
+    const self = this;
+    const start = function () {
+      const id = input.value.trim();
+      if (!id) { App.toast("Give this fit an identifier.", "error"); input.focus(); return; }
+      App.amend("Record train " + id + " on " + self._record.ml_application_id + ".",
+        "POST", "/api/ml-applications/" +
+        encodeURIComponent(self._record.ml_application_id) + "/collections/" +
+        self._specs.training.collection, { fields: { fit_id: id } },
+        () => self.refresh());
+    };
+    btn.onclick = start;
+    input.onkeydown = function (e) { if (e.key === "Enter") start(); };
   },
 
   _bindSectionRail() {
@@ -535,6 +580,7 @@ const MLAppDetail = {
     if (this._tab === "overview") { box.innerHTML = this._overview(); this._bindEdits(); return; }
     if (this._tab === "training") {
       box.innerHTML = this._trainingSections(d);
+      this._bindFirstTrain();
       this._bindSectionRail();
       this._bindTrainEdits(d);
       this._bindArtefacts();

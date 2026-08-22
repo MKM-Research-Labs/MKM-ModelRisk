@@ -38,6 +38,11 @@ What does NOT come across, and why:
                    nothing about an ML Application -- they are all classifiers or
                    regressors, and the Estimator already says which.
 
+``version_history`` becomes TRAINS. An ML Application has no versions -- the record of
+change is its sequence of fits -- and each version entry describes one: a date, an
+author, and what changed about the model. Dropping them would lose the only history
+the inventory holds of how the thing was built.
+
 The nine SR 26-2 answers ARE carried, into the ML questionnaire. A record keeps the
 questions it was actually asked; re-asking it the ML set would discard answers a
 reviewer gave and a committee saw.
@@ -52,7 +57,7 @@ import sys
 from config.database import DatabaseConfig
 from src.governance.errors import DomainError
 from config.governance import (ML_APPLICATION_COLLECTION_SPECS, ML_APPLICATION_FIELD_SPECS,
-                               ML_REVIEW_QUESTIONS_COLLECTION)
+                               ML_REVIEW_QUESTIONS_COLLECTION, TRAINING_RUNS_COLLECTION)
 from src.governance.documents import (add_document, list_documents,
                                       ml_application_scope, model_scope)
 from src.governance.ml_application import (add_collection_item, get_ml_application,
@@ -92,6 +97,24 @@ def _provenance(model_id: str, data: dict) -> dict:
     return {"version": data.get("version") or "", "date": "", "author": "migration",
             "change_type": "Migration",
             "description": f"Migrated from model {model_id}."}
+
+
+def _versions_as_trains(ml_application_id: str, versions: list, actor: str) -> int:
+    """Each recorded version is a fit. Carried oldest first so the sequence reads
+    forwards, and the run date is the version's date -- the only date the inventory
+    holds for when the thing was actually built."""
+    made = 0
+    for entry in versions:
+        fields = {"fit_id": str(entry.get("version") or f"v{made + 1}")}
+        if entry.get("date"):
+            fields["run_date"] = entry["date"]
+        if entry.get("description"):
+            fields["secondary_metrics"] = entry["description"]
+        add_collection_item(ml_application_id=ml_application_id,
+                            collection=TRAINING_RUNS_COLLECTION, fields=fields,
+                            actor=actor, reason="Carried from the model's version history")
+        made += 1
+    return made
 
 
 def migrate(model_id: str, ml_application_id: str, estimator: str,
@@ -134,8 +157,16 @@ def migrate(model_id: str, ml_application_id: str, estimator: str,
     for name, items in data.items():
         if not isinstance(items, list) or not items or name in DROPPED_COLLECTIONS:
             continue
+        if name == "version_history":
+            counts[TRAINING_RUNS_COLLECTION] = _versions_as_trains(
+                ml_application_id, items, actor)
+            continue
         target = ML_REVIEW_QUESTIONS_COLLECTION if name == "validation_questions" else name
         if target not in ML_APPLICATION_COLLECTION_SPECS:
+            # Reported, never dropped in silence: a collection the target cannot hold
+            # is information the migration is losing, and the operator has to know.
+            counts.setdefault("NOT CARRIED (no home on the record)", []).append(
+                f"{name} ({len(items)})")
             continue
         spec_keys = {f["key"] for f in ML_APPLICATION_COLLECTION_SPECS[target]["fields"]}
         for item in items:
@@ -181,6 +212,11 @@ def main(argv: list[str]) -> int:
     print(f"database: {resolved}")
     counts = migrate(argv[1], argv[2], argv[3])
     for key, value in counts.items():
+        if isinstance(value, list):
+            print(f"  {key}:")
+            for entry in value:
+                print(f"    {entry}")
+            continue
         if key == "NOT CARRIED":
             print("  NOT CARRIED (left on the source record):")
             for field, why in value.items():
