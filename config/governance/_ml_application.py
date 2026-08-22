@@ -48,6 +48,10 @@ What this record deliberately does NOT carry, and why:
                             below), seeded from a different admin list.
 ``version_history``         There is no version. Every fit is a train, recorded in
                             ``training_runs`` with the evidence that fit produced.
+``training_data`` etc.      What a fit was trained on and how it performed belongs to
+                            the TRAIN that produced it, not to the record. A copy here
+                            would be a second answer to the same question, free to
+                            disagree with the fit it describes.
 ``raci_roles``              Accountability for an ML Application's use in production
                             sits on the Product that consumes it, where the RACI
                             operating model already lives. Carrying a second one here
@@ -119,20 +123,13 @@ ML_APPLICATION_FIELD_SPECS = {
     "vendor": {"label": "Vendor", "type": "text", "group": "Estimator and method",
                "reference": "vendor", "strict_reference": True},
     "category": {"label": "Category", "type": "text", "group": "Estimator and method"},
-    "training_data": {"label": "Training data", "type": "textarea", "group": "Estimator and method"},
-    "training_period": {"label": "Training period", "type": "text", "group": "Estimator and method"},
     # Deliberately not a named metric. Area under the curve is a CLASSIFICATION
     # metric; a regression model has RMSE, MAE and R-squared, and much of this
     # estate is regression. The record asks which metric and what it said, so both
     # can answer honestly.
-    "performance": {"label": "Performance (metric and result)", "type": "textarea",
-                    "group": "Estimator and method"},
-    "benchmark": {"label": "Benchmark comparison", "type": "textarea", "group": "Estimator and method"},
     # Where the output could be read as saying more than it does. Its own field
     # rather than a weakness because it is a risk of USE, not a defect of the
     # model -- the model can be sound and still be misread.
-    "misinterpretation": {"label": "Scope for misinterpretation", "type": "textarea",
-                          "group": "Estimator and method"},
     # --- Classification. The same three dimensions, bands and heatmap a model
     #     carries, so an ML Application's categorisation is challenged on the same
     #     terms -- and so the ``analysis`` and ``evaluation`` probes count it. ---
