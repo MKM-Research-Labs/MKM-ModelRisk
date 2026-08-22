@@ -271,6 +271,14 @@ const MLAppDetail = {
     return true;  // the rest depend on the data, not the task: always offered
   },
 
+  // Which section is open. Held on the detail object so leaving the tab and coming
+  // back puts the owner where they were, exactly as the model's review rail does.
+  _trainSection: null,
+
+  // Six sub-tabs rather than one long page: fifty-three fields in a single scroll is
+  // a page nobody reaches the bottom of, and the sections are a sequence anyway.
+  // Numbered 1-6 and not lettered — the letters were the spec's internal references,
+  // and a reader meeting "C." on screen has nothing to match it against.
   _trainingSections(d) {
     const train = this._latestTrain(d);
     if (!train) {
@@ -279,16 +287,45 @@ const MLAppDetail = {
         "tab.</div>";
     }
     const self = this;
+    const sections = this._specs.training.sections;
+    if (!this._trainSection) this._trainSection = sections[0].key;
+    const open = sections.find((x) => x.key === self._trainSection) || sections[0];
+    const rail = sections.map((section, i) =>
+      '<button class="dtab' + (section.key === open.key ? " active" : "") +
+      '" data-tsec="' + section.key + '">' + (i + 1) + ". " + esc(section.title) +
+      self._sectionBadge(section, train) + "</button>").join("");
+    const keys = (open.fields || []).filter((k) => self._applies(k, train));
     return '<p class="muted" style="font-size:12px;margin:0 0 10px">Train ' +
       '<span class="code">' + esc(train.fit_id || train.item_id) + "</span>" +
       " — the most recent fit. Earlier trains are on the Trains tab.</p>" +
       this._completenessPanel(d) +
-      this._specs.training.sections.map((section) => {
-        const keys = (section.fields || []).filter((k) => self._applies(k, train));
-        if (!keys.length) return "";
-        return '<div class="section-header">' + esc(section.key + ". " + section.title) +
-          "</div>" + keys.map((k) => self._trainRow(k, train) + self._artefact(k)).join("");
-      }).join("");
+      '<div class="dtabs" style="margin-top:12px">' + rail + "</div>" +
+      '<div style="margin-top:12px">' +
+      keys.map((k) => self._trainRow(k, train) + self._artefact(k)).join("") +
+      "</div>";
+  },
+
+  // How much of the section is recorded. A count, never a mark: nothing here is
+  // mandatory, so this says how far through it is and not how well it scores.
+  _sectionBadge(section, train) {
+    const self = this;
+    const keys = (section.fields || []).filter((k) => self._applies(k, train));
+    const filled = keys.filter((k) => {
+      const v = train[k];
+      return v !== null && v !== undefined && v !== "" &&
+        !(Array.isArray(v) && !v.length);
+    }).length;
+    return " (" + filled + "/" + keys.length + ")";
+  },
+
+  _bindSectionRail() {
+    const self = this;
+    document.querySelectorAll("#mla-content [data-tsec]").forEach(function (btn) {
+      btn.onclick = function () {
+        self._trainSection = btn.getAttribute("data-tsec");
+        self._renderContent();
+      };
+    });
   },
 
   // What the evidence adds up to. Deliberately NOT the RAG rating: that is the risk
@@ -498,6 +535,7 @@ const MLAppDetail = {
     if (this._tab === "overview") { box.innerHTML = this._overview(); this._bindEdits(); return; }
     if (this._tab === "training") {
       box.innerHTML = this._trainingSections(d);
+      this._bindSectionRail();
       this._bindTrainEdits(d);
       this._bindArtefacts();
       this._bindWhy();

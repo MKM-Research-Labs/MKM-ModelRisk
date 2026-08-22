@@ -65,6 +65,12 @@ def _qualifications(train: dict) -> list[str]:
     if str(train.get("scaler_fit_point") or "") == "Full dataset":
         out.append("the scaler was fitted on the full dataset, which leaks the test "
                    "set into the fit and inflates the reported metric")
+    # The same leak, and a quieter one: nobody thinks of filling in a blank as
+    # training on the answer, but a median computed over the whole dataset carries
+    # the test set into the fit just as a scaler does.
+    if str(train.get("missing_data_fit_point") or "") == "Full dataset":
+        out.append("the imputation was fitted on the full dataset, which leaks the "
+                   "test set into the fit as surely as a scaler would")
     rationale = str(train.get("split_rationale") or "")
     if _recorded(rationale) and len(rationale.strip()) < MIN_RATIONALE_CHARS:
         out.append("the split rationale is too short to be an argument")

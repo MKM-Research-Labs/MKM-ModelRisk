@@ -45,7 +45,10 @@ curve it never produced. That rule lives in ``when``.
 """
 from __future__ import annotations
 
-from config.governance._ml_training_notes import TRAINING_NOTES
+from config.governance._ml_training_notes import (CONDITIONAL_TASKS,  # noqa: F401
+                                                  TRAINING_NOTES, WHEN_CATEGORICAL,
+                                                  WHEN_CLASSIFICATION, WHEN_NEURAL,
+                                                  WHEN_PROBABILITY)
 
 TRAINING_RUNS_COLLECTION = "training_runs"
 
@@ -94,8 +97,10 @@ ML_TRAINING_VOCABULARIES = {
     SCALING_LIST: ("Scaling methods", "SM",
                    ("Standard", "Min-max", "Robust", "None"),
                    "How features were scaled or normalised."),
-    SCALER_FIT_POINT_LIST: ("Scaler fit points", "SF", ("Train only", "Full dataset"),
-                            "Where the scaler was fitted. Fitting on the full dataset leaks."),
+    SCALER_FIT_POINT_LIST: ("Fit points", "SF", ("Train only", "Full dataset"),
+                            "Where a transform was fitted -- the scaler, the imputer, "
+                            "the encoder. Fitting on the full dataset leaks the test "
+                            "set into the fit."),
     SPLIT_METHOD_LIST: ("Split methods", "SP",
                         ("Random", "Stratified", "Temporal", "Spatial-group",
                          "Entity-group", "Predefined"),
@@ -122,20 +127,6 @@ ML_TRAINING_VOCABULARIES = {
 
 ML_TRAINING_LISTS = tuple(ML_TRAINING_VOCABULARIES)
 
-# Conditional rules, named so ``when`` reads as a sentence and the completeness
-# calculation and the form agree about what applies.
-WHEN_CLASSIFICATION = "classification"
-WHEN_CATEGORICAL = "categorical features present"
-WHEN_NEURAL = "neural task"
-WHEN_PROBABILITY = "probability consumed downstream"
-
-# The learning tasks each conditional rule fires for. Matched on the STORED value, so
-# renaming a task's label in Admin does not change which fields it demands.
-CONDITIONAL_TASKS = {
-    WHEN_CLASSIFICATION: ("Binary classification", "Multiclass classification"),
-    WHEN_NEURAL: ("Sequence", "Image"),
-}
-
 # --- Capture at fit time -----------------------------------------------------
 # The fields a training run can report for ITSELF. Everything here is a fact about
 # the run rather than a judgement about it, so a human retyping it adds nothing but
@@ -153,6 +144,7 @@ CAPTURABLE_FIELDS = (
     "learning_task", "primary_metric", "metric_train", "metric_cv", "metric_test",
     "cv_method", "cv_folds", "cv_result", "split_method", "split_proportions",
     "scaling", "scaler_fit_point", "encoding", "missing_data",
+    "missing_data_fit_point",
     "code_commit", "environment", "artefact",
 )
 
@@ -179,8 +171,6 @@ _F = (
     ("row_count", "B", "Rows", "number", None, None),
     ("target_distribution", "B", "Target distribution", "text", None,
      WHEN_CLASSIFICATION),
-    ("missing_data", "B", "Missing data treatment", "choice", MISSING_DATA_LIST, None),
-    ("missing_data_columns", "B", "Columns affected", "text", None, None),
     # C. Split and validation
     ("split_method", "C", "Split method", "choice", SPLIT_METHOD_LIST, None),
     ("split_proportions", "C", "Split proportions (train/val/test)", "text", None,
@@ -191,6 +181,10 @@ _F = (
     # split has seen the test set, and the reported test metric is inflated -- so a
     # reader meets "fitted on: full dataset" already knowing what the split was, and
     # can tell in one line whether the numbers below are worth reading.
+    ("missing_data", "C", "Missing data treatment", "choice", MISSING_DATA_LIST, None),
+    ("missing_data_columns", "C", "Columns affected", "text", None, None),
+    ("missing_data_fit_point", "C", "Imputation fitted on", "choice",
+     SCALER_FIT_POINT_LIST, None),
     ("encoding", "C", "Categorical encoding", "choice", ENCODING_LIST, WHEN_CATEGORICAL),
     ("scaling", "C", "Scaling / normalisation", "choice", SCALING_LIST, None),
     ("scaler_fit_point", "C", "Scaler fitted on", "choice", SCALER_FIT_POINT_LIST, None),

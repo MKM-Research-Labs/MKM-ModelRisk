@@ -30,6 +30,20 @@ something and a number that does not.
 """
 from __future__ import annotations
 
+# Conditional rules, named so ``when`` reads as a sentence and the completeness
+# calculation and the form agree about what applies.
+WHEN_CLASSIFICATION = "classification"
+WHEN_CATEGORICAL = "categorical features present"
+WHEN_NEURAL = "neural task"
+WHEN_PROBABILITY = "probability consumed downstream"
+
+# The learning tasks each conditional rule fires for. Matched on the STORED value, so
+# renaming a task's label in Admin does not change which fields it demands.
+CONDITIONAL_TASKS = {
+    WHEN_CLASSIFICATION: ("Binary classification", "Multiclass classification"),
+    WHEN_NEURAL: ("Sequence", "Image"),
+}
+
 TRAINING_NOTES = {
     # A. Task and target
     "learning_task": "Fixes what the rest of this tab asks for. A regression is not "
@@ -64,6 +78,10 @@ TRAINING_NOTES = {
                     "invents typical cases; dropping rows can drop a whole segment.",
     "missing_data_columns": "Which columns were affected, so the treatment can be judged "
                             "against the features that mattered.",
+    "missing_data_fit_point": "WHERE the imputation was fitted. A median computed over "
+                              "the full dataset leaks the test set into the fit exactly "
+                              "as a scaler does, and the leak is quieter: nobody thinks "
+                              "of filling in a blank as training on the answer.",
     "encoding": "How categories became numbers. Ordinal encoding of an unordered "
                 "category asserts an ordering the data does not have.",
     "scaling": "Which transform was applied. It changes what the coefficients and the "

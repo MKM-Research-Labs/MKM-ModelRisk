@@ -28,9 +28,14 @@ becomes unreliable. A tab that lists the fields in any other order lets that pas
 *The spec contradicts itself here and we followed the better half.* Its §2 puts the
 split before scaling; its §4 schema puts scaling at B.8 and the split at C.1, which
 is the opposite. Section C now reads "Split, preprocessing and validation" and
-carries encoding, scaling and the scaler fit-point after the split rationale. The
-finding fires either way — `scaler_fit_point = "Full dataset"` is flagged wherever
-the row sits — but a reader meets it already knowing what the split was.
+carries **every** transform after the split rationale — missing-data treatment,
+encoding and scaling — each saying where it was fitted.
+
+The spec asks for a fit-point on the scaler only. Missing-data imputation has exactly
+the same property and gets one too: a median computed over the whole dataset carries
+the test set into the fit as surely as a scaler does, and the leak is quieter, because
+nobody thinks of filling in a blank as training on the answer. Both draw on one
+vocabulary — **Fit points** — rather than one list per transform.
 
 ## 2. Two translations the spec needs
 
