@@ -132,6 +132,31 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
     return rows
 
 
+def coverage_population(model_ids=None, ml_application_ids=None,
+                        config=None) -> list[dict[str, Any]]:
+    """Every record the framework clauses are counted over.
+
+    Models AND ML Applications. The clause probes are field-name lambdas over one
+    population, and an ML Application carries the same field names a model does
+    precisely so it can join that population without a per-type branch (see
+    docs/design/mlmodel.md, decision 7). Counting the clauses over models alone
+    would report a coverage picture of a shrinking slice of the estate as the ML
+    side grows — the same failure the gap audit had.
+
+    Retired records are excluded on both sides: out of the estate, out of every
+    figure.
+    """
+    records = list(scoped_models(model_ids, config=config))
+    want = None if ml_application_ids is None else set(ml_application_ids)
+    for record in list_ml_applications(config=config):
+        if record.get("retired"):
+            continue
+        if want is not None and record["ml_application_id"] not in want:
+            continue
+        records.append(record)
+    return records
+
+
 def scoped_models(model_ids=None, config=None) -> list[dict[str, Any]]:
     """The inventory the report's estate-wide sections read, under the same scope
     rule as ``scan``: ``None`` is the whole estate, an empty sequence is nothing.

@@ -38,6 +38,10 @@ const Reference = {
     // and Vendor because it is the same kind of thing: what a record is classified
     // as, and who supplies it.
     ["estimator", "Estimator"],
+    // The features an ML Application is fitted on. Its own tab, beside Estimator,
+    // because it is the same kind of thing: a register of entries with properties,
+    // not a vocabulary of words.
+    ["feature", "Feature"],
     // The per-division risk policy: dimensions, ratings and the generated grids.
     ["risk", "Risk"],
     // The questionnaire every review works through. Its own tab rather than a row
@@ -101,7 +105,10 @@ const Reference = {
     keys.forEach((key) => {
       const spec = res.collections.find((c) => c.key === key);
       if (!spec) return;
-      this._renderList(document.getElementById("voc-" + key), spec, res.data[key] || []);
+      // Each list says what it governs. The shared blurb above explains the two
+      // columns; this says which words these are.
+      this._renderList(document.getElementById("voc-" + key), spec,
+                       res.data[key] || [], spec.hint || "");
     });
   },
 
@@ -148,6 +155,14 @@ const Reference = {
         "<b>Role</b> is what the console draws for the item (a rollcall, the previous " +
         "minutes, the sign-off review); leave it blank for business the committee " +
         "always takes, which renders as an ordinary agenda item.");
+      return;
+    }
+    if (this._tab === "feature") {
+      this._renderList(container, spec, res.data[this._tab] || [],
+        "The features your ML Applications are fitted on. Linked from a train rather " +
+        "than typed into it, so a feature that turns out to be wrong \u2014 or to have " +
+        "leaked \u2014 can be traced to every fit that used it at once. Nothing is " +
+        "seeded here: a starter list of ours would be somebody else's model.");
       return;
     }
     if (this._tab === "estimator") {

@@ -43,6 +43,10 @@ def _specs():
     return [
         {
             "key": key, "label": spec["label"], "id_prefix": spec["id_prefix"],
+            # What the list is for, where the spec says. Several vocabularies share
+            # one admin page and a table of words with no purpose beside it is a
+            # table nobody knows whether they may edit.
+            "hint": spec.get("hint", ""),
             "fields": [resolve_field(f, options) for f in spec["fields"]],
         }
         for key, spec in REFERENCE_SPECS.items()

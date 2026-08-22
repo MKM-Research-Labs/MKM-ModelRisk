@@ -28,6 +28,7 @@ no arithmetic can turn either of those into a compliance claim.
 """
 from __future__ import annotations
 
+from src.governance.latex import _wrappable
 from config.governance import (
     COSO_ERM,
     COVERAGE_ABSENT,
@@ -73,9 +74,9 @@ def test_every_configured_clause_is_assessed_and_names_a_known_probe():
         assert clause["evidence"].strip()
 
 
-def test_both_frameworks_are_reported():
+def test_every_configured_framework_is_reported():
     frameworks = {c["framework"] for c in _cover([_model()])}
-    assert frameworks == {ISO_31000, COSO_ERM}
+    assert frameworks == {name for name, _rows in FRAMEWORK_COVERAGE}
 
 
 def test_tally_reconciles_to_the_clauses_it_counts():
@@ -249,10 +250,15 @@ def test_the_section_makes_no_compliance_claim():
 
 def test_the_section_lists_every_clause_and_repeats_the_unevidenced_ones():
     tex = framework_section([{"entity_id": "M1"}], [_model()], AS_OF)
-    assert ISO_31000 in tex and COSO_ERM in tex
+    for framework, _rows in FRAMEWORK_COVERAGE:
+        assert framework in tex
     for _framework, rows in FRAMEWORK_COVERAGE:
         for _ref, title, _probe, _note in rows:
-            assert title.replace("&", "\\&") in tex or title in tex
+            # Through _wrappable, because that is how the cell is rendered: a title
+            # carrying a slash ("Home/host cooperation") gains a break hint, and a
+            # citation keeps its published spelling rather than being reworded to
+            # suit an assertion.
+            assert _wrappable(title) in tex, title
     assert "Not evidenced" in tex
     assert tex.count("Defines Risk Appetite") == 2  # in its table, and again alone
 
