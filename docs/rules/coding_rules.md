@@ -227,9 +227,9 @@ registered person while `DB_NAME` is protected), which is designed but **not yet
 
 **Rule.** Colours, type sizes, spacing steps, corner radii and shadows live in
 `config/theme.py`. No colour literal — hex, `rgb()`, `rgba()`, `hsl()` — anywhere else:
-not in `src/static/css`, not in `src/templates`, not in a `.py` file, and (once step 5 of
-`docs/design/theme_config.md` lands) not in `src/static/js` either. The stylesheet and the
-JavaScript name a **token**; the token is defined in one place and served from it.
+not in `src/static/css`, not in `src/templates`, not in `src/static/js`, and not in a
+`.py` file. The stylesheet and the JavaScript name a **token**; the token is defined in one
+place and served from it.
 
 Two corollaries that are part of the rule, not advice:
 
@@ -253,12 +253,17 @@ only where the value is *manipulated* rather than used — the heatmap appends t
 of alpha, and `var(--red)22` means nothing. Which token a status is drawn in belongs in
 `STATUS_COLOUR_TOKENS`, not in a map in a `.js` file.
 
-**Verified by.** The styling audit (`python -m audit`, `audit/styling.py`). Colour literals
-in the converted surfaces and undefined token references are **gated**. Colour literals in
-`src/static/js` are **reported with a count** while step 5 is outstanding — adding `".js"`
-to `STYLING_GATED_SUFFIXES` in `config/audit.py` is what closes that step and turns the
-backlog into a gate. `src/governance/latex.py` writes its colour without a leading `#` and
-is out of scope until the PDF work in the design note's §9.1.
+**Verified by.** The styling audit (`python -m audit`, `audit/styling.py`), which scans
+every `.css`, `.js` and `.html` file under `src/static` and `src/templates`, plus every
+`.py` file under the source tree. Three gated checks, all at zero: a colour literal in an
+asset, a colour literal in Python, and a `var(--token)` naming a token the theme does not
+define. `STYLING_GATED_SUFFIXES` in `config/audit.py` is the scope knob. The rule has its
+own report PDF (`audit_r10_styling.pdf`) and three rows in the audit's compliance summary,
+so it appears in the console's Audit Reports tab alongside R1–R8.
+
+`src/governance/latex.py` writes its colour without a leading `#` and is out of scope until
+the PDF work in the design note's §9.1 — the one place a colour still lives outside
+`config/theme.py`.
 
 ---
 

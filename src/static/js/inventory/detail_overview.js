@@ -50,7 +50,7 @@ Object.assign(Detail, {
     let value;
     if (latest) {
       const outcome = latest.outcome || "Approved";
-      const color = outcome === "Rejected" ? "var(--red)" : "#388e3c";
+      const color = outcome === "Rejected" ? "var(--red)" : Theme.value("green");
       value = '<span style="color:' + color + ';font-weight:600">' + esc(outcome) + "</span> at " +
         '<span class="code">' + esc(latest.meeting_id) + "</span>" +
         (latest.date ? " (" + esc(latest.date) + ")" : "");
@@ -148,7 +148,7 @@ Object.assign(Detail, {
     if (key === "owner") {
       const pending = pendingOwnerRatification(d);
       if (pending) {
-        value += ' <span class="badge" style="background:#f57c00" title="' +
+        value += ' <span class="badge" style="background:var(--amber)" title="' +
           esc((pending.from_owner || "unassigned") + " → " + (pending.to_owner || "unassigned")) +
           '">MRC sign-off outstanding</span>';
       }

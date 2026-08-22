@@ -21,9 +21,8 @@
 // A coloured status pill (shared with the Product detail view).
 function productStatusBadge(status, retired) {
   if (retired) return '<span class="pill">retired</span>';
-  const colors = { Active: "#388e3c", Proposed: "#0288d1", Suspended: "#f57c00", Retired: "#9e9e9e" };
-  const c = colors[status] || "#9e9e9e";
-  return '<span style="display:inline-block;padding:2px 9px;border-radius:10px;color:#fff;' +
+  const c = Theme.colour("product_status", status);
+  return '<span style="display:inline-block;padding:2px 9px;border-radius:10px;color:var(--inverse);' +
     'font-size:12px;background:' + c + '">' + esc(status || "—") + "</span>";
 }
 
@@ -112,11 +111,11 @@ const Product = {
       '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
       lbl + '</div><div class="val">' + v + "</div></div>";
     return '<div class="summary">' +
-      card("Total", products.length, "#1976d2") +
-      card("Active", n("Active"), "#388e3c") +
-      card("Proposed", n("Proposed"), "#0288d1") +
-      card("Suspended", n("Suspended"), "#f57c00") +
-      card("Retired", products.filter((p) => p.retired).length, "#9e9e9e") +
+      card("Total", products.length, Theme.value("accent")) +
+      card("Active", n("Active"), Theme.value("green")) +
+      card("Proposed", n("Proposed"), Theme.value("info")) +
+      card("Suspended", n("Suspended"), Theme.value("amber")) +
+      card("Retired", products.filter((p) => p.retired).length, Theme.value("grey")) +
       "</div>";
   },
 

@@ -55,7 +55,7 @@ function bandDisplay(f, value, division) {
   const key = RISK_FIELD_DIMENSION[f.key];
   const band = key ? Policy.band(key, value, division) : null;
   if (!band) return fieldDisplay(value);
-  return '<span class="badge" style="background:' + (band.colour || "#9e9e9e") + '">' +
+  return '<span class="badge" style="background:' + (band.colour || Theme.value("grey")) + '">' +
     esc(band.name) + "</span>" +
     (band.explanation ? ' <span class="muted">' + esc(band.explanation) + "</span>" : "");
 }
@@ -89,7 +89,7 @@ function bandPicker(id, f, division, current) {
     return '<label class="bandopt' + (on ? " on" : "") + '">' +
       '<input type="radio" name="' + esc(id) + '-band" value="' + esc(c.value) + '"' +
       (on ? " checked" : "") + ">" +
-      '<span class="bswatch" style="background:' + esc(c.colour || "#9e9e9e") + '"></span>' +
+      '<span class="bswatch" style="background:' + esc(c.colour || Theme.value("grey")) + '"></span>' +
       '<span class="bname">' + esc(c.name) + "</span>" +
       '<span class="bexpl">' + esc(c.explanation || "") + "</span></label>";
   }).join("");

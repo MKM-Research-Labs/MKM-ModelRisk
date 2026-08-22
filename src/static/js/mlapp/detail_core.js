@@ -225,7 +225,7 @@ const MLAppDetail = {
     let value = '<span class="muted">Not yet before a committee</span>';
     if (latest) {
       const outcome = latest.outcome || "Approved";
-      const colour = outcome === "Rejected" ? "var(--red)" : "#388e3c";
+      const colour = outcome === "Rejected" ? "var(--red)" : Theme.value("green");
       value = '<span style="color:' + colour + ';font-weight:600">' + esc(outcome) +
         "</span> at " + '<span class="code">' + esc(latest.meeting_id) + "</span>" +
         (latest.date ? " (" + esc(latest.date) + ")" : "");
@@ -299,7 +299,7 @@ const MLAppDetail = {
     const c = d.training_completeness || {};
     const findings = c.qualifications || [];
     const detail = findings.length
-      ? '<span class="badge" style="background:#f57c00">' + findings.length +
+      ? '<span class="badge" style="background:var(--amber)">' + findings.length +
         " to tell a reviewer</span>" +
         '<ul style="margin:6px 0 0 18px;padding:0;font-size:12px">' +
         findings.map((q) => "<li>" + esc(q) + "</li>").join("") + "</ul>"
@@ -569,7 +569,7 @@ const MLAppDetail = {
         ? '<div class="empty">This ML Application is retired.</div>'
         : '<div class="section-header">Retire</div><p class="muted">Retiring stops all ' +
           'further edits. The record and its history are kept.</p>' +
-          '<button class="btn small" id="mla-retire" style="color:#d32f2f">Retire</button>';
+          '<button class="btn small" id="mla-retire" style="color:var(--red)">Retire</button>';
       const btn = document.getElementById("mla-retire");
       if (btn) btn.onclick = () => this._retire();
       return;

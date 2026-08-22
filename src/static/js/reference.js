@@ -187,7 +187,7 @@ const Reference = {
     const name = (s.fields && s.fields.org_name) || "";
     const logoImg = s.logo
       ? '<img src="/api/mrc/logo?ts=' + Date.now() + '" alt="logo" style="max-height:64px;' +
-        'border:1px solid var(--line);border-radius:6px;padding:4px;background:#fff">'
+        'border:1px solid var(--line);border-radius:6px;padding:4px;background:var(--panel)">'
       : '<span class="muted">No logo uploaded.</span>';
     container.innerHTML =
       '<div class="section-header">Company</div>' +

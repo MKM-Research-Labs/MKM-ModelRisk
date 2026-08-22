@@ -75,14 +75,14 @@ const Handoffs = {
   _signoffPanel(d) {
     const status = d.status || "Draft";
     if (status === "Approved") {
-      return '<div class="dz-row" style="border:1px solid #388e3c;background:#e8f5e9;padding:10px 14px;border-radius:6px;margin:8px 0">' +
+      return '<div class="dz-row" style="border:1px solid var(--green);background:var(--ok-bg);padding:10px 14px;border-radius:6px;margin:8px 0">' +
         '<div class="dz-text"><b>MRC compatibility sign-off — approved</b>' +
         '<p class="muted">Ratified at ' + esc(d.mrc_signoff_meeting || "a meeting") +
         (d.mrc_signoff_date ? " (" + esc(d.mrc_signoff_date) + ")" : "") +
         ". Editing the field lineage or note does not currently re-open sign-off.</p></div></div>";
     }
     if (status === "Pending sign-off") {
-      return '<div class="dz-row" style="border:1px solid #f57c00;background:#fff8e1;padding:10px 14px;border-radius:6px;margin:8px 0">' +
+      return '<div class="dz-row" style="border:1px solid var(--amber);background:var(--warn-bg);padding:10px 14px;border-radius:6px;margin:8px 0">' +
         '<div class="dz-text"><b>Pending MRC sign-off</b>' +
         '<p class="muted">Queued for the consumer model\'s committee — it will be taken at that ' +
         "committee's next scheduled meeting.</p></div></div>";

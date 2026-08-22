@@ -48,7 +48,7 @@ Object.assign(MeetingDetail, {
     // read-only and can be downloaded as a distribution pack (ZIP) for members.
     const bar = locked
       ? '<div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">' +
-        '<span class="badge" style="background:#388e3c">Agenda finalised</span><span>' +
+        '<span class="badge" style="background:var(--green)">Agenda finalised</span><span>' +
         '<a class="btn small primary" href="/api/meetings/' + esc(this._id) +
         '/distribution.zip">&darr; Distribution pack (ZIP)</a> ' +
         '<button class="btn small" data-agenda-unlock="1">Unlock</button></span></div>'
@@ -111,7 +111,7 @@ Object.assign(MeetingDetail, {
     const title = "<b>" + esc(item.title || "") + "</b>";
     if (item.status === "Completed") {
       return '<div class="card" style="margin-bottom:8px">' + title +
-        ' <span class="badge" style="background:#388e3c">Received</span></div>';
+        ' <span class="badge" style="background:var(--green)">Received</span></div>';
     }
     const id = esc(item.item_id);
     return '<div class="card" style="margin-bottom:8px" id="evrow-' + id + '">' + title +

@@ -262,7 +262,7 @@ const ProductDetail = {
     let value;
     if (latest) {
       const outcome = latest.outcome || "Approved";
-      const color = outcome === "Rejected" ? "var(--red)" : "#388e3c";
+      const color = outcome === "Rejected" ? "var(--red)" : Theme.value("green");
       value = '<span style="color:' + color + ';font-weight:600">' + esc(outcome) + "</span> at " +
         '<span class="code">' + esc(latest.meeting_id) + "</span>" +
         (latest.date ? " (" + esc(latest.date) + ")" : "");

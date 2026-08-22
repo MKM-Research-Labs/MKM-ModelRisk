@@ -87,7 +87,7 @@ Object.assign(Clients, {
       esc(d.item_id) + '">Remove</button></li>');
     const warn = (m.warnings || []).length
       ? '<div class="section-header">Warnings</div>' +
-        '<ul style="margin:4px 0 0 18px;color:#b8860b">' +
+        '<ul style="margin:4px 0 0 18px;color:var(--gold)">' +
         m.warnings.map((w) => "<li>" + esc(w) + "</li>").join("") + "</ul>"
       : "";
     return '<div class="section-header">Model documentation &amp; evidence</div>' + this._list(models) +

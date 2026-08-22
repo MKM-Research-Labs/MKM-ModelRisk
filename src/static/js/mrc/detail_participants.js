@@ -93,8 +93,8 @@ Object.assign(MeetingDetail, {
     const inv = this._invitees(d);
     const q = this._quorum(d);
     const badge = q.met
-      ? '<span class="badge" style="background:#388e3c">Quorum met</span>'
-      : '<span class="badge" style="background:#d32f2f">Quorum not met</span>' +
+      ? '<span class="badge" style="background:var(--green)">Quorum met</span>'
+      : '<span class="badge" style="background:var(--red)">Quorum not met</span>' +
         (q.missing.length ? '<div class="muted" style="font-size:11px;margin-top:4px">Needs: ' +
           esc(q.missing.join(", ")) + "</div>" : "");
     const statusSel = (i) => {

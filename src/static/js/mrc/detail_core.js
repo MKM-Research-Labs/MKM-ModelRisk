@@ -232,7 +232,7 @@ const MeetingDetail = {
         esc(detail.document.original_name) + "</a>"
       : '<span class="muted">none uploaded</span>';
     return '<div style="margin-top:10px;padding:10px 12px;border:1px solid var(--amber);' +
-      'border-radius:6px;background:#fff8e1">' +
+      'border-radius:6px;background:var(--warn-bg)">' +
       '<b>Risk categorisation sign-off &mdash; ' + esc(division) + "</b>" +
       '<p class="muted" style="font-size:12px;margin:4px 0">' + esc(division) + " has proposed a " +
       "revised risk categorisation. Approving it makes it live for this division's models; the " +

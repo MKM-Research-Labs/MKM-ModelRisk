@@ -190,8 +190,10 @@ def test_every_status_maps_to_a_token_that_exists():
 def test_the_domains_without_a_default_are_the_ones_that_must_show_a_dash():
     # An unknown rating or an unrated tier renders as a dash. Giving these a default
     # would paint a grey badge asserting a classification nobody made.
-    assert set(STATUS_COLOUR_DEFAULTS) == {"validation_question", "mrc_state", "lifecycle"}
-    assert {"rag", "mission_criticality", "meeting_status"}.isdisjoint(STATUS_COLOUR_DEFAULTS)
+    assert set(STATUS_COLOUR_DEFAULTS) == {"validation_question", "mrc_state", "lifecycle",
+                                           "product_status"}
+    assert {"rag", "mission_criticality", "meeting_status",
+            "review_thread"}.isdisjoint(STATUS_COLOUR_DEFAULTS)
 
 
 def test_theme_api_serves_tokens_and_the_status_mapping(client):
@@ -202,11 +204,14 @@ def test_theme_api_serves_tokens_and_the_status_mapping(client):
 
 
 def test_the_status_mapping_covers_every_value_the_console_had_a_colour_for():
-    # The six maps helpers.js used to carry, by their entry counts. A value dropped in
-    # translation would render as a dash on a screen that used to colour it.
+    # The maps the JavaScript used to carry, by their entry counts — six found in
+    # helpers.js at step 3, and two more (Product status, review threads) found in
+    # product.js and inventory/review.js at step 5. A value dropped in translation
+    # would render as a dash on a screen that used to colour it.
     assert {domain: len(mapping) for domain, mapping in STATUS_COLOUR_TOKENS.items()} == {
         "rag": 3, "mission_criticality": 5, "meeting_status": 4,
         "validation_question": 4, "mrc_state": 7, "lifecycle": 4,
+        "product_status": 4, "review_thread": 2,
     }
 
 

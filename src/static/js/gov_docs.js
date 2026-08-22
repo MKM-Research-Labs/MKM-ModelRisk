@@ -76,8 +76,8 @@ const GovDocs = {
 
   _chip(label, on, attrs) {
     const style = on
-      ? "background:#1565C0;color:#fff;border:1px solid #1565C0"
-      : "background:#fff;color:#1565C0;border:1px solid #1565C0";
+      ? "background:var(--accent);color:var(--inverse);border:1px solid var(--accent)"
+      : "background:var(--panel);color:var(--accent);border:1px solid var(--accent)";
     return '<span class="mtype-chip" ' + (attrs || "") +
       ' style="display:inline-block;padding:1px 8px;margin:1px 3px 1px 0;border-radius:10px;' +
       "font-size:12px;" + style + '">' + esc(label) + "</span>";
@@ -302,8 +302,8 @@ const GovDocs = {
       el.onclick = function () {
         const on = el.getAttribute("data-on") === "1";
         el.setAttribute("data-on", on ? "0" : "1");
-        el.style.background = on ? "#fff" : "#1565C0";
-        el.style.color = on ? "#1565C0" : "#fff";
+        el.style.background = on ? "var(--panel)" : "var(--accent)";
+        el.style.color = on ? "var(--accent)" : "var(--inverse)";
       };
     });
   },

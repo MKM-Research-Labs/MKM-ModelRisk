@@ -215,7 +215,7 @@ const RiskEditor = {
     const rows = bands.map((b, i) =>
       '<tr data-scope="' + scope + '" data-i="' + i + '">' +
       '<td><input data-f="name" value="' + esc(b.name) + '" style="font-weight:600;width:150px"></td>' +
-      '<td><input data-f="colour" type="color" value="' + esc(b.colour || "#9e9e9e") +
+      '<td><input data-f="colour" type="color" value="' + esc(b.colour || Theme.value("grey")) +
       '" style="width:44px;height:28px;padding:2px"></td>' +
       '<td><textarea data-f="explanation" rows="3" style="width:100%;resize:vertical;overflow-y:auto">' +
       esc(b.explanation || "") + "</textarea></td>" +
@@ -267,7 +267,7 @@ const RiskEditor = {
       btn.onclick = () => {
         const bands = this._bandsFor(btn.getAttribute("data-add"));
         bands.push({ name: "New " + (group === "rating" ? "rating" : "band"),
-                     colour: "#9e9e9e", explanation: "", score: this._nextScore(bands) });
+                     colour: Theme.value("grey"), explanation: "", score: this._nextScore(bands) });
         this._save();
         this._draw();
       };
@@ -343,7 +343,7 @@ const RiskEditor = {
     const rowsFor = (mc) => mat.slice().reverse().map((a) =>
       "<tr><th>" + esc(a) + "</th>" + comp.map((c) => {
         const rag = (p.grid[mc] || {})[a + "|" + c] || "";
-        const bg = (colour[rag] || "#9e9e9e") + "22";
+        const bg = (colour[rag] || Theme.value("grey")) + "22";
         return '<td class="hcell" style="background:' + bg + '"><select data-mc="' + esc(mc) +
           '" data-cell="' + esc(a + "|" + c) + '">' + opts(rag) + "</select></td>";
       }).join("") + "</tr>").join("");
@@ -358,7 +358,7 @@ const RiskEditor = {
       bands.map((b) =>
         '<div><div class="grid-cap" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
         '<span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' +
-        esc(b.colour || "#9e9e9e") + '"></span>' +
+        esc(b.colour || Theme.value("grey")) + '"></span>' +
         '<span style="font-size:10px;text-transform:uppercase;color:var(--muted);letter-spacing:.04em">' +
         esc(mcLabel) + "</span>" +
         '<span style="font-size:14px;font-weight:700;color:var(--text)">' + esc(b.name) + "</span></div>" +

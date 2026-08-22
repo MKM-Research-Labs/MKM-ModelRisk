@@ -38,12 +38,11 @@ def test_every_design_token_referenced_is_defined():
     assert undefined_token_findings() == []
 
 
-def test_the_javascript_backlog_is_reported_with_a_location():
-    # Step 5 of docs/design/theme_config.md. Reported rather than gated, but each entry
-    # has to be actionable — a bare count would not tell anyone where to go.
-    backlog = unconverted_colour_findings()
-    assert all(f["path"].endswith(".js") for f in backlog)
-    assert all(f["line"] > 0 and f["snippet"] for f in backlog)
+def test_nothing_sits_outside_the_gate():
+    # Every asset type scanned is now gated, so the reported bucket is empty. It stays
+    # in place as the landing spot for a new asset type, which must surface rather than
+    # be exempted in silence.
+    assert unconverted_colour_findings() == []
 
 
 def test_the_scanner_recognises_every_css_colour_form():

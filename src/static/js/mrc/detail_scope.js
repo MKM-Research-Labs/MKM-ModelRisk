@@ -83,7 +83,7 @@ Object.assign(MeetingDetail, {
       '<input id="scope-search-' + cfg.kind + '" placeholder="Search ' + esc(lc) +
       's by id or name&hellip;" style="width:100%;margin-bottom:6px">' +
       '<div class="scope-scroll" style="max-height:' + (this._SCOPE_ROWS * rowPx + headPx) +
-      'px;overflow:auto;border:1px solid var(--line,#e5e7eb);border-radius:6px">' +
+      'px;overflow:auto;border:1px solid var(--line);border-radius:6px">' +
       "<table><thead><tr><th></th><th>" + cfg.label + " ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
       "<th>Presenter</th><th>Analysis</th></tr></thead><tbody>" + rows + "</tbody></table></div>" +
       '<div class="row" style="margin-top:10px">' +

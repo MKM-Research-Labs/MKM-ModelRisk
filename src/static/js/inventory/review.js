@@ -299,8 +299,8 @@ Object.assign(Detail, {
       const challenge = n.kind === "Challenge";
       const isOpen = challenge && !answered.has(n.item_id);
       const tag = challenge
-        ? '<span class="pill" style="background:' + (isOpen ? "#8e24aa" : "#607d8b") +
-          ';color:#fff">' + (isOpen ? "Challenge — open" : "Challenge — answered") + "</span> "
+        ? '<span class="pill" style="background:' + Theme.colour("review_thread", isOpen ? "open" : "answered") +
+          ';color:var(--inverse)">' + (isOpen ? "Challenge — open" : "Challenge — answered") + "</span> "
         : "";
       const answers = n.resolves
         ? '<span class="muted" style="font-size:11px"> answering ' + esc(n.resolves) + "</span>" : "";
@@ -404,11 +404,11 @@ Object.assign(Detail, {
     return '<p class="muted">The nine SR 26-2 questions. The owner sets a status and a ' +
       "rationale; the reviewer accepts it or challenges it. Every change saves as you make " +
       "it, and who reviewed what is stamped from the signed-in identity.</p>" +
-      '<div class="summary">' + card("Addressed", counts.Addressed, "#388e3c") +
-      card("Partially", counts["Partially Addressed"], "#f57c00") +
-      card("Not Addressed", counts["Not Addressed"], "#d32f2f") +
-      card("Accepted", accepted, "#1565c0") +
-      card("Challenged", challenged, "#8e24aa") + "</div>" +
+      '<div class="summary">' + card("Addressed", counts.Addressed, Theme.value("green")) +
+      card("Partially", counts["Partially Addressed"], Theme.value("amber")) +
+      card("Not Addressed", counts["Not Addressed"], Theme.value("red")) +
+      card("Accepted", accepted, Theme.value("accent")) +
+      card("Challenged", challenged, Theme.value("violet")) + "</div>" +
       '<div class="muted" style="margin-bottom:6px">Owner coverage: ' + counts.Addressed +
       "/" + total + " (" + pct + "%)</div>" +
       '<div class="progress"><div class="bar" style="width:' + pct + "%;background:" +
