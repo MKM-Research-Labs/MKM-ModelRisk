@@ -32,7 +32,8 @@ from audit._walk import py_files, rel
 from config.audit import CONFIG_DIR, SOURCE_DIRS
 from config.paths import STATIC_DIR, TEMPLATES_DIR
 from config.theme import (LEVEL_COLOURS, MISSION_CRITICALITY_COLOURS, RAG,
-                          RISK_RATING_COLOURS, THEME, THEME_GROUPS, UNRATED_COLOUR)
+                          RISK_RATING_COLOURS, STATUS_COLOUR_DEFAULTS,
+                          STATUS_COLOUR_TOKENS, THEME, THEME_GROUPS, UNRATED_COLOUR)
 from src.governance.risk_policy._defaults import default_policy
 from src.web._theme import theme_css, theme_version
 
@@ -174,3 +175,46 @@ def test_no_python_source_declares_a_colour_of_its_own():
         if found:
             offenders[relpath] = found
     assert not offenders, f"colour literals outside {_THEME_MODULE}: {offenders}"
+
+
+def test_every_status_maps_to_a_token_that_exists():
+    # These name tokens, not colours, so a typo would render nothing at all rather than
+    # the wrong colour — silent, and only on the one status nobody clicked.
+    unknown = {(domain, value, token)
+               for domain, mapping in STATUS_COLOUR_TOKENS.items()
+               for value, token in mapping.items() if token not in THEME}
+    assert not unknown
+    assert all(token in THEME for token in STATUS_COLOUR_DEFAULTS.values())
+
+
+def test_the_domains_without_a_default_are_the_ones_that_must_show_a_dash():
+    # An unknown rating or an unrated tier renders as a dash. Giving these a default
+    # would paint a grey badge asserting a classification nobody made.
+    assert set(STATUS_COLOUR_DEFAULTS) == {"validation_question", "mrc_state", "lifecycle"}
+    assert {"rag", "mission_criticality", "meeting_status"}.isdisjoint(STATUS_COLOUR_DEFAULTS)
+
+
+def test_theme_api_serves_tokens_and_the_status_mapping(client):
+    payload = client.get("/api/theme").get_json()
+    assert payload["tokens"]["accent"] == THEME["accent"]
+    assert payload["status_colours"]["rag"]["Green"] == "green"
+    assert payload["status_defaults"]["lifecycle"] == "grey"
+
+
+def test_the_status_mapping_covers_every_value_the_console_had_a_colour_for():
+    # The six maps helpers.js used to carry, by their entry counts. A value dropped in
+    # translation would render as a dash on a screen that used to colour it.
+    assert {domain: len(mapping) for domain, mapping in STATUS_COLOUR_TOKENS.items()} == {
+        "rag": 3, "mission_criticality": 5, "meeting_status": 4,
+        "validation_question": 4, "mrc_state": 7, "lifecycle": 4,
+    }
+
+
+def test_the_javascript_names_no_colour_of_its_own():
+    # helpers.js and inventory/list.js are fully converted; the rest of the front end
+    # is step 5 (docs/design/theme_config.md §5), so this is scoped to the files the
+    # colour maps reached rather than asserting a clean tree it has not reached yet.
+    converted = ["js/helpers.js", "js/inventory/list.js", "js/main.js"]
+    offenders = {name: _HEX_COLOUR.findall((STATIC_DIR / name).read_text(encoding="utf-8"))
+                 for name in converted}
+    assert not any(offenders.values()), f"colour literals remain: {offenders}"

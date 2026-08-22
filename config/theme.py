@@ -189,6 +189,41 @@ LEVEL_COLOURS = {"Low": RAG["green-soft"], "Medium": RAG["amber-soft"],
 # What a band nobody has coloured falls back to — an absence, not a rating.
 UNRATED_COLOUR = RAG["grey"]
 
+# --- What colour a status is drawn in --------------------------------------------
+# Six maps in helpers.js held 27 entries between them and used five colours: they were
+# six spellings of one vocabulary, and one of them had already been half-converted to
+# var(--red) by hand. Here they are one table, and they name a TOKEN rather than a
+# colour — so an adopter recolours by editing the token, and re-maps by editing this.
+#
+# Keys are the stored value, as a string: these arrive over JSON, where an object key
+# is always a string, and mission criticality is keyed by its band score.
+STATUS_COLOUR_TOKENS = {
+    "rag": {"Green": "green", "Amber": "amber", "Red": "red"},
+    # Scores 4 and 5 have no seeded band (the seed defines three); they are carried
+    # because a division may define more, and a record may still hold an old score.
+    "mission_criticality": {"1": "red", "2": "amber", "3": "accent", "4": "green",
+                            "5": "grey"},
+    "meeting_status": {"Scheduled": "accent", "In Progress": "amber", "Held": "green",
+                       "Cancelled": "grey"},
+    "validation_question": {"Addressed": "green", "Partially Addressed": "amber",
+                            "Not Addressed": "red", "Not Applicable": "grey"},
+    # Everything short of a live sign-off is amber: work outstanding, not a failure.
+    "mrc_state": {"Pending": "amber", "Rejected": "red", "Revoked": "red",
+                  "Re-classify": "amber", "Rating moved": "amber",
+                  "Not placed": "grey", "Approved": "green"},
+    "lifecycle": {"New": "accent", "Being Enhanced": "amber",
+                  "No New Development": "grey", "Marked for Removal": "red"},
+}
+
+# What an unrecognised value is drawn in, per domain. A domain absent from here has no
+# default on purpose: an unknown rating or an unrated tier must render as a dash, not
+# as a grey badge asserting a classification nobody made.
+STATUS_COLOUR_DEFAULTS = {
+    "validation_question": "grey",
+    "mrc_state": "grey",
+    "lifecycle": "grey",
+}
+
 # The groups in the order they are emitted, so the served stylesheet reads in the
 # same order as this file and a diff of either is legible.
 THEME_GROUPS = (

@@ -18,10 +18,51 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Fallback palette (used before the policy loads, or for unknown values). The live
-// colours/labels/order come from the risk policy, resolved per a model's division.
-const RAG_COLORS = { Green: "#388e3c", Amber: "#f57c00", Red: "#d32f2f" };
-const TIER_COLORS = { 1: "#d32f2f", 2: "#f57c00", 3: "#1976d2", 4: "#388e3c", 5: "#9e9e9e" };
+// Which token a status is drawn in, from config/theme.py via /api/theme. Nothing here
+// names a colour: a badge asks for the token and the served stylesheet resolves it, so
+// recolouring the console is a config change and never a JavaScript one.
+//
+// main.js waits on load() before the first render, so the maps are populated by the
+// time anything is drawn. If the fetch fails the console still renders — every badge
+// simply falls back to whatever its caller does with a null colour, which is the same
+// dash an unrated record has always shown.
+const Theme = {
+  _tokens: {},
+  _status: {},
+  _defaults: {},
+  async load() {
+    try {
+      const theme = await App.get("/api/theme");
+      this._tokens = theme.tokens || {};
+      this._status = theme.status_colours || {};
+      this._defaults = theme.status_defaults || {};
+    } catch (e) { /* the stylesheet still carries the token values */ }
+  },
+  // A token's literal value. Needed where the colour is manipulated rather than just
+  // used — the heatmap appends two hex digits of alpha to shade a cell, and "var(--red)22"
+  // means nothing. Those sites therefore require hex-valued tokens; a tint() built on
+  // color-mix() would lift that constraint, at the cost of changing the shade slightly.
+  value(token) { return this._tokens[token]; },
+  // A token as CSS refers to it. Inline styles resolve var() normally; SVG
+  // presentation attributes do NOT, so anything drawing into a canvas must use a
+  // class or a style attribute rather than fill="..." with one of these.
+  ref(token) { return token ? "var(--" + token + ")" : null; },
+  // The colour a value is drawn in, or null when the domain has no default and the
+  // value is unrecognised — callers render that as a dash rather than inventing one.
+  colour(domain, value) {
+    return this.ref(this._token(domain, value));
+  },
+  // As colour(), but the literal value — for the callers that sit alongside policy
+  // colours (raw hex out of the division's policy) and must be the same kind of thing.
+  hex(domain, value) {
+    const token = this._token(domain, value);
+    return token ? this.value(token) : null;
+  },
+  _token(domain, value) {
+    const map = this._status[domain] || {};
+    return map[String(value)] || this._defaults[domain] || null;
+  },
+};
 
 // The risk-policy registry: the firm-wide seed + each division's live policy, loaded
 // once at startup. Colours, labels and ordering resolve per a model's division and
@@ -170,7 +211,7 @@ function fieldDisplay(value) {
 
 // RAG rating as a coloured dot + label; colour from the division's policy.
 function ragBadge(rating, division) {
-  const color = Policy.ratingColour(rating, division) || RAG_COLORS[rating];
+  const color = Policy.ratingColour(rating, division) || Theme.colour("rag", rating);
   if (!color) return '<span class="muted">—</span>';
   return '<span class="ragdot"><span class="dot" style="background:' + color +
     '"></span><span style="color:' + color + '">' + esc(rating) + "</span></span>";
@@ -190,19 +231,15 @@ function tierBadge(tier, division) {
   // renders as "Critical" in red -- a rating no one gave, on a risk register.
   if (tier === null || tier === undefined || tier === "") return '<span class="muted">—</span>';
   const band = Policy.mcBand(tier, division);
-  const color = (band && band.colour) || TIER_COLORS[tier];
+  const color = (band && band.colour) || Theme.colour("mission_criticality", tier);
   const label = (band && band.name) || TIER_DESCRIPTORS[tier] || ("Tier " + tier);
   if (!color) return '<span class="muted">—</span>';
   return '<span class="badge" style="background:' + color + '">' + esc(label) + "</span>";
 }
 
-const MEETING_STATUS_COLORS = {
-  Scheduled: "#1976d2", "In Progress": "#f57c00", Held: "#388e3c", Cancelled: "#9e9e9e",
-};
-
 // MRC meeting status as a coloured pill.
 function statusBadge(status) {
-  const color = MEETING_STATUS_COLORS[status];
+  const color = Theme.colour("meeting_status", status);
   if (!color) return fieldDisplay(status);
   return '<span class="badge" style="background:' + color + '">' + esc(status) + "</span>";
 }
@@ -221,14 +258,9 @@ function tierFullLabel(tier, division) {
   return d ? "Tier " + tier + " - " + d : "";
 }
 
-const VQ_COLORS = {
-  "Addressed": "#388e3c", "Partially Addressed": "#f57c00",
-  "Not Addressed": "#d32f2f", "Not Applicable": "#9e9e9e",
-};
-
 // Validation-question status badge.
 function vqBadge(status) {
-  const color = VQ_COLORS[status] || "#9e9e9e";
+  const color = Theme.colour("validation_question", status);
   return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
 }
 
@@ -285,22 +317,10 @@ function mrcState(data, division) {
   return "Approved";
 }
 
-// Everything short of a live sign-off is amber — it is work outstanding, not a failure.
-const MRC_STATE_COLORS = {
-  Pending: "#f57c00", Rejected: "var(--red)", Revoked: "var(--red)",
-  "Re-classify": "#f57c00", "Rating moved": "#f57c00", "Not placed": "#9e9e9e",
-  Approved: "#388e3c",
-};
-
-const LIFECYCLE_COLORS = {
-  "New": "#1976d2", "Being Enhanced": "#f57c00",
-  "No New Development": "#9e9e9e", "Marked for Removal": "#d32f2f",
-};
-
 // Version-lifecycle badge (W4d): where a model version sits in its development arc.
 function lifecycleBadge(lifecycle) {
   if (!lifecycle) return "";
-  const color = LIFECYCLE_COLORS[lifecycle] || "#9e9e9e";
+  const color = Theme.colour("lifecycle", lifecycle);
   return ' <span class="badge" style="background:' + color + '">' + esc(lifecycle) + "</span>";
 }
 
@@ -325,7 +345,7 @@ function mrcStatusBadge(data) {
       " is unset, so this is not on the heatmap and there is no rating to sign off.",
   };
   const title = hints[state] ? ' title="' + esc(hints[state]) + '"' : "";
-  return '<span style="color:' + (MRC_STATE_COLORS[state] || "#9e9e9e") +
+  return '<span style="color:' + Theme.colour("mrc_state", state) +
     ';font-weight:600"' + title + ">" + esc(state) + "</span>";
 }
 

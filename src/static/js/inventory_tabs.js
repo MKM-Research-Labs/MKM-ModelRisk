@@ -53,7 +53,7 @@ const DetailTabs = {
     // Axes and cell colours come from the division's policy (echoed on the envelope),
     // falling back to the classic Low/Medium/High + RAG palette for older payloads.
     const axes = hm.axes || {};
-    const ratingColours = hm.rating_colours || RAG_COLORS;
+    const ratingColours = hm.rating_colours || {};
     const matOrder = axes.materiality || ["Low", "Medium", "High"];
     const cols = axes.complexity || ["Low", "Medium", "High"];
     const rows = matOrder.slice().reverse();  // highest materiality at the top
@@ -62,7 +62,7 @@ const DetailTabs = {
     const table = rows.map(function (m) {
       const cells = cols.map(function (c) {
         const rag = cellRag(m, c);
-        const bg = ratingColours[rag] || RAG_COLORS[rag] || "#9e9e9e";
+        const bg = ratingColours[rag] || Theme.hex("rag", rag) || Theme.value("grey");
         const here = (m === hm.materiality && c === hm.complexity);
         const style = "background:" + bg + "22;color:" + bg + ";" +
           (here ? "outline:3px solid " + bg + ";outline-offset:-3px;font-weight:800;" : "");
@@ -116,7 +116,8 @@ const DetailTabs = {
     const hmRag = hm.rag;
     // The rating's colour is the division's, from the policy on the envelope — a renamed
     // or re-coloured rating shaded this banner with the built-in palette before.
-    const hmColor = (hm.rating_colours || {})[hmRag] || RAG_COLORS[hmRag] || "#9e9e9e";
+    const hmColor = (hm.rating_colours || {})[hmRag] || Theme.hex("rag", hmRag) ||
+      Theme.value("grey");
     const headline = hmRag
       ? '<div class="riskbanner" style="border-color:' + hmColor + ";background:" + hmColor + '14">' +
         '<div class="muted" style="text-align:center">HEATMAP RATING</div>' +
