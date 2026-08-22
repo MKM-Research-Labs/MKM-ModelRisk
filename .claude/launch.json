@@ -5,7 +5,11 @@
       "name": "modelrisk",
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": [
-        "model.py"
+        "-m",
+        "gunicorn",
+        "--config",
+        "gunicorn.conf.py",
+        "wsgi:application"
       ],
       "port": 5015,
       "autoPort": false
