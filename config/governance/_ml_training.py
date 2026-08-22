@@ -53,7 +53,7 @@ TRAINING_RUNS_COLLECTION = "training_runs"
 TRAINING_SECTIONS = (
     ("A", "Task and target"),
     ("B", "Training data"),
-    ("C", "Split and validation"),
+    ("C", "Split, preprocessing and validation"),
     ("D", "Fit record"),
     ("E", "Performance"),
     ("F", "Reproducibility"),
@@ -181,16 +181,19 @@ _F = (
      WHEN_CLASSIFICATION),
     ("missing_data", "B", "Missing data treatment", "choice", MISSING_DATA_LIST, None),
     ("missing_data_columns", "B", "Columns affected", "text", None, None),
-    ("encoding", "B", "Categorical encoding", "choice", ENCODING_LIST,
-     WHEN_CATEGORICAL),
-    ("scaling", "B", "Scaling / normalisation", "choice", SCALING_LIST, None),
-    ("scaler_fit_point", "B", "Scaler fitted on", "choice", SCALER_FIT_POINT_LIST,
-     None),
     # C. Split and validation
     ("split_method", "C", "Split method", "choice", SPLIT_METHOD_LIST, None),
     ("split_proportions", "C", "Split proportions (train/val/test)", "text", None,
      None),
     ("split_rationale", "C", "Split rationale", "textarea", None, None),
+    # Preprocessing sits AFTER the split, not before it, and that ordering is the
+    # governance point rather than a tidy-up. A scaler or an encoder fitted before the
+    # split has seen the test set, and the reported test metric is inflated -- so a
+    # reader meets "fitted on: full dataset" already knowing what the split was, and
+    # can tell in one line whether the numbers below are worth reading.
+    ("encoding", "C", "Categorical encoding", "choice", ENCODING_LIST, WHEN_CATEGORICAL),
+    ("scaling", "C", "Scaling / normalisation", "choice", SCALING_LIST, None),
+    ("scaler_fit_point", "C", "Scaler fitted on", "choice", SCALER_FIT_POINT_LIST, None),
     ("cv_method", "C", "Cross-validation", "choice", CV_METHOD_LIST, None),
     ("cv_folds", "C", "Folds (k)", "number", None, None),
     ("cv_result", "C", "CV result (mean +/- std)", "text", None, None),
