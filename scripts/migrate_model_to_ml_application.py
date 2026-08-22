@@ -24,7 +24,19 @@ fitted to data, using an off-the-shelf estimator. This moves one across without
 losing what the inventory holds about it.
 
     python -m scripts.migrate_model_to_ml_application MKM-FC-001 MLA-FC-001 \\
-        GradientBoostingClassifier
+        GradientBoostingClassifier [actor]
+
+Against a PROTECTED database this refuses unless the operator names that database
+explicitly:
+
+    MIGRATE_ALLOW_PROTECTED=mkm_modelrisk python -m scripts... <ids> <estimator> <actor>
+
+The refusal is the default and stays that way. The live log is append-only -- a
+migration writes roughly ninety events that can be retired by a committee but never
+deleted -- so writing to it has to be something an operator states, not something a
+mistyped DB_NAME can cause. And ``actor`` is required there: "migration" is not a
+person in the People directory, and an event on the real estate should say who did
+it.
 
 The estimator is an ARGUMENT because the inventory does not record one -- naming what
 the thing is actually built on is the information the ML register adds, and inferring
@@ -52,6 +64,7 @@ a migration's.
 """
 from __future__ import annotations
 
+import os
 import sys
 
 from config.database import DatabaseConfig
@@ -202,15 +215,26 @@ def migrate(model_id: str, ml_application_id: str, estimator: str,
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 4:
+    if len(argv) not in (4, 5):
         print(__doc__)
         return 2
     resolved = DatabaseConfig.from_env().name
+    actor = argv[4] if len(argv) == 5 else "migration"
     if resolved in PROTECTED:
-        print(f"REFUSING: config resolves to '{resolved}', which holds the real estate.")
-        return 1
+        if os.environ.get("MIGRATE_ALLOW_PROTECTED") != resolved:
+            print(f"REFUSING: config resolves to '{resolved}', which holds the real "
+                  "estate.\nTo write to it deliberately, name it:\n"
+                  f"    MIGRATE_ALLOW_PROTECTED={resolved} python -m "
+                  "scripts.migrate_model_to_ml_application <model> <id> <estimator> <actor>")
+            return 1
+        if actor == "migration":
+            print("REFUSING: writing to the real estate needs a named author -- an "
+                  "event on the live log should say who did it, and 'migration' is "
+                  "nobody in the People directory.")
+            return 1
+        print(f"WRITING TO THE REAL ESTATE: {resolved}, as {actor}")
     print(f"database: {resolved}")
-    counts = migrate(argv[1], argv[2], argv[3])
+    counts = migrate(argv[1], argv[2], argv[3], actor=actor)
     for key, value in counts.items():
         if isinstance(value, list):
             print(f"  {key}:")
