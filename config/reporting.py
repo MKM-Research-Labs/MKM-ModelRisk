@@ -27,7 +27,7 @@ once. The values here are what a fresh install prints until it does — the word
 that ships, not the wording that is fixed.
 """
 
-from config.theme import BRAND, RAG, TEXT
+from config.theme import BRAND, RAG, SURFACE, TEXT
 
 # --- How a generated document looks (coding rule R10) -----------------------------
 # The PDFs are the most externally visible thing the platform produces — a committee
@@ -41,6 +41,26 @@ DOCUMENT_CLASSIFICATION_COLOUR = RAG["red"]
 
 # What a band with no colour of its own falls back to, in the risk-policy tables.
 DOCUMENT_UNRATED_COLOUR = RAG["grey"]
+
+# The colour names the standalone integration guide (docs/integration_guide.tex)
+# defines for itself, and the document colour each one takes. That guide is a
+# hand-written LaTeX file rather than a document assembled from ``preamble()`` --
+# it has to build outside the app too -- so the platform hands it these
+# definitions at generation time and the copy it publishes carries the adopter's
+# brand rather than the values typed into its source (rule R10). ``mkmwash`` and
+# ``mkmline`` are the note panel and the hairline down a listing; no other
+# document draws either, which is why they are named here and not above.
+STANDALONE_DOCUMENT_COLOURS = {
+    "mkmblue": DOCUMENT_LINK_COLOUR,
+    "mkmchrome": DOCUMENT_CHROME_COLOUR,
+    "mkmred": DOCUMENT_CLASSIFICATION_COLOUR,
+    "mkmwash": BRAND["accent-wash"],
+    "mkmline": SURFACE["line"],
+}
+
+# The file those definitions are written to beside the source. The guide inputs it
+# when it is present, so the name is spelled the same way in both places.
+DOCUMENT_COLOUR_INCLUDE = "theme_colours.tex"
 
 # Page setup, from the ``docs/Swaption.tex`` house template: 170mm of text with a
 # 20mm top, and a 25mm bottom so the footer rule the template omits has room.

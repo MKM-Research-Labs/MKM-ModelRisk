@@ -31,7 +31,8 @@ const AuditReports = {
       '<button class="btn small primary" id="ar-generate">Generate reports</button></div>' +
       '<p class="muted">Generate produces one PDF per audit rule (R1&ndash;R8 and R10), the ' +
       "JSON-file audit and a consolidated coding-rule audit, plus the Model Risk " +
-      "Report and the Governance Completeness Audit. " +
+      "Report, the Governance Completeness Audit, and the User and Integration " +
+      "guides. " +
       "The test suite then runs in the background, adding coverage (XML + browsable HTML), " +
       "JUnit results and the Test Report. Files are written to uploads/audit/ (gitignored)." +
       "</p>" +

@@ -43,8 +43,11 @@ from audit.testsuite import SUITE_ACTIVE_ENV, run_test_suite
 from config.audit import (AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS,
                           COMPLETENESS_REPORT_PDF_NAME, COVERAGE_HTML_DIRNAME,
                           COVERAGE_HTML_LABEL, COVERAGE_XML_NAME,
+                          INTEGRATION_GUIDE_PDF_NAME, INTEGRATION_GUIDE_TEX,
                           TEST_REPORT_PDF_NAME, USER_GUIDE_MD)
+from config.reporting import DOCUMENT_COLOUR_INCLUDE
 from src.governance.latex import front_matter, history_page, logo_asset, preamble
+from src.governance.latex_style import colour_definitions
 from src.governance.model_inventory import list_models
 from src.governance.completeness.report import render_completeness_pdf
 from src.governance.model_inventory.report import render_report_pdf
@@ -230,6 +233,21 @@ def _render_user_guide(dest):
         return
 
 
+def _render_integration_guide(dest):
+    """Publish the integration guide (skipped if tectonic is absent).
+
+    Unlike the user guide this one is already LaTeX, and standalone, so that it also
+    builds by hand outside the app. Its colours are handed to it alongside the source
+    rather than left to the values written in it, so the copy an institution publishes
+    is drawn in that institution's brand like every other generated document."""
+    assets = {DOCUMENT_COLOUR_INCLUDE: colour_definitions().encode("utf-8")}
+    try:
+        dest.write_bytes(
+            compile_tex(INTEGRATION_GUIDE_TEX.read_text(encoding="utf-8"), assets))
+    except TectonicNotFound:
+        return
+
+
 @audit_reports_bp.post("/generate")
 def generate():
     """(Re)generate the audit report PDFs into the output directory."""
@@ -257,6 +275,7 @@ def generate():
     write_init_audit_json(report, OUTPUT_DIR)
     _render_user_guide(OUTPUT_DIR / "user_guide.pdf")
     _render_user_guide_docx(OUTPUT_DIR / "user_guide.docx")
+    _render_integration_guide(OUTPUT_DIR / INTEGRATION_GUIDE_PDF_NAME)
     # Run the suites in the background; coverage/JUnit/Test Report land when done.
     _start_coverage_refresh(OUTPUT_DIR)
     return jsonify(_catalogue())
