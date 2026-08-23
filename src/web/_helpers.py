@@ -99,8 +99,7 @@ def reference_options() -> dict[str, list]:
     # Kept separate from ``model_inventory`` so the other consumers of that list (an
     # MRC decision's linked model, say) are not quietly offered ML Applications too.
     options["product_component"] = (options["model_inventory"] +
-                                    [r["ml_application_id"] for r in list_ml_applications()
-                                     if not r["retired"]])
+                                    [r["ml_application_id"] for r in list_ml_applications()])
     return options
 
 

@@ -90,7 +90,7 @@ def field_specs():
         # can offer them by name rather than making somebody type an id. Not narrowed
         # by type the way models are: an ML Application has no model type.
         "ml_applications": {r["ml_application_id"]: (r["data"] or {}).get("name") or ""
-                            for r in list_ml_applications() if not r["retired"]},
+                            for r in list_ml_applications()},
         "collections": collection_field_specs(PRODUCT_COLLECTION_SPECS),
         **document_specs(),
     })
