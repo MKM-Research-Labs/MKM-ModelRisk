@@ -65,5 +65,18 @@ def get_ml_application(ml_application_id: str, config=None) -> dict[str, Any] | 
     return rows[0] if rows else None
 
 
-def list_ml_applications(config=None) -> list[dict[str, Any]]:
-    return read_view(_VIEW, _COLUMNS, order_by="ml_application_id", config=config)
+def list_ml_applications(config=None, *,
+                         include_retired: bool = False) -> list[dict[str, Any]]:
+    """The live ML Applications, ordered by ``ml_application_id``.
+
+    Hibernated records are left out by default, on the same reasoning as
+    ``list_models``: a retired record carries no governance obligations, so
+    counting it drags every estate-wide figure against something nobody will
+    ever complete. Excluding it is the honest default; the record survives in
+    the log.
+
+    ``include_retired=True`` is for reads that are *about* a particular record
+    rather than about the estate.
+    """
+    rows = read_view(_VIEW, _COLUMNS, order_by="ml_application_id", config=config)
+    return rows if include_retired else [row for row in rows if not row.get("retired")]

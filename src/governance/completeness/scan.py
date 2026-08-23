@@ -115,12 +115,10 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
     # ML Applications are audited on the same terms as everything else. An estate
     # half of which is ML, audited on the other half, reports a gap picture that is
     # wrong in the direction that flatters — and nothing on the page would say so.
+    # A retired record is out of the estate and out of every figure, exactly as a
+    # hibernated model is -- both projections exclude them by default, or the audit
+    # reports gaps against records nobody is running.
     for record in list_ml_applications(config=config):
-        # A retired record is out of the estate and out of every figure, exactly as a
-        # hibernated model is: ``list_models`` excludes them and this must match, or
-        # the audit reports gaps against records nobody is running.
-        if record.get("retired"):
-            continue
         if want_ml is not None and record["ml_application_id"] not in want_ml:
             continue
         data = record.get("data") or {}
@@ -149,8 +147,6 @@ def coverage_population(model_ids=None, ml_application_ids=None,
     records = list(scoped_models(model_ids, config=config))
     want = None if ml_application_ids is None else set(ml_application_ids)
     for record in list_ml_applications(config=config):
-        if record.get("retired"):
-            continue
         if want is not None and record["ml_application_id"] not in want:
             continue
         records.append(record)

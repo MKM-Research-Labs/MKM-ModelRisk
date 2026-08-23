@@ -22,7 +22,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 
 from config.governance import (ESTIMATOR_LIST, ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS, ML_APPLICATION_REGISTER_FIELDS,
@@ -110,7 +110,11 @@ def field_specs():
 
 @ml_application_bp.get("")
 def list_all():
-    return jsonify(list_ml_applications())
+    """The live ML Applications. ``?include_retired=1`` adds the hibernated ones
+    back — the default is the estate, so a retired record is not in the list, the
+    tiles or any figure drawn from them."""
+    include_retired = request.args.get("include_retired") == "1"
+    return jsonify(list_ml_applications(include_retired=include_retired))
 
 
 @ml_application_bp.get("/<ml_application_id>")

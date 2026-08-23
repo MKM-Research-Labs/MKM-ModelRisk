@@ -29,7 +29,9 @@ integrity check that has to see the whole declared graph.
 from __future__ import annotations
 
 from src.governance.completeness.scan import scan
+from src.governance.ml_application import list_ml_applications
 from src.governance.model_inventory import list_models
+from src.governance.reference import ensure_default_estimators
 from tests.web._signoff_flows import (
     _register_subject_model,
     _schedule_meeting,
@@ -91,3 +93,48 @@ def test_its_own_page_still_works(client):
     _hibernate(client)
     assert client.get("/api/models/M1").status_code == 200
     assert client.get("/api/models/M1/neighbourhood").status_code == 200
+
+
+# --- The same line, held for ML Applications --------------------------------
+#
+# An ML Application is retired directly rather than through the committee, but
+# what retirement MEANS is identical: out of the estate, out of every figure.
+# The projection used to return hibernated records to every caller, so three
+# call sites each re-filtered them and the console list showed them anyway.
+
+
+def _hibernate_ml(client):
+    """Register MLA-0001 and retire it."""
+    ensure_default_estimators()
+    client.post("/api/ml-applications",
+                json={"ml_application_id": "MLA-0001", "confirmed": True,
+                      "fields": {"name": "Retail PD scorecard", "division": "Risk",
+                                 "owner": "David K Kelly",
+                                 "estimator": "GradientBoostingClassifier",
+                                 "use_case": "Ranks applicants by PD."}},
+                headers=HEADERS)
+    client.post("/api/ml-applications/MLA-0001/retire",
+                json={"confirmed": True}, headers=HEADERS)
+    assert client.get("/api/ml-applications/MLA-0001").get_json()["retired"] is True
+
+
+def test_the_ml_list_leaves_hibernated_records_out(client):
+    _hibernate_ml(client)
+    assert [r["ml_application_id"] for r in list_ml_applications()] == []
+    assert [r["ml_application_id"]
+            for r in list_ml_applications(include_retired=True)] == ["MLA-0001"]
+
+
+def test_the_ml_endpoint_leaves_them_out_unless_asked(client):
+    _hibernate_ml(client)
+    assert client.get("/api/ml-applications").get_json() == []
+    with_retired = client.get("/api/ml-applications?include_retired=1").get_json()
+    assert [r["ml_application_id"] for r in with_retired] == ["MLA-0001"]
+
+
+def test_a_hibernated_ml_application_is_not_offered_as_a_product_component(client):
+    """It cannot be picked as a component, and the audit does not score it."""
+    _hibernate_ml(client)
+    fields = client.get("/api/products/fields").get_json()
+    assert "MLA-0001" not in fields["ml_applications"]
+    assert [row["entity_id"] for row in scan("2026-08-07")] == []
