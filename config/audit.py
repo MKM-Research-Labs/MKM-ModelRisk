@@ -35,6 +35,14 @@ AUDIT_OUTPUT_DIR = UPLOAD_DIR / "audit" / DatabaseConfig.from_env().name
 # The user guide (Markdown) — published as a PDF into the Audit Reports tab.
 USER_GUIDE_MD = Path(__file__).resolve().parents[1] / "docs" / "user_guide.md"
 
+# The integration guide (LaTeX) — how the platform works, how to restyle it, how to
+# move it to another SQL engine or a container, and how it takes identity from an
+# SSO. Published as a PDF into the Audit Reports tab beside the user guide.
+INTEGRATION_GUIDE_TEX = (
+    Path(__file__).resolve().parents[1] / "docs" / "integration_guide.tex"
+)
+INTEGRATION_GUIDE_PDF_NAME = "integration_guide.pdf"
+
 # Test-evidence artefacts produced by the audit run itself and written into
 # AUDIT_OUTPUT_DIR alongside the report PDFs — mirroring PhysicalRisk, where the
 # audit run drops coverage, JUnit and the test-summary artefacts into one place.
@@ -53,6 +61,7 @@ AUDIT_REPORT_LABELS = {
     "model_risk_report.pdf": "Model Risk Report",
     COMPLETENESS_REPORT_PDF_NAME: "Governance Completeness Audit",
     "user_guide.pdf": "User Guide",
+    INTEGRATION_GUIDE_PDF_NAME: "Integration Guide",
     TEST_REPORT_PDF_NAME: "Test Report",
     JSON_FILES_REPORT_PDF_NAME: "JSON-File Audit",
     JUNIT_XML_NAME: "JUnit Results",

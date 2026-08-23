@@ -25,7 +25,8 @@ visual language those pages are drawn in, so the one place a colour is chosen st
 """
 from __future__ import annotations
 
-from config.reporting import DOCUMENT_CHROME_COLOUR, DOCUMENT_UNRATED_COLOUR
+from config.reporting import (DOCUMENT_CHROME_COLOUR, DOCUMENT_UNRATED_COLOUR,
+                              STANDALONE_DOCUMENT_COLOURS)
 
 
 def latex_hex(colour=None) -> str:
@@ -56,3 +57,18 @@ def chrome(body: str) -> str:
 BODY_FONT_PACKAGES = {
     "sans": "\\usepackage{helvet}\\renewcommand{\\familydefault}{\\sfdefault}\n",
 }
+
+
+def colour_definitions() -> str:
+    """The ``\\definecolor`` block a standalone document is handed.
+
+    ``preamble()`` colours the documents this module assembles, but the integration
+    guide is a hand-written ``.tex`` that has to build outside the app as well. It
+    inputs this block when the platform provides it, so the published copy is drawn
+    in whatever ``config/theme`` holds rather than in the values its source falls
+    back to (rule R10).
+    """
+    return "".join(
+        "\\definecolor{" + name + "}{HTML}{" + latex_hex(colour) + "}\n"
+        for name, colour in STANDALONE_DOCUMENT_COLOURS.items()
+    )
