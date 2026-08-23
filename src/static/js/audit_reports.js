@@ -29,7 +29,7 @@ const AuditReports = {
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Audit reports</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="ar-generate">Generate reports</button></div>' +
-      '<p class="muted">Generate produces one PDF per audit rule (R1&ndash;R8), the ' +
+      '<p class="muted">Generate produces one PDF per audit rule (R1&ndash;R8 and R10), the ' +
       "JSON-file audit and a consolidated coding-rule audit, plus the Model Risk " +
       "Report and the Governance Completeness Audit. " +
       "The test suite then runs in the background, adding coverage (XML + browsable HTML), " +

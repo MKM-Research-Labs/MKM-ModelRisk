@@ -47,7 +47,7 @@ def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
     assert generated.status_code == 200
     names = {r["filename"] for r in generated.get_json()}
     assert {"coding_rule_audit.pdf", "model_risk_report.pdf", "user_guide.pdf"} <= names
-    # One standalone PDF per audit rule R1–R8 is generated in the same click.
+    # One standalone PDF per audit rule (R1–R8 and R10) is generated in the same click.
     assert {"audit_r1_hardcoded_parameters.pdf", "audit_r3_test_coverage.pdf",
             "audit_r8_duplicate_code.pdf"} <= names
     assert sum(n.startswith("audit_r") for n in names) == 9
