@@ -38,3 +38,10 @@ local/
 # as macOS is case-insensitive but git patterns are not).
 docs/bib/
 docs/Bib/
+
+# Large local binaries under docs/. The written material is tracked; the heavy
+# artefacts beside it are not. Same reasoning as docs/bib/ above -- a third-party
+# textbook or a 9 MB built PDF is kept on the machine, never in the repo.
+docs/sklearn/*.pdf
+docs/space-economy/
+docs/*.docx
