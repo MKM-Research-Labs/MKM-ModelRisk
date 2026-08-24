@@ -35,10 +35,11 @@ Run against the configured ModelRisk database:
 """
 from __future__ import annotations
 
-from src.governance.documents import reissue_duplicate_ids
+from src.governance.documents import (GOVERNANCE_DOCUMENTS_AGGREGATE,
+                                      reissue_duplicate_ids)
 
 ACTOR = "repair_duplicate_document_ids"
-AGGREGATE = "GovernanceDocuments"
+AGGREGATE = GOVERNANCE_DOCUMENTS_AGGREGATE
 AGGREGATE_ID = "global"
 
 
