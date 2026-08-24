@@ -92,24 +92,39 @@ def build_report() -> dict:
     }
 
 
-def write_audit_reports(report: dict, as_of: str, output_dir: Path) -> list[Path]:
+def write_audit_reports(report: dict, as_of: str, output_dir: Path,
+                        errors: list | None = None) -> list[Path]:
     """Render every per-rule PDF plus the consolidated overview into ``output_dir``.
 
     Shared by the CLI ``--pdf`` flag and the Audit Reports web endpoint so both
-    emit exactly the same set. Returns the written paths; propagates
-    ``TectonicNotFound`` if the LaTeX engine is unavailable (the failing report
-    leaves no partial file behind).
+    emit exactly the same set. Returns the paths that were written successfully.
+
+    ``TectonicNotFound`` always propagates — the LaTeX engine is missing, so no
+    report can be produced at all. Any *other* per-report failure (a one-off
+    tectonic compile error, a bad glyph in a finding, …) is handled per
+    ``errors``: when it is ``None`` (the CLI default) the exception propagates as
+    before; when a list is supplied the failure is appended as a
+    ``(filename, message)`` pair and the remaining reports are still written — so
+    a single failing report can no longer leave every later report stale.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     written = []
-    for spec in (*REPORTS, *STANDALONE_REPORTS):
+    specs = [*REPORTS, *STANDALONE_REPORTS,
+             {"filename": "coding_rule_audit.pdf", "consolidated": True}]
+    for spec in specs:
         dest = output_dir / spec["filename"]
-        dest.write_bytes(render_report_pdf(report, spec, as_of))
-        written.append(dest)
-    dest = output_dir / "coding_rule_audit.pdf"
-    dest.write_bytes(render_audit_pdf(report, as_of))
-    written.append(dest)
+        try:
+            pdf = (render_audit_pdf(report, as_of) if spec.get("consolidated")
+                   else render_report_pdf(report, spec, as_of))
+            dest.write_bytes(pdf)
+            written.append(dest)
+        except TectonicNotFound:
+            raise
+        except Exception as exc:                 # noqa: BLE001 — recorded, not swallowed
+            if errors is None:
+                raise
+            errors.append((spec["filename"], str(exc)))
     return written
 
 

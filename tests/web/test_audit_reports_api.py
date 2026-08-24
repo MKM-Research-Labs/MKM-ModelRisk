@@ -17,11 +17,19 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Tests for the audit-reports API (list, generate, serve)."""
+"""Tests for the audit-reports API package (list, generate, serve).
+
+The package keeps its state in ``_bp`` (the output directory) and ``_suite`` (the
+background refresh), and the route modules read both through the module object —
+so a test points ``_bp.OUTPUT_DIR`` at a temporary directory and the whole package
+follows. Where ``generate`` imported a renderer by name, the stub goes on ``gen``:
+patching the defining module would not reach the binding it already holds.
+"""
 from __future__ import annotations
 
 import audit.__main__ as audit_main
-import src.web.api_audit_reports as mod
+from src.web.api_audit_reports import _bp, _guides, _suite
+from src.web.api_audit_reports import generate as gen
 from config.reporting import DOCUMENT_COLOUR_INCLUDE
 from config.theme import BRAND
 from src.governance.latex_style import colour_definitions, latex_hex
@@ -35,21 +43,23 @@ def _stub_pdf(tex, assets=None):
 
 
 def test_list_empty_when_no_output_dir(client, tmp_path, monkeypatch):
-    monkeypatch.setattr(mod, "OUTPUT_DIR", tmp_path / "audit")
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", tmp_path / "audit")
     assert client.get("/api/audit-reports").get_json() == []
 
 
 def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
-    monkeypatch.setattr(mod, "OUTPUT_DIR", tmp_path / "audit")
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", tmp_path / "audit")
     monkeypatch.setattr(pack, "compile_tex", _stub_pdf)             # no tectonic
     monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})  # no jscpd
-    monkeypatch.setattr(mod, "_render_user_guide", lambda dest: dest.write_bytes(b"%PDF ug"))  # no pandoc
-    monkeypatch.setattr(mod, "compile_tex", _stub_pdf)              # the guide's own compile
-    monkeypatch.setattr(mod, "_start_coverage_refresh", lambda output_dir: True)  # no test-suite run
+    monkeypatch.setattr(gen, "render_user_guide", lambda dest: dest.write_bytes(b"%PDF ug"))  # no pandoc
+    monkeypatch.setattr(_guides, "compile_tex", _stub_pdf)           # the guides' own compile
+    monkeypatch.setattr(_suite, "start_coverage_refresh", lambda output_dir: True)  # no test-suite run
 
     generated = client.post("/api/audit-reports/generate", headers=HEADERS)
     assert generated.status_code == 200
-    names = {r["filename"] for r in generated.get_json()}
+    payload = generated.get_json()
+    assert payload["failures"] == []          # every report rendered
+    names = {r["filename"] for r in payload["reports"]}
     assert {"coding_rule_audit.pdf", "model_risk_report.pdf", "user_guide.pdf",
             "integration_guide.pdf"} <= names
     # One standalone PDF per audit rule (R1–R8 and R10) is generated in the same click.
@@ -67,11 +77,44 @@ def test_generate_then_list_and_view(client, tmp_path, monkeypatch):
     assert served.status_code == 200 and served.data.startswith(b"%PDF")
 
 
+def test_generate_survives_one_failing_report(client, tmp_path, monkeypatch):
+    # A single report blowing up (e.g. a one-off tectonic compile error) must not
+    # abort the run: every other report still refreshes and the failure is named
+    # under ``failures`` — instead of every report after it silently keeping its
+    # previous file and previous date (the "reports are two days old" symptom).
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", tmp_path / "audit")
+    monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})
+    monkeypatch.setattr(gen, "render_user_guide", lambda dest: dest.write_bytes(b"%PDF ug"))
+    monkeypatch.setattr(_suite, "start_coverage_refresh", lambda output_dir: True)
+
+    def _one_bad(report, spec, as_of):
+        if spec["filename"] == "audit_r6_data_access.pdf":
+            raise RuntimeError("tectonic hiccup")
+        return b"%PDF-1.4 stub"
+
+    monkeypatch.setattr(audit_main, "render_report_pdf", _one_bad)
+    monkeypatch.setattr(audit_main, "render_audit_pdf", lambda report, as_of: b"%PDF-1.4 stub")
+    monkeypatch.setattr(gen, "render_report_pdf", lambda *a: b"%PDF-1.4 stub")
+    monkeypatch.setattr(gen, "render_completeness_pdf", lambda *a: b"%PDF-1.4 stub")
+
+    res = client.post("/api/audit-reports/generate", headers=HEADERS)
+    assert res.status_code == 200
+    payload = res.get_json()
+    assert [f["file"] for f in payload["failures"]] == ["audit_r6_data_access.pdf"]
+
+    names = {r["filename"] for r in payload["reports"]}
+    # Reports after the failing one still refreshed in the same click.
+    assert {"audit_r6_path_definitions.pdf", "audit_r8_duplicate_code.pdf",
+            "coding_rule_audit.pdf", "model_risk_report.pdf"} <= names
+    # The failing report left no partial/stale file with today's date.
+    assert not (tmp_path / "audit" / "audit_r6_data_access.pdf").exists()
+
+
 def test_generate_returns_503_without_tectonic(client, tmp_path, monkeypatch):
     # The engine is an optional system dependency: when it's absent, generation
     # must fail with an actionable 503, not an unhandled 500 stack trace.
     out = tmp_path / "audit"
-    monkeypatch.setattr(mod, "OUTPUT_DIR", out)
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", out)
     monkeypatch.setattr(pack.shutil, "which", lambda _name: None)          # no tectonic
     monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})
 
@@ -82,25 +125,25 @@ def test_generate_returns_503_without_tectonic(client, tmp_path, monkeypatch):
 
 
 def test_user_guide_skipped_without_pandoc(tmp_path, monkeypatch):
-    monkeypatch.setattr(mod.shutil, "which", lambda _name: None)
+    monkeypatch.setattr(_guides.shutil, "which", lambda _name: None)
     dest = tmp_path / "user_guide.pdf"
-    mod._render_user_guide(dest)
+    _guides.render_user_guide(dest)
     assert not dest.exists()
 
 
 def test_user_guide_runs_pandoc_then_house_style(tmp_path, monkeypatch):
     # The guide is pandoc'd to a LaTeX fragment, then wrapped in the shared house
     # style and compiled — so it matches every other generated PDF.
-    monkeypatch.setattr(mod.shutil, "which", lambda _name: "/usr/bin/pandoc")
+    monkeypatch.setattr(_guides.shutil, "which", lambda _name: "/usr/bin/pandoc")
     calls = []
 
     class _Done:
         stdout = "\\section{Guide}\n"
 
-    monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: (calls.append(cmd) or _Done()))
-    monkeypatch.setattr(mod, "compile_tex", lambda tex, assets=None: b"%PDF-stub")
+    monkeypatch.setattr(_guides.subprocess, "run", lambda cmd, **kw: (calls.append(cmd) or _Done()))
+    monkeypatch.setattr(_guides, "compile_tex", lambda tex, assets=None: b"%PDF-stub")
     dest = tmp_path / "user_guide.pdf"
-    mod._render_user_guide(dest)
+    _guides.render_user_guide(dest)
     assert calls and calls[0][0] == "pandoc" and calls[0][-2:] == ["-t", "latex"]
     assert dest.read_bytes() == b"%PDF-stub"
 
@@ -115,9 +158,9 @@ def test_integration_guide_is_drawn_in_the_configured_theme(tmp_path, monkeypatc
         sent["tex"], sent["assets"] = tex, assets
         return b"%PDF-guide"
 
-    monkeypatch.setattr(mod, "compile_tex", _capture)
+    monkeypatch.setattr(_guides, "compile_tex", _capture)
     dest = tmp_path / "integration_guide.pdf"
-    mod._render_integration_guide(dest)
+    _guides.render_integration_guide(dest)
     assert dest.read_bytes() == b"%PDF-guide"
     assert "\\documentclass" in sent["tex"]
     supplied = sent["assets"][DOCUMENT_COLOUR_INCLUDE].decode()
@@ -129,41 +172,41 @@ def test_integration_guide_skipped_without_tectonic(tmp_path, monkeypatch):
     def _boom(_tex, _assets=None):
         raise TectonicNotFound("no tectonic")
 
-    monkeypatch.setattr(mod, "compile_tex", _boom)
+    monkeypatch.setattr(_guides, "compile_tex", _boom)
     dest = tmp_path / "integration_guide.pdf"
-    mod._render_integration_guide(dest)
+    _guides.render_integration_guide(dest)
     assert not dest.exists()
 
 
 def test_user_guide_skipped_without_tectonic(tmp_path, monkeypatch):
     # pandoc present but tectonic absent: no half-written file, no crash.
-    monkeypatch.setattr(mod.shutil, "which", lambda _name: "/usr/bin/pandoc")
+    monkeypatch.setattr(_guides.shutil, "which", lambda _name: "/usr/bin/pandoc")
 
     class _Done:
         stdout = "\\section{Guide}\n"
 
-    monkeypatch.setattr(mod.subprocess, "run", lambda cmd, **kw: _Done())
+    monkeypatch.setattr(_guides.subprocess, "run", lambda cmd, **kw: _Done())
 
     def _boom(_tex, _assets=None):
         raise TectonicNotFound("no tectonic")
 
-    monkeypatch.setattr(mod, "compile_tex", _boom)
+    monkeypatch.setattr(_guides, "compile_tex", _boom)
     dest = tmp_path / "user_guide.pdf"
-    mod._render_user_guide(dest)
+    _guides.render_user_guide(dest)
     assert not dest.exists()
 
 
 def test_coverage_refresh_rebuilds_reports_and_clears_running(tmp_path, monkeypatch):
     # Skip the ~1-min suite; the refresh still writes the Test Report and rebuilds
     # the coverage-aware reports (R3 + consolidated).
-    monkeypatch.setattr(mod, "run_test_suite", lambda output_dir: {"unit": None, "e2e": None})
+    monkeypatch.setattr(_suite, "run_test_suite", lambda output_dir: {"unit": None, "e2e": None})
     monkeypatch.setattr(pack, "compile_tex", _stub_pdf)
     monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})
-    monkeypatch.setitem(mod._cov_state, "running", True)
+    monkeypatch.setitem(_suite.cov_state, "running", True)
 
-    mod._run_coverage_and_rebuild(tmp_path)
+    _suite.run_coverage_and_rebuild(tmp_path)
 
-    assert mod._cov_state["running"] is False and mod._cov_state["error"] is None
+    assert _suite.cov_state["running"] is False and _suite.cov_state["error"] is None
     assert (tmp_path / "test_report.pdf").exists()
     assert (tmp_path / "audit_r3_test_coverage.pdf").exists()
     assert (tmp_path / "coding_rule_audit.pdf").exists()
@@ -173,11 +216,11 @@ def test_coverage_refresh_records_error(tmp_path, monkeypatch):
     def _boom(output_dir):
         raise RuntimeError("pytest exploded")
 
-    monkeypatch.setattr(mod, "run_test_suite", _boom)
-    monkeypatch.setitem(mod._cov_state, "running", True)
-    mod._run_coverage_and_rebuild(tmp_path)
-    assert mod._cov_state["running"] is False
-    assert "pytest exploded" in mod._cov_state["error"]
+    monkeypatch.setattr(_suite, "run_test_suite", _boom)
+    monkeypatch.setitem(_suite.cov_state, "running", True)
+    _suite.run_coverage_and_rebuild(tmp_path)
+    assert _suite.cov_state["running"] is False
+    assert "pytest exploded" in _suite.cov_state["error"]
 
 
 def test_start_coverage_refresh_spawns_once_and_guards(tmp_path, monkeypatch):
@@ -191,24 +234,24 @@ def test_start_coverage_refresh_spawns_once_and_guards(tmp_path, monkeypatch):
         def start(self):
             spawned.append(self.args)
 
-    monkeypatch.setattr(mod.threading, "Thread", _FakeThread)
-    monkeypatch.delenv(mod.SUITE_ACTIVE_ENV, raising=False)     # not nested here
-    monkeypatch.setitem(mod._cov_state, "running", False)
+    monkeypatch.setattr(_suite.threading, "Thread", _FakeThread)
+    monkeypatch.delenv(_suite.SUITE_ACTIVE_ENV, raising=False)     # not nested here
+    monkeypatch.setitem(_suite.cov_state, "running", False)
 
-    assert mod._start_coverage_refresh(tmp_path) is True
-    assert mod._cov_state["running"] is True and spawned == [(tmp_path,)]
+    assert _suite.start_coverage_refresh(tmp_path) is True
+    assert _suite.cov_state["running"] is True and spawned == [(tmp_path,)]
     # Already running → no second thread.
-    assert mod._start_coverage_refresh(tmp_path) is False
+    assert _suite.start_coverage_refresh(tmp_path) is False
     assert len(spawned) == 1
-    monkeypatch.setitem(mod._cov_state, "running", False)      # restore for others
+    monkeypatch.setitem(_suite.cov_state, "running", False)      # restore for others
 
 
 def test_start_coverage_refresh_declines_when_nested_in_a_suite(tmp_path, monkeypatch):
     # A generate fired from inside a running suite must not spawn another suite.
-    monkeypatch.setenv(mod.SUITE_ACTIVE_ENV, "1")
-    monkeypatch.setitem(mod._cov_state, "running", False)
-    assert mod._start_coverage_refresh(tmp_path) is False
-    assert mod._cov_state["running"] is False          # never flipped on
+    monkeypatch.setenv(_suite.SUITE_ACTIVE_ENV, "1")
+    monkeypatch.setitem(_suite.cov_state, "running", False)
+    assert _suite.start_coverage_refresh(tmp_path) is False
+    assert _suite.cov_state["running"] is False          # never flipped on
 
 
 def test_coverage_status_endpoint_shape(client):
@@ -223,7 +266,7 @@ def test_catalogue_lists_non_pdf_artefacts_and_coverage_html(client, tmp_path, m
     (out / "junit.xml").write_text("<testsuite/>")
     (out / "init_audit_results.json").write_text("{}")
     (out / "coverage" / "index.html").write_text("<html>cov</html>")
-    monkeypatch.setattr(mod, "OUTPUT_DIR", out)
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", out)
 
     catalogue = client.get("/api/audit-reports").get_json()
     by_name = {r["filename"]: r for r in catalogue}
@@ -232,7 +275,7 @@ def test_catalogue_lists_non_pdf_artefacts_and_coverage_html(client, tmp_path, m
     assert by_name["init_audit_results.json"]["type"] == "JSON"
     # The coverage HTML directory is surfaced as one card that opens its own page.
     by_label = {r["label"]: r for r in catalogue}
-    cov = by_label[mod.COVERAGE_HTML_LABEL]
+    cov = by_label[_bp.COVERAGE_HTML_LABEL]
     assert cov["type"] == "HTML" and cov["href"] == "coverage"
 
 
@@ -248,7 +291,7 @@ def test_catalogue_groups_artefacts_into_the_two_sub_tabs(client, tmp_path, monk
                  "junit.xml"):
         (out / name).write_bytes(b"stub")
     (out / "coverage" / "index.html").write_text("<html>cov</html>")
-    monkeypatch.setattr(mod, "OUTPUT_DIR", out)
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", out)
 
     groups = {r["filename"]: r["group"]
               for r in client.get("/api/audit-reports").get_json()}
@@ -267,14 +310,14 @@ def test_serve_coverage_index_and_assets(client, tmp_path, monkeypatch):
     (out / "coverage").mkdir(parents=True)
     (out / "coverage" / "index.html").write_text("<html>cov index</html>")
     (out / "coverage" / "style.css").write_text("body{}")
-    monkeypatch.setattr(mod, "OUTPUT_DIR", out)
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", out)
 
     assert b"cov index" in client.get("/api/audit-reports/coverage").data
     assert b"body{}" in client.get("/api/audit-reports/coverage/style.css").data
 
 
 def test_serve_coverage_404_when_absent(client, tmp_path, monkeypatch):
-    monkeypatch.setattr(mod, "OUTPUT_DIR", tmp_path / "audit")
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", tmp_path / "audit")
     assert client.get("/api/audit-reports/coverage").status_code == 404
     assert client.get("/api/audit-reports/coverage/style.css").status_code == 404
 
@@ -283,19 +326,19 @@ def test_serve_non_pdf_downloads_as_attachment(client, tmp_path, monkeypatch):
     out = tmp_path / "audit"
     out.mkdir()
     (out / "junit.xml").write_text("<testsuite/>")
-    monkeypatch.setattr(mod, "OUTPUT_DIR", out)
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", out)
     res = client.get("/api/audit-reports/junit.xml")
     assert res.status_code == 200
     assert "attachment" in res.headers.get("Content-Disposition", "")
 
 
 def test_serve_missing_dir_is_404(client, tmp_path, monkeypatch):
-    monkeypatch.setattr(mod, "OUTPUT_DIR", tmp_path / "audit")
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", tmp_path / "audit")
     assert client.get("/api/audit-reports/anything.pdf").status_code == 404
 
 
 def test_serve_unknown_file_is_404(client, tmp_path, monkeypatch):
     out = tmp_path / "audit"
     out.mkdir()
-    monkeypatch.setattr(mod, "OUTPUT_DIR", out)
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", out)
     assert client.get("/api/audit-reports/nope.pdf").status_code == 404
