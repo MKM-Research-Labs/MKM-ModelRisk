@@ -43,8 +43,9 @@ from audit.testsuite import SUITE_ACTIVE_ENV, run_test_suite
 from config.audit import (AUDIT_OUTPUT_DIR, AUDIT_REPORT_LABELS,
                           COMPLETENESS_REPORT_PDF_NAME, COVERAGE_HTML_DIRNAME,
                           COVERAGE_HTML_LABEL, COVERAGE_XML_NAME,
-                          INTEGRATION_GUIDE_PDF_NAME, INTEGRATION_GUIDE_TEX,
-                          TEST_REPORT_PDF_NAME, USER_GUIDE_MD)
+                          DEFAULT_REPORT_GROUP, INTEGRATION_GUIDE_PDF_NAME,
+                          INTEGRATION_GUIDE_TEX, TEST_REPORT_PDF_NAME,
+                          USER_FOCUSED_REPORTS, USER_GUIDE_MD, USER_REPORT_GROUP)
 from config.reporting import DOCUMENT_COLOUR_INCLUDE
 from src.governance.latex import front_matter, history_page, logo_asset, preamble
 from src.governance.latex_style import colour_definitions
@@ -117,12 +118,14 @@ def _start_coverage_refresh(output_dir) -> bool:
 
 
 def _entry(path) -> dict:
-    """Catalogue row for one artefact file ``path``."""
+    """Catalogue row for one artefact file ``path``, tagged with its sub-tab group."""
     stat = path.stat()
     ext = path.suffix.lower()
     return {
         "filename": path.name,
         "label": _LABELS.get(path.name, path.stem.replace("_", " ").title()),
+        "group": (USER_REPORT_GROUP if path.name in USER_FOCUSED_REPORTS
+                  else DEFAULT_REPORT_GROUP),
         "type": _TYPE_LABELS.get(ext, ext.lstrip(".").upper() or "FILE"),
         "size": stat.st_size,
         "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
@@ -142,6 +145,7 @@ def _catalogue() -> list[dict]:
         reports.append({
             "filename": f"{COVERAGE_HTML_DIRNAME}/index.html",
             "label": COVERAGE_HTML_LABEL,
+            "group": DEFAULT_REPORT_GROUP,      # R3 evidence, like the XML beside it
             "type": "HTML",
             "size": stat.st_size,
             "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
