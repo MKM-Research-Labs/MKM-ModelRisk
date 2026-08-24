@@ -73,7 +73,7 @@ def generate():
     report = build_report()
     errors: list = []
     try:
-        with _suite.write_lock:                  # serialise vs. the bg rebuild
+        with _suite.write_lock(_bp.OUTPUT_DIR):  # serialise vs. the bg rebuild
             # One standalone PDF per audit function (R1–R8) plus the JSON-file
             # audit and the consolidated overview — the same set the ``python -m
             # audit --pdf`` CLI emits — followed by the Model Risk report.

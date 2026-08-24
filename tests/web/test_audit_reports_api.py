@@ -27,6 +27,8 @@ patching the defining module would not reach the binding it already holds.
 """
 from __future__ import annotations
 
+import os
+
 import audit.__main__ as audit_main
 from src.web.api_audit_reports import _bp, _guides, _suite
 from src.web.api_audit_reports import generate as gen
@@ -202,11 +204,11 @@ def test_coverage_refresh_rebuilds_reports_and_clears_running(tmp_path, monkeypa
     monkeypatch.setattr(_suite, "run_test_suite", lambda output_dir: {"unit": None, "e2e": None})
     monkeypatch.setattr(pack, "compile_tex", _stub_pdf)
     monkeypatch.setattr(audit_main, "duplication_report", lambda: {"available": False})
-    monkeypatch.setitem(_suite.cov_state, "running", True)
+    _suite._write_state(tmp_path, {"running": True, "error": None, "pid": os.getpid()})
 
     _suite.run_coverage_and_rebuild(tmp_path)
 
-    assert _suite.cov_state["running"] is False and _suite.cov_state["error"] is None
+    assert _suite.refresh_state(tmp_path) == {"running": False, "error": None}
     assert (tmp_path / "test_report.pdf").exists()
     assert (tmp_path / "audit_r3_test_coverage.pdf").exists()
     assert (tmp_path / "coding_rule_audit.pdf").exists()
@@ -217,10 +219,11 @@ def test_coverage_refresh_records_error(tmp_path, monkeypatch):
         raise RuntimeError("pytest exploded")
 
     monkeypatch.setattr(_suite, "run_test_suite", _boom)
-    monkeypatch.setitem(_suite.cov_state, "running", True)
+    _suite._write_state(tmp_path, {"running": True, "error": None, "pid": os.getpid()})
     _suite.run_coverage_and_rebuild(tmp_path)
-    assert _suite.cov_state["running"] is False
-    assert "pytest exploded" in _suite.cov_state["error"]
+    state = _suite.refresh_state(tmp_path)
+    assert state["running"] is False
+    assert "pytest exploded" in state["error"]
 
 
 def test_start_coverage_refresh_spawns_once_and_guards(tmp_path, monkeypatch):
@@ -236,22 +239,19 @@ def test_start_coverage_refresh_spawns_once_and_guards(tmp_path, monkeypatch):
 
     monkeypatch.setattr(_suite.threading, "Thread", _FakeThread)
     monkeypatch.delenv(_suite.SUITE_ACTIVE_ENV, raising=False)     # not nested here
-    monkeypatch.setitem(_suite.cov_state, "running", False)
 
     assert _suite.start_coverage_refresh(tmp_path) is True
-    assert _suite.cov_state["running"] is True and spawned == [(tmp_path,)]
+    assert _suite.refresh_state(tmp_path)["running"] is True and spawned == [(tmp_path,)]
     # Already running → no second thread.
     assert _suite.start_coverage_refresh(tmp_path) is False
     assert len(spawned) == 1
-    monkeypatch.setitem(_suite.cov_state, "running", False)      # restore for others
 
 
 def test_start_coverage_refresh_declines_when_nested_in_a_suite(tmp_path, monkeypatch):
     # A generate fired from inside a running suite must not spawn another suite.
     monkeypatch.setenv(_suite.SUITE_ACTIVE_ENV, "1")
-    monkeypatch.setitem(_suite.cov_state, "running", False)
     assert _suite.start_coverage_refresh(tmp_path) is False
-    assert _suite.cov_state["running"] is False          # never flipped on
+    assert _suite.refresh_state(tmp_path)["running"] is False    # never flipped on
 
 
 def test_coverage_status_endpoint_shape(client):
@@ -342,3 +342,59 @@ def test_serve_unknown_file_is_404(client, tmp_path, monkeypatch):
     out.mkdir()
     monkeypatch.setattr(_bp, "OUTPUT_DIR", out)
     assert client.get("/api/audit-reports/nope.pdf").status_code == 404
+
+
+# --- The refresh flag is shared, because the workers are not ------------------
+# Under gunicorn, a flag in module state is per-process: the worker answering the
+# status poll is usually not the one running the refresh, so the UI saw "finished"
+# seconds in and showed the previous run's coverage as this run's output.
+
+
+def test_the_refresh_state_is_read_from_disk_not_from_this_process(tmp_path):
+    """A refresh started by ANOTHER process is still reported as running."""
+    _suite._write_state(tmp_path, {"running": True, "error": None, "pid": 1})
+    assert _suite.refresh_state(tmp_path)["running"] is True     # pid 1 is alive
+
+
+def test_a_refresh_whose_process_died_is_reported_interrupted(tmp_path):
+    """The killed-mid-run case: the artefacts never arrived, and saying nothing
+    would present the previous run's coverage as this run's result."""
+    dead = _dead_pid()
+    _suite._write_state(tmp_path, {"running": True, "error": None, "pid": dead})
+    state = _suite.refresh_state(tmp_path)
+    assert state["running"] is False
+    assert "stopped before it finished" in state["error"]
+
+
+def test_a_missing_or_unreadable_state_file_reads_as_idle(tmp_path):
+    """Never generated, or truncated by hand: neither may 500 the status endpoint."""
+    idle = {"running": False, "error": None}
+    assert _suite.refresh_state(tmp_path) == idle
+    (tmp_path / _suite.REFRESH_STATE_NAME).write_text("{not json", encoding="utf-8")
+    assert _suite.refresh_state(tmp_path) == idle
+
+
+def test_the_write_lock_is_reentrant_across_sequential_holders(tmp_path):
+    """Two passes in a row each acquire and release; neither deadlocks."""
+    for _ in range(2):
+        with _suite.write_lock(tmp_path):
+            pass
+    assert (tmp_path / _suite.REFRESH_WRITE_LOCK_NAME).exists()
+
+
+def test_the_coordination_files_stay_out_of_the_catalogue(tmp_path, monkeypatch):
+    """They are dotfiles precisely so the tab does not list them as artefacts."""
+    monkeypatch.setattr(_bp, "OUTPUT_DIR", tmp_path)
+    _suite._write_state(tmp_path, {"running": False, "error": None, "pid": 1})
+    with _suite.write_lock(tmp_path):
+        pass
+    (tmp_path / "user_guide.pdf").write_bytes(b"%PDF-1.4")
+    assert [row["filename"] for row in _bp.catalogue()] == ["user_guide.pdf"]
+
+
+def _dead_pid() -> int:
+    """A pid that is certainly not running: spawn a trivial child and reap it."""
+    import subprocess
+    proc = subprocess.Popen(["true"])
+    proc.wait()
+    return proc.pid
