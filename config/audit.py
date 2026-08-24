@@ -55,6 +55,22 @@ TEST_REPORT_PDF_NAME = "test_report.pdf"
 COMPLETENESS_REPORT_PDF_NAME = "completeness_audit.pdf"
 JSON_FILES_REPORT_PDF_NAME = "json_files_report.pdf"
 
+# Coordination files for the background refresh, written into AUDIT_OUTPUT_DIR.
+# Both are dotfiles so ``catalogue()`` leaves them out of the tab. They live on
+# disk rather than in memory because the console runs under gunicorn with several
+# workers: a module-level flag is per-process, so the worker answering the status
+# poll is usually not the worker running the refresh, and a lock held in one
+# worker does not serialise a second worker rendering into the same directory.
+REFRESH_STATE_NAME = ".refresh_state.json"
+REFRESH_WRITE_LOCK_NAME = ".refresh_write.lock"
+
+# What the status endpoint reports when the refresh's owning process is gone --
+# killed, restarted or crashed. Without it an interrupted run is indistinguishable
+# from a finished one, and the tab presents stale artefacts as fresh output.
+REFRESH_INTERRUPTED = ("The background refresh stopped before it finished "
+                       "(the server process it was running in went away). "
+                       "Coverage, JUnit and the Test Report may be out of date.")
+
 # Human-readable titles for the generated report files (filename -> label).
 AUDIT_REPORT_LABELS = {
     "coding_rule_audit.pdf": "Coding-Rule Audit",

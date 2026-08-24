@@ -68,7 +68,10 @@ def serve_report(filename: str):
 
 @audit_reports_bp.get("/coverage-status")
 def coverage_status():
-    """Poll target for the UI while a background coverage refresh runs."""
-    with _suite.cov_lock:
-        return jsonify({"running": _suite.cov_state["running"],
-                        "error": _suite.cov_state["error"]})
+    """Poll target for the UI while a background coverage refresh runs.
+
+    Read from the state file rather than module state: under gunicorn this GET is
+    answered by whichever worker picks it up, which is usually not the one running
+    the refresh.
+    """
+    return jsonify(_suite.refresh_state(_bp.OUTPUT_DIR))
