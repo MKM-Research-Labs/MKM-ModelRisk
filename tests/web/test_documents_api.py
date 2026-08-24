@@ -96,3 +96,40 @@ def test_set_model_types_on_unknown_is_404(client):
     resp = client.post("/api/documents/DOC-999/model-types",
                        json={"model_types": ["Hazard"]}, headers=HEADERS)
     assert resp.status_code == 404
+
+
+def test_upload_keeps_the_description_it_was_given(client):
+    assert _upload(client).get_json()[0]["description"] == "Q1 pack"
+
+
+def test_metadata_amends_description_and_tags_together(client):
+    doc = _upload(client).get_json()[0]
+    resp = client.post("/api/documents/" + doc["item_id"] + "/metadata",
+                       json={"description": "  Q1 board pack  ",
+                             "model_types": ["Regulatory"]}, headers=HEADERS)
+    assert resp.status_code == 200
+    after = resp.get_json()[0]
+    assert after["item_id"] == doc["item_id"], "the file and its id stay put"
+    assert after["description"] == "Q1 board pack"
+    assert after["model_types"] == ["Regulatory"]
+
+
+def test_amending_one_field_leaves_the_other_alone(client):
+    """The older ``/model-types`` path knows nothing about the description, so
+    omission must mean "unchanged" rather than "cleared"."""
+    doc = _upload(client).get_json()[0]
+    after = client.post("/api/documents/" + doc["item_id"] + "/model-types",
+                        json={"model_types": ["Hazard"]}, headers=HEADERS).get_json()[0]
+    assert after["description"] == "Q1 pack" and after["model_types"] == ["Hazard"]
+
+    cleared = client.post("/api/documents/" + doc["item_id"] + "/metadata",
+                          json={"description": ""}, headers=HEADERS).get_json()[0]
+    assert cleared["description"] == "", "an explicit empty description does clear it"
+    assert cleared["model_types"] == ["Hazard"]
+
+
+def test_metadata_with_nothing_to_amend_is_400(client):
+    doc = _upload(client).get_json()[0]
+    resp = client.post("/api/documents/" + doc["item_id"] + "/metadata",
+                       json={}, headers=HEADERS)
+    assert resp.status_code == 400

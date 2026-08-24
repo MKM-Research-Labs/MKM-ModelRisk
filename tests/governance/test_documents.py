@@ -23,6 +23,7 @@ from __future__ import annotations
 import pytest
 
 from src.governance.documents import (add_document, list_documents, model_scope,
+                                      reissue_duplicate_ids, remove_document,
                                       update_document)
 from src.governance.errors import DomainError
 
@@ -81,3 +82,50 @@ def test_scope_helpers_name_the_upload_directories():
     from src.governance.documents import client_scope, model_scope
     assert model_scope("MKM-DD-001") == "model/MKM-DD-001"
     assert client_scope("CL-01") == "client/CL-01"
+
+
+def _add_with_count_numbering(monkeypatch, name):
+    """Upload the way ids used to be minted — from the item count, not the highest
+    in use — which is how two live documents came to share one id."""
+    from src.governance import collections as coll
+    monkeypatch.setattr(coll, "next_item_id",
+                        lambda items, prefix: f"{prefix}-{len(items) + 1:03d}")
+    doc = _add(name=name)
+    monkeypatch.undo()
+    return doc
+
+
+def test_a_removed_documents_id_is_not_handed_to_the_next_upload():
+    first, second = _add(name="a.pdf"), _add(name="b.pdf")
+    remove_document(aggregate_type=AGG, aggregate_id="M1", item_id=first["item_id"], actor="a")
+    third = _add(name="c.pdf")
+    assert third["item_id"] != second["item_id"], "an id in use must never be reissued"
+
+
+def test_documents_sharing_an_id_are_reissued_one_each(monkeypatch):
+    # Remove an early document and the count points back at a live id: one left,
+    # so the next upload is numbered 002 — which DOC-002 already holds.
+    doomed = _add(name="gone.pdf")                     # DOC-001
+    kept = _add(name="keep.pdf")                       # DOC-002
+    remove_document(aggregate_type=AGG, aggregate_id="M1", item_id=doomed["item_id"], actor="a")
+    clash = _add_with_count_numbering(monkeypatch, "clash.pdf")
+    assert clash["item_id"] == kept["item_id"], "the state this repair exists for"
+
+    moved = reissue_duplicate_ids(aggregate_type=AGG, aggregate_id="M1", actor="fix")
+    after = list_documents(AGG, "M1")
+    assert len(after) == 2, "a repair must not add or lose a document"
+    assert len({d["item_id"] for d in after}) == 2
+    assert {m["name"] for m in moved} == {"keep.pdf", "clash.pdf"}
+    assert all(m["was"] == kept["item_id"] for m in moved)
+
+    # Everything but the id survives, so the file still downloads and the row still
+    # reads the same.
+    by_name = {d["original_name"]: d for d in after}
+    assert by_name["keep.pdf"]["filename"] == kept["filename"]
+    assert by_name["keep.pdf"]["uploaded_at"] == kept["uploaded_at"]
+    assert by_name["clash.pdf"]["description"] == "d"
+
+
+def test_reissuing_is_idempotent_when_every_id_is_already_unique():
+    _add(name="a.pdf")
+    assert reissue_duplicate_ids(aggregate_type=AGG, aggregate_id="M1", actor="fix") == []

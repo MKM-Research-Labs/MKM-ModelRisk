@@ -132,7 +132,7 @@ def add_document(
     meta = save_upload(scope, filename, data)
     documents, version = _fold(aggregate_type, aggregate_id, config)
     payload = {
-        "collection": DOCUMENTS, "item_id": f"DOC-{len(documents) + 1:03d}",
+        "collection": DOCUMENTS, "item_id": coll.next_item_id(documents, "DOC"),
         "category": category, "filename": meta["filename"],
         "original_name": meta["original_name"], "description": description or "",
         "model_types": clean_model_types(model_types),
@@ -165,6 +165,56 @@ def update_document(
         payload={"collection": DOCUMENTS, "item_id": item_id, **fields},
         actor=actor, reason=reason, expected_version=version, config=config,
     )
+
+
+def _refile(aggregate_type: str, aggregate_id: str, doc: dict, actor: str, config) -> str:
+    """Record ``doc`` again under a fresh id, keeping every other field as it was."""
+    documents, version = _fold(aggregate_type, aggregate_id, config)
+    prefix = str(doc["item_id"]).rsplit("-", 1)[0]
+    payload = {k: v for k, v in doc.items() if k != "item_id"}
+    payload["collection"] = DOCUMENTS
+    payload["item_id"] = coll.next_item_id(documents, prefix)
+    append_event(
+        aggregate_type=aggregate_type, aggregate_id=aggregate_id,
+        event_type=coll.EVENT_ITEM_ADDED, payload=payload, actor=actor,
+        reason=f"Re-file {doc.get('original_name') or doc['item_id']} under a unique "
+               f"id (shared {doc['item_id']} with another document)",
+        expected_version=version, config=config,
+    )
+    return payload["item_id"]
+
+
+def reissue_duplicate_ids(
+    *, aggregate_type: str, aggregate_id: str, actor: str, config=None,
+) -> list:
+    """Give each document that shares an item id with another one of its own.
+
+    Ids were once minted from the item count, so removing a document and uploading
+    another reissued a live id (see ``collections.next_item_id``). The fold matches
+    on id alone, which leaves the affected documents inseparable: editing one edits
+    the other, and deleting one deletes both.
+
+    The repair is append-only, like everything else on this log — the shared id is
+    retired and each document re-filed under its own, carrying its original name,
+    file, size and upload date across, so the only thing that changes is the id.
+    The bytes on disk are never touched. Returns one ``{was, now, name}`` per
+    document moved; idempotent, and an empty list when there is nothing to repair.
+    """
+    documents = list_documents(aggregate_type, aggregate_id, config)
+    seen: dict = {}
+    for doc in documents:
+        seen.setdefault(doc["item_id"], []).append(doc)
+    clashing = [group for group in seen.values() if len(group) > 1]
+    moved = []
+    for group in clashing:
+        # One removal clears the whole group — that is the defect being repaired.
+        remove_document(aggregate_type=aggregate_type, aggregate_id=aggregate_id,
+                        item_id=group[0]["item_id"], actor=actor, config=config)
+        for doc in group:
+            new_id = _refile(aggregate_type, aggregate_id, doc, actor, config)
+            moved.append({"was": doc["item_id"], "now": new_id,
+                          "name": doc.get("original_name", "")})
+    return moved
 
 
 def remove_document(

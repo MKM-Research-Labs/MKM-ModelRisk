@@ -20,7 +20,9 @@
 
 // Governance-wide Documents tab: external reference material, tagged with the
 // Admin-defined model types (see MRC settings > "Document model types") and
-// filterable by them. Model types replace the old free-text Description column.
+// filterable by them. Model types are what a document is filtered BY; the free-text
+// description is what it is about, which no tag list says on its own — so both are
+// offered at upload and both are amendable afterwards, in one editor.
 function parseModelTypes(str) {
   return (str || "").split(",").map((s) => s.trim()).filter(Boolean);
 }
@@ -126,7 +128,9 @@ const GovDocs = {
       "framework is built on, tagged by model type. Manage the type list in " +
       "Admin &rsaquo; MRC settings.</p>" +
       // Upload row
-      '<div class="row" style="align-items:center;margin-bottom:var(--space-3)"><input type="file" id="gd-file">' +
+      '<div class="row" style="align-items:center;margin-bottom:var(--space-3);gap:var(--space-3)">' +
+      '<input type="file" id="gd-file">' +
+      '<input id="gd-desc" placeholder="Description (optional)" style="flex:1">' +
       '<button class="btn small primary" id="gd-upload">Upload</button></div>' +
       '<div id="gd-uptypes" style="margin-bottom:var(--space-6)">' +
       '<span class="muted" style="margin-right:var(--space-3)">Model types:</span>' +
@@ -135,7 +139,8 @@ const GovDocs = {
       '<div class="row" style="align-items:center;margin-bottom:var(--space-4)">' +
       '<label class="muted" style="margin-right:var(--space-3)">Filter:</label>' +
       '<select id="gd-filter">' + opts + "</select></div>" +
-      "<table><thead><tr><th>Name</th><th>Model Type</th><th>Date Added</th><th>Size</th>" +
+      "<table><thead><tr><th>Name</th><th>Description</th><th>Model Type</th>" +
+      "<th>Date Added</th><th>Size</th>" +
       "<th>Actions</th></tr></thead><tbody id=\"gd-rows\"></tbody></table></div>";
   },
 
@@ -273,13 +278,15 @@ const GovDocs = {
   _renderRows() {
     const docs = this._visibleDocs();
     const rows = docs.length ? docs.map((d) =>
-      "<tr><td>" + esc(d.original_name) + '</td><td class="mt-cell" data-mt="' + esc(d.item_id) + '">' +
+      "<tr><td>" + esc(d.original_name) + '</td><td class="ds-cell" data-ds="' + esc(d.item_id) +
+      '">' + this._descStatic(d.description) +
+      '</td><td class="mt-cell" data-mt="' + esc(d.item_id) + '">' +
       this._chipsStatic(d.model_types) +
       ' <span class="edit-btn" data-edt="' + esc(d.item_id) + '">edit</span></td><td>' +
       esc((d.uploaded_at || "").slice(0, 10)) + "</td><td>" + fmtSize(d.size) +
       '</td><td class="rowact"><a href="/api/documents/' + esc(d.item_id) + '/download">Download</a>' +
       ' <button class="btn small danger" data-rmgd="' + esc(d.item_id) + '">Delete</button></td></tr>').join("") :
-      '<tr><td colspan="5" class="empty">No documents' +
+      '<tr><td colspan="6" class="empty">No documents' +
       (this._filter ? " for this model type." : " uploaded yet.") + "</td></tr>";
     document.getElementById("gd-rows").innerHTML = rows;
     this._bindRows();
@@ -324,13 +331,24 @@ const GovDocs = {
       };
     });
     document.querySelectorAll("[data-edt]").forEach(function (el) {
-      el.onclick = function () { self._editTypes(el.getAttribute("data-edt")); };
+      el.onclick = function () { self._editMeta(el.getAttribute("data-edt")); };
     });
   },
 
-  _editTypes(itemId) {
+  // A row's description cell: the text, or a dash when there is none.
+  _descStatic(description) {
+    return description ? esc(description) : '<span class="muted">—</span>';
+  },
+
+  // One editor over both metadata fields, opened by the single "edit" control and
+  // saved in one amendment — two separate editors would mean two audit entries for
+  // what a user did as one correction.
+  _editMeta(itemId) {
     const self = this;
     const doc = this._docs.find((d) => d.item_id === itemId);
+    const desc = document.querySelector('.ds-cell[data-ds="' + itemId + '"]');
+    desc.innerHTML = '<input id="mt-desc" style="width:100%" placeholder="Description" ' +
+      'value="' + esc(doc.description || "") + '">';
     const cell = document.querySelector('.mt-cell[data-mt="' + itemId + '"]');
     cell.innerHTML = '<div data-editor="1">' + this._chipsPicker(doc.model_types || [], "ed") +
       '<div style="margin-top:var(--space-2)"><button class="btn small primary" id="mt-save">Save…</button>' +
@@ -338,9 +356,9 @@ const GovDocs = {
     this._bindPicker("ed");
     document.getElementById("mt-cancel").onclick = function () { self._renderRows(); };
     document.getElementById("mt-save").onclick = function () {
-      const chosen = self._picked("ed");
-      App.amend("Set model types for " + itemId + ".", "POST",
-        "/api/documents/" + itemId + "/model-types", { model_types: chosen },
+      App.amend("Set description and model types for " + itemId + ".", "POST",
+        "/api/documents/" + itemId + "/metadata",
+        { model_types: self._picked("ed"), description: val("mt-desc") },
         () => self.render());
     };
   },
@@ -350,6 +368,7 @@ const GovDocs = {
     if (!fileInput.files.length) { App.toast("Choose a file first", "error"); return; }
     const form = new FormData();
     form.append("file", fileInput.files[0]);
+    form.append("description", val("gd-desc"));
     this._picked("up").forEach((t) => form.append("model_types", t));
     fetch("/api/documents", {
       method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
