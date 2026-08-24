@@ -236,6 +236,32 @@ def test_catalogue_lists_non_pdf_artefacts_and_coverage_html(client, tmp_path, m
     assert cov["type"] == "HTML" and cov["href"] == "coverage"
 
 
+def test_catalogue_groups_artefacts_into_the_two_sub_tabs(client, tmp_path, monkeypatch):
+    # The tab is split User / Code. The estate's own reports and the guides are the
+    # user's; the rule reports and the test evidence are the code's — including the
+    # report for a rule added later, since Code is what an unlisted artefact falls to.
+    out = tmp_path / "audit"
+    (out / "coverage").mkdir(parents=True)
+    for name in ("model_risk_report.pdf", "completeness_audit.pdf", "user_guide.pdf",
+                 "user_guide.docx", "integration_guide.pdf", "coding_rule_audit.pdf",
+                 "audit_r1_hardcoded_parameters.pdf", "audit_r99_a_later_rule.pdf",
+                 "junit.xml"):
+        (out / name).write_bytes(b"stub")
+    (out / "coverage" / "index.html").write_text("<html>cov</html>")
+    monkeypatch.setattr(mod, "OUTPUT_DIR", out)
+
+    groups = {r["filename"]: r["group"]
+              for r in client.get("/api/audit-reports").get_json()}
+    assert {n for n, g in groups.items() if g == "user"} == {
+        "model_risk_report.pdf", "completeness_audit.pdf", "user_guide.pdf",
+        "user_guide.docx", "integration_guide.pdf"}
+    assert groups["audit_r1_hardcoded_parameters.pdf"] == "code"
+    assert groups["audit_r99_a_later_rule.pdf"] == "code"
+    assert groups["coding_rule_audit.pdf"] == "code"
+    assert groups["junit.xml"] == "code"
+    assert groups["coverage/index.html"] == "code"
+
+
 def test_serve_coverage_index_and_assets(client, tmp_path, monkeypatch):
     out = tmp_path / "audit"
     (out / "coverage").mkdir(parents=True)

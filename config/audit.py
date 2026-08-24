@@ -61,6 +61,9 @@ AUDIT_REPORT_LABELS = {
     "model_risk_report.pdf": "Model Risk Report",
     COMPLETENESS_REPORT_PDF_NAME: "Governance Completeness Audit",
     "user_guide.pdf": "User Guide",
+    # The editable form of the same guide, named apart from the PDF because the
+    # two now sit side by side under the User sub-tab.
+    "user_guide.docx": "User Guide (Word)",
     INTEGRATION_GUIDE_PDF_NAME: "Integration Guide",
     TEST_REPORT_PDF_NAME: "Test Report",
     JSON_FILES_REPORT_PDF_NAME: "JSON-File Audit",
@@ -72,6 +75,22 @@ AUDIT_REPORT_LABELS = {
 
 # Label for the browsable HTML coverage report (a directory, surfaced as one card).
 COVERAGE_HTML_LABEL = "Coverage HTML"
+
+# --- Audit Reports tab: the two sub-tabs an artefact appears under ----------------
+# The tab is read by two audiences that share nothing but the Generate button: whoever
+# governs the estate (its own reports, and the guides), and whoever maintains the code
+# (the R1-R10 rule evidence and the test artefacts). USER_FOCUSED_REPORTS names the
+# first set; everything else falls to DEFAULT_REPORT_GROUP, so a report added for a new
+# numbered rule lands under Code without being listed here.
+USER_FOCUSED_REPORTS = (
+    "model_risk_report.pdf",
+    COMPLETENESS_REPORT_PDF_NAME,
+    "user_guide.pdf",
+    "user_guide.docx",
+    INTEGRATION_GUIDE_PDF_NAME,
+)
+USER_REPORT_GROUP = "user"
+DEFAULT_REPORT_GROUP = "code"
 
 # Coding rule R2: source files should stay under this many lines.
 MAX_SOURCE_FILE_LINES = 300

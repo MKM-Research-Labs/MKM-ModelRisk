@@ -643,15 +643,24 @@ Size, with **Download** and **Delete**. Use it for institution-level policies an
 papers. (Models and products also have their own **Docs** tab for item-specific
 files, and the per-model Docs tab carries the nine document categories.)
 
-**Audit Reports.** Click **Generate reports** to produce, on demand, a set of PDFs
-and reports: one per coding-rule audit **R1–R8**, the JSON-file audit and a
-consolidated **coding-rule audit**, the **Model Risk Report** (the portfolio
-profile, the inventory table, then a full dossier per model — classification,
-methodology, governance, validation questions and evidence, assumptions,
-limitations, weaknesses, remediation, dependencies, change history, MRC sign-offs
-and attached documents), the **Governance Completeness Audit**, and — in the
-background — the test-suite coverage (browsable HTML) and the **Test Report**. Each
-report card offers **View** / **Download** / **Open**. Files are written under
+**Audit Reports.** Click **Generate reports** to produce the whole set on demand.
+The tab then divides what it produced between two sub-tabs, because it is read by
+two audiences that share nothing but that button:
+
+- **User** — what the institution publishes about its own estate, and the guides
+  that come with the console: the **Model Risk Report** (the portfolio profile, the
+  inventory table, then a full dossier per model — classification, methodology,
+  governance, validation questions and evidence, assumptions, limitations,
+  weaknesses, remediation, dependencies, change history, MRC sign-offs and attached
+  documents), the **Governance Completeness Audit**, the **User Guide** (this
+  document, also as an editable Word file) and the **Integration Guide**.
+- **Code** — the coding-rule evidence, in rule order: one report per rule,
+  **R1–R10**, the JSON-file audit and the consolidated **coding-rule audit**; then,
+  arriving in the background because the test suite takes about a minute, the
+  coverage (browsable HTML and Cobertura XML), the JUnit results and the
+  **Test Report**.
+
+Each report card offers **View** / **Download** / **Open**. Files are written under
 `uploads/audit/`.
 
 > The per-meeting **Meeting Pack** is generated from the meeting itself

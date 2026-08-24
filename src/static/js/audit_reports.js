@@ -18,28 +18,65 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Audit Reports tab: lists the generated PDF reports with View/Download, and a
-// button to (re)generate them.
+// Audit Reports tab: the generated artefacts, split into two sub-tabs because the
+// tab has two audiences that share nothing but the Generate button — whoever governs
+// the estate (User: its reports and the guides) and whoever maintains the code (Code:
+// the R1-R10 rule evidence and the test artefacts). Which group an artefact belongs to
+// is the API's answer (config/audit.py), not this file's.
 const AuditReports = {
+  _tab: "user",
+  _TABS: [["user", "User"], ["code", "Code"]],
+  _BLURB: {
+    user: "The reports the institution publishes about its own estate, and the guides " +
+      "that come with the console.",
+    code: "The coding-rule audit: one report per rule (R1&ndash;R10), the consolidated " +
+      "overview, and the test evidence behind R3 &mdash; coverage (XML + browsable HTML), " +
+      "JUnit results and the Test Report.",
+  },
+  _reports: [],
+
   async render() {
-    const reports = await App.get("/api/audit-reports");
-    const cards = reports.length ? reports.map((r) => this._card(r)).join("") :
-      '<div class="empty">No reports generated yet. Click “Generate reports”.</div>';
-    document.getElementById("tab-reports").innerHTML =
+    this._reports = await App.get("/api/audit-reports");
+    const bar = this._TABS.map(([k, label]) =>
+      '<button class="dtab' + (k === this._tab ? " active" : "") + '" data-rtab="' + k + '">' +
+      label + "</button>").join("");
+    const el = document.getElementById("tab-reports");
+    el.innerHTML =
       '<div class="card"><div class="row" style="align-items:center">' +
       '<h3 style="margin:0">Audit reports</h3><span style="flex:1"></span>' +
       '<button class="btn small primary" id="ar-generate">Generate reports</button></div>' +
-      '<p class="muted">Generate produces one PDF per audit rule (R1&ndash;R8 and R10), the ' +
-      "JSON-file audit and a consolidated coding-rule audit, plus the Model Risk " +
-      "Report, the Governance Completeness Audit, and the User and Integration " +
-      "guides. " +
-      "The test suite then runs in the background, adding coverage (XML + browsable HTML), " +
-      "JUnit results and the Test Report. Files are written to uploads/audit/ (gitignored)." +
-      "</p>" +
+      '<p class="muted">Generate produces every artefact below in one click, under both ' +
+      "tabs. The test suite then runs in the background, adding coverage, JUnit results " +
+      "and the Test Report. Files are written to uploads/audit/ (gitignored).</p>" +
       '<p class="muted" id="ar-cov-note"></p>' +
-      '<div class="rgrid" style="margin-top:var(--space-6)">' + cards + "</div></div>";
+      '<div class="dtabs">' + bar + '</div><div id="ar-body"></div></div>';
+    el.querySelectorAll("[data-rtab]").forEach((btn) => {
+      // Switching sub-tab re-draws from what was already fetched — no round trip.
+      btn.onclick = () => {
+        this._tab = btn.getAttribute("data-rtab");
+        el.querySelectorAll("[data-rtab]").forEach((b) =>
+          b.classList.toggle("active", b === btn));
+        this._draw();
+      };
+    });
     document.getElementById("ar-generate").onclick = () => this._generate();
+    this._draw();
     this._resumeCoverage();          // reflect an in-flight coverage refresh, if any
+  },
+
+  // The selected group's artefacts. Sorted by filename with numeric collation, which
+  // is what puts the rule reports first and in rule order (R2 before R10, not after
+  // R1) without this file having to know the set of rules.
+  _draw() {
+    const cards = this._reports
+      .filter((r) => r.group === this._tab)
+      .sort((a, b) => a.filename.localeCompare(b.filename, undefined, { numeric: true }))
+      .map((r) => this._card(r)).join("");
+    document.getElementById("ar-body").innerHTML =
+      '<p class="muted">' + this._BLURB[this._tab] + "</p>" +
+      (cards
+        ? '<div class="rgrid" style="margin-top:var(--space-6)">' + cards + "</div>"
+        : '<div class="empty">Nothing generated yet. Click \u201cGenerate reports\u201d.</div>');
   },
 
   // One artefact card. The coverage HTML report opens its own page (r.href);
