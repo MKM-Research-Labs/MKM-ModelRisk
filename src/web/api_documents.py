@@ -24,6 +24,7 @@ from flask import Blueprint, jsonify, request, send_file
 
 from src.files import UploadError, upload_path
 from src.governance.documents import (
+    GOVERNANCE_DOCUMENTS_AGGREGATE,
     add_document,
     clean_model_types,
     find_document,
@@ -35,7 +36,7 @@ from src.web._helpers import request_actor
 
 documents_bp = Blueprint("documents", __name__, url_prefix="/api/documents")
 
-_AGG = "GovernanceDocuments"
+_AGG = GOVERNANCE_DOCUMENTS_AGGREGATE
 _ID = "global"
 _SCOPE = "governance"
 # What an amended field is called in the audit trail's reason line.
