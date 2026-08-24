@@ -101,6 +101,27 @@ def _find_item(collections: dict, collection: str, item_id: str) -> dict | None:
     return next((it for it in collections.get(collection, ()) if it["item_id"] == item_id), None)
 
 
+def next_item_id(items, prefix: str) -> str:
+    """Mint the next id for a collection: one past the highest number in use.
+
+    Numbering from the item *count* instead reissues an id as soon as one has been
+    removed — that is how the governance Documents area came to hold two DOC-017s.
+    Nothing downstream distinguishes them: ``fold`` applies an update to every item
+    whose id matches and a removal to all of them, so retagging one document
+    silently retags the other and deleting one deletes both.
+
+    Ids of removed items are not reserved — the numbering follows what is on the
+    record, not what once was — so retiring the newest item frees its number again.
+    That leaves no two live items sharing an id, which is the collision that bites.
+    """
+    highest = 0
+    for item in items:
+        tail = str(item.get("item_id", "")).rsplit("-", 1)[-1]
+        if tail.isdigit():
+            highest = max(highest, int(tail))
+    return f"{prefix}-{highest + 1:03d}"
+
+
 def _validate(
     spec: dict, fields: dict[str, Any], *, require_required: bool, allow_readonly: bool = False
 ) -> None:
@@ -168,7 +189,7 @@ def decide_add(
 ) -> tuple[str, dict[str, Any]]:
     spec = _spec(specs, collection)
     _validate(spec, fields, require_required=True)
-    item_id = f"{spec['id_prefix']}-{len(collections.get(collection, ())) + 1:03d}"
+    item_id = next_item_id(collections.get(collection, ()), spec["id_prefix"])
     payload: dict[str, Any] = {"collection": collection, "item_id": item_id}
     payload.update(fields)
     return EVENT_ITEM_ADDED, payload

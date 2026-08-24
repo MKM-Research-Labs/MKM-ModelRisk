@@ -155,3 +155,15 @@ def test_update_only_touches_matching_item():
     items = state.collections["assumptions"]
     assert "impact" not in items[0]
     assert items[1]["impact"] == "Low"
+
+
+def test_next_item_id_follows_the_highest_number_not_the_count():
+    """Numbering from the count reissues a live id as soon as one is removed —
+    the fold then treats the two items as one (edit or delete hits both)."""
+    from src.governance.collections import next_item_id
+    assert next_item_id((), "DOC") == "DOC-001"
+    # AS-001 removed: three items, but AS-004 is the next free number.
+    items = ({"item_id": "AS-002"}, {"item_id": "AS-003"})
+    assert next_item_id(items, "AS") == "AS-004"
+    # An id that carries no number cannot claim one, and must not stop the scan.
+    assert next_item_id(({"item_id": "legacy"},) + items, "AS") == "AS-004"

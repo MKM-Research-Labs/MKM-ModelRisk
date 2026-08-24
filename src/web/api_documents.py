@@ -38,6 +38,8 @@ documents_bp = Blueprint("documents", __name__, url_prefix="/api/documents")
 _AGG = "GovernanceDocuments"
 _ID = "global"
 _SCOPE = "governance"
+# What an amended field is called in the audit trail's reason line.
+_FIELD_LABELS = {"model_types": "model types", "description": "description"}
 
 
 @documents_bp.get("")
@@ -61,16 +63,30 @@ def upload():
     return jsonify(list_documents(_AGG, _ID)), 201
 
 
+@documents_bp.post("/<item_id>/metadata")
 @documents_bp.post("/<item_id>/model-types")
-def set_model_types(item_id: str):
-    """Amend an external document's model-type tags (a metadata-only change)."""
+def set_metadata(item_id: str):
+    """Amend an external document's description and model-type tags.
+
+    Metadata only: the file on disk and the item id stay put. Fields absent from
+    the body are left alone rather than cleared, so a caller that knows about only
+    one of them (the older ``/model-types`` path, kept as an alias) cannot wipe the
+    other by omission.
+    """
     if find_document(_AGG, _ID, item_id) is None:
         return jsonify({"error": "document not found"}), 404
     body = request.get_json(silent=True) or {}
+    fields = {}
+    if "model_types" in body:
+        fields["model_types"] = clean_model_types(body.get("model_types"))
+    if "description" in body:
+        fields["description"] = str(body.get("description") or "").strip()
+    if not fields:
+        return jsonify({"error": "no metadata to amend"}), 400
     update_document(
-        aggregate_type=_AGG, aggregate_id=_ID, item_id=item_id,
-        fields={"model_types": clean_model_types(body.get("model_types"))},
-        actor=request_actor(), reason="Set document model types",
+        aggregate_type=_AGG, aggregate_id=_ID, item_id=item_id, fields=fields,
+        actor=request_actor(),
+        reason="Set document " + " and ".join(_FIELD_LABELS[k] for k in fields),
     )
     return jsonify(list_documents(_AGG, _ID))
 
