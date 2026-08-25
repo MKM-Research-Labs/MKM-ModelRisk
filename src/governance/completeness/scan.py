@@ -32,6 +32,7 @@ from typing import Any
 from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS,
     COLLECTION_SPECS,
+    FINOS_SHELF,
     DOC_CATEGORIES,
     MODEL_FIELD_SPECS,
     PRODUCT_COLLECTION_SPECS,
@@ -39,7 +40,9 @@ from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
 )
 from src.files import upload_path
 from src.governance.completeness._rules import audit_entity
-from src.governance.documents import ml_application_scope, model_scope
+from src.governance.documents import (GOVERNANCE_ARTEFACTS_AGGREGATE,
+                                      list_documents, ml_application_scope,
+                                      model_scope)
 from src.governance.model_inventory.projection import list_models
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.ml_application.projection import list_ml_applications
@@ -181,6 +184,21 @@ def ratified_divisions(models: list[dict], config=None) -> set:
     divisions = {(m.get("data") or {}).get("division") for m in models}
     return {division for division in divisions if division
             and load_policy(division, config)["approved"]}
+
+
+def finos_evidence(config=None) -> list[dict]:
+    """The control documentation filed on the FINOS shelf.
+
+    The FINOS mitigation catalogue is the one part of the coverage table not counted
+    from the register: a mitigation is a control the institution runs, largely
+    outside this platform, and what a governance record can attest is that the firm
+    has described it. So the evidence is the filed paper, and this reads the shelf.
+
+    An empty shelf is not an error and is not hidden. Every mitigation then reads
+    Not evidenced, which is the correct account of an institution that has filed
+    nothing -- and the sentence in each row says where the document would go.
+    """
+    return list_documents(GOVERNANCE_ARTEFACTS_AGGREGATE, FINOS_SHELF, config)
 
 
 def findings(rows: list[dict]) -> list[dict]:

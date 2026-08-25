@@ -26,7 +26,7 @@ from src.files import UploadError, upload_path
 from src.governance.documents import (
     GOVERNANCE_DOCUMENTS_AGGREGATE,
     add_document,
-    clean_model_types,
+    clean_tags,
     find_document,
     list_documents,
     remove_document,
@@ -79,7 +79,7 @@ def set_metadata(item_id: str):
     body = request.get_json(silent=True) or {}
     fields = {}
     if "model_types" in body:
-        fields["model_types"] = clean_model_types(body.get("model_types"))
+        fields["model_types"] = clean_tags(body.get("model_types"))
     if "description" in body:
         fields["description"] = str(body.get("description") or "").strip()
     if not fields:

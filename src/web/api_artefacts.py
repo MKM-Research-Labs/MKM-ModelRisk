@@ -36,9 +36,14 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify, request
 
-from config.governance import ARTEFACT_KINDS, COMPANY_WIDE_SHELF
+from config.governance import ARTEFACT_KINDS, COMPANY_WIDE_SHELF, FINOS_SHELF
+# The mitigation vocabulary is FINOS's own, and only this endpoint and the coverage
+# table read it -- imported from the catalogue module rather than re-exported through
+# the config package, as the BCBS 239 tables already are.
+from config.governance._finos import FINOS_MITIGATION_REFS
 from src.files import UploadError, upload_path
 from src.governance.documents import (
+    GOVERNANCE_ARTEFACTS_AGGREGATE,
     add_document,
     find_document,
     list_documents,
@@ -49,7 +54,7 @@ from src.web._helpers import request_actor, send_document
 
 artefacts_bp = Blueprint("artefacts", __name__, url_prefix="/api/artefacts")
 
-_AGG = "GovernanceArtefacts"
+_AGG = GOVERNANCE_ARTEFACTS_AGGREGATE
 
 
 def _scope(shelf: str) -> str:
@@ -58,10 +63,15 @@ def _scope(shelf: str) -> str:
 
 
 def _shelves() -> list[str]:
-    """The company-wide shelf first, then one per division, in reference order."""
+    """The company-wide shelf first, then one per division, then FINOS.
+
+    FINOS goes last rather than beside the company-wide shelf because it is a
+    different sort of thing: the other shelves hold what a division issues, and this
+    one holds the control documentation the completeness audit reads.
+    """
     divisions = [d.get("value") for d in (get_reference_lists().get("division") or [])
                  if d.get("value")]
-    return [COMPANY_WIDE_SHELF, *divisions]
+    return [COMPANY_WIDE_SHELF, *divisions, FINOS_SHELF]
 
 
 @artefacts_bp.get("")
@@ -71,6 +81,10 @@ def shelves():
     return jsonify({
         "shelves": _shelves(),
         "kinds": list(ARTEFACT_KINDS),
+        "finos_shelf": FINOS_SHELF,
+        # Served with the shelves so the upload form has the vocabulary without a
+        # second round trip, and exactly one source for it.
+        "finos_refs": [dict(r) for r in FINOS_MITIGATION_REFS],
         "artefacts": {shelf: list_documents(_AGG, shelf) for shelf in _shelves()},
     })
 
@@ -87,11 +101,16 @@ def upload(shelf: str):
     kind = request.form.get("kind") or ""
     if kind and kind not in ARTEFACT_KINDS:
         return jsonify({"error": f"kind must be one of: {', '.join(ARTEFACT_KINDS)}"}), 400
+    # Mitigation references are accepted on the FINOS shelf and ignored elsewhere,
+    # rather than rejected: a stray tag on a division shelf is inert, and refusing
+    # the upload over one would lose the document to save the tag.
+    refs = request.form.getlist("finos_refs") if shelf == FINOS_SHELF else []
     try:
         add_document(
             aggregate_type=_AGG, aggregate_id=shelf, scope=_scope(shelf),
             filename=file.filename, data=file.read(), category=kind,
             description=request.form.get("description", ""), actor=request_actor(),
+            finos_refs=refs,
         )
     except UploadError as exc:
         return jsonify({"error": str(exc)}), 400

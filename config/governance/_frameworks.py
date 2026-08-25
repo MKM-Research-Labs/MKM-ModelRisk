@@ -56,6 +56,8 @@ issue -- the mapping is the judgement here, the numbering is not.
 """
 from __future__ import annotations
 
+from config.governance._finos import FINOS_COVERAGE, FINOS_NOTES
+
 # ---------------------------------------------------------------------------
 # Outcome vocabulary.
 # ---------------------------------------------------------------------------
@@ -81,8 +83,17 @@ COVERAGE_EVIDENCED_AT = 0.90
 # evidence column carries the sentence a reader acts on, so it takes the room;
 # the reference column is sized to hold the longest citation on one line, because
 # a wrapped clause number reads as two clauses when the table is skimmed.
-COVERAGE_CLAUSE_WEIGHTS = (0.07, 0.26, 0.15, 0.52)
-COVERAGE_ABSENT_WEIGHTS = (0.16, 0.07, 0.24, 0.53)
+# Widened at the reference end when FINOS arrived: its citations are AIR-PREV-023
+# rather than 5.4.3, and the rule above is that the column holds the longest citation
+# in the report on one line. The room comes off the evidence column, which is wide
+# enough to lose some -- a wrapped reference costs the reader more than a shorter
+# line of prose does.
+COVERAGE_CLAUSE_WEIGHTS = (0.20, 0.22, 0.14, 0.44)
+# Same widening, and the framework column takes some too: it now has to hold
+# "FINOS AIGF -- Mitigation catalogue" rather than "BCBS 239 (2013)". A framework
+# NAME may wrap where a citation may not -- it reads as one name over two lines,
+# where a wrapped reference reads as two references.
+COVERAGE_ABSENT_WEIGHTS = (0.20, 0.20, 0.22, 0.38)
 
 # Ratings that oblige a treatment plan, for the risk-treatment clauses. A Green
 # record with no remediation against it is not an untreated risk, so counting it
@@ -251,11 +262,21 @@ BCBS_239_PRINCIPLES = (
 )
 
 # The frameworks the coverage section reports, in the order it reports them.
+#
+# FINOS enters as TWO entries rather than one, because it is two catalogues read
+# differently -- see config/governance/_finos.py. The report renders one table per
+# entry, so nothing here or in the counting needs to know that.
 FRAMEWORK_COVERAGE = (
     (ISO_31000, ISO_31000_CLAUSES),
     (COSO_ERM, COSO_ERM_PRINCIPLES),
     (BCBS_239, BCBS_239_PRINCIPLES),
+    *FINOS_COVERAGE,
 )
+
+# What a framework's table needs said before its rows, where the shared basis
+# paragraph is not enough on its own. Keyed by framework name; a framework with
+# nothing to add simply does not appear.
+FRAMEWORK_NOTES = dict(FINOS_NOTES)
 
 # What the coverage section says it is and is not. Held here with the table it
 # qualifies, because an adopter who re-points the table must re-word this with it.
@@ -263,7 +284,9 @@ COVERAGE_BASIS = (
     "No framework here certifies a software product: ISO 31000 states in its own "
     "scope that it is guidance rather than requirements, COSO is assessed at the "
     "institution, and BCBS 239 is supervisory guidance addressed to banks and their "
-    "supervisors -- its own principles 12 to 14 are written for the supervisor. This "
+    "supervisors -- its own principles 12 to 14 are written for the supervisor. The "
+    "FINOS AI Governance Framework is a catalogue contributed by member institutions "
+    "and has no conformity scheme at all. This "
     "section therefore makes no compliance claim. It states, "
     "clause by clause, what the platform holds that evidences the clause and how "
     "much of the estate actually carries it -- so that the institution's own "

@@ -42,7 +42,8 @@ from config.governance import (
 from src.governance.completeness._method import appendix, method_section
 from src.governance.completeness.framework_report import framework_section
 from src.governance.completeness.review_programme import programme
-from src.governance.completeness.scan import (findings, ratified_divisions, scan,
+from src.governance.completeness.scan import (findings, finos_evidence,
+                                              ratified_divisions, scan,
                                               coverage_population, scoped_models)
 from src.governance.latex import (_para_table, _section, _subsection, front_matter,
                                   history_page, logo_asset, preamble)
@@ -232,12 +233,17 @@ def _review_programme(models: list) -> str:
 def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
                            logo: bool = False, models: list | None = None,
                            coverage: list | None = None,
-                           ratified=()) -> str:
+                           ratified=(), evidence=()) -> str:
     """LaTeX source for the completeness audit.
 
     ``ratified`` are the divisions whose risk policy their committee has approved;
     the framework-coverage section reads it, and an empty one reports the criteria
     clause as unevidenced rather than guessing.
+
+    ``evidence`` are the documents filed on the FINOS shelf, which the same section
+    counts its mitigation catalogue against. Defaulted empty rather than read here,
+    so a caller building the report from records it has already scoped cannot have
+    a shelf fetched behind its back.
     """
     org = settings.get("fields", {}).get("org_name", "")
     gaps = findings(rows)
@@ -260,7 +266,8 @@ def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
         # The clause coverage counts ML Applications beside models; the review
         # programme above it does not, because that reports on the inventory's own
         # review cycle. Two populations, two questions, said so here.
-        + framework_section(rows, coverage or models or [], as_of, ratified)
+        + framework_section(rows, coverage or models or [], as_of, ratified,
+                            evidence)
         + appendix()
         + "\\end{document}\n"
     )
@@ -285,5 +292,6 @@ def render_completeness_pdf(settings: dict, as_of: str, rows=None, models=None,
     return pack.compile_tex(
         build_completeness_tex(rows, settings, as_of, logo=bool(assets), models=models,
                                coverage=coverage_population(model_ids),
-                               ratified=ratified_divisions(models)),
+                               ratified=ratified_divisions(models),
+                               evidence=finos_evidence()),
         assets)
