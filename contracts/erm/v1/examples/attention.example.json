@@ -1,0 +1,53 @@
+{
+ "schema_version": "v1",
+ "as_of": "2026-08-25",
+ "generated_at": "2026-08-25T06:00:11+00:00",
+ "institution": "Example Bank",
+ "total": 51,
+ "returned": 51,
+ "truncated": false,
+ "items": [
+  {
+   "id": "remediation_overdue:MOD-001:RM-001",
+   "state": "act",
+   "reason": "remediation_overdue",
+   "reason_label": "Remediation overdue",
+   "group": "remediation_overdue",
+   "entity": {
+    "kind": "Model",
+    "id": "MOD-001",
+    "name": "Analytical Pricing Model",
+    "tier": 1,
+    "rating": "Amber",
+    "division": "Markets"
+   },
+   "owner": "J. Patel",
+   "committee": "",
+   "due": "2026-03-31",
+   "days_over": 147,
+   "action": "Complete the remediation step, or agree a new date with the committee that set it.",
+   "href": "https://modelrisk.example-bank.internal/#inventory/MOD-001"
+  },
+  {
+   "id": "risk_policy_unratified:Retail",
+   "state": "escalate",
+   "reason": "risk_policy_unratified",
+   "reason_label": "Risk policy has never been ratified",
+   "group": null,
+   "entity": {
+    "kind": "Division",
+    "id": "Retail",
+    "name": "Retail",
+    "tier": null,
+    "rating": null,
+    "division": "Retail"
+   },
+   "owner": "A. Okonjo",
+   "committee": "Retail MRC",
+   "due": null,
+   "days_over": null,
+   "action": "Table the division's risk policy for ratification at its next committee.",
+   "href": "https://modelrisk.example-bank.internal/#reference"
+  }
+ ]
+}

@@ -25,18 +25,13 @@ mTLS scheme replaces it before any external producer is onboarded.
 """
 from __future__ import annotations
 
-import hmac
-
-from flask import Blueprint, jsonify, request
+from flask import Blueprint
 
 from config.ingest import INGEST_DEV_TOKEN, INGEST_TOKEN_HEADER
+from src.web._token_auth import token_guard
 
 ingest_bp = Blueprint("ingest", __name__, url_prefix="/api/ingest")
 
-
-@ingest_bp.before_request
-def _require_token():
-    """Reject any ingest request without the shared producer token."""
-    presented = request.headers.get(INGEST_TOKEN_HEADER, "")
-    if not hmac.compare_digest(presented, INGEST_DEV_TOKEN):
-        return jsonify({"error": "invalid or missing ingest token"}), 401
+# Reject any ingest request without the shared producer token. The guard is shared
+# with the ERM read API (``src.web._token_auth``) rather than written twice.
+ingest_bp.before_request(token_guard(INGEST_TOKEN_HEADER, INGEST_DEV_TOKEN, "ingest"))

@@ -198,10 +198,14 @@ def test_the_status_mapping_covers_every_value_the_console_had_a_colour_for():
     # helpers.js at step 3, and two more (Product status, review threads) found in
     # product.js and inventory/review.js at step 5. A value dropped in translation
     # would render as a dash on a screen that used to colour it.
+    #
+    # "attention" was not translated from anything: the dashboard's four response
+    # states were configured here from the start, so no screen can have lost a value
+    # from it. It is counted all the same, so that dropping one later still fails.
     assert {domain: len(mapping) for domain, mapping in STATUS_COLOUR_TOKENS.items()} == {
         "rag": 3, "mission_criticality": 5, "meeting_status": 4,
         "validation_question": 4, "mrc_state": 7, "lifecycle": 4,
-        "product_status": 4, "review_thread": 2,
+        "product_status": 4, "review_thread": 2, "attention": 4,
     }
 
 

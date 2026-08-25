@@ -133,8 +133,13 @@ Tests do not prove a screen. For anything visible, restore the scratch DB, serve
 
 - **Template caching:** with `debug=False` Jinja caches `index.html`, so a **new `<script>`
   tag is not picked up until the server restarts**. Static JS/CSS are fine
-  (`asset_version` busts the browser cache). `dev_app.sh` serves under gunicorn, so
-  restart it — or `kill -HUP` the master to recycle the workers.
+  (`asset_version` busts the browser cache).
+- **`kill -HUP` does NOT pick up changed Python.** This entry used to say it did; it does
+  not, and the failure is silent — the endpoint keeps answering with the old code and you
+  conclude your change is broken. `preload_app = False`, but the *master* has already
+  imported the app to bootstrap, so forked workers inherit its `sys.modules`. **Stop and
+  restart `dev_app.sh`** after any change under `src/` or `config/` (verified 2026-08-25,
+  twice, while building the dashboard).
 - **Many UI surfaces are hand-curated, not spec-driven.** Adding a field to config is not
   enough — wire it into the relevant detail lists, the Admin tab bar, and the register form.
 - If screenshots come back blank and `document.body.getBoundingClientRect().width === 0`,

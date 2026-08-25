@@ -30,7 +30,9 @@ from src.web.api_audit import audit_bp
 from src.web.api_artefacts import artefacts_bp
 from src.web.api_audit_reports import audit_reports_bp
 from src.web.api_client import client_bp
+from src.web.api_dashboard import dashboard_bp
 from src.web.api_documents import documents_bp
+from src.web.api_erm import erm_bp
 from src.web.api_handoffs import handoffs_bp
 from src.web.api_models import models_bp
 from src.web import api_models_signoff  # noqa: F401 — attaches endpoints to models_bp
@@ -92,6 +94,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app = Flask(__name__, static_folder="../static", template_folder="../templates")
     app.register_blueprint(views_bp)
     app.register_blueprint(theme_bp)
+    app.register_blueprint(dashboard_bp)
     app.register_blueprint(models_bp)
     app.register_blueprint(handoffs_bp)
     app.register_blueprint(product_bp)
@@ -107,6 +110,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(audit_bp)
     app.register_blueprint(audit_reports_bp)
     app.register_blueprint(ingest_bp)
+    app.register_blueprint(erm_bp)
     _register_error_handlers(app)
 
     # Never cache the front-end assets: the console is a single-page app whose

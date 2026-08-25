@@ -246,6 +246,12 @@ STATUS_COLOUR_TOKENS = {
                        "Retired": "grey"},
     # A reviewer's challenge: outstanding, or answered by the owner.
     "review_thread": {"open": "violet", "answered": "blue-grey"},
+    # The dashboard's four response states. Escalate and Act are the two that
+    # reach the executive, so they take the two alarm colours; Monitor is drawn in
+    # the accent rather than a third warning shade, because "note it" is not a
+    # lesser emergency -- it is a different kind of thing.
+    "attention": {"escalate": "red", "act": "amber", "monitor": "accent",
+                  "clear": "green"},
 }
 
 # What an unrecognised value is drawn in, per domain. A domain absent from here has no

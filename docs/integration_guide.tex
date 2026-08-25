@@ -1307,6 +1307,119 @@ stop offering what the caller may not do, but that is cosmetic: the server is th
 \clearpage
 \appendix
 
+\section{Feeding an ERM}
+\label{sec:erm}
+
+\subsection{What this surface is for}
+
+Model risk is rarely the end of the story. Where an institution runs enterprise risk
+management, model risk feeds two places in it --- the \textbf{operational risk} view and
+\textbf{strategic direction} --- and those are read by different people asking different
+questions. The API is shaped around that rather than around how this platform happens to
+store things.
+
+\begin{code}
+GET /api/erm/v1/model-risk             the panel: verdict, operational, direction, estate
+GET /api/erm/v1/model-risk/attention   the queue: every outstanding obligation
+GET /api/erm/v1/model-risk/estate      the position: counts by kind/tier/rating/division
+\end{code}
+
+All three accept \texttt{?as\_of=YYYY-MM-DD}, which moves the dated rules (review currency,
+remediation dates). It does \emph{not} replay history: the registers hold current state.
+
+\textbf{The ERM calls you. It never writes.} There is no write endpoint on this surface at
+any version, and there will not be one: if the ERM could change the governance record, the
+record would no longer be the thing the committee signed.
+
+\subsection{The blocks, and who reads them}
+
+\begin{longtable}{@{}p{0.20\textwidth}p{0.28\textwidth}p{0.46\textwidth}@{}}
+\toprule
+\textbf{Block} & \textbf{Consumed by} & \textbf{Carries} \\
+\midrule
+\endhead
+\texttt{verdict} & the C-suite tile & Whether anything needs a response, as a sentence and
+  a count per state. \\
+\texttt{operational} & operational risk & Failures that actually happened in the rolling
+  window, and the controls not holding right now. \\
+\texttt{direction} & a strategic view & How much of the estate meets the standard its own
+  divisions set, and which way that is moving. \\
+\texttt{estate} & either & What the estate is made of. Absent values are named
+  (\texttt{untiered}, \texttt{unrated}), never dropped. \\
+\bottomrule
+\end{longtable}
+
+\subsection{Authentication}
+
+A shared token in \texttt{X-ERM-Token}, checked in constant time by the same guard the
+ingest surface uses (\texttt{src/web/\_token\_auth.py}). Like ingest's, this is a Phase 0
+stub: a real API-key or mTLS scheme replaces it before an external party is onboarded.
+
+The ERM token is deliberately \emph{separate} from the ingest token. The two surfaces have
+opposite privileges --- one writes the governance record, one may only read it --- and a
+single credential for both would collapse that distinction.
+
+\subsection{Two conventions to code against}
+
+\textbf{Fixed machine values beside adopter labels.} Every enumerated field ships both:
+\texttt{state} with \texttt{label}, \texttt{reason} with \texttt{reason\_label}. The
+vocabulary is configurable by design (\S\ref{sec:style} makes the same point about colour);
+the contract is not. \textbf{Code against \texttt{state} and \texttt{reason}; display
+\texttt{label} and \texttt{reason\_label}.} An institution that renames its risk language
+must not break its own ERM.
+
+\textbf{Items come back individually.} The console collapses twenty overdue remediation
+steps into three rows, one per owner. That is a presentation decision and it stays in the
+console. Each item carries \texttt{group} --- the reason it would collapse under, or
+\texttt{null} --- so a consumer can reproduce that rollup or list every record instead.
+Rolling up inside the contract would leave no way back to the records.
+
+\subsection{What the payload will not do}
+
+Each of these is a commitment, and each is the opposite of what a consumer would otherwise
+assume.
+
+\begin{itemize}
+  \item \textbf{Report a score it did not compute.}
+    \texttt{direction.share\_meeting\_standard} is a count ratio --- records meeting their
+    own division's threshold, over records audited. The completeness audit publishes no
+    estate-wide figure, and a weighted average invented here would be a number nobody chose
+    sitting on a governance record.
+  \item \textbf{Infer a deadline.} \texttt{due} is a date a person set, or \texttt{null}. An
+    MRC action is agreed \emph{without} a target date, so it is reported as outstanding and
+    never as late.
+  \item \textbf{Truncate silently.} \texttt{total}, \texttt{returned} and \texttt{truncated}
+    are always present.
+  \item \textbf{Emit a link that 404s.} \texttt{href} is \texttt{null} where the console has
+    no screen for that kind of thing. A dead link in somebody else's dashboard is found by a
+    person who cannot fix it.
+  \item \textbf{Hide ``no history''.} \texttt{direction.trend} is \texttt{null} until
+    observations exist, rather than absent --- a strategic view that cannot tell ``no
+    history yet'' from ``flat'' would read a new install as a stable one.
+\end{itemize}
+
+\subsection{The contract itself}
+
+JSON Schemas and validated examples are checked in under \texttt{contracts/erm/v1/},
+alongside the ingest contract. That is what the ERM's developers code to; the prose here
+explains it, but the schema is the agreement. \texttt{tests/web/test\_erm\_api.py} validates
+live responses against those files, so a renamed key fails in this repository's suite rather
+than in somebody else's dashboard.
+
+\subsection{The finding history}
+
+Ageing a finding needs to know when it first appeared, and the completeness audit is
+computed fresh each run with no memory. So a daily observation records what it found:
+one row per finding ever seen, carrying first-seen, last-seen and closed-at
+(\texttt{0012\_attention\_history.sql}).
+
+Two things follow for an operator. It runs \textbf{on a schedule, from one process} --- the
+gunicorn master, beside the backup schedule --- and never on a request, because the console
+and this API are both reads. And the two tables it writes are the \emph{only} state in the
+platform that is not replayed from the event log: nothing in the log records what the audit
+found on a Tuesday, because nobody decided it. \textbf{Back them up.} Losing them loses the
+trend line and the ability to age a finding; it loses nothing a committee decided.
+
 \section{Environment variable reference}
 
 Every value below has a shipped default; nothing must be set for the platform to start on a
@@ -1332,6 +1445,28 @@ developer's machine. Real environment variables always beat \texttt{.env}.
 \texttt{TEST\_DB\_BASE} & derived & A dedicated \texttt{*\_test} base name for the suite. \\
 \texttt{SCRATCH\_DB} & \texttt{mkm\_modelrisk\_}\newline\texttt{scratch} & Read by
   \texttt{scripts/dev\_app.sh}. \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{ERM read API} --- \texttt{config/erm.py}} \\
+\midrule
+\texttt{ERM\_TOKEN\_HEADER} & \texttt{X-ERM-Token} & \\
+\texttt{ERM\_DEV\_TOKEN} & \texttt{dev-erm-token} & \textbf{Change it.} Separate from
+  the ingest token on purpose --- see \S\ref{sec:erm}. \\
+\texttt{ERM\_ATTENTION\_CAP} & \texttt{500} & Items per response; truncation is
+  declared, never silent. \\
+\texttt{ERM\_CONSOLE\_BASE} & derived & Where a row's \texttt{href} points. Set it when
+  the ERM reaches the console on a different hostname than this API. \\
+\midrule
+\multicolumn{3}{@{}l}{\textbf{Finding history} --- \texttt{config/history.py}} \\
+\midrule
+\texttt{HISTORY\_ENABLED} & \texttt{1} & Off loses the trend and finding ages; nothing
+  else on the dashboard depends on it. \\
+\texttt{HISTORY\_INTERVAL} & \texttt{86400} & Seconds. Daily: the finding set moves at
+  the speed of a committee. \\
+\texttt{HISTORY\_STARTUP\_DELAY} & \texttt{120} & Seconds, so a restart does not add a
+  scan to the stampede. \\
+\texttt{TREND\_DAYS} & \texttt{365} & How much series the dashboard and ERM carry. \\
+\texttt{CLOSED\_FINDING\_}\newline\texttt{RETENTION} & \texttt{730} & Days a closed
+  finding stays on the history. \\
 \midrule
 \multicolumn{3}{@{}l}{\textbf{Web} --- \texttt{config/web.py}} \\
 \midrule
@@ -1412,6 +1547,15 @@ later.
 \texttt{curl -i -H 'X-Auth-Request-User: someone'\newline http://proxy/...} &
   That your proxy \emph{strips} a client-supplied identity header rather than forwarding
   it. The single most important check in \S\ref{sec:permissions}. \\
+\texttt{curl -i http://host/api/erm/v1/}\newline\texttt{model-risk} &
+  That the ERM surface refuses an unauthenticated caller with \texttt{401}. If it answers,
+  your model-risk position is readable by anyone who can reach the port. \\
+\texttt{curl -i -X POST -H 'X-ERM-Token: ...'}\newline
+  \texttt{http://host/api/erm/v1/model-risk} &
+  That the ERM surface is read-only --- \texttt{405}. \\
+\texttt{curl -s -H 'X-ERM-Token: ...' http://host/\newline api/erm/v1/model-risk
+  | jq .generated\_at} &
+  That an ERM panel can tell how old the figure it is showing is. \\
 \bottomrule
 \end{longtable}
 
@@ -1428,12 +1572,16 @@ src/identity/     resolve_principal(), Principal, the known-actor rule
 src/governance/   the domain: model inventory, MRC, products, chain, risk policy,
                   documents, and the LaTeX document builders
 src/web/          Flask app factory and blueprints (api_*.py), _startup.py,
-                  _theme.py, _helpers.py
+                  _theme.py, _helpers.py, _token_auth.py (the machine-surface
+                  guard), _history.py (the daily observation schedule),
+                  api_dashboard.py, api_erm/ (the read-only ERM contract)
 src/static/       js/ and css/ -- the console (R7). No build step.
 src/templates/    index.html
 audit/            the coding-rule audit: one module per scan, plus pdf.py
 scripts/          pg.sh, start.sh, dev_app.sh, restore_scratch.sh, backup_db.sh,
                   and the one-off data migrations
+contracts/        the frozen wire contracts: ingest/ (producers write) and
+                  erm/ (an ERM reads). JSON Schemas plus validated examples
 docs/             coding_rules.md, user_guide.md, permissions_design.md,
                   mssql-immutability.md, windows-setup.md, design/, and this guide
 tests/            unit, integration, governance, web, audit, e2e, journey

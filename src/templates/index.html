@@ -33,8 +33,9 @@
   </header>
 
   <nav class="tabs">
+    <button class="tab active" data-tab="dashboard">Dashboard</button>
     <button class="tab" data-tab="mrc">MRC</button>
-    <button class="tab active" data-tab="inventory">Models</button>
+    <button class="tab" data-tab="inventory">Models</button>
     <button class="tab" data-tab="chain">Model Chain</button>
     <button class="tab" data-tab="product">Products</button>
     <button class="tab" data-tab="mlapps">ML Apps</button>
@@ -49,7 +50,8 @@
     <!-- Persistent MRC-region bar, shared by the MRC / Models / Products / Audit
          tabs. It lives outside the panels so switching tabs never rebuilds it. -->
     <div id="region-nav" style="display:none"></div>
-    <section id="tab-inventory" class="panel active"></section>
+    <section id="tab-dashboard" class="panel active"></section>
+    <section id="tab-inventory" class="panel"></section>
     <section id="tab-chain" class="panel"></section>
     <section id="tab-product" class="panel"></section>
     <section id="tab-mlapps" class="panel"></section>
@@ -217,6 +219,7 @@
   <script src="{{ url_for('static', filename='js/clients.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/clients_detail.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/clients_pack.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/dashboard.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/main.js', v=asset_version) }}"></script>
 </body>
 </html>

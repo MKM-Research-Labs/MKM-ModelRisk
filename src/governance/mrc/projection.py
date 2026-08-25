@@ -232,8 +232,26 @@ def outstanding_actions_for_committee(
     committee = (current.get("data") or {}).get("mrc")
     peers = ([m for m in meetings if (m.get("data") or {}).get("mrc") == committee]
              if committee else [current])
+    return _open_actions(peers)
+
+
+def outstanding_actions(config=None) -> list[dict[str, Any]]:
+    """Every action still owed, across every committee.
+
+    The firm-wide question the dashboard asks, where
+    :func:`outstanding_actions_for_committee` asks the committee-scoped one. Both
+    read the same rows through the same filter, so a count on the dashboard and a
+    list in a set of minutes cannot disagree about what "still owed" means.
+    """
+    return _open_actions(list_meetings(config))
+
+
+def _open_actions(meetings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The un-closed actions across the given meetings, each carrying the meeting it
+    was agreed at. Oldest first: a review of what is outstanding starts with
+    whatever has been owed longest."""
     results: list[dict[str, Any]] = []
-    for meeting in peers:
+    for meeting in meetings:
         data = meeting.get("data") or {}
         for action in data.get(ACTIONS_COLLECTION) or []:
             if action.get("status") == CLOSED_ACTION_STATUS:
@@ -243,6 +261,7 @@ def outstanding_actions_for_committee(
                 "meeting_id": meeting["meeting_id"],
                 "meeting_title": data.get("title"),
                 "meeting_date": data.get("date"),
+                "mrc": data.get("mrc"),
             })
     results.sort(key=lambda a: (a.get("meeting_date") or "", a.get("item_id") or ""))
     return results

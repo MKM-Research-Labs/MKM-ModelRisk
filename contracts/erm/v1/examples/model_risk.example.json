@@ -1,0 +1,72 @@
+{
+ "schema_version": "v1",
+ "as_of": "2026-08-25",
+ "generated_at": "2026-08-25T06:00:11+00:00",
+ "institution": "Example Bank",
+ "verdict": {
+  "response_required": true,
+  "state": "act",
+  "headline": "23 items need your response.",
+  "detail": "22 remediation steps are past their date and 1 record is below the acceptable standard. 1 committee action is still open, 1 remediation step falls due within the horizon, and 26 records carry open findings and meet the standard \u2014 with named owners and in date.",
+  "counts": {
+   "escalate": 0,
+   "act": 23,
+   "monitor": 2,
+   "clear": 26
+  },
+  "breakdown": [
+   {
+    "reason": "remediation_overdue",
+    "state": "act",
+    "count": 22,
+    "label": "22 remediation steps are past their date"
+   },
+   {
+    "reason": "record_below_standard",
+    "state": "act",
+    "count": 1,
+    "label": "1 record is below the acceptable standard"
+   }
+  ]
+ },
+ "operational": {
+  "window_days": 365,
+  "failures_in_window": 0,
+  "records_with_failures": 0,
+  "control_breaches": 0,
+  "control_breaches_by_reason": []
+ },
+ "direction": {
+  "records_audited": 27,
+  "records_meeting_standard": 26,
+  "records_below_standard": 1,
+  "share_meeting_standard": 0.963,
+  "trend": null
+ },
+ "estate": {
+  "total": 27,
+  "by_kind": {
+   "ML Application": 1,
+   "Model": 25,
+   "Product": 1
+  },
+  "by_tier": {
+   "1": 3,
+   "2": 19,
+   "3": 5
+  },
+  "by_rating": {
+   "Amber": 4,
+   "Green": 20,
+   "unrated": 3
+  },
+  "by_division": {
+   "Markets": 12,
+   "Retail": 15
+  }
+ },
+ "attention": {
+  "total": 51,
+  "href": "https://modelrisk.example-bank.internal/api/erm/v1/model-risk/attention"
+ }
+}
