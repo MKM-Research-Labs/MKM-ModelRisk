@@ -27,6 +27,7 @@ from here — ``gunicorn.conf.py`` only wires these names to gunicorn's own.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 WEB_HOST = os.environ.get("WEB_HOST", "127.0.0.1")
 WEB_PORT = int(os.environ.get("WEB_PORT", "5015"))
@@ -61,6 +62,35 @@ WEB_GRACEFUL_TIMEOUT = int(os.environ.get("WEB_GRACEFUL_TIMEOUT", "30"))
 WEB_ACCESS_LOG = os.environ.get("WEB_ACCESS_LOG", "-")
 WEB_ERROR_LOG = os.environ.get("WEB_ERROR_LOG", "-")
 WEB_LOG_LEVEL = os.environ.get("WEB_LOG_LEVEL", "info")
+
+# --- Telling one running app from another -----------------------------------
+# The estate's app (5015, mkm_modelrisk) and the verification app (5016, the scratch
+# copy) are the same command run twice, so by default they were indistinguishable in
+# two dangerous ways: both answered to the same ``pgrep -f`` pattern, and both wrote
+# to gunicorn's default control socket (~/.gunicorn/gunicorn.ctl). "Stop the
+# verification app" could therefore stop the live one -- which is exactly what
+# happened on 2026-08-25, and is the best available explanation for the two clean
+# SIGTERMs that killed 5015 mid-run on 08-24 and 08-23.
+#
+# Both are keyed on the DATABASE, not the port: the database is what actually makes
+# one of these the estate's app and the other disposable.
+def _instance_name() -> str:
+    """``modelrisk-<database>`` — what this app is, in one token."""
+    from config.database import DatabaseConfig
+    return f"modelrisk-{DatabaseConfig.from_env().name}"
+
+
+# NOTE: gunicorn honours this on Linux only. On macOS it disables setproctitle on
+# purpose -- it segfaults through fork there (benoitc/gunicorn#3021) -- so on a Mac
+# the name is accepted and changes nothing. That is why scripts/dev_app.sh also puts
+# the port on the command line: THAT is what tells the two apps apart locally.
+WEB_PROC_NAME = os.environ.get("WEB_PROC_NAME") or _instance_name()
+
+# One control socket per instance, so a control command reaches the app it was meant
+# for and gunicorn does not refuse to start because another app holds the default.
+WEB_CONTROL_SOCKET = os.environ.get(
+    "WEB_CONTROL_SOCKET",
+    str(Path.home() / ".gunicorn" / f"{WEB_PROC_NAME}.ctl"))
 
 # Set in the gunicorn master once the one-time startup work (migrations, seeded
 # defaults, read-model rebuild) has been done, and inherited across the fork so

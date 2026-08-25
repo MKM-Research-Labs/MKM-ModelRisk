@@ -24,6 +24,11 @@ flask==3.1.3
 # POSIX only -- it needs fcntl -- so the marker skips it on Windows, which keeps
 # the development server that `python model.py` starts.
 gunicorn==26.0.0; sys_platform != "win32"
+# Makes gunicorn's proc_name real, so the estate's app and the verification app are
+# told apart in ps/pgrep. LINUX ONLY in practice: gunicorn disables setproctitle on
+# macOS deliberately (it segfaults through fork -- benoitc/gunicorn#3021), so on a Mac
+# this installs and does nothing, and the port on the command line does the work.
+setproctitle==1.3.7; sys_platform != "win32"
 
 # --- Development / test ---
 pytest==9.1.1
