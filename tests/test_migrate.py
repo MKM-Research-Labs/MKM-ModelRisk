@@ -56,6 +56,7 @@ def test_migration_files_are_ordered():
         "0010_client_view.sql",
         "0011_ml_application_view.sql",
         "0012_attention_history.sql",
+        "0013_ai_system_view.sql",
     ]
 
 
@@ -75,6 +76,7 @@ def test_run_migrations_applies_then_skips():
         "0010_client_view",
         "0011_ml_application_view",
         "0012_attention_history",
+        "0013_ai_system_view",
     ]
     # Re-running is a no-op: every version already recorded.
     assert run_migrations() == []
