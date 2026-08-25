@@ -13,6 +13,12 @@ dependencies = [
     # Serves the console (gunicorn.conf.py). POSIX only — it needs fcntl — so on
     # Windows this is skipped and `python model.py` remains the way to run it.
     'gunicorn>=23.0; sys_platform != "win32"',
+    # Lets gunicorn's ``proc_name`` rename the process, so the estate's app and the
+    # verification app are told apart in ps/pgrep -- which is how one got killed in
+    # place of the other. Effective on Linux only: gunicorn disables setproctitle on
+    # macOS deliberately (benoitc/gunicorn#3021), where the port on dev_app.sh's
+    # command line does the same job.
+    'setproctitle>=1.3; sys_platform != "win32"',
 ]
 
 [project.optional-dependencies]

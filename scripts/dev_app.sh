@@ -51,4 +51,8 @@ echo "Verification app: http://$WEB_HOST:$WEB_PORT   database: $RESOLVED" >&2
 # what ships — including the WSGI startup path (one bootstrap in the master, then
 # the fork). Settings come from gunicorn.conf.py, which reads WEB_HOST/WEB_PORT
 # exported above.
-exec "$PY" -m gunicorn --config gunicorn.conf.py wsgi:application
+# --bind is already set from WEB_BIND in gunicorn.conf.py; passing it again puts the
+# PORT on this process's command line, which is what tells this app apart from the
+# estate's in ``ps``/``pgrep``. gunicorn's own proc_name cannot: it is a no-op unless
+# setproctitle is installed. The control socket is separated in config/web.py.
+exec "$PY" -m gunicorn --config gunicorn.conf.py --bind "$WEB_HOST:$WEB_PORT" wsgi:application
