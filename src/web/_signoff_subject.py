@@ -48,6 +48,15 @@ from src.governance.ml_application import (
     update_collection_item as _ml_update,
     update_ml_application_field,
 )
+from src.governance.ai_system import (
+    add_collection_item as _ai_add,
+    get_ai_system,
+    list_ai_systems,
+    rebuild_ai_system_view,
+    retire_ai_system,
+    update_ai_system_field,
+    update_collection_item as _ai_update,
+)
 from src.governance.model_handoff import (
     add_collection_item as _handoff_add,
     get_handoff,
@@ -164,7 +173,20 @@ ML_APPLICATION_SUBJECT = Subject(
     rebuild=rebuild_ml_application_view, id_kwarg="ml_application_id",
     retire_cmd=retire_ml_application,
 )
-SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT, HANDOFF_SUBJECT, ML_APPLICATION_SUBJECT)
+# An AI System takes the same trip as a model and an ML Application: the owner
+# proposes a rating and the stored one does not move until the committee approves it.
+# It would have been easy to let this record type set its own rating -- it is new and
+# nothing downstream depends on it yet -- and that is exactly the argument that left
+# ML ratings bypassing the committee until somebody noticed. Same route from the start.
+AI_SYSTEM_SUBJECT = Subject(
+    kind="ai_system", agenda_id_field="subject_ai_system_id",
+    id_key="ai_system_id", get=get_ai_system, list_all=list_ai_systems,
+    add_cmd=_ai_add, update_cmd=_ai_update, field_cmd=update_ai_system_field,
+    rebuild=rebuild_ai_system_view, id_kwarg="ai_system_id",
+    retire_cmd=retire_ai_system,
+)
+SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT, HANDOFF_SUBJECT, ML_APPLICATION_SUBJECT,
+            AI_SYSTEM_SUBJECT)
 
 
 def subject_for_agenda_item(item: dict) -> tuple[Subject | None, str | None]:

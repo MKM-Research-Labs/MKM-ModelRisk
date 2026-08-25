@@ -80,6 +80,7 @@ const AISystemDetail = RecordDetail.attach({
       ["data_sources", "Data sources", n("data_sources")],
       ["remediation_steps", "Remediation", n("remediation_steps")],
       ["review", "Review", n("review_notes")],
+      ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],
       ["audit", "Audit", null],
       ["danger", "Retire", null]);
     return DetailShell.tabBar(tabs, this._tab, "data-aistab");
@@ -169,6 +170,22 @@ const AISystemDetail = RecordDetail.attach({
         policyNotice(d.division) + this.riskTable() +
         DetailTabs.risk(this._risk, false, d.division);
       this._bindEdits(); return;
+    }
+    if (this._tab === "docs") {
+      // The record's evidence pack: red-team results, the provider's model card, the
+      // contract clause the Exposure tab refers to. No generated AI System Document
+      // yet -- a model, a product and an ML Application each render one, and what an
+      // AI System's should contain is a governance question rather than a template
+      // one. Its absence is stated here rather than left as a missing button.
+      box.innerHTML =
+        '<p class="muted" style="font-size:var(--size-sm);margin:0 0 var(--space-5)">' +
+        "Evidence filed against this record. There is no generated AI System Document " +
+        "yet &mdash; what one should contain is still an open question.</p>" +
+        '<div id="aisdocs-host"></div>';
+      ModelDocs.render(this.recordId(), d.documents || [],
+                       this._specs.doc_tab_categories || [], this._record.retired,
+                       "/api/ai-systems/", () => this.refresh(), "aisdocs-host");
+      return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") {
