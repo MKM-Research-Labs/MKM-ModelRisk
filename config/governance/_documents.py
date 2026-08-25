@@ -106,6 +106,12 @@ DOC_CATEGORIES = (tuple(c for c in DOC_TAB_CATEGORIES if c not in DOC_TAB_GROUPS
 # firm-wide standard). The kinds are what an adopter files here in practice; they label
 # a tile, so an unfamiliar one is a wording change, not a schema change.
 COMPANY_WIDE_SHELF = "Company-wide"
+# A shelf of its own for the control documentation the FINOS mitigation catalogue is
+# evidenced by. Not a division and not the company-wide shelf: its documents carry
+# mitigation references and are read by the completeness audit, which no other
+# artefact is, and mixing them into the general shelf would leave the audit guessing
+# which of an institution's policies it was entitled to count.
+FINOS_SHELF = "FINOS"
 ARTEFACT_KINDS = ("Terms of Reference", "Presentation", "Policy", "Guide", "Template",
                   "Other")
 

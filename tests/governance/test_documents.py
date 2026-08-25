@@ -56,11 +56,13 @@ def test_amending_an_unknown_document_is_refused():
                         fields={"category": "Sensitivity"}, actor="a")
 
 
-def test_clean_model_types_trims_dedupes_and_keeps_order():
-    from src.governance.documents import clean_model_types
-    assert clean_model_types(None) == []
-    assert clean_model_types([]) == []
-    assert clean_model_types([" Hazard ", "Pricing", "Hazard", ""]) == ["Hazard", "Pricing"]
+def test_clean_tags_trims_dedupes_and_keeps_order():
+    from src.governance.documents import clean_tags
+    assert clean_tags(None) == []
+    assert clean_tags([]) == []
+    assert clean_tags([" Hazard ", "Pricing", "Hazard", ""]) == ["Hazard", "Pricing"]
+    # Same normaliser now serves the FINOS mitigation references.
+    assert clean_tags(["AIR-PREV-005", " AIR-DET-011 "]) == ["AIR-PREV-005", "AIR-DET-011"]
 
 
 def test_external_document_carries_model_types_but_no_category():

@@ -40,6 +40,7 @@ from config.governance import (
     COVERAGE_EVIDENCED_AT,
     COVERAGE_STATES,
     FRAMEWORK_COVERAGE,
+    FRAMEWORK_NOTES,
 )
 from src.governance.completeness.framework import coverage, tally
 from src.governance.latex import _para_table, _section, _subsection
@@ -65,6 +66,11 @@ def _framework_table(framework: str, clauses: list[dict]) -> str:
     counts = tally(clauses, framework)
     intro = (f"{counts.get(COVERAGE_EVIDENCED, 0)} of {counts['clauses']} clauses "
              f"evidenced by the estate as recorded.\n\n")
+    # A framework whose rows are not read the way the shared basis paragraph
+    # describes says so here, before its table rather than after it.
+    note = FRAMEWORK_NOTES.get(framework)
+    if note:
+        intro += note + "\n\n"
     table = _para_table(
         ["Ref.", "Clause", "Coverage", "Evidence"],
         [[c["ref"], c["title"], c["state"], c["evidence"]] for c in scoped],
@@ -92,11 +98,14 @@ def _not_evidenced(clauses: list[dict]) -> str:
 
 
 def framework_section(rows: list[dict], models: list[dict], as_of: str,
-                      ratified=()) -> str:
-    """The coverage section, or nothing at all when no framework is configured."""
+                      ratified=(), evidence=()) -> str:
+    """The coverage section, or nothing at all when no framework is configured.
+
+    ``evidence`` are the documents filed on the FINOS shelf; see ``coverage``.
+    """
     if not FRAMEWORK_COVERAGE:
         return ""
-    clauses = coverage(rows, models, as_of, ratified)
+    clauses = coverage(rows, models, as_of, ratified, evidence)
     body = [_headline(clauses)]
     body.extend(_framework_table(framework, clauses)
                 for framework, _rows in FRAMEWORK_COVERAGE)

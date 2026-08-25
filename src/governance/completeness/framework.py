@@ -49,6 +49,7 @@ from config.governance import (
     FRAMEWORK_COVERAGE,
     TREATABLE_RATINGS,
 )
+from config.governance._finos import EVIDENCE_PROBE
 from src.governance.completeness._gaps import _recorded
 from src.governance.completeness.review_programme import model_state
 from src.identity import same_person
@@ -144,7 +145,46 @@ PROBES = {
     # audited record is scored, banded, given a target date and printed here.
     "prioritisation": lambda e: (len(e["rows"]), len(e["rows"])),
     "reporting": lambda e: (len(e["rows"]), len(e["rows"])),
+    # Acceptance testing recorded against the record. The one FINOS mitigation the
+    # platform evidences from the register rather than from a filed description --
+    # reporting it unevidenced because nobody had also written a paper about it
+    # would be the register disowning evidence it holds.
+    "acceptance": lambda e: _share(
+        e, lambda d: _filled(d, "unit_tests", "integration_tests", "benchmark_tests")),
 }
+
+# Probes that depend on WHICH row they are run for, and so cannot be a lambda over
+# the estate alone. Kept in their own table rather than given every probe a second
+# parameter it would ignore: every other probe's signature should not change to
+# accommodate one caller that needs something they do not.
+#
+# Each returns (met, total, evidence) -- the third element is the sentence the table
+# prints, because "1 of 1" is not what a reader of a mitigation row wants to see.
+REF_PROBES = {EVIDENCE_PROBE: lambda e, ref: _filed_against(e["evidence"], ref)}
+
+
+def _filed_against(documents: list[dict], ref: str) -> tuple[int, int, str]:
+    """Whether any document on the FINOS shelf names this mitigation reference.
+
+    The evidence names the document and the date it was filed, not a count. That is
+    the whole claim being made: the institution has DESCRIBED this control, in this
+    paper, on this date. Whether the control operates is not something a governance
+    register observes, and the sentence must not imply that it does.
+    """
+    naming = [d for d in documents if ref in (d.get("finos_refs") or ())]
+    if not naming:
+        # Said in words rather than as "0 of 1", which reads as a measurement of
+        # something and is not one. The sentence also tells a reader what to do.
+        return 0, 1, "No document on the FINOS shelf names this reference."
+    return 1, 1, "; ".join(
+        f"{d.get('original_name') or d.get('filename')} (filed {_filed_on(d)})"
+        for d in naming)
+
+
+def _filed_on(document: dict) -> str:
+    """The upload date, day-precision. A time of day on an evidence citation is
+    noise in a table an assessor reads across."""
+    return str(document.get("uploaded_at") or "")[:10] or "date not recorded"
 
 
 def _state(met: int, total: int) -> str:
@@ -153,31 +193,49 @@ def _state(met: int, total: int) -> str:
     return COVERAGE_EVIDENCED if met / total >= COVERAGE_EVIDENCED_AT else COVERAGE_PARTIAL
 
 
-def _measured(probe: str, estate: dict, note: str) -> dict:
-    met, total = PROBES[probe](estate)
+def _measured(probe: str, estate: dict, note: str, ref: str = "") -> dict:
+    """One row's outcome, counted.
+
+    A probe returns ``(met, total)`` and the evidence reads "17 of 20"; a reference
+    probe may return a third element, and where it does that sentence replaces the
+    count. The two are different claims -- a share of the estate against a named
+    document -- and printing a share for something that is not one would be worse
+    than useless.
+    """
+    result = (REF_PROBES[probe](estate, ref) if probe in REF_PROBES
+              else PROBES[probe](estate))
+    met, total, stated = (result if len(result) == 3 else (*result, ""))
     if not total:
         return {"state": COVERAGE_ABSENT, "met": 0, "total": 0,
                 "evidence": "No applicable record on the register. " + note}
+    evidence = stated or f"{met} of {total}."
     return {"state": _state(met, total), "met": met, "total": total,
-            "evidence": f"{met} of {total}. {note}"}
+            "evidence": " ".join(part for part in (evidence, note) if part)}
 
 
 def coverage(rows: list[dict], models: list[dict], as_of: str,
-             ratified=()) -> list[dict]:
+             ratified=(), evidence=()) -> list[dict]:
     """Every clause of every configured framework, with its evidence.
 
     ``rows`` are the audited records (models and products), ``models`` the
     inventory the probes count over, and ``ratified`` the divisions whose risk
     policy their committee has actually approved -- a division still running on
     the firm-wide seed default has criteria, but not criteria it has adopted.
+
+    ``evidence`` is the documents filed on the FINOS shelf. It is the one input
+    here that is not the estate: the FINOS mitigation catalogue is evidenced by
+    what an institution has written about its controls rather than by what its
+    register holds, so those rows are counted against filed papers. An empty one
+    leaves every such row unevidenced, which is the correct reading of a shelf
+    nobody has filed anything on.
     """
     estate = {"rows": rows, "models": models, "as_of": as_of,
-              "ratified": set(ratified)}
+              "ratified": set(ratified), "evidence": list(evidence)}
     out = []
     for framework, clauses in FRAMEWORK_COVERAGE:
         for ref, title, probe, note in clauses:
             result = ({"state": DECLARED[probe], "met": 0, "total": 0, "evidence": note}
-                      if probe in DECLARED else _measured(probe, estate, note))
+                      if probe in DECLARED else _measured(probe, estate, note, ref))
             out.append({"framework": framework, "ref": ref, "title": title,
                         "probe": probe, **result})
     return out
@@ -193,4 +251,5 @@ def tally(clauses: list[dict], framework: str | None = None) -> dict:
     return counts
 
 
-__all__ = ["coverage", "tally", "PROBES", "DECLARED", "TREATABLE_RATINGS"]
+__all__ = ["coverage", "tally", "PROBES", "REF_PROBES", "DECLARED",
+           "TREATABLE_RATINGS"]
