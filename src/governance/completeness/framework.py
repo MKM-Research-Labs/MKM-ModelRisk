@@ -51,6 +51,9 @@ from config.governance import (
 )
 from config.governance._finos import EVIDENCE_PROBE
 from src.governance.completeness._gaps import _recorded
+from src.governance.completeness._probe_helpers import (_any_entries, _data,
+                                                        _filled, _share)
+from src.governance.completeness._probes_ai import AI_PROBES
 from src.governance.completeness.review_programme import model_state
 from src.identity import same_person
 
@@ -62,20 +65,6 @@ DECLARED = {
     "absent": COVERAGE_ABSENT,
     "partial": COVERAGE_PARTIAL,
 }
-
-
-def _data(model: dict) -> dict:
-    return model.get("data") or {}
-
-
-def _filled(data: dict, *fields: str) -> bool:
-    """Whether every named scalar field holds an answer rather than a placeholder."""
-    return all(_recorded(data.get(field)) for field in fields)
-
-
-def _any_entries(data: dict, *collections: str) -> bool:
-    """Whether any of the named collections holds at least one entry."""
-    return any(data.get(name) for name in collections)
 
 
 def _independent(data: dict) -> bool:
@@ -151,6 +140,9 @@ PROBES = {
     # would be the register disowning evidence it holds.
     "acceptance": lambda e: _share(
         e, lambda d: _filled(d, "unit_tests", "integration_tests", "benchmark_tests")),
+    # The FINOS risk rows that only an AI System can answer. Kept in their own
+    # module because they carry their own population rules -- see _probes_ai.
+    **AI_PROBES,
 }
 
 # Probes that depend on WHICH row they are run for, and so cannot be a lambda over

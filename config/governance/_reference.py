@@ -30,6 +30,7 @@ from config.governance._collections import (IMPACT_LIST, PRIORITY_LIST, VERSION_
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES,
                                           VALID_VALIDATION_STATUSES,
                                           VALIDATION_STATUS_LIST)
+from config.governance._ai import AI_REFERENCE_LISTS, AI_REFERENCE_SPECS
 from config.governance._ml import ML_REFERENCE_LISTS, ML_REFERENCE_SPECS
 from config.governance._standing_agenda import STANDING_AGENDA_ROLES
 from config.governance._vocabulary import status_vocabulary_spec as _status_vocabulary_spec
@@ -97,7 +98,7 @@ REFERENCE_LISTS = (
     "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,
     MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
     STANDING_AGENDA_LIST,
-) + tuple(STATUS_VOCABULARIES) + ML_REFERENCE_LISTS
+) + tuple(STATUS_VOCABULARIES) + ML_REFERENCE_LISTS + AI_REFERENCE_LISTS
 
 # What a model type means to a Product's bindings. A Product binds one analytics
 # engine and one market-data source, and it picks each from the inventory filtered
@@ -288,3 +289,5 @@ REFERENCE_SPECS.update({
 # The Estimator menu and the ML questionnaire, kept in their own module so the ML
 # vocabulary can evolve without disturbing this one (see _ml.py).
 REFERENCE_SPECS.update(ML_REFERENCE_SPECS)
+# The foundation-model list and the AI questionnaire, folded in the same way.
+REFERENCE_SPECS.update(AI_REFERENCE_SPECS)

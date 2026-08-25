@@ -45,6 +45,7 @@ from src.governance.documents import (GOVERNANCE_ARTEFACTS_AGGREGATE,
                                       model_scope)
 from src.governance.model_inventory.projection import list_models
 from src.governance.model_inventory.risk import compute_risk_rating
+from src.governance.ai_system.projection import list_ai_systems
 from src.governance.ml_application.projection import list_ml_applications
 from src.governance.product.projection import list_products
 from src.governance.risk_policy import load as load_policy
@@ -134,23 +135,32 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
 
 
 def coverage_population(model_ids=None, ml_application_ids=None,
-                        config=None) -> list[dict[str, Any]]:
+                        ai_system_ids=None, config=None) -> list[dict[str, Any]]:
     """Every record the framework clauses are counted over.
 
-    Models AND ML Applications. The clause probes are field-name lambdas over one
-    population, and an ML Application carries the same field names a model does
-    precisely so it can join that population without a per-type branch (see
-    docs/design/mlmodel.md, decision 7). Counting the clauses over models alone
-    would report a coverage picture of a shrinking slice of the estate as the ML
-    side grows — the same failure the gap audit had.
+    Models, ML Applications AND AI Systems. The clause probes are field-name lambdas
+    over one population, and each later record type carries the same field names a
+    model does precisely so it can join that population without a per-type branch
+    (see docs/design/mlmodel.md decision 7, and docs/design/finos-coverage.md 6.1).
+    Counting the clauses over models alone would report a coverage picture of a
+    shrinking slice of the estate as the other two grow — the same failure the gap
+    audit had.
 
-    Retired records are excluded on both sides: out of the estate, out of every
+    The AI-specific clauses narrow this population again to the AI Systems in it;
+    that rule lives with those probes, in ``_probes_ai``, not here.
+
+    Retired records are excluded on every side: out of the estate, out of every
     figure.
     """
     records = list(scoped_models(model_ids, config=config))
-    want = None if ml_application_ids is None else set(ml_application_ids)
+    want_ml = None if ml_application_ids is None else set(ml_application_ids)
     for record in list_ml_applications(config=config):
-        if want is not None and record["ml_application_id"] not in want:
+        if want_ml is not None and record["ml_application_id"] not in want_ml:
+            continue
+        records.append(record)
+    want_ai = None if ai_system_ids is None else set(ai_system_ids)
+    for record in list_ai_systems(config=config):
+        if want_ai is not None and record["ai_system_id"] not in want_ai:
             continue
         records.append(record)
     return records
