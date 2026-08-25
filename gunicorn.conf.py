@@ -35,9 +35,9 @@ into the workers (``fork`` carries only the calling thread), which is exactly
 what is wanted: one schedule, owned by the process that outlives worker
 recycling.
 """
-from config.web import (WEB_ACCESS_LOG, WEB_BIND, WEB_ERROR_LOG,
-                        WEB_GRACEFUL_TIMEOUT, WEB_LOG_LEVEL, WEB_THREADS,
-                        WEB_TIMEOUT, WEB_WORKER_CLASS, WEB_WORKERS)
+from config.web import (WEB_ACCESS_LOG, WEB_BIND, WEB_CONTROL_SOCKET, WEB_ERROR_LOG,
+                        WEB_GRACEFUL_TIMEOUT, WEB_LOG_LEVEL, WEB_PROC_NAME,
+                        WEB_THREADS, WEB_TIMEOUT, WEB_WORKER_CLASS, WEB_WORKERS)
 
 bind = WEB_BIND
 workers = WEB_WORKERS
@@ -48,6 +48,13 @@ graceful_timeout = WEB_GRACEFUL_TIMEOUT
 accesslog = WEB_ACCESS_LOG
 errorlog = WEB_ERROR_LOG
 loglevel = WEB_LOG_LEVEL
+
+# One identity per app, keyed on its database. Without these the estate's app and the
+# verification app are the same command twice: the same ``pgrep -f`` pattern matches
+# both, and both write gunicorn's default control socket. Killing "the verification
+# app" could then kill the estate's -- see config/web.py for what that has cost.
+proc_name = WEB_PROC_NAME
+control_socket = WEB_CONTROL_SOCKET
 
 # Each worker imports wsgi.py for itself. Preloading would build the app in the
 # master and fork the result, which saves memory but is the wrong trade here:
