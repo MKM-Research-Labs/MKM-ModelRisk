@@ -30,6 +30,8 @@ from config.governance import (DEFAULT_VQ_STATUS,
                                ML_REVIEW_QUESTIONS_COLLECTION)
 from src.database import Event, append_event, read_stream
 from src.governance import collections as coll
+from src.governance.ml_application._state import record_data
+from src.governance.ml_application.review_scope import (COMPLETING_REVIEW_STATUS, REVIEW_STATUS_FIELD, guard_review_complete)
 from src.governance.ml_application._rules import (decide_add_item, decide_edit_field,
                                                   decide_register, decide_remove_item,
                                                   decide_retire, decide_update_item)
@@ -123,6 +125,11 @@ def update_ml_application_field(*, ml_application_id: str, field: str, value: An
                                 actor: str, reason: str = "", config=None) -> Event:
     _check_reference_fields({field: value}, config)
     state, version = _load(ml_application_id, config)
+    # Declaring the review complete is the one edit the policy gates. It needs a read
+    # (the division's ratified policy), so it cannot live in the pure rules -- the same
+    # reason the model inventory guards its dependency graph from here.
+    if field == REVIEW_STATUS_FIELD and value == COMPLETING_REVIEW_STATUS:
+        guard_review_complete(record_data(state), "Signing off this review", config)
     decision = decide_edit_field(state, field=field, value=value)
     return _record(ml_application_id, decision, version, actor, reason, config)
 

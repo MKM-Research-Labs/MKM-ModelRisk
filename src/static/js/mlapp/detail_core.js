@@ -87,14 +87,18 @@ const MLAppDetail = {
 
   _tabbar(d) {
     const n = (k) => (d[k] || []).length;
+    const qs = (this._scope().questions) || {};
     const asked = d.ml_review_questions || [];
-    const cov = asked.filter((q) => q.status === "Addressed").length + "/" + asked.length;
+    const cov = (qs.total !== undefined)
+      ? qs.answered + "/" + qs.total
+      : asked.filter((q) => q.status === "Addressed").length + "/" + asked.length;
     return DetailShell.tabBar([
       ["overview", "Overview", null],
       // A retrain is this record's substantial change -- the same collection a model
       // versions through, under the word that actually describes what happened.
-      ["training", "Training", (d.training_completeness || {}).total
-        ? (d.training_completeness.filled + "/" + d.training_completeness.total) : null],
+      ["training", "Training", ((this._scope().training || d.training_completeness || {}).total)
+        ? ((this._scope().training || d.training_completeness).filled + "/" +
+           (this._scope().training || d.training_completeness).total) : null],
       ["training_runs", "Trains", n("training_runs")],
       ["review", "Review", cov],
       ["risk", "Risk Rating", null],
@@ -271,7 +275,52 @@ const MLAppDetail = {
     return this._reqIndex[key] || {};
   },
 
+  // The policy the division's MRC ratified: which items it asks for, and which a
+  // review cannot be completed without. Resolved server-side and sent with the
+  // record, so the screen never has to know that half the catalogue is code and half
+  // is a reference list.
+  _scope() { return (this._record || {}).review_scope || {}; },
+
+  _inUse(key) {
+    const list = this._scope().training_in_use;
+    return !list || list.indexOf(key) >= 0;
+  },
+
+  _mandatory(key) {
+    return (this._scope().training_mandatory || []).indexOf(key) >= 0;
+  },
+
+  // Questions join to the policy on their TOPIC, not on an id: a record's copy is
+  // seeded with an id of its own, and a record migrated from a model carries that
+  // model's questions. Anything the policy does not mention stays asked, so a
+  // migration never drops questions off its own review.
+  _questionKey(q) { return (q || {}).short_label || ""; },
+
+  _questionInUse(q) {
+    const list = this._scope().question_in_use;
+    return !list || list.indexOf(this._questionKey(q)) >= 0;
+  },
+
+  _questionMandatory(q) {
+    return (this._scope().question_mandatory || []).indexOf(this._questionKey(q)) >= 0;
+  },
+
+  // Outstanding mandatory questions, named above the table for the same reason the
+  // Training tab names its own: "3 outstanding" sends somebody hunting.
+  _questionGap() {
+    const q = (this._scope().questions) || {};
+    const missing = q.missing_mandatory || [];
+    if (!missing.length) return "";
+    return '<p style="margin:0 0 var(--space-3)"><span class="badge" ' +
+      'style="background:var(--red)">' + missing.length + " mandatory outstanding" +
+      '</span> <span class="muted">' + missing.map(esc).join(", ") + "</span></p>";
+  },
+
   _applies(key, train) {
+    // Switched off by the institution: not asked, so not shown and not counted. The
+    // record keeps whatever it already recorded -- this hides a field, it never
+    // erases one.
+    if (!this._inUse(key)) return false;
     const meta = this._conditional(key);
     if (!meta.when) return true;
     const task = (train || {}).learning_task || "";
@@ -331,17 +380,21 @@ const MLAppDetail = {
       "</div>";
   },
 
-  // How much of the section is recorded. A count, never a mark: nothing here is
-  // mandatory, so this says how far through it is and not how well it scores.
+  // How much of the section is recorded, and whether anything the division REQUIRES
+  // is still blank. Still a count and not a mark -- but a rail that does not say
+  // which of six sub-tabs is holding up the review makes somebody open all six.
   _sectionBadge(section, train) {
     const self = this;
     const keys = (section.fields || []).filter((k) => self._applies(k, train));
-    const filled = keys.filter((k) => {
+    const recorded = (k) => {
       const v = train[k];
       return v !== null && v !== undefined && v !== "" &&
         !(Array.isArray(v) && !v.length);
-    }).length;
-    return " (" + filled + "/" + keys.length + ")";
+    };
+    const filled = keys.filter(recorded).length;
+    const short = keys.filter((k) => self._mandatory(k) && !recorded(k)).length;
+    return " (" + filled + "/" + keys.length + ")" +
+      (short ? ' <span class="badge" style="background:var(--red)">' + short + "</span>" : "");
   },
 
   // Start the first train from the Training tab itself.
@@ -378,7 +431,7 @@ const MLAppDetail = {
   // risky model. Both appear on the record and a reader must be able to tell them
   // apart, so this one is named for what it is.
   _completenessPanel(d) {
-    const c = d.training_completeness || {};
+    const c = (this._scope().training) || d.training_completeness || {};
     const findings = c.qualifications || [];
     const detail = findings.length
       ? '<span class="badge" style="background:var(--amber)">' + findings.length +
@@ -386,15 +439,29 @@ const MLAppDetail = {
         '<ul style="margin:var(--space-3) 0 0 var(--space-9);padding:0;font-size:var(--size-sm)">' +
         findings.map((q) => "<li>" + esc(q) + "</li>").join("") + "</ul>"
       : '<span class="muted">Nothing recorded here that a reviewer must be told about.</span>';
+    // Progress and permission are different questions, so the outstanding mandatory
+    // items are named beside the count rather than folded into it. A bar at 40% that
+    // is nonetheless completable is not a contradiction.
+    const missing = (c.missing_mandatory || []);
+    const required = missing.length
+      ? '<div style="margin-top:var(--space-2)"><span class="badge" ' +
+        'style="background:var(--red)">' + missing.length + " mandatory outstanding" +
+        "</span> <span class=\"muted\">" + missing.map(esc).join(", ") + "</span></div>"
+      : ((c.mandatory_total || 0)
+        ? '<div style="margin-top:var(--space-2)"><span class="badge" ' +
+          'style="background:var(--green)">every mandatory field recorded</span></div>'
+        : "");
     return '<div class="inforow" style="align-items:flex-start"><div class="k">Evidence' +
       '</div><div class="v"><span class="muted">' + (c.filled || 0) + " of " +
       (c.total || 0) + ' fields recorded</span><div style="margin-top:var(--space-2)">' +
-      detail + "</div></div></div>";
+      detail + "</div>" + required + "</div></div>";
   },
 
-  // A field of the train. An empty one is an ordinary dash: nothing here is
-  // mandatory, so an unfilled field is work not yet done rather than a failure, and
-  // a tab that says otherwise on every record is one people stop reading.
+  // A field of the train. An empty one is an ordinary dash UNLESS the division has
+  // made it mandatory: what a review cannot be completed without carries the red
+  // rule, and everything else is work not yet done rather than a failure. A tab that
+  // scolds on every row is one people stop reading, which is the whole reason the
+  // institution gets to choose which rows these are.
   _trainRow(key, train) {
     const spec = this._trainSpec(key);
     if (!spec) return "";
@@ -421,8 +488,12 @@ const MLAppDetail = {
     const mark = captured
       ? ' <span class="pill" title="Reported by the run that produced it">captured</span>'
       : "";
-    return '<div class="inforow" id="row-tr-' + key + '"><div class="k">' +
-      esc(spec.label) + '</div><div class="v">' + shown + mark + edit +
+    const required = this._mandatory(key);
+    return '<div class="inforow' + (required ? " mandatory-item" : "") +
+      '" id="row-tr-' + key + '"><div class="k">' + esc(spec.label) +
+      (required ? ' <span class="muted" style="font-size:var(--size-xs)">required</span>'
+                : "") +
+      '</div><div class="v">' + shown + mark + edit +
       this._why(key) + "</div></div>";
   },
 
@@ -674,10 +745,19 @@ const MLAppDetail = {
         '<div class="section-header">Testing evidence</div>' +
         this._REVIEW_FIELDS.map((k) => this._row(k)).join("") +
         '<div class="section-header" style="margin-top:var(--space-8)">Review questions</div>' +
+        this._questionGap() +
         '<div id="mla-questions"></div>';
       this._bindEdits();
+      // Only the questions this division asks. A record keeps every question ever
+      // put to it -- one switched off is hidden, never removed -- so the filtered
+      // copy is for rendering and nothing else.
+      const scoped = Object.assign({}, d, {
+        ml_review_questions: (d.ml_review_questions || [])
+          .filter((q) => this._questionInUse(q)),
+      });
       document.getElementById("mla-questions").innerHTML = Collections.render(
-        d, [this.collSpec("ml_review_questions")], this._record.retired, false, true);
+        scoped, [this.collSpec("ml_review_questions")], this._record.retired, false, true,
+        (item) => (this._questionMandatory(item) ? "mandatory" : ""));
       this._bindCollections(["ml_review_questions"]);
       return;
     }

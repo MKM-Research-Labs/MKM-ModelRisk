@@ -90,19 +90,37 @@ def _qualifications(train: dict) -> list[str]:
     return out
 
 
-def completeness(train: dict | None) -> dict[str, Any]:
-    """``{filled, total, state, qualifications}`` for one train.
+def completeness(train: dict | None, in_use: "set | tuple | None" = None,
+                 mandatory: "set | tuple" = ()) -> dict[str, Any]:
+    """``{filled, total, state, qualifications, ...}`` for one train.
 
-    ``filled`` of ``total`` is progress, not a score. Fifty-one fields will not all be
+    ``filled`` of ``total`` is progress, not a score. Fifty-odd fields will not all be
     populated on a real estate and saying so on every record helps nobody -- what a
     reviewer needs is the count and, separately, the things recorded that they must be
     told about.
+
+    ``in_use`` narrows the count to what the division's ratified review policy actually
+    asks for, so the progress a screen reports is progress against the institution's own
+    standard rather than against our catalogue. Omitted, the whole catalogue counts,
+    which is what an estate that has ratified nothing gets.
+
+    ``mandatory`` is reported SEPARATELY rather than folded into the figure: progress and
+    permission are different questions, and a bar at 40% that is nonetheless completable
+    is not a contradiction. A mandatory field that does not apply to this train is not
+    missing -- a classifier is not withheld for want of a regression's residual plot.
     """
     if not train:
-        return {"filled": 0, "total": 0, "state": TRAINING_CLEAN, "qualifications": []}
-    applicable = [key for key in TRAINING_FIELD_SPECS if applies(key, train)]
+        return {"filled": 0, "total": 0, "state": TRAINING_CLEAN, "qualifications": [],
+                "mandatory_total": 0, "missing_mandatory": []}
+    applicable = [key for key in TRAINING_FIELD_SPECS
+                  if applies(key, train) and (in_use is None or key in in_use)]
     filled = [key for key in applicable if _recorded(train.get(key))]
+    required = [key for key in mandatory
+                if key in TRAINING_FIELD_SPECS and applies(key, train)]
+    missing = [key for key in required if not _recorded(train.get(key))]
     qualifications = _qualifications(train)
     return {"filled": len(filled), "total": len(applicable),
             "state": TRAINING_QUALIFIED if qualifications else TRAINING_CLEAN,
-            "qualifications": qualifications}
+            "qualifications": qualifications,
+            "mandatory_total": len(required),
+            "missing_mandatory": [TRAINING_FIELD_SPECS[key]["label"] for key in missing]}

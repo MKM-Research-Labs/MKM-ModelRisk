@@ -27,9 +27,13 @@ const Collections = {
   // ``autosave`` (opt-in, used by the Product register tabs) makes every editable
   // field an inline control that saves on change — text fields included — so a row
   // needs no Edit/Save step. Callers that omit it keep the Edit-in-place behaviour.
-  render(data, specs, retired, bulk, autosave) {
+  // ``rowClass(item, collectionKey)`` is optional: return a class name to mark a row.
+  // Added for the ML review tab, where the division's ratified policy makes some
+  // questions mandatory and those carry the red rule. Callers that pass nothing --
+  // every model screen -- render exactly as before.
+  render(data, specs, retired, bulk, autosave, rowClass) {
     return specs.collections.map((c) =>
-      this._section(c, data[c.key] || [], retired, bulk, autosave)).join("");
+      this._section(c, data[c.key] || [], retired, bulk, autosave, rowClass)).join("");
   },
 
   // Fields shown in tables / add forms: internal (hidden) fields — e.g. the
@@ -65,7 +69,7 @@ const Collections = {
     return "<td>" + optionLabel(f, item[f.key]) + "</td>";
   },
 
-  _row(c, item, retired, autosave) {
+  _row(c, item, retired, autosave, rowClass) {
     const cells = this._visible(c).map((f) => this._cell(c, item, f, retired, autosave)).join("");
     let actions = "";
     if (this._hasActions(c, retired)) {
@@ -76,15 +80,16 @@ const Collections = {
       actions = '<td class="rowact">' + edit + '<button class="btn small danger" data-rm="' +
         c.key + "|" + esc(item.item_id) + '">Remove</button></td>';
     }
-    return "<tr>" + cells + actions + "</tr>";
+    const cls = rowClass ? (rowClass(item, c.key) || "") : "";
+    return "<tr" + (cls ? ' class="' + cls + '"' : "") + ">" + cells + actions + "</tr>";
   },
 
-  _section(c, items, retired, bulk, autosave) {
+  _section(c, items, retired, bulk, autosave, rowClass) {
     const head = this._visible(c).map((f) => "<th>" + esc(f.label) + "</th>").join("") +
       (this._hasActions(c, retired) ? "<th></th>" : "");
     const span = this._visible(c).length + (this._hasActions(c, retired) ? 1 : 0);
     const body = items.length
-      ? items.map((it) => this._row(c, it, retired, autosave)).join("")
+      ? items.map((it) => this._row(c, it, retired, autosave, rowClass)).join("")
       : '<tr><td colspan="' + span + '" class="empty">None.</td></tr>';
     const form = retired ? "" : (bulk ? this._bulkAddForm(c) : this._addForm(c));
     return '<div class="section-header">' + esc(c.label) + "</div>" +

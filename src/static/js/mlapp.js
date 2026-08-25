@@ -97,6 +97,16 @@ const MLApps = {
         idKey: "ml_application_id", summaryId: "mlapp-summary", listId: "mlapp-list",
         filtersId: "mla-filters", tableId: "mla-table", p: "af-",
         noun: "ML Applications",
+        // What the division's ratified ML review policy asks of the estate. Only
+        // meaningful where there IS such a policy, so the tile stays off a register
+        // that has never set one rather than reporting a confident "0 short".
+        extraTiles: (live, tile) => {
+          const scored = live.filter((m) => (m.r.review_status || {}).required > 0);
+          if (!scored.length) return [];
+          const short = scored.filter((m) => !m.r.review_status.complete).length;
+          return [tile("Mandatory complete", (scored.length - short) + " / " +
+            scored.length, Theme.value(short ? "red" : "green"), "")];
+        },
         spec: (key) => self.fieldSpec(key),
         reload: () => self.loadList(),
       }, [

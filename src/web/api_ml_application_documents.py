@@ -43,6 +43,7 @@ from src.governance.ml_application.commands import AGGREGATE_TYPE as ML_AGGREGAT
 from src.governance.ml_application.document import render_ml_application_document_pdf
 from src.governance.mrc.pack import TectonicNotFound
 from src.governance.mrc_settings import get_settings
+from src.web._ml_scope import scoped
 from src.web._helpers import request_actor, send_document
 from src.web.api_ml_application import ml_application_bp
 
@@ -66,7 +67,7 @@ def upload_document(ml_application_id: str):
     except UploadError as exc:
         return jsonify({"error": str(exc)}), 400
     rebuild_ml_application_view()
-    return jsonify(get_ml_application(ml_application_id)), 201
+    return jsonify(scoped(get_ml_application(ml_application_id))), 201
 
 
 @ml_application_bp.get("/<ml_application_id>/documents/<item_id>/download")
@@ -85,7 +86,7 @@ def delete_document(ml_application_id: str, item_id: str):
     remove_document(aggregate_type=ML_AGGREGATE, aggregate_id=ml_application_id,
                     item_id=item_id, actor=request_actor())
     rebuild_ml_application_view()
-    return jsonify(get_ml_application(ml_application_id))
+    return jsonify(scoped(get_ml_application(ml_application_id)))
 
 
 def _file_history_copy(ml_application_id: str, pdf: bytes, stamp: str, issued_at: str) -> None:

@@ -51,6 +51,19 @@ def initial_state() -> MLApplicationState:
     return MLApplicationState()
 
 
+def record_data(state: MLApplicationState) -> dict[str, Any]:
+    """A state as the flat record shape everything downstream reads.
+
+    Shared by the read model and by the completion gate: the gate has to ask the same
+    question of the same shape the screens do, and a second copy of this fold is a
+    second chance for the two to disagree about what a record contains.
+    """
+    data = dict(state.fields)
+    for collection, items in state.collections.items():
+        data[collection] = list(items)
+    return data
+
+
 def apply(state: MLApplicationState, event_type: str,
           payload: dict[str, Any]) -> MLApplicationState:
     """Fold one event into ``state``. Unknown event types are ignored."""

@@ -38,6 +38,7 @@ from src.governance.ml_application import (add_collection_item, get_ml_applicati
                                            update_ml_application_field)
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.reference import get_reference_lists
+from src.web._ml_scope import scoped, scoped_list
 from src.web._helpers import (collection_field_specs, context_from_request,
                               resolve_mrc_for_org,
                               document_specs, grouped_field_specs, json_body,
@@ -114,7 +115,7 @@ def list_all():
     back — the default is the estate, so a retired record is not in the list, the
     tiles or any figure drawn from them."""
     include_retired = request.args.get("include_retired") == "1"
-    return jsonify(list_ml_applications(include_retired=include_retired))
+    return jsonify(scoped_list(list_ml_applications(include_retired=include_retired)))
 
 
 @ml_application_bp.get("/<ml_application_id>")
@@ -122,7 +123,7 @@ def get_one(ml_application_id: str):
     record = get_ml_application(ml_application_id)
     if record is None:
         return jsonify({"error": "ML Application not found"}), 404
-    return jsonify(record)
+    return jsonify(scoped(record))
 
 
 @ml_application_bp.post("")
@@ -133,7 +134,7 @@ def register():
              context=context_from_request(body), ml_application_id=ml_application_id,
              fields=body.get("fields") or {})
     rebuild_ml_application_view()
-    return jsonify(get_ml_application(ml_application_id)), 201
+    return jsonify(scoped(get_ml_application(ml_application_id))), 201
 
 
 @ml_application_bp.post("/<ml_application_id>/field")
@@ -143,7 +144,7 @@ def update_field(ml_application_id: str):
              context=context_from_request(body), ml_application_id=ml_application_id,
              field=body.get("field"), value=body.get("value"))
     rebuild_ml_application_view()
-    return jsonify(get_ml_application(ml_application_id))
+    return jsonify(scoped(get_ml_application(ml_application_id)))
 
 
 @ml_application_bp.post("/<ml_application_id>/retire")
@@ -152,7 +153,7 @@ def retire(ml_application_id: str):
     dispatch("retire_ml_application", retire_ml_application,
              context=context_from_request(body), ml_application_id=ml_application_id)
     rebuild_ml_application_view()
-    return jsonify(get_ml_application(ml_application_id))
+    return jsonify(scoped(get_ml_application(ml_application_id)))
 
 
 @ml_application_bp.post("/<ml_application_id>/collections/<collection>")
@@ -162,7 +163,7 @@ def add_item(ml_application_id: str, collection: str):
              context=context_from_request(body), ml_application_id=ml_application_id,
              collection=collection, fields=body.get("fields") or {})
     rebuild_ml_application_view()
-    return jsonify(get_ml_application(ml_application_id)), 201
+    return jsonify(scoped(get_ml_application(ml_application_id))), 201
 
 
 @ml_application_bp.post("/<ml_application_id>/collections/<collection>/<item_id>")
@@ -172,7 +173,7 @@ def update_item(ml_application_id: str, collection: str, item_id: str):
              context=context_from_request(body), ml_application_id=ml_application_id,
              collection=collection, item_id=item_id, fields=body.get("fields") or {})
     rebuild_ml_application_view()
-    return jsonify(get_ml_application(ml_application_id))
+    return jsonify(scoped(get_ml_application(ml_application_id)))
 
 
 @ml_application_bp.post("/<ml_application_id>/collections/<collection>/<item_id>/delete")
@@ -182,7 +183,7 @@ def delete_item(ml_application_id: str, collection: str, item_id: str):
              context=context_from_request(body), ml_application_id=ml_application_id,
              collection=collection, item_id=item_id)
     rebuild_ml_application_view()
-    return jsonify(get_ml_application(ml_application_id))
+    return jsonify(scoped(get_ml_application(ml_application_id)))
 
 
 @ml_application_bp.get("/<ml_application_id>/risk-rating")

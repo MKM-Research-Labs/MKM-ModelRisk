@@ -80,7 +80,11 @@ const InventoryList = {
   ],
 
   mount(models, onRow) {
-    this._models = models.map((m) => ({ id: m[this._cfg.idKey], retired: m.retired, d: m.data || {} }));
+    // ``r`` is the row as the API sent it. The shared shape names only what every
+    // register has; a register's own tiles (see ``extraTiles``) read the rest from
+    // here rather than this builder growing a field per register.
+    this._models = models.map((m) => ({ id: m[this._cfg.idKey], retired: m.retired,
+                                        d: m.data || {}, r: m }));
     this._onRow = onRow;
     // Filters survive a re-mount. Choosing "Hibernated" re-fetches, and clearing
     // the filters here would drop the very filter that asked for the reload —
@@ -166,6 +170,11 @@ const InventoryList = {
         "tier=" + b.score)).join("") +
       tile(esc(ragLabel), ragVal, Theme.value("green"), "") +
       tile("Approved", approved + " / " + live.length, Theme.value("green"), "") +
+      // A register may declare tiles of its own: the ML Apps list adds the estate's
+      // mandatory-item gap, which means nothing on a model. Declared by the caller
+      // rather than branched on here, so this builder never learns which register it
+      // is drawing.
+      (this._cfg.extraTiles ? this._cfg.extraTiles(live, tile).join("") : "") +
       "</div>";
   },
 

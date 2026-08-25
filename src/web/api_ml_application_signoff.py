@@ -33,9 +33,11 @@ from __future__ import annotations
 from flask import jsonify
 
 from src.governance.ml_application import get_ml_application
+from src.governance.ml_application.review_scope import guard_review_complete
 from src.governance.mrc import matching_mrc
 from src.governance.reference import get_reference_lists
 from src.web._helpers import context_from_request, json_body
+from src.web._ml_scope import scoped
 from src.web._signoff_routing import raise_signoff
 from src.web._signoff_subject import ML_APPLICATION_SUBJECT
 from src.web.api_ml_application import ml_application_bp
@@ -67,7 +69,11 @@ def request_signoff(ml_application_id: str):
     mrc, error = _target_mrc(record)
     if error:
         return error
+    # The committee is asked to sign off a review, so the review has to be one. Raised
+    # as a DomainError, which the app turns into a 400 naming what is still blank --
+    # the same wall a script hits, because the check is not in this route's logic.
+    guard_review_complete(record["data"] or {}, "Raising this for MRC sign-off")
     raise_signoff(context_from_request(body), ML_APPLICATION_SUBJECT, ml_application_id,
                   kind="rag", proposed_rag=proposed_rag, target_mrc=mrc["value"],
                   note=body.get("note"))
-    return jsonify(get_ml_application(ml_application_id)), 201
+    return jsonify(scoped(get_ml_application(ml_application_id))), 201
