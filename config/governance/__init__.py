@@ -212,6 +212,13 @@ from config.governance._product import (COMPONENT_KIND_ML, COMPONENT_KIND_MODEL,
     PRODUCT_REGISTER_FIELDS,
     VALID_PRODUCT_STATUS,
 )
+# Two areas gather their own exports and declare their own ``__all__`` (see
+# ``_ml_exports``): they are star-imported here rather than restated, which is what
+# keeps this aggregate inside the 300-line gate as areas are added. Their names stay
+# reachable as ``from config.governance import X`` like every other; what they are
+# deliberately not is a second copy of a list that already exists.
+from config.governance._attention import *  # noqa: F401,F403
+from config.governance._attention_reasons import *  # noqa: F401,F403
 from config.governance._ml_exports import *  # noqa: F401,F403
 from config.governance._reference import (
     CODEBASE_LIST, DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES, DEFAULT_MODEL_TYPES,
@@ -285,9 +292,4 @@ __all__ = [
     "VALID_PARTICIPANT_STATUS", "VALID_PRIORITY", "VALID_PRODUCT_STATUS", "VALID_RAG_RATINGS",
     "CLOSED_REMEDIATION_STATUS", "VALID_REMEDIATION_STATUS", "VALID_REVIEW_FREQUENCIES", "VALID_VALIDATION_STATUSES",
     "VALID_VQ_STATUSES", "VERSION_LIFECYCLE_LIST",
-    "ML_APPLICATION_COLLECTION_SPECS", "ML_APPLICATION_EDITABLE_FIELDS",
-    "ML_APPLICATION_FIELD_CHOICES", "ML_APPLICATION_FIELD_SPECS",
-    "ML_APPLICATION_ID_PREFIX", "ML_APPLICATION_REGISTER_FIELDS",
-    "ML_REVIEW_QUESTIONS_COLLECTION", "ML_TRAINING_COLLECTION_SPEC", "TRAINING_FIELD_SPECS", "TRAINING_RUNS_COLLECTION", "TRAINING_SECTIONS",
-    "DEFAULT_ESTIMATORS", "ESTIMATOR_LIST", "ML_TRAINING_VOCABULARIES", "ML_TRAINING_LISTS", "ML_APPLICATION_QUESTIONS", "ML_APPLICATION_QUESTION_LIST",
 ]

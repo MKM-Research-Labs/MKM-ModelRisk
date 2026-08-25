@@ -19,6 +19,7 @@
 // SOFTWARE.
 
 const TABS = {
+  dashboard: Dashboard,
   inventory: Inventory, chain: Chain, product: Product, mlapps: MLApps,
   clients: Clients, mrc: MRC,
   documents: GovDocs, audit: Audit, reports: AuditReports, reference: Reference,
@@ -74,6 +75,30 @@ const Nav = {
 
 function showTab(name) { return Nav.show(name); }
 
+// A link from outside: the ERM's click-through, or somebody's bookmark.
+// "#<tab>" opens that tab; "#<tab>/<id>" opens the record on it. Only these four
+// take an id — a tab with no per-record screen simply opens. Nothing else is
+// routed: the console is one page, and inventing routes it does not have would
+// strand the reader on a blank panel with no way to say what went wrong.
+const DEEP_LINK = {
+  inventory: (id) => Detail.show(id),
+  product: (id) => ProductDetail.show(id),
+  mlapps: (id) => MLAppDetail.show(id),
+  mrc: (id) => MeetingDetail.show(id),
+};
+
+// Open whatever the current hash names. Returns false when it names nothing we
+// have, so the caller can fall back to the landing tab rather than showing blank.
+function openHash() {
+  const parts = (location.hash || "").replace(/^#/, "").split("/");
+  const tab = parts[0];
+  if (!tab || !TABS[tab]) return false;
+  showTab(tab).then(function () {
+    if (parts[1] && DEEP_LINK[tab]) DEEP_LINK[tab](decodeURIComponent(parts[1]));
+  });
+  return true;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
   document.querySelectorAll(".tab").forEach(function (btn) {
     btn.onclick = function () { showTab(btn.getAttribute("data-tab")); };
@@ -92,10 +117,18 @@ document.addEventListener("DOMContentLoaded", function () {
   };
   OrgScope.onChange(refreshInventory);
   // Load the risk policy and the theme first so badges/heatmaps colour from them on the
-  // first render, then show the inventory. The theme carries which token each status is
+  // first render, then show the landing tab. The theme carries which token each status is
   // drawn in (config/theme.py); the policy overrides it per division. Failure of either
   // is non-fatal — a badge with no colour renders as the dash an unrated record shows.
-  Promise.all([Policy.load(), Theme.load()]).then(function () { showTab("inventory"); });
+  //
+  // The dashboard lands rather than the inventory: the first question a reader has is
+  // whether anything needs them, and a register cannot answer it.
+  Promise.all([Policy.load(), Theme.load()]).then(function () {
+    if (!openHash()) showTab("dashboard");
+  });
+  // A second link, followed while the console is already open, must move the page
+  // too — otherwise the URL changes and nothing else does.
+  window.addEventListener("hashchange", openHash);
   // Populate the scope dropdowns, then re-filter (applies any saved selection).
   OrgScope.init().then(refreshInventory);
   // The actor picker lists real People, so it loads with the reference data.

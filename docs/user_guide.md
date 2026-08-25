@@ -35,6 +35,8 @@ needs a person; a meeting needs a committee). For installation, see the
 18. [Documents and Audit Reports](#18-documents-and-audit-reports)
 19. [How everything links](#19-how-everything-links)
 20. [The audit trail](#20-the-audit-trail)
+21. [The Dashboard — do I need to respond?](#21-the-dashboard--do-i-need-to-respond)
+22. [Feeding your ERM](#22-feeding-your-erm)
 
 ---
 
@@ -93,9 +95,13 @@ you are `david.kelly@mkmresearchlabs.com` by default.
 3. Set the **org-scope selector** in the header to the Company (and, later,
    Division / Line of Business) you are working in.
 
-The main tabs, left to right, are: **MRC**, **Models**, **Model Chain**,
-**Products**, **Clients**, **Audit Trail**, **Documents**, **Audit Reports**, and
-**Admin**.
+The main tabs, left to right, are: **Dashboard**, **MRC**, **Models**, **Model
+Chain**, **Products**, **ML Apps**, **Clients**, **Audit Trail**, **Documents**,
+**Audit Reports**, and **Admin**.
+
+You land on **Dashboard**, which answers one question — *does any of this need a
+response from me?* On a fresh install it has nothing to report; it becomes useful
+once there are models on the register, so it is described last, in section 21.
 
 Click **Admin**. Its sub-tabs are **Company**, **Division**, **Line of Business**,
 **MRC**, **Calc Agent**, **Data Source**, **People**, **Model Type**, **Vendor**,
@@ -731,6 +737,155 @@ history for free:
 This is why the console insists on confirm-to-amend with a reason: the audit trail
 is a first-class governance artefact, not a side-effect. It cannot be edited or
 cleared from the application.
+
+---
+
+## 21. The Dashboard — do I need to respond?
+
+This is the tab you land on, and it exists to answer one question in about four
+seconds. Everything on it earns its place by helping answer that question;
+anything that does not is left off.
+
+The consequence is a rule the page keeps to: **no number appears without the state
+it implies.** "14 open findings" tells you nothing you can act on. "14 open
+findings, all with named owners and inside their deadlines — nothing for you" is
+an answer.
+
+### The four states
+
+Everything the platform is owed sorts into exactly four states, used identically on
+the cards, on the queue and in the API.
+
+| On screen | State | What it means | Your response |
+|---|---|---|---|
+| **Breaches** | Escalate | A governance rule is broken that no owner can clear alone. | Yours. Take it to the committee. |
+| **Needs you** | Act | Owed, and past the date somebody set for it. | Chase the named owner. |
+| **Worth noting** | Monitor | Owed, not yet due, with a named owner. | Nothing today. Note it. |
+| **With owners** | Clear | Open, in date, in somebody else's queue. | Nothing. |
+
+The names in the first column, and the four labels, are yours to change —
+`config/governance/_attention.py`, like every other vocabulary in the platform.
+
+### The verdict
+
+The top of the page is a sentence, not a score:
+
+> **Yes — 27 items need your response.** 22 remediation steps are past their date,
+> 4 records have findings past their remediation deadline, and 1 record is below
+> the acceptable standard.
+
+There is deliberately no single "model risk score". A composite number would
+immediately raise the question of what it is made of, and the honest answer takes
+the rest of the page. The platform makes the same argument about not deriving a
+second risk rating beside the one your committee sets.
+
+### What reaches you, and what does not
+
+An item reaches you when one of three things is true.
+
+1. **A date somebody set has passed** — a review past its next-review date, or a
+   remediation step past its due date.
+2. **A hard rule is broken.** Four of these, each chosen because an owner *cannot*
+   quietly close it by filling in a field: the recorded reviewer is the record's
+   own owner; a division is running on a risk policy its committee never ratified;
+   the register cites a document the store cannot produce; a record carries no
+   committee sign-off.
+3. **A record is below the completeness standard its own division set**, or its
+   findings have outlived the deadline their severity band allows.
+
+Everything else that is open is *with an owner*, and the page says so rather than
+counting it against you. That distinction is the whole value of the screen: it
+turns a backlog into a queue with somebody else's name on it.
+
+Note what is **not** here. A committee action is agreed without a target date —
+progress is recorded as dated updates instead — so it is reported as outstanding
+and never as late. Calling it overdue would put a deadline in front of you that no
+committee ever set.
+
+### Reading the queue
+
+Each row ends in a named person and, where there is one, a date. A row that you
+cannot hand to somebody is an observation, not an action.
+
+Rows collapse where twenty of them would say the same thing. Overdue remediation
+collapses **by owner** — "14 remediation steps are past their date · David K Kelly
+· across 8 records · worst 147 d" — because the response to fourteen overdue steps
+is a conversation with one person, not reading fourteen rows. **List** opens the
+records behind a collapsed row; **Open** takes you to the record itself.
+
+The page never writes. There is no acknowledge and no dismiss: clearing an item
+from a dashboard would be a decision with no minute against it, and the whole
+premise of the platform is that a response is recorded where it can be challenged.
+Every row routes you to the record or the meeting instead.
+
+### Direction
+
+"Is this getting better?" is the second question, and today's figures cannot
+answer it. Once a day the platform looks at what the completeness audit is
+reporting and writes down what it saw — when each finding first appeared, when it
+was last seen, and when it stopped appearing.
+
+From that come three things: the trend line, the opened-versus-closed counts, and
+the ability to say a finding has outlived its deadline. Until it has looked more
+than once the panel says so, rather than drawing a flat line — a flat line and an
+empty history look identical, and only one of them is true.
+
+**Meeting the standard** is a count — how many records meet the threshold their own
+division set, out of how many were audited. It is deliberately not a weighted
+average of completeness scores: the audit publishes no estate-wide figure, and one
+invented here would be a number nobody chose sitting on the front page of a
+governance record. Read it beside **Below the standard**: an average in the
+nineties with a tail of four is a different firm from one with a tail of none.
+
+### How this relates to the completeness audit
+
+They cannot disagree, by construction.
+
+| | Completeness audit | Dashboard |
+|---|---|---|
+| Asks | Is each record complete, and how bad is each gap? | Does any of this need me? |
+| Unit | One finding, per record | One response, per person |
+| For | The committee, an assessor | You, and your ERM |
+| Output | A signed PDF, defensible line by line | A sentence and a queue |
+
+**The dashboard computes nothing the audit does not.** It reads the audit's own
+findings, severity bands, deadlines and remediation wording unchanged. Where it
+adds anything it is subtraction: four states, and everything inside its deadline
+dropped out of your count. A committee member who has read the audit recognises
+the row rather than having to reconcile it.
+
+---
+
+## 22. Feeding your ERM
+
+Model risk rarely stops at this platform. Where a firm runs enterprise risk
+management, model risk usually feeds two places in it: the **operational risk**
+view, and **strategic direction**. The platform exposes a read-only API shaped
+around those two consumers.
+
+```
+GET /api/erm/v1/model-risk             the panel: verdict, operational, direction, estate
+GET /api/erm/v1/model-risk/attention   the queue: every outstanding obligation
+GET /api/erm/v1/model-risk/estate      the position: counts by kind, tier, rating, division
+```
+
+Authentication is a shared token in the `X-ERM-Token` header. It is separate from
+the ingest token on purpose: ingest *writes* the governance record and the ERM may
+only read it.
+
+**The ERM can never write.** There is no write endpoint at any version. If it
+could change the record, the record would no longer be the thing your committee
+signed.
+
+Two things an integrator should know. Every enumerated field ships a fixed machine
+value *and* your label — `state` beside `label`, `reason` beside `reason_label` —
+so renaming your risk vocabulary never breaks a consumer. And items come back
+individually, each carrying the `group` it would collapse under, so the ERM can
+reproduce the console's rollup or list every record instead.
+
+The full contract, with JSON Schemas and worked examples, is checked in at
+[`contracts/erm/`](../contracts/erm/README.md). Hand that to whoever is building
+the ERM side.
 
 ---
 

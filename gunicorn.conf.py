@@ -60,6 +60,7 @@ preload_app = False
 def on_starting(server):
     """Master process, before any worker is forked."""
     from src.web._backup import start_backup_scheduler
+    from src.web._history import start as start_history_scheduler
     from src.web._startup import bootstrap_once
 
     # Marks the environment on completion; forked workers inherit that and skip
@@ -69,3 +70,8 @@ def on_starting(server):
     # Started here, in the master, so there is exactly one backup schedule
     # however many workers are running. See src/web/_backup.py.
     start_backup_scheduler()
+
+    # Likewise the daily finding-history observation: one per deployment, not one
+    # per worker, or every worker would run a completeness scan at the same moment
+    # every day. See src/web/_history.py.
+    start_history_scheduler()

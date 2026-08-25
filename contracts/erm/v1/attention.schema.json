@@ -1,0 +1,195 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://modelrisk.mkm/contracts/erm/v1/attention.schema.json",
+ "title": "ModelRisk \u2014 the response queue for an ERM (v1)",
+ "description": "GET /api/erm/v1/model-risk/attention. Every outstanding obligation, individually. The console collapses these into rows (twenty overdue remediation steps become one row per owner); that is a presentation decision and stays in the console. Each item carries 'group' so a consumer can reproduce the same rollup, or list every record instead.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "as_of",
+  "generated_at",
+  "institution",
+  "total",
+  "returned",
+  "truncated",
+  "items"
+ ],
+ "properties": {
+  "schema_version": {
+   "description": "Contract major version.",
+   "const": "v1"
+  },
+  "as_of": {
+   "description": "The date the registers were read against. Dated rules (review currency, remediation dates) move with it.",
+   "type": "string",
+   "format": "date"
+  },
+  "generated_at": {
+   "description": "When this response was produced, UTC. Present so a stale panel can say it is stale.",
+   "type": "string",
+   "format": "date-time"
+  },
+  "institution": {
+   "description": "The institution's own name for itself.",
+   "type": "string"
+  },
+  "total": {
+   "description": "Items before any cap.",
+   "type": "integer",
+   "minimum": 0
+  },
+  "returned": {
+   "type": "integer",
+   "minimum": 0
+  },
+  "truncated": {
+   "description": "Declared, never silent: a capped list that says nothing about the cap reads as the whole of it.",
+   "type": "boolean"
+  },
+  "items": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "state",
+     "reason",
+     "reason_label",
+     "group",
+     "entity",
+     "owner",
+     "committee",
+     "due",
+     "days_over",
+     "action",
+     "href"
+    ],
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "state": {
+      "type": "string",
+      "enum": [
+       "escalate",
+       "act",
+       "monitor",
+       "clear"
+      ]
+     },
+     "reason": {
+      "description": "Fixed machine vocabulary.",
+      "type": "string",
+      "enum": [
+       "committee_action_open",
+       "evidence_missing",
+       "finding_open",
+       "record_below_standard",
+       "remediation_due_soon",
+       "remediation_overdue",
+       "review_due_soon",
+       "review_overdue",
+       "reviewer_not_independent",
+       "risk_policy_unratified",
+       "signoff_missing"
+      ]
+     },
+     "reason_label": {
+      "description": "The adopter's wording for it.",
+      "type": "string"
+     },
+     "group": {
+      "description": "The reason this item collapses under in the console, or null if it does not collapse.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "kind",
+       "id",
+       "name",
+       "tier",
+       "rating",
+       "division"
+      ],
+      "properties": {
+       "kind": {
+        "description": "What sort of thing this is about.",
+        "type": "string"
+       },
+       "id": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "name": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "tier": {
+        "description": "The institution's own criticality tier, or null.",
+        "type": [
+         "integer",
+         "string",
+         "null"
+        ]
+       },
+       "rating": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "division": {
+        "type": [
+         "string",
+         "null"
+        ]
+       }
+      }
+     },
+     "owner": {
+      "type": "string"
+     },
+     "committee": {
+      "type": "string"
+     },
+     "due": {
+      "description": "The date somebody set, or null. Never inferred.",
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date"
+     },
+     "days_over": {
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "action": {
+      "description": "The instruction that closes it, in the same words the signed audit report uses.",
+      "type": "string"
+     },
+     "href": {
+      "description": "A link to the record in the console, or null where the console has no screen for it \u2014 a dead link in somebody else's dashboard is worse than none.",
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   }
+  }
+ }
+}

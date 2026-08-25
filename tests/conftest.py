@@ -141,4 +141,9 @@ def _clean_event_log():
             cur.execute("DELETE FROM model_chain_view")
             cur.execute("DELETE FROM model_handoff_view")
             cur.execute("DELETE FROM ml_application_view")
+            # Observations, not projections — but per-test state all the same. Left
+            # behind, one test's finding history ages another test's findings and
+            # the dashboard's verdict starts depending on test order.
+            cur.execute("DELETE FROM finding_history")
+            cur.execute("DELETE FROM attention_trend")
     yield

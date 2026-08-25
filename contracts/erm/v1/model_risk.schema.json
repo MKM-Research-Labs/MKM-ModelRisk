@@ -1,0 +1,283 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "https://modelrisk.mkm/contracts/erm/v1/model_risk.schema.json",
+ "title": "ModelRisk \u2014 model risk for an ERM (v1)",
+ "description": "GET /api/erm/v1/model-risk. What an ERM's model-risk tile renders. The blocks follow where model risk lands rather than how this platform stores it: 'verdict' for the C-suite tile, 'operational' for an operational-risk view, 'direction' for a strategic one.",
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "schema_version",
+  "as_of",
+  "generated_at",
+  "institution",
+  "verdict",
+  "operational",
+  "direction",
+  "estate",
+  "attention"
+ ],
+ "properties": {
+  "schema_version": {
+   "description": "Contract major version.",
+   "const": "v1"
+  },
+  "as_of": {
+   "description": "The date the registers were read against. Dated rules (review currency, remediation dates) move with it.",
+   "type": "string",
+   "format": "date"
+  },
+  "generated_at": {
+   "description": "When this response was produced, UTC. Present so a stale panel can say it is stale.",
+   "type": "string",
+   "format": "date-time"
+  },
+  "institution": {
+   "description": "The institution's own name for itself.",
+   "type": "string"
+  },
+  "verdict": {
+   "description": "Does any of this need a response, and what does it consist of.",
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "response_required",
+    "state",
+    "headline",
+    "detail",
+    "counts",
+    "breakdown"
+   ],
+   "properties": {
+    "response_required": {
+     "type": "boolean"
+    },
+    "state": {
+     "description": "The worst state present. Fixed values: an adopter renames the LABELS, never these.",
+     "type": "string",
+     "enum": [
+      "escalate",
+      "act",
+      "monitor",
+      "clear"
+     ]
+    },
+    "headline": {
+     "description": "One sentence. Deliberately not a score.",
+     "type": "string"
+    },
+    "detail": {
+     "type": "string"
+    },
+    "counts": {
+     "description": "Items in each state. Every state is present, at zero if need be \u2014 a missing key would render as a blank tile where the answer is a nought.",
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "escalate",
+      "act",
+      "monitor",
+      "clear"
+     ],
+     "properties": {
+      "escalate": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "act": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "monitor": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "clear": {
+       "type": "integer",
+       "minimum": 0
+      }
+     }
+    },
+    "breakdown": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "reason",
+       "state",
+       "count",
+       "label"
+      ],
+      "properties": {
+       "reason": {
+        "type": "string",
+        "enum": [
+         "committee_action_open",
+         "evidence_missing",
+         "finding_open",
+         "record_below_standard",
+         "remediation_due_soon",
+         "remediation_overdue",
+         "review_due_soon",
+         "review_overdue",
+         "reviewer_not_independent",
+         "risk_policy_unratified",
+         "signoff_missing"
+        ]
+       },
+       "state": {
+        "type": "string",
+        "enum": [
+         "escalate",
+         "act",
+         "monitor",
+         "clear"
+        ]
+       },
+       "count": {
+        "type": "integer",
+        "minimum": 1
+       },
+       "label": {
+        "description": "The adopter's wording for that count.",
+        "type": "string"
+       }
+      }
+     }
+    }
+   }
+  },
+  "operational": {
+   "description": "For an operational-risk view: what has actually failed in the rolling window, and which controls are not holding now.",
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "window_days",
+    "failures_in_window",
+    "records_with_failures",
+    "control_breaches",
+    "control_breaches_by_reason"
+   ],
+   "properties": {
+    "window_days": {
+     "type": "integer"
+    },
+    "failures_in_window": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "records_with_failures": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "control_breaches": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "control_breaches_by_reason": {
+     "type": "array"
+    }
+   }
+  },
+  "direction": {
+   "description": "For a strategic view: how much of the estate meets the standard its OWN divisions set. A count ratio, not a weighted average \u2014 the audit publishes no estate-wide score, and inventing one would put a figure nobody chose on a governance record.",
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "records_audited",
+    "records_meeting_standard",
+    "records_below_standard",
+    "share_meeting_standard",
+    "trend"
+   ],
+   "properties": {
+    "records_audited": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "records_meeting_standard": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "records_below_standard": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "share_meeting_standard": {
+     "type": [
+      "number",
+      "null"
+     ],
+     "minimum": 0,
+     "maximum": 1
+    },
+    "trend": {
+     "description": "null until a finding history exists. Null rather than omitted, so 'no history yet' cannot be read as 'flat'.",
+     "type": [
+      "array",
+      "null"
+     ]
+    }
+   }
+  },
+  "estate": {
+   "description": "What the estate is made of. Absent values are named ('untiered', 'unrated') rather than dropped.",
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "total",
+    "by_kind",
+    "by_tier",
+    "by_rating",
+    "by_division"
+   ],
+   "properties": {
+    "total": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "by_kind": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "integer"
+     }
+    },
+    "by_tier": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "integer"
+     }
+    },
+    "by_rating": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "integer"
+     }
+    },
+    "by_division": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "integer"
+     }
+    }
+   }
+  },
+  "attention": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "total",
+    "href"
+   ],
+   "properties": {
+    "total": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "href": {
+     "type": "string"
+    }
+   }
+  }
+ }
+}
