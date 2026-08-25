@@ -64,10 +64,14 @@ GO
 -- 3. Projections are derived and rebuildable, so the app may mutate them --
 --    exactly as on PostgreSQL.
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.projection_checkpoints TO [mkm_app];
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.ai_system_view       TO [mkm_app];
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.attention_trend      TO [mkm_app];
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.client_view          TO [mkm_app];
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.data_lineage_view    TO [mkm_app];
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.field_lineage_view   TO [mkm_app];
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.finding_history      TO [mkm_app];
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.ingest_receipts_view TO [mkm_app];
+GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.ml_application_view  TO [mkm_app];
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.model_chain_view     TO [mkm_app];
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.model_handoff_view   TO [mkm_app];
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.model_inventory_view TO [mkm_app];
@@ -75,6 +79,23 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.mrc_meeting_view     TO [mkm_app];
 GRANT SELECT, INSERT, UPDATE, DELETE ON dbo.product_view         TO [mkm_app];
 GO
 ```
+
+> **This list has to be maintained with every new projection, and it had already
+> drifted.** Four tables were missing when the AI System record was added:
+> `ml_application_view`, `attention_trend`, `finding_history` and `ai_system_view`
+> itself. On PostgreSQL each projection's own migration carries its `GRANT`, so the
+> list maintains itself; here it does not, and a missing line is not a visible
+> error — it is an application that cannot write one read-model on SQL Server and
+> fails at runtime rather than at deployment.
+>
+> To check the list is complete against the migrations:
+>
+> ```bash
+> grep -h 'CREATE TABLE IF NOT EXISTS' src/database/migrations/*.sql \
+>   | sed 's/.*EXISTS //;s/ (.*//' | sort -u
+> ```
+>
+> Everything it prints except `events` belongs above.
 
 ## Prove it took effect
 

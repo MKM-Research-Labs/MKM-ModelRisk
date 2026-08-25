@@ -21,18 +21,20 @@
 const TABS = {
   dashboard: Dashboard,
   inventory: Inventory, chain: Chain, product: Product, mlapps: MLApps,
+  aisystems: AISystems,
   clients: Clients, mrc: MRC,
   documents: GovDocs, audit: Audit, reports: AuditReports, reference: Reference,
 };
 
 // Tabs that share the persistent MRC-region bar, and how each re-filters when the
 // region selection changes (without rebuilding the bar).
-const REGION_TABS = ["mrc", "inventory", "product", "mlapps", "audit"];
+const REGION_TABS = ["mrc", "inventory", "product", "mlapps", "aisystems", "audit"];
 const REGION_RELOAD = {
   mrc: () => MRC.render(),
   inventory: () => Inventory.loadList(),
   product: () => Product.loadList(),
   mlapps: () => MLApps.loadList(),
+  aisystems: () => AISystems.loadList(),
   audit: () => Audit._draw(),
 };
 
@@ -84,6 +86,7 @@ const DEEP_LINK = {
   inventory: (id) => Detail.show(id),
   product: (id) => ProductDetail.show(id),
   mlapps: (id) => MLAppDetail.show(id),
+  aisystems: (id) => AISystemDetail.show(id),
   mrc: (id) => MeetingDetail.show(id),
 };
 
@@ -109,6 +112,8 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("reg-cancel").onclick = function () { Inventory.closeRegister(); };
   document.getElementById("mlapp-reg-submit").onclick = function () { MLApps.submitRegister(); };
   document.getElementById("mlapp-reg-cancel").onclick = function () { MLApps.closeRegister(); };
+  document.getElementById("ais-reg-submit").onclick = function () { AISystems.submitRegister(); };
+  document.getElementById("ais-reg-cancel").onclick = function () { AISystems.closeRegister(); };
   document.getElementById("product-reg-submit").onclick = function () { Product.submitRegister(); };
   document.getElementById("product-reg-cancel").onclick = function () { Product.closeRegister(); };
   // Changing the org scope re-filters the inventory if it's on screen.

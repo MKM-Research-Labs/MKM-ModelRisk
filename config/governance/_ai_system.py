@@ -118,26 +118,26 @@ AI_SYSTEM_FIELD_SPECS = {
     # --- Exposure ---
     "data_egress": {"label": "Data sent for inference", "type": "choice",
                     "options": DATA_EGRESS_CLASSES, "group": "Exposure"},
-    "data_egress_basis": {"label": "Contractual basis for that data leaving",
+    "data_egress_basis": {"label": "Contractual basis",
                           "type": "textarea", "group": "Exposure"},
     "eu_ai_act_class": {"label": "EU AI Act classification", "type": "choice",
                         "options": EU_AI_ACT_CLASSES, "group": "Exposure"},
-    "eu_ai_act_rationale": {"label": "Who classified it, and on what basis",
+    "eu_ai_act_rationale": {"label": "Classified by",
                             "type": "textarea", "group": "Exposure"},
     # --- Controls. Prose rather than flags: what a reviewer needs is the
     #     arrangement described well enough to disagree with, and a Yes/No on
     #     "guardrails" would be the least informative field in the record. ---
     "human_oversight": {"label": "Human oversight", "type": "choice",
                         "options": HUMAN_OVERSIGHT_MODES, "group": "Controls"},
-    "guardrails": {"label": "Input and output filtering", "type": "textarea",
+    "guardrails": {"label": "Guardrails", "type": "textarea",
                    "group": "Controls"},
-    "grounding": {"label": "How output is grounded", "type": "textarea",
+    "grounding": {"label": "Grounding", "type": "textarea",
                   "group": "Controls"},
-    "output_variability": {"label": "Output variability and how it is controlled",
+    "output_variability": {"label": "Output variability",
                            "type": "textarea", "group": "Controls"},
     "explainability_approach": {"label": "Explainability approach", "type": "textarea",
                                 "group": "Controls"},
-    "fairness_approach": {"label": "Fairness and bias assessment", "type": "textarea",
+    "fairness_approach": {"label": "Fairness assessment", "type": "textarea",
                           "group": "Controls"},
     # --- Classification. The same three dimensions, bands and heatmap a model
     #     carries, so an AI System is challenged on the same terms. ---

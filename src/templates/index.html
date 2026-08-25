@@ -39,6 +39,7 @@
     <button class="tab" data-tab="chain">Model Chain</button>
     <button class="tab" data-tab="product">Products</button>
     <button class="tab" data-tab="mlapps">ML Apps</button>
+    <button class="tab" data-tab="aisystems">AI Systems</button>
     <button class="tab" data-tab="clients">Clients</button>
     <button class="tab" data-tab="audit">Audit Trail</button>
     <button class="tab" data-tab="documents">Documents</button>
@@ -55,6 +56,7 @@
     <section id="tab-chain" class="panel"></section>
     <section id="tab-product" class="panel"></section>
     <section id="tab-mlapps" class="panel"></section>
+    <section id="tab-aisystems" class="panel"></section>
     <section id="tab-clients" class="panel"></section>
     <section id="tab-mrc" class="panel"></section>
     <section id="tab-documents" class="panel"></section>
@@ -86,6 +88,20 @@
   </div>
 
   <!-- Register a Product: ID, product and three component bindings. -->
+  <div id="ais-register-overlay" class="overlay hidden">
+    <div class="modal">
+      <h2>Register an AI System</h2>
+      <p class="muted">A deployed use of a generative or agentic model. Say what it is
+        for and how it is deployed &mdash; the pattern decides which risks apply to it
+        &mdash; and everything else is edited on the record afterwards.</p>
+      <div id="ais-reg-body"></div>
+      <div class="modal-actions">
+        <button id="ais-reg-cancel" class="btn ghost">Cancel</button>
+        <button id="ais-reg-submit" class="btn primary">Register&hellip;</button>
+      </div>
+    </div>
+  </div>
+
   <div id="mlapp-register-overlay" class="overlay hidden">
     <div class="modal">
       <h2>Register an ML Application</h2>
@@ -188,7 +204,10 @@
   <script src="{{ url_for('static', filename='js/model_docs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/doc_panel.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/record_detail.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mlapp.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/aisystem.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/aisystem/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mlapp/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/model_map.js', v=asset_version) }}"></script>

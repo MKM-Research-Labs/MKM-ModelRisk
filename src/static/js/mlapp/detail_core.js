@@ -23,55 +23,13 @@
 // dependency chain, so there is no graph to draw. Everything drawn here comes from
 // shared components (DetailShell, DetailTabs, Collections); what this file holds is
 // which tabs exist and what each one is for.
-const MLAppDetail = {
-  _record: null,
-  _tab: "overview",
-  _specs: null,
-  _audit: [],
-  _risk: null,
-  _mrc: null,
+// Migrated onto RecordDetail when the AI System screen arrived: the fetch/render/
+// close sequence below was the third copy of it, and the copies had drifted -- this
+// one hid the list view by adding a `hidden` class that no stylesheet rule matches,
+// so the register stayed on screen underneath every open ML Application. That is
+// fixed by using the shared sequence rather than by patching this file.
+const MLAppDetail = RecordDetail.attach({
   _reqIndex: null,
-
-  collSpec(key) { return this._specs.collections.find((c) => c.key === key); },
-
-  async show(id) {
-    this._specs = MLApps._specs || await MLApps.specs();
-    const [record, audit, risk, mrc] = await Promise.all([
-      App.get("/api/ml-applications/" + encodeURIComponent(id)),
-      App.get("/api/audit"),
-      App.get("/api/ml-applications/" + encodeURIComponent(id) + "/risk-rating"),
-      App.get("/api/ml-applications/" + encodeURIComponent(id) + "/mrc"),
-    ]);
-    this._record = record;
-    this._mrc = mrc;
-    this._audit = audit.filter((e) => e.aggregate_id === id);
-    this._risk = risk;
-    this._tab = "overview";
-    document.getElementById("mlapp-listview").classList.add("hidden");
-    this._render();
-  },
-
-  close() {
-    document.getElementById("mlapp-detail").innerHTML = "";
-    document.getElementById("mlapp-listview").classList.remove("hidden");
-    MLApps.loadList();
-  },
-
-  async refresh() { await this.show(this._record.ml_application_id); },
-
-  _render() {
-    const d = this._record.data || {};
-    document.getElementById("mlapp-detail").innerHTML =
-      '<div class="card">' + this._header(d) + this._tabbar(d) +
-      '<div id="mla-content" style="margin-top:var(--space-7)"></div></div>';
-    document.getElementById("mla-close").onclick = () => this.close();
-    // _render, not _renderContent: the tab bar carries the active marker, so drawing
-    // only the body leaves the underline on whichever tab was open before.
-    document.querySelectorAll("[data-mlatab]").forEach((b) => {
-      b.onclick = () => { this._tab = b.getAttribute("data-mlatab"); this._render(); };
-    });
-    this._renderContent();
-  },
 
   _header(d) {
     return '<div class="row" style="align-items:center">' +
@@ -81,7 +39,7 @@ const MLAppDetail = {
       ragBadge(d.rag_rating, d.division) + " " +
       (this._record.retired ? '<span class="pill">retired</span>'
         : optionLabel(MLApps.fieldSpec("lifecycle_stage"), d.lifecycle_stage)) + "</span>" +
-      '<span style="flex:1"></span><button class="btn small ghost" id="mla-close">Close</button>' +
+      '<span style="flex:1"></span><button class="btn small ghost" id="mla-content-close">Close</button>' +
       "</div>";
   },
 
@@ -143,10 +101,6 @@ const MLAppDetail = {
   _RIGHT: ["rag_rating", "owner", "model_owner_role", "lifecycle_stage", "review_status"],
 
 
-  _editLink(key) {
-    return this._record.retired
-      ? "" : '<span class="edit-btn" data-edit="' + key + '">edit</span>';
-  },
 
   _row(key) {
     const d = this._record.data || {};
@@ -204,48 +158,12 @@ const MLAppDetail = {
       '<div class="grid2"><div><div class="section-header">ML Application Details</div>' +
       rows(this._LEFT) + "</div>" +
       '<div><div class="section-header">Governance</div>' +
-      this._mrcRow() + rows(this._RIGHT) + this._mrcStatusRow(d) +
+      this.mrcRow("ML Application") + rows(this._RIGHT) + this.mrcStatusRow() +
       this._row("next_review_date") + "</div></div>" +
       DetailShell.retiredFlag(this._record.retired);
   },
 
-  // The committee responsible for this ML Application, derived from its Division and
-  // Line of Business exactly as a model's is. Flags red when none covers it: a record
-  // no committee sees is invisible to the governance meant to hold it.
-  _mrcRow() {
-    const m = this._mrc || {};
-    if (m.mrc) {
-      const c = m.mrc;
-      return '<div class="inforow"><div class="k">MRC</div><div class="v">' +
-        esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
-        '<span class="muted" style="font-size:var(--size-xs)">' + esc(m.level || "") +
-        "-level</span></div></div>";
-    }
-    const d = this._record.data || {};
-    const org = [d.division, d.line_of_business].filter(Boolean).join(" / ") ||
-      "no division / line of business set";
-    return '<div class="inforow"><div class="k">MRC</div>' +
-      '<div class="v" style="color:var(--red)">&#9888; No committee covers this ML ' +
-      "Application (" + esc(org) + "). Set one up under Admin &rarr; MRC.</div></div>";
-  },
 
-  // The committee's latest word on this record. Empty until phase 4 puts an ML
-  // Application on the sign-off route; the row exists now so the Overview reads the
-  // same as a model's rather than gaining a section later.
-  _mrcStatusRow(d) {
-    const hist = d.signoff_history || [];
-    const latest = hist.length ? hist[hist.length - 1] : null;
-    let value = '<span class="muted">Not yet before a committee</span>';
-    if (latest) {
-      const outcome = latest.outcome || "Approved";
-      const colour = outcome === "Rejected" ? "var(--red)" : Theme.value("green");
-      value = '<span style="color:' + colour + ';font-weight:600">' + esc(outcome) +
-        "</span> at " + '<span class="code">' + esc(latest.meeting_id) + "</span>" +
-        (latest.date ? " (" + esc(latest.date) + ")" : "");
-    }
-    return '<div class="inforow"><div class="k">MRC status</div><div class="v">' +
-      value + "</div></div>";
-  },
 
   // --- Training -------------------------------------------------------------
   // The most recent train, in the six sections the schema declares, in the order a
@@ -631,19 +549,6 @@ const MLAppDetail = {
     };
   },
 
-  // The risk assessment, through the same shared table the model and product screens
-  // use: one row per dimension, named and banded as the division's ratified policy
-  // says, with the rationale beside each.
-  _riskTable(d) {
-    const rag = (this._risk.heatmap || {}).rag;
-    return riskAssessmentTable({
-      data: d,
-      division: d.division,
-      spec: (key) => MLApps.fieldSpec(key),
-      editLink: (key) => this._editLink(key),
-      ratingBadge: rag ? ragBadge(rag, d.division) : "",
-    });
-  },
 
   _renderContent() {
     const d = this._record.data || {};
@@ -665,7 +570,7 @@ const MLAppDetail = {
         "place the ML Application on the heatmap below, which becomes its rating once the " +
         "MRC signs it off.</p>" +
         policyNotice(d.division) +
-        this._riskTable(d) +
+        this.riskTable() +
         DetailTabs.risk(this._risk, false, d.division);  // events are product-only
       this._bindEdits();
       return;
@@ -755,28 +660,34 @@ const MLAppDetail = {
         ml_review_questions: (d.ml_review_questions || [])
           .filter((q) => this._questionInUse(q)),
       });
+      // {collections: [...]}, not a bare array — see RecordDetail.renderCollection.
+      // Rendered into its own box with a row class, so it cannot use that helper.
       document.getElementById("mla-questions").innerHTML = Collections.render(
-        scoped, [this.collSpec("ml_review_questions")], this._record.retired, false, true,
+        scoped, {collections: [this.collSpec("ml_review_questions")]},
+        this._record.retired, false, true,
         (item) => (this._questionMandatory(item) ? "mandatory" : ""));
       this._bindCollections(["ml_review_questions"]);
       return;
     }
     // Everything else is an ordinary spec-driven collection.
-    const key = this._tab;
-    box.innerHTML = Collections.render(d, [this.collSpec(key)], this._record.retired,
-                                       false, this._tab === "review");
-    this._bindCollections([key]);
+    this.renderCollection(this._tab, {autosave: this._tab === "review"});
   },
 
-  _bindCollections(keys) {
-    const base = "/api/ml-applications/" + encodeURIComponent(this._record.ml_application_id);
-    Collections.bind(base, keys.map((k) => this.collSpec(k)), this._record.retired,
-                     () => this.refresh(), this._record.data);
-  },
+  _bindCollections(keys) { this.bindCollections(keys); },
 
   _retire() {
     App.amend("Retire ML Application " + this._record.ml_application_id + ".", "POST",
       "/api/ml-applications/" + encodeURIComponent(this._record.ml_application_id) + "/retire",
       {}, () => this.refresh());
   },
-};
+}, {
+  api: "/api/ml-applications",
+  idKey: "ml_application_id",
+  listEl: "mlapp-listview",
+  detailEl: "mlapp-detail",
+  contentEl: "mla-content",
+  tabAttr: "data-mlatab",
+  specs: () => MLApps._specs || MLApps.specs(),
+  fieldSpec: (key) => MLApps.fieldSpec(key),
+  onClose: () => MLApps.loadList(),
+});
