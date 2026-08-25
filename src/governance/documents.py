@@ -100,6 +100,13 @@ def ml_application_scope(ml_application_id: str) -> str:
     return f"ml_application/{ml_application_id}"
 
 
+def ai_system_scope(ai_system_id: str) -> str:
+    """Where an AI System's uploaded files live under the upload directory — named
+    beside ``model_scope`` so the API and anything generating a pack agree about
+    which directory the record's files are in."""
+    return f"ai_system/{ai_system_id}"
+
+
 def _fold(aggregate_type: str, aggregate_id: str, config) -> tuple[list, int]:
     state: dict = {}
     version = 0

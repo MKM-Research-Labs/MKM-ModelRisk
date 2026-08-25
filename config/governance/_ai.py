@@ -1,0 +1,146 @@
+# Copyright (c) 2022-2026 MKM Research Labs.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+"""AI System vocabulary: foundation models and the AI questionnaire (rule R1).
+
+The admin-managed lists an AI System picks from, kept apart from the record's own
+field specs for the same reason ``_ml.py`` is kept apart from ``_ml_application.py``:
+an institution curates these, and the record's shape is not theirs to change.
+
+**Why this exists at all.** ``_ml.py`` says in its own words that LLMs and agentic
+AI are out of scope and are not to be added to the estimator list. That still
+holds -- an estimator is a fitted algorithm and a foundation model is not one, and
+folding them into one list would leave "which version of GradientBoostingRegressor"
+and "which snapshot of a vendor's frontier model" answering the same question. They
+are different questions, so they are different lists and different records.
+
+The FINOS AI Governance Framework is what changed. Its risk catalogue is entirely
+about generative and agentic systems, and 19 of its 23 risk rows read Not evidenced
+for one reason: no such system can be registered. See docs/design/finos-coverage.md
+section 6.1.
+
+``FOUNDATION_MODEL_LIST`` seeds EMPTY, like the estimator list's versions do. Which
+models an institution has approved is a fact about their procurement and their legal
+review, and seeding our guesses would put models in their register that nobody has
+cleared -- on a record type whose whole point is knowing what is actually running.
+"""
+from __future__ import annotations
+
+FOUNDATION_MODEL_LIST = "foundation_model"
+AI_SYSTEM_QUESTION_LIST = "ai_system_questions"
+
+# How the system is reached, which is the fact RC-001 turns on: what leaves the firm.
+HOSTING_MODES = ("Third-party hosted API", "Private cloud deployment",
+                 "On-premise", "Embedded in a vendor product")
+
+# What the system is, architecturally. AIR-OP-014, AIR-OP-028 and the whole agentic
+# half of the Security catalogue only bite on particular values here, which is why it
+# is a field and not prose: "is anything in the estate agentic" has to be a query.
+DEPLOYMENT_PATTERNS = ("Direct prompting", "Retrieval-augmented (RAG)",
+                       "Fine-tuned", "Agentic (tool-using)", "Multi-agent")
+
+# What the firm sends for inference. Ordered by how much it would matter if it
+# leaked, so a reader can see at a glance which end of the list a record sits at.
+DATA_EGRESS_CLASSES = ("No data leaves the firm", "Internal non-sensitive",
+                       "Confidential business data", "Personal data (PII)",
+                       "Regulated client data")
+
+# Where the human is. AIR-OP-018 (overreach) and AIR-RC-022 (oversight) both turn on
+# this, and it is the single most useful thing to know about an AI system in a bank.
+HUMAN_OVERSIGHT_MODES = ("Human makes the decision", "Human reviews before action",
+                         "Human reviews after the fact", "Human on request only",
+                         "Fully autonomous")
+
+# Whether the underlying model can change under the firm's feet (AIR-OP-005).
+VERSION_POLICIES = ("Pinned to a named version", "Pinned, reviewed on a cycle",
+                    "Tracks the provider's latest")
+
+# EU AI Act Annex III risk classes. FINOS cites the Regulation directly (Articles 12,
+# 26 and 72) and a deployer has to know which class it is in before it can know which
+# obligations apply. "Not assessed" is the honest default and is not a class -- it is
+# the absence of the assessment, which is itself the finding.
+EU_AI_ACT_CLASSES = ("Not assessed", "Minimal risk", "Limited risk",
+                     "High risk (Annex III)", "Prohibited")
+
+# The questionnaire seeded on a fresh install, and the reason this record type earns
+# its own rather than borrowing the ML set: not one of the ten ML questions is
+# answerable about a foundation model nobody in the firm trained. These are written
+# against the FINOS risk catalogue, so that answering them is what moves those rows.
+AI_SYSTEM_QUESTIONS = (
+    {"short_label": "Use Case",
+     "question": "What decision or task does this system support, and what is it "
+                 "explicitly not to be used for?"},
+    {"short_label": "Model Provenance",
+     "question": "Which foundation model and version is in use, who provides it, and "
+                 "what happens when they change or retire it?"},
+    {"short_label": "Data Egress",
+     "question": "What data is sent for inference, does it leave the firm, and what "
+                 "in the contract governs its retention and reuse?"},
+    {"short_label": "Grounding and Accuracy",
+     "question": "How is the output grounded, how has its accuracy been measured, and "
+                 "against what reference answers?"},
+    {"short_label": "Hallucination Exposure",
+     "question": "What is the consequence of a confident but wrong answer reaching its "
+                 "consumer, and what stops it?"},
+    {"short_label": "Determinism",
+     "question": "Can the same input produce different output, and does anything "
+                 "downstream depend on it not doing so?"},
+    {"short_label": "Prompt and Input Integrity",
+     "question": "Could untrusted content reach the model as instructions, and what "
+                 "filtering stands between the two?"},
+    {"short_label": "Agency and Authority",
+     "question": "What can this system do without a human, which tools or APIs can it "
+                 "call, and what is the worst it could do if manipulated?"},
+    {"short_label": "Bias and Fairness",
+     "question": "Who could be disadvantaged by its output, and how would you know?"},
+    {"short_label": "Explainability",
+     "question": "Can a particular output be explained to the person affected by it, "
+                 "and to a regulator?"},
+    {"short_label": "Human Oversight",
+     "question": "Who reviews what it produces, on what basis, and would they catch it "
+                 "being wrong?"},
+    {"short_label": "Regulatory Classification",
+     "question": "Under the EU AI Act and any other applicable regime, what class does "
+                 "this system fall into, and who decided that?"},
+)
+
+AI_REFERENCE_SPECS = {
+    # Shaped like the Estimator list next door: one row per model a firm has approved,
+    # carrying the versions it runs. NOT one row per version -- the same cartesian
+    # product argument that keeps the estimator list readable.
+    FOUNDATION_MODEL_LIST: {"label": "Foundation model", "id_prefix": "FM",
+                            "display": "value", "fields": [
+        {"key": "value", "label": "Foundation model", "type": "text", "required": True},
+        {"key": "provider", "label": "Provider", "type": "text", "reference": "vendor"},
+        {"key": "versions", "label": "Approved versions (comma-separated)", "type": "text"},
+        {"key": "notes", "label": "Notes", "type": "textarea"},
+    ]},
+    AI_SYSTEM_QUESTION_LIST: {"label": "AI System questions", "id_prefix": "AIQ",
+                              "display": "short_label", "fields": [
+        {"key": "short_label", "label": "Topic", "type": "text", "required": True},
+        {"key": "question", "label": "Question", "type": "textarea", "required": True},
+    ]},
+}
+
+AI_REFERENCE_LISTS = (FOUNDATION_MODEL_LIST, AI_SYSTEM_QUESTION_LIST)
+
+__all__ = ["FOUNDATION_MODEL_LIST", "AI_SYSTEM_QUESTION_LIST", "AI_SYSTEM_QUESTIONS",
+           "AI_REFERENCE_SPECS", "AI_REFERENCE_LISTS", "HOSTING_MODES",
+           "DEPLOYMENT_PATTERNS", "DATA_EGRESS_CLASSES", "HUMAN_OVERSIGHT_MODES",
+           "VERSION_POLICIES", "EU_AI_ACT_CLASSES"]

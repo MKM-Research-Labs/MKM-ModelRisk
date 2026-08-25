@@ -174,13 +174,13 @@ MRC_COLLECTION_SPECS = {
         # not the ``kind`` field above, which marks a standing-template role.
         # Approving a "rag" item snaps the subject's rag_rating to proposed_rag;
         # a "retire" hibernates it; a "reactivate" brings it back. Set by the
-        # request routing, not by hand.
-        {"key": "subject_model_id", "label": "Subject model",
-         "type": "text", "reference": "model_inventory", "hidden": True},
+        # request routing, not by hand. One subject field per register below.
+        {"key": "subject_model_id", "label": "Subject model", "type": "text",
+         "reference": "model_inventory", "hidden": True},
         {"key": "subject_product_id", "label": "Subject product", "type": "text", "hidden": True},
-        # A sign-off item names its subject: a handoff ("from~to"), or the ML Application whose rating is proposed. Set by the routing.
         {"key": "subject_handoff_id", "label": "Subject handoff", "type": "text", "hidden": True},
         {"key": "subject_ml_application_id", "label": "Subject ML Application", "type": "text", "hidden": True},
+        {"key": "subject_ai_system_id", "label": "Subject AI System", "type": "text", "hidden": True},
         # An "event review" agenda item links to a product's operational-failure
         # event (the event's item id, with subject_product_id naming the product).
         {"key": "subject_event_id", "label": "Subject event", "type": "text", "hidden": True},

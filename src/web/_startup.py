@@ -68,6 +68,7 @@ _REBUILDERS: tuple[tuple[str, str, str], ...] = (
     ("field_lineage", "src.governance.field_lineage.projection", "rebuild_field_lineage_view"),
     ("clients", "src.governance.client.projection", "rebuild_client_view"),
     ("receipts", "src.ingest.receipt.projection", "rebuild_receipts_view"),
+    ("ai_systems", "src.governance.ai_system.projection", "rebuild_ai_system_view"),
 )
 
 

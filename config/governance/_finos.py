@@ -69,27 +69,30 @@ EVIDENCE_PROBE = "finos_evidence"
 # so nothing in the counting has to know which framework a row came from.
 FINOS_RISK_CATALOGUE = (
     # --- Operational ---
-    ("AIR-OP-004", "Hallucination and Inaccurate Outputs", "absent",
-     "No evaluation record exists. A test flag says testing happened; what it "
-     "found, against which reference answers, is not captured anywhere."),
-    ("AIR-OP-005", "Foundation Model Versioning", "absent",
-     "Version fields are free text. Nothing records a pinned foundation-model "
-     "version, the provider's change notification, or a deprecation date."),
-    ("AIR-OP-006", "Non-Deterministic Behaviour", "absent",
-     "The register assumes a deterministic artefact throughout. A seed is recorded "
-     "for training; nothing describes decoding at inference."),
-    ("AIR-OP-007", "Availability of Foundational Model", "absent",
-     "No availability, service-level or provider-concentration record."),
-    ("AIR-OP-014", "Inadequate System Alignment", "absent",
-     "Alignment is a property of a generative system against its business purpose, "
-     "and no such system can be registered."),
-    ("AIR-OP-016", "Bias and Discrimination", "absent",
-     "No protected attributes, no subgroup performance, no fair-lending "
-     "attestation -- for the machine-learning estate either, not only for AI."),
-    ("AIR-OP-017", "Lack of Explainability", "partial",
-     "The ML questionnaire asks whether an individual prediction can be explained "
-     "to someone affected by it, and the answer is recorded and challenged. The "
-     "technique used, and any explanation of a particular decision, are not."),
+    ("AIR-OP-004", "Hallucination and Inaccurate Outputs", "ai_grounding",
+     "How the output is grounded, and the human who would catch it being wrong. "
+     "Neither closes this alone. What is still not held is an evaluation record: "
+     "a test flag says testing happened, not what it found."),
+    ("AIR-OP-005", "Foundation Model Versioning", "ai_versioning",
+     "The version pinned and the policy that keeps it pinned. Both, because a "
+     "pinned version with no policy behind it is an accident rather than a "
+     "control. The provider's own change notification is still not tracked."),
+    ("AIR-OP-006", "Non-Deterministic Behaviour", "ai_determinism",
+     "Output variability described, and what controls it."),
+    ("AIR-OP-007", "Availability of Foundational Model", "ai_provider",
+     "Provider and hosting recorded, so the dependency is at least visible and "
+     "concentration across the estate is a query. Service levels and failover "
+     "arrangements are not held."),
+    ("AIR-OP-014", "Inadequate System Alignment", "ai_alignment",
+     "The use case the system is meant to serve, bounded by the filtering that "
+     "keeps it there."),
+    ("AIR-OP-016", "Bias and Discrimination", "ai_fairness",
+     "A recorded fairness and bias assessment. Counted over AI Systems only: the "
+     "model and ML estate still carries no protected attributes and no subgroup "
+     "performance, which is a gap this row does not report."),
+    ("AIR-OP-017", "Lack of Explainability", "ai_explainability",
+     "The explainability approach recorded against the system. An explanation of "
+     "one particular output remains a runtime artefact the platform does not hold."),
     ("AIR-OP-018", "Model Overreach / Expanded Use", "identification",
      "Assumptions, limitations and weaknesses recorded -- where the bound on a "
      "record's use is written down and can be challenged."),
@@ -100,8 +103,10 @@ FINOS_RISK_CATALOGUE = (
     ("AIR-OP-020", "Reputational Risk", "absent",
      "The three risk dimensions are structural. None of them is conduct or "
      "customer-facing exposure, so nothing carries this."),
-    ("AIR-OP-028", "Multi-Agent Trust Boundary Violations", "absent",
-     "No agent, and so no boundary between two of them, can be registered."),
+    ("AIR-OP-028", "Multi-Agent Trust Boundary Violations", "ai_multi_agent",
+     "Counted over multi-agent systems only -- a single agent has no boundary to "
+     "violate, and scoring one against this would manufacture a gap nobody can "
+     "close. Their tools are enumerated and their filtering described."),
     # --- Security. Nine of nine, and all for one reason. ---
     ("AIR-SEC-002", "Information Leaked to Vector Store", "absent",
      "No embedding store, cache or prompt log is a governed record."),
@@ -111,12 +116,16 @@ FINOS_RISK_CATALOGUE = (
     ("AIR-SEC-009", "Data Poisoning", "absent",
      "Training data is recorded per train for the ML estate, but nothing records "
      "its integrity controls or a third-party feed's trust basis."),
-    ("AIR-SEC-010", "Prompt Injection", "absent",
-     "No prompt is a governed artefact."),
-    ("AIR-SEC-024", "Agent Action Authorization Bypass", "absent",
-     "An agent's permitted actions are not recorded, so exceeding them cannot be."),
-    ("AIR-SEC-025", "Tool Chain Manipulation and Injection", "absent",
-     "The tools a system may call are not recorded."),
+    ("AIR-SEC-010", "Prompt Injection", "ai_guardrails",
+     "The filtering standing between untrusted input and the model. The prompt "
+     "itself is still not a governed artefact."),
+    ("AIR-SEC-024", "Agent Action Authorization Bypass", "ai_agency",
+     "Counted over agentic systems only. Each tool enumerated with what it may do "
+     "and whether a human must approve, against a recorded oversight mode."),
+    ("AIR-SEC-025", "Tool Chain Manipulation and Injection", "ai_agency",
+     "Counted over agentic systems only. The tool list is what makes this "
+     "answerable; validation of a call in flight is a runtime control, evidenced "
+     "on the mitigation side."),
     ("AIR-SEC-026", "MCP Server Supply Chain Compromise", "absent",
      "External capability providers are not registered as dependencies."),
     ("AIR-SEC-027", "Agent State Persistence Poisoning", "absent",
@@ -124,13 +133,16 @@ FINOS_RISK_CATALOGUE = (
     ("AIR-SEC-029", "Agent-Mediated Credential Discovery and Harvesting", "absent",
      "No agent credential boundary is recorded."),
     # --- Regulatory and Compliance ---
-    ("AIR-RC-001", "Information Leaked To Hosted Model", "absent",
-     "A data source is Internal or External and nothing else. No sensitivity "
-     "classification, no egress flag, no residency, so what leaves the firm for "
-     "inference cannot be stated."),
+    ("AIR-RC-001", "Information Leaked To Hosted Model", "ai_egress",
+     "What is sent for inference, and the contractual basis for it leaving. "
+     "Residency is not held."),
     ("AIR-RC-022", "Regulatory Compliance and Oversight", "committee",
      "Committee sign-off recorded against the record, on the same route, with the "
-     "same attributed append-only trail every other record takes."),
+     "same attributed append-only trail every other record takes. An AI System also "
+     "carries its own EU AI Act classification and the basis for it; that is scored "
+     "as a field by the completeness audit rather than given a row here, because "
+     "FINOS has no such reference and inventing one would be a citation an assessor "
+     "cannot check."),
     ("AIR-RC-023", "Intellectual Property (IP) and Copyright", "absent",
      "No licensing, training-provenance or output-ownership record."),
 )

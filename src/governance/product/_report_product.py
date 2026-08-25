@@ -33,13 +33,15 @@ from typing import Any
 
 from config.files import HIDDEN_DOC_EXTENSIONS
 from src.governance.risk_policy.naming import field_label
-from config.governance import (COMPONENT_KIND_ML, PRODUCT_COLLECTION_SPECS,
+from config.governance import (COMPONENT_KIND_AI, COMPONENT_KIND_ML,
+                               PRODUCT_COLLECTION_SPECS,
                                PRODUCT_COMPONENTS, component_kind,
                                PRODUCT_FIELD_SPECS)
 from src.files import extension
 from src.governance import report_blocks as rb
 from src.governance.latex import _esc, _para_table, _section, _wrappable
 from src.governance.report_blocks import NOT_RECORDED, items
+from src.governance.ai_system import get_ai_system
 from src.governance.ml_application import get_ml_application
 from src.governance.model_inventory import get_model
 
@@ -90,6 +92,21 @@ def _groups() -> dict[str, list[str]]:
 def _field_group(data: dict, title: str, keys: list[str], extra: list) -> str:
     return rb.field_group(data, title, keys, extra, field_specs=PRODUCT_FIELD_SPECS)
 
+# Which register each component kind resolves against, and what to say when the id is
+# not on it. A table rather than a chain of ifs: this branched twice for two kinds and
+# a third arrived, so the next one is a row here instead of another else.
+#
+# ``None`` is the fallback, and it means Model on purpose -- every component recorded
+# before kinds existed carries no kind, and the log is append-only.
+_RESOLVERS = {
+    COMPONENT_KIND_ML: (lambda cid, config: get_ml_application(cid),
+                        "(not on the ML Application register)"),
+    COMPONENT_KIND_AI: (lambda cid, config: get_ai_system(cid),
+                        "(not on the AI System register)"),
+    None: (lambda cid, config: get_model(cid, config=config), "(not in the inventory)"),
+}
+
+
 def _component_models(data: dict, config) -> str:
     """The models this product binds, each resolved to its inventory name so the
     document names what the product is built from — the same models the product
@@ -102,17 +119,12 @@ def _component_models(data: dict, config) -> str:
     for comp in components:
         kind = component_kind(comp)
         component_id = str(comp.get("model_id") or "")
-        # An ML Application resolves against its own register. Looking it up in the
-        # inventory would report a bound component as "not in the inventory" -- a
-        # missing model, which is a finding, rather than a component of another kind.
-        if kind == COMPONENT_KIND_ML:
-            record = get_ml_application(component_id) if component_id else None
-            name = (record.get("data") or {}).get("name") or "" if record else ""
-            missing = "(not on the ML Application register)"
-        else:
-            record = get_model(component_id, config=config) if component_id else None
-            name = (record.get("data") or {}).get("name") or "" if record else ""
-            missing = "(not in the inventory)"
+        # Each kind resolves against its OWN register. Looking a component up in the
+        # wrong one reports a bound component as missing, which reads as a finding
+        # rather than as a component of another kind.
+        lookup, missing = _RESOLVERS.get(kind, _RESOLVERS[None])
+        record = lookup(component_id, config) if component_id else None
+        name = (record.get("data") or {}).get("name") or "" if record else ""
         if record is not None:
             cell = f"{component_id} --- {name}" if name else component_id
         elif component_id:

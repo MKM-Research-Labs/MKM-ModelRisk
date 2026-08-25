@@ -42,16 +42,20 @@ PRODUCT_BINDINGS = ("calculating_agent",)
 # structured credit, not an error.
 PRODUCT_COMPONENTS = "components"
 
-# What a component IS. A Product is built from models and from ML Applications, and
-# the two resolve against different registers -- so the row says which, rather than
-# leaving every consumer to guess from whether an id happens to resolve.
+# What a component IS. A Product is built from models, from ML Applications and from
+# AI Systems, and the three resolve against different registers -- so the row says
+# which, rather than leaving every consumer to guess from whether an id happens to
+# resolve. This is the reason the kind was made explicit rather than inferred: a third
+# register was always going to arrive, and inference would have started guessing wrong
+# the day it did.
 #
 # Absent means Model. Every component recorded before ML Applications existed carries
 # no kind, and the log is append-only, so the default has to be the old meaning or
 # each of those rows would change meaning retrospectively.
 COMPONENT_KIND_MODEL = "Model"
 COMPONENT_KIND_ML = "ML Application"
-VALID_COMPONENT_KINDS = (COMPONENT_KIND_MODEL, COMPONENT_KIND_ML)
+COMPONENT_KIND_AI = "AI System"
+VALID_COMPONENT_KINDS = (COMPONENT_KIND_MODEL, COMPONENT_KIND_ML, COMPONENT_KIND_AI)
 
 
 def component_kind(item: dict) -> str:
