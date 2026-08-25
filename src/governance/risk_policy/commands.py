@@ -26,15 +26,15 @@ affect any model's rating.
 """
 from __future__ import annotations
 
+from dataclasses import replace
+
 from config.governance import AUDIT_POLICY_DEFAULTS
 from src.database import Event, append_event
 from src.governance.errors import DomainError
 from src.governance.risk_policy._store import (
     AGGREGATE_TYPE,
-    EVENT_POLICY_APPROVED,
     EVENT_POLICY_DOCUMENT,
-    EVENT_POLICY_PROPOSED,
-    EVENT_POLICY_REJECTED,
+    POLICY,
     load,
 )
 
@@ -129,47 +129,33 @@ def _validate_policy(policy) -> None:
                                   f"unknown risk rating '{rating}'")
 
 
+# The lifecycle is ``ratified_policy``; what belongs to a RISK policy is the
+# validation above, which is why propose passes it in rather than the shared code
+# knowing anything about bands, ratings or heatmap cells.
+_POLICY = replace(POLICY, validate=_validate_policy)
+
+
 def propose_policy(*, division: str, policy: dict, actor: str,
                    reason: str | None = None, config=None) -> Event:
     """Submit a division's draft risk policy for MRC sign-off. Validated now so a broken
     policy never reaches the committee; it stays a draft until approved."""
-    if not str(division).strip():
-        raise DomainError("a risk policy must belong to a division")
-    _validate_policy(policy)
-    state = load(division, config)
-    return append_event(
-        aggregate_type=AGGREGATE_TYPE, aggregate_id=division,
-        event_type=EVENT_POLICY_PROPOSED, payload={"policy": policy},
-        actor=actor, reason=reason, expected_version=state["version"], config=config,
-    )
+    return _POLICY.propose(division=division, policy=policy, actor=actor,
+                           reason=reason, config=config)
 
 
 def approve_policy(*, division: str, actor: str, meeting_id: str | None = None,
                    reason: str | None = None, config=None) -> Event:
     """Ratify the division's pending draft — its MRC has signed it off, so it becomes the
     live policy. Records the meeting it was approved at for the audit trail."""
-    state = load(division, config)
-    if state["draft"] is None:
-        raise DomainError(f"{division} has no proposed risk policy awaiting sign-off")
-    payload = {"policy": state["draft"], "meeting_id": meeting_id}
-    return append_event(
-        aggregate_type=AGGREGATE_TYPE, aggregate_id=division,
-        event_type=EVENT_POLICY_APPROVED, payload=payload,
-        actor=actor, reason=reason, expected_version=state["version"], config=config,
-    )
+    return _POLICY.approve(division=division, actor=actor, meeting_id=meeting_id,
+                           reason=reason, config=config)
 
 
 def reject_policy(*, division: str, actor: str, meeting_id: str | None = None,
                   reason: str | None = None, config=None) -> Event:
     """Decline/withdraw the division's pending draft. The live policy is unchanged."""
-    state = load(division, config)
-    if state["draft"] is None:
-        raise DomainError(f"{division} has no proposed risk policy to reject")
-    return append_event(
-        aggregate_type=AGGREGATE_TYPE, aggregate_id=division,
-        event_type=EVENT_POLICY_REJECTED, payload={"meeting_id": meeting_id},
-        actor=actor, reason=reason, expected_version=state["version"], config=config,
-    )
+    return _POLICY.reject(division=division, actor=actor, meeting_id=meeting_id,
+                          reason=reason, config=config)
 
 
 def set_policy_document(*, division: str, filename: str, original_name: str,

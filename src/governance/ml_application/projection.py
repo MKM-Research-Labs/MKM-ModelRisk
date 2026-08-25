@@ -25,6 +25,7 @@ from typing import Any
 from src.database import read_all, read_view, replace_view
 from config.governance import TRAINING_RUNS_COLLECTION
 from src.governance.ml_application._state import apply, initial_state
+from src.governance.ml_application._state import record_data
 from src.governance.ml_application.training import completeness
 from src.governance.ml_application.commands import AGGREGATE_TYPE
 
@@ -33,9 +34,7 @@ _COLUMNS = ("ml_application_id", "data", "retired", "version")
 
 
 def _document(state) -> dict[str, Any]:
-    data = dict(state.fields)
-    for collection, items in state.collections.items():
-        data[collection] = list(items)
+    data = record_data(state)
     # Derived, like a Product's identifier: computed here so the tab counter, the
     # state on the page and anything that audits the estate all read one figure
     # rather than three that can disagree. The most recent train is the one in

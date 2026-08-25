@@ -58,6 +58,10 @@ const Reference = {
     // the same reasoning as the status vocabularies below: shown together rather
     // than as eleven tabs nobody would find.
     ["ml_training", "ML Training"],
+    // What a division's ML review actually asks for. Beside the two lists it governs
+    // -- the questions and the training vocabularies -- because it is the tab that
+    // decides how much of them anybody is shown.
+    ["ml_review_policy", "ML Review Policy"],
     ["standing_agenda", "Agenda"],
     // Every status vocabulary on one tab: shown-as is the institution's to change,
     // stored-as is what the records already hold and never moves.
@@ -122,6 +126,12 @@ const Reference = {
     // The risk policy is per-division structured config, not a flat reference list.
     if (this._tab === "risk") {
       await RiskEditor.render(container);
+      return;
+    }
+    // Likewise the ML review policy: per-division, MRC-ratified, and about the other
+    // lists rather than being one.
+    if (this._tab === "ml_review_policy") {
+      await MlReviewPolicyEditor.render(container);
       return;
     }
     // Misc is the singleton settings that are wording, not lists.

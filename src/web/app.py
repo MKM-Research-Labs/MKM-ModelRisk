@@ -52,6 +52,7 @@ from src.web import api_product_documents  # noqa: F401 — attaches endpoints t
 from src.web.api_ingest import ingest_bp
 from src.web.api_reference import reference_bp
 from src.web.api_theme import theme_bp
+from src.web.api_ml_review_policy import ml_review_policy_bp
 from src.web.api_risk_policy import risk_policy_bp
 from src.web.api_vendor_documents import vendor_documents_bp
 from src.web.views import views_bp
@@ -103,6 +104,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(mrc_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(reference_bp)
+    app.register_blueprint(ml_review_policy_bp)
     app.register_blueprint(risk_policy_bp)
     app.register_blueprint(documents_bp)
     app.register_blueprint(artefacts_bp)

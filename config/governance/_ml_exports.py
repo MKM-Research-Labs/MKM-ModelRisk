@@ -41,6 +41,22 @@ from config.governance._ml_application import (  # noqa: F401
     ML_APPLICATION_REGISTER_FIELDS,
     ML_REVIEW_QUESTIONS_COLLECTION,
 )
+from config.governance._ml_review_policy import (  # noqa: F401
+    DEFAULT_ITEM_POLICY,
+    ML_REVIEW_ITEM_SOURCES,
+    ML_REVIEW_POLICY_AGGREGATE,
+    ML_REVIEW_POLICY_NOUN,
+    QUESTION_GROUP_KEY,
+    QUESTION_GROUP_LABEL,
+    QUESTION_ITEM_SOURCE,
+    TRAINING_ITEM_SOURCE,
+    default_review_policy,
+    item_group_labels,
+    policy_item_id,
+    resolve_item,
+    split_item_id,
+    training_policy_items,
+)
 from config.governance._ml_training import (  # noqa: F401
     ML_TRAINING_COLLECTION_SPEC,
     TRAINING_FIELD_SPECS,
@@ -56,4 +72,9 @@ __all__ = [
     "ML_APPLICATION_ID_PREFIX", "ML_APPLICATION_REGISTER_FIELDS",
     "ML_REVIEW_QUESTIONS_COLLECTION", "ML_TRAINING_COLLECTION_SPEC",
     "TRAINING_FIELD_SPECS", "TRAINING_RUNS_COLLECTION", "TRAINING_SECTIONS",
+    "DEFAULT_ITEM_POLICY", "ML_REVIEW_ITEM_SOURCES", "ML_REVIEW_POLICY_AGGREGATE",
+    "ML_REVIEW_POLICY_NOUN", "QUESTION_GROUP_KEY", "QUESTION_GROUP_LABEL",
+    "QUESTION_ITEM_SOURCE", "TRAINING_ITEM_SOURCE", "default_review_policy",
+    "item_group_labels", "policy_item_id", "resolve_item", "split_item_id",
+    "training_policy_items",
 ]

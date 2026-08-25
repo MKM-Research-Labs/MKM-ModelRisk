@@ -21,32 +21,42 @@
 
 Each division defines its own risk vocabulary (Moody's Ratings need not see risk the
 way Moody's Analytics does), and a change only goes live once that division's MRC has
-signed it off. So a division's stream is a lifecycle:
+signed it off.
 
-    RiskPolicyProposed   → a draft submitted for sign-off (carries the full policy)
-    RiskPolicyApproved   → the division's MRC ratified it; it becomes the LIVE policy
-    RiskPolicyRejected   → the draft is withdrawn/declined; the live policy is unchanged
+The lifecycle itself -- Proposed → Approved / Rejected, and the fold that turns a
+stream into ``{live, draft, state, ...}`` -- lives in ``ratified_policy``, shared with
+the ML review policy. What is here is what makes a RISK policy specific: its default,
+and the validation in ``commands``.
 
-``get_risk_policy(division)`` returns the LIVE policy a division's models actually use —
+``get_risk_policy(division)`` returns the LIVE policy a division's models actually use --
 the most recently approved one, or the firm-wide seed ``default_policy()`` for a division
 that has never ratified its own. The pending draft (if any) is read separately by the
 admin editor; it does not drive ratings until approved.
 """
 from __future__ import annotations
 
-from src.database import read_stream
+from src.governance.ratified_policy import (STATE_APPROVED, STATE_DRAFT, STATE_SEED,
+                                            RatifiedPolicy, recorded_date)
 from src.governance.risk_policy._defaults import default_policy
 
 AGGREGATE_TYPE = "RiskPolicy"
-EVENT_POLICY_PROPOSED = "RiskPolicyProposed"
-EVENT_POLICY_APPROVED = "RiskPolicyApproved"
-EVENT_POLICY_REJECTED = "RiskPolicyRejected"
 EVENT_POLICY_DOCUMENT = "RiskPolicyDocumentUploaded"
 
-# Lifecycle states surfaced to the UI.
-STATE_SEED = "seed"          # no policy ever ratified — running on the firm-wide default
-STATE_APPROVED = "approved"  # a division-specific policy is live, no draft outstanding
-STATE_DRAFT = "draft"        # a proposed policy is awaiting the division's MRC sign-off
+# Validation is applied by ``commands.propose_policy``, which owns the rules about what
+# a risk policy may contain; the lifecycle only needs to know how to store one.
+POLICY = RatifiedPolicy(aggregate_type=AGGREGATE_TYPE, noun="risk policy",
+                        default=default_policy, document_event=EVENT_POLICY_DOCUMENT)
+
+EVENT_POLICY_PROPOSED = POLICY.proposed_event
+EVENT_POLICY_APPROVED = POLICY.approved_event
+EVENT_POLICY_REJECTED = POLICY.rejected_event
+
+# Re-exported: these were this module's names before the lifecycle moved out, and
+# callers (the API, the admin editor) still read them from here.
+__all__ = ["AGGREGATE_TYPE", "EVENT_POLICY_PROPOSED", "EVENT_POLICY_APPROVED",
+           "EVENT_POLICY_REJECTED", "EVENT_POLICY_DOCUMENT", "POLICY",
+           "STATE_SEED", "STATE_APPROVED", "STATE_DRAFT",
+           "load", "get_risk_policy", "get_policy_draft"]
 
 
 def load(division: str, config=None) -> dict:
@@ -56,51 +66,19 @@ def load(division: str, config=None) -> dict:
     models use, ``draft`` is a proposal awaiting sign-off (or None), and ``approved`` is
     whether any division-specific policy has ever been ratified.
     """
-    live = default_policy()
-    draft = None
-    document = None
-    approved = False
-    approved_at = None
-    version = 0
-    for event in read_stream(
-        aggregate_type=AGGREGATE_TYPE, aggregate_id=division, config=config
-    ):
-        if event.event_type == EVENT_POLICY_PROPOSED:
-            draft = event.payload["policy"]
-        elif event.event_type == EVENT_POLICY_APPROVED:
-            live = event.payload["policy"]
-            draft = None
-            approved = True
-            # When the current live categorisation was ratified — a model signed off
-            # before this date was assessed under an older categorisation.
-            approved_at = _recorded_date(event.recorded_at)
-        elif event.event_type == EVENT_POLICY_REJECTED:
-            draft = None
-        elif event.event_type == EVENT_POLICY_DOCUMENT:
-            document = {"filename": event.payload["filename"],
-                        "original_name": event.payload["original_name"]}
-        version = event.stream_seq
-    state = STATE_DRAFT if draft is not None else (STATE_APPROVED if approved else STATE_SEED)
-    return {"live": live, "draft": draft, "document": document, "state": state,
-            "approved": approved, "approved_at": approved_at, "version": version}
-
-
-def _recorded_date(recorded_at) -> str | None:
-    """The date (YYYY-MM-DD) an event was recorded, for comparing against a model's
-    sign-off date."""
-    if recorded_at is None:
-        return None
-    if hasattr(recorded_at, "date"):
-        return recorded_at.date().isoformat()
-    return str(recorded_at)[:10]
+    return POLICY.load(division, config)
 
 
 def get_risk_policy(division: str, config=None) -> dict:
     """The LIVE risk policy a division's models use: its most recently MRC-approved
     policy, or the firm-wide seed default until the division ratifies its own."""
-    return load(division, config)["live"]
+    return POLICY.live(division, config)
 
 
 def get_policy_draft(division: str, config=None) -> dict | None:
     """The division's proposed policy awaiting MRC sign-off, or None."""
-    return load(division, config)["draft"]
+    return POLICY.draft(division, config)
+
+
+# Kept for callers that imported it from here before it moved.
+_recorded_date = recorded_date
