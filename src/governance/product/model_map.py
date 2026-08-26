@@ -30,15 +30,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import DATA_SOURCES_COLLECTION, PRODUCT_COMPONENTS
+from config.governance import PRODUCT_COMPONENTS
 from src.governance.model_inventory.chain import all_edges
 from src.governance.model_inventory.projection import list_models
+from src.governance.model_inventory.sources import source_nodes
 from src.governance.product.projection import get_product
-
-
-def _sources(model: dict[str, Any]) -> set[str]:
-    items = (model.get("data", {}) or {}).get(DATA_SOURCES_COLLECTION, []) or []
-    return {s for s in (item.get("data_source") for item in items) if s}
 
 
 def derive_product_map(product_id: str, config=None) -> dict[str, Any] | None:
@@ -90,14 +86,11 @@ def derive_product_map(product_id: str, config=None) -> dict[str, Any] | None:
     ]
     links = [{"from": a, "to": b} for a, b in edges if a in involved and b in involved]
 
-    # Data sources feeding any model in the map, each drawn as a node above the
-    # models that draw on it — the same treatment as the per-model Connections view,
-    # so a ubiquitous source ("Simulated") reads as one node, not a web of edges.
-    src_map: dict[str, set[str]] = {}
-    for mid in involved:
-        for name in _sources(by_id[mid]):
-            src_map.setdefault(name, set()).add(mid)
-    sources = [{"name": name, "models": sorted(ids)} for name, ids in sorted(src_map.items())]
+    # Data sources drawn above the models they supply — and only above the ones
+    # nothing feeds, the same rule as the per-model Connections view, so a source
+    # marks where data enters the chain rather than webbing it together. The
+    # reasoning is in ``model_inventory.sources``.
+    sources = source_nodes(sorted(involved), by_id, edges)
 
     return {
         "product_id": product_id,
