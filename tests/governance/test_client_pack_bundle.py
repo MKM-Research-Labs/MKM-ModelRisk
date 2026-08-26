@@ -57,7 +57,7 @@ def stub(tmp_path, monkeypatch):
 
 def _stub_tor(monkeypatch, committees):
     """Stub the MRC committee list the pack reads its Terms of Reference from."""
-    monkeypatch.setattr("src.governance.client.pack.get_reference_lists",
+    monkeypatch.setattr("src.governance.client._pack_sources.get_reference_lists",
                         lambda config=None: {"mrc": list(committees)})
 
 
@@ -79,7 +79,7 @@ def _model(monkeypatch, docs=None):
 
 def _no_meetings_or_products(monkeypatch):
     monkeypatch.setattr("src.governance.client.pack.list_products", lambda config=None: [])
-    monkeypatch.setattr("src.governance.client.pack.list_meetings", lambda config=None: [])
+    monkeypatch.setattr("src.governance.client._pack_sources.list_meetings", lambda config=None: [])
 
 
 def _open(data):
@@ -102,7 +102,7 @@ def test_pack_carries_linked_model_doc_and_evidence(stub, monkeypatch):
 
 def test_pack_resolves_models_via_a_linked_product(stub, monkeypatch):
     _model(monkeypatch)
-    monkeypatch.setattr("src.governance.client.pack.get_product",
+    monkeypatch.setattr("src.governance.client._pack_sources.get_product",
                         lambda pid, config=None: {"product_id": pid, "data": {
                             "components": [{"model_id": "MKM-EF-001"}]}})
     _no_meetings_or_products(monkeypatch)
@@ -124,7 +124,7 @@ def test_blank_and_unknown_link_types_are_skipped(stub, monkeypatch):
 
 def test_product_component_without_a_model_id_is_ignored(stub, monkeypatch):
     _model(monkeypatch)
-    monkeypatch.setattr("src.governance.client.pack.get_product",
+    monkeypatch.setattr("src.governance.client._pack_sources.get_product",
                         lambda pid, config=None: {"product_id": pid, "data": {
                             "components": [{}, {"model_id": "MKM-EF-001"}]}})
     _no_meetings_or_products(monkeypatch)
@@ -159,7 +159,7 @@ def test_pack_includes_minutes_events_tor_and_gaps(stub, monkeypatch):
                         lambda config=None: [{"product_id": "P1", "data": {
                             "operational_failure_events": [
                                 {"date": "2026-05-01", "description": "Feed outage"}]}}])
-    monkeypatch.setattr("src.governance.client.pack.list_meetings",
+    monkeypatch.setattr("src.governance.client._pack_sources.list_meetings",
                         lambda config=None: [{"meeting_id": "MRC-1", "data": {
                             "status": "Completed", "date": "2026-06-01",
                             "minutes_filename": "minutes_MRC-1.pdf",
@@ -182,7 +182,7 @@ def test_pack_notes_missing_minutes_file_and_absent_tor(stub, monkeypatch):
     _model(monkeypatch)
     _stub_tor(monkeypatch, [])  # no committee has a ToR
     monkeypatch.setattr("src.governance.client.pack.list_products", lambda config=None: [])
-    monkeypatch.setattr("src.governance.client.pack.list_meetings",
+    monkeypatch.setattr("src.governance.client._pack_sources.list_meetings",
                         lambda config=None: [{"meeting_id": "MRC-9", "data": {
                             "status": "Completed", "date": "2026-06-01",
                             "minutes_filename": "gone.pdf"}}])
@@ -230,7 +230,7 @@ def test_manifest_previews_contents_without_compiling(stub, monkeypatch):
     _model(monkeypatch, docs=[{"category": "Test Results", "filename": "tests.pdf",
                                "original_name": "tests.pdf"}])
     monkeypatch.setattr("src.governance.client.pack.list_products", lambda config=None: [])
-    monkeypatch.setattr("src.governance.client.pack.list_meetings",
+    monkeypatch.setattr("src.governance.client._pack_sources.list_meetings",
                         lambda config=None: [{"meeting_id": "MRC-1", "data": {
                             "status": "Completed", "date": "2026-06-01",
                             "minutes_filename": "minutes_MRC-1.pdf"}}])  # present in the stub tree
@@ -260,7 +260,7 @@ def test_manifest_flags_every_missing_file(stub, monkeypatch):
     _stub_tor(monkeypatch, [{"item_id": "MRC-1", "name": "Division MRC",
                              "tor_filename": "no.docx", "tor_original_name": "ToR.docx"}])
     monkeypatch.setattr("src.governance.client.pack.list_products", lambda config=None: [])
-    monkeypatch.setattr("src.governance.client.pack.list_meetings",
+    monkeypatch.setattr("src.governance.client._pack_sources.list_meetings",
                         lambda config=None: [{"meeting_id": "MRC-9", "data": {
                             "status": "Completed", "date": "2026-06-01",
                             "minutes_filename": "nomin.pdf"}}])
