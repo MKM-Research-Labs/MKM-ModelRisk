@@ -85,8 +85,6 @@ AI_PROBES = {
     # AIR-OP-004: what stops a confident wrong answer -- grounding, and the human
     # who would catch it. Hallucination is not closed by either alone.
     "ai_grounding": _ai(lambda d: _filled(d, "grounding", "human_oversight")),
-    # AIR-OP-016
-    "ai_fairness": _ai(lambda d: _filled(d, "fairness_approach")),
     # AIR-OP-017
     "ai_explainability": _ai(lambda d: _filled(d, "explainability_approach")),
     # AIR-OP-007: who supplies it and how it is reached. A system whose provider is

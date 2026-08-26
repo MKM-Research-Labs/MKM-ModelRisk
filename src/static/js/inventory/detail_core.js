@@ -136,6 +136,10 @@ const Detail = {
       ["raci_roles", "RACI", n("raci_roles")],
       ["review", "Review", cov],
       ["risk", "Risk Rating", null],
+      // Who the model could disadvantage, one row per attribute assessed. Beside Risk
+      // Rating rather than under Connections: it is a property of the assessment, not
+      // of the wiring.
+      ["fairness_assessments", "Fairness", n("fairness_assessments")],
       // Outstanding actions count here too: the badge should say there is something
       // still owed to the committee, not only how much history the tab holds.
       ["decisions", "MRC linkage", (d.signoff_history || []).length +

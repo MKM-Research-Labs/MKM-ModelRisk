@@ -247,8 +247,11 @@ def test_filling_the_ai_fields_moves_the_finos_risk_rows():
         return next(r for r in rows
                     if r["framework"] == FINOS_RISKS and r["ref"] == ref)
 
+    # AIR-OP-016 is no longer here: it is counted over the whole estate from the
+    # fairness_assessments collection, so it is exercised in its own test rather than
+    # by filling scalar fields on one record.
     moved = ("AIR-OP-004", "AIR-OP-005", "AIR-OP-006", "AIR-OP-007", "AIR-OP-014",
-             "AIR-OP-016", "AIR-OP-017", "AIR-SEC-010", "AIR-RC-001")
+             "AIR-OP-017", "AIR-SEC-010", "AIR-RC-001")
 
     _register()
     bare = [get_ai_system("AIS-0001")]
@@ -264,7 +267,6 @@ def test_filling_the_ai_fields_moves_the_finos_risk_rows():
         ("provider", "Acme Analytics"),
         ("hosting", "Private cloud deployment"),
         ("guardrails", "Retrieved content is fenced and never treated as instruction."),
-        ("fairness_approach", "Sampled review across client segments each quarter."),
         ("explainability_approach", "Every answer cites the paragraphs it used."),
         ("data_egress", "Confidential business data"),
         ("data_egress_basis", "Clause 14 of the master agreement; no training on our data."),

@@ -45,7 +45,11 @@ field had to pass to be in this list -- not "an AI system has one of these" but
 ``grounding``                         AIR-OP-004
 ``explainability_approach``           AIR-OP-017
 ``guardrails``                        AIR-SEC-010, AIR-PREV-003, AIR-PREV-017
-``fairness_approach``                 AIR-OP-016
+``fairness_assessments`` (collection)  AIR-OP-016 -- one row per attribute assessed.
+                                   A scalar "fairness approach" field lived here
+                                   first and was removed when the collection
+                                   arrived: two places to answer one question is
+                                   two answers free to disagree.
 ``eu_ai_act_class``                   AIR-RC-022
 ``agent_tools`` (collection)          AIR-SEC-024/025, AIR-PREV-018/019
 
@@ -64,7 +68,7 @@ from config.governance._ai import (AI_SYSTEM_QUESTION_LIST, DATA_EGRESS_CLASSES,
                                    DEPLOYMENT_PATTERNS, EU_AI_ACT_CLASSES,
                                    FOUNDATION_MODEL_LIST, HOSTING_MODES,
                                    HUMAN_OVERSIGHT_MODES, VERSION_POLICIES)
-from config.governance._collections import COLLECTION_SPECS
+from config.governance._collections import COLLECTION_SPECS, FAIRNESS_COLLECTION
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY,
                                           VALID_LIFECYCLE_STAGES, VALID_MATERIALITY,
                                           VALID_RAG_RATINGS, VALID_REVIEW_FREQUENCIES,
@@ -137,8 +141,6 @@ AI_SYSTEM_FIELD_SPECS = {
                            "type": "textarea", "group": "Controls"},
     "explainability_approach": {"label": "Explainability approach", "type": "textarea",
                                 "group": "Controls"},
-    "fairness_approach": {"label": "Fairness assessment", "type": "textarea",
-                          "group": "Controls"},
     # --- Classification. The same three dimensions, bands and heatmap a model
     #     carries, so an AI System is challenged on the same terms. ---
     "tier": {"label": "Tier", "type": "tier", "group": "Classification"},
@@ -210,6 +212,10 @@ AI_SYSTEM_COLLECTION_SPECS = {
     "model_weaknesses": COLLECTION_SPECS["model_weaknesses"],
     "remediation_steps": COLLECTION_SPECS["remediation_steps"],
     "data_sources": COLLECTION_SPECS["data_sources"],
+    # Same collection, same name, on all three record types: "who could this
+    # disadvantage" is the same question of a model, an ML Application and an AI
+    # System, and three shapes would make the estate-wide answer unobtainable.
+    FAIRNESS_COLLECTION: COLLECTION_SPECS[FAIRNESS_COLLECTION],
     "change_history": COLLECTION_SPECS["change_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],

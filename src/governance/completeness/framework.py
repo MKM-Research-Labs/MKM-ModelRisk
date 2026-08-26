@@ -138,6 +138,15 @@ PROBES = {
     # platform evidences from the register rather than from a filed description --
     # reporting it unevidenced because nobody had also written a paper about it
     # would be the register disowning evidence it holds.
+    # AIR-OP-016. Counted over the WHOLE estate, not just AI Systems: bias is a
+    # question about anything that scores people, and a model that ranks retail
+    # applicants raises it exactly as a generative system does. It was AI-only while
+    # the record had nowhere else to live, and that limit was a gap the row could not
+    # report about itself.
+    #
+    # A recorded assessment, not a recorded intention: an entry names the attribute
+    # assessed and what the measurement showed.
+    "fairness": lambda e: _share(e, lambda d: _any_entries(d, "fairness_assessments")),
     "acceptance": lambda e: _share(
         e, lambda d: _filled(d, "unit_tests", "integration_tests", "benchmark_tests")),
     # The FINOS risk rows that only an AI System can answer. Kept in their own

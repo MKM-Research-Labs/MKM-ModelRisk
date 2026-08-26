@@ -37,7 +37,7 @@ const AISystemDetail = RecordDetail.attach({
   _EXPOSURE: ["data_egress", "data_egress_basis", "eu_ai_act_class",
               "eu_ai_act_rationale"],
   _CONTROLS: ["human_oversight", "guardrails", "grounding", "output_variability",
-              "explainability_approach", "fairness_approach", "monitoring_approach"],
+              "explainability_approach", "monitoring_approach"],
   _TESTING: ["unit_tests", "integration_tests", "benchmark_tests"],
 
   _agentic() {
@@ -78,6 +78,7 @@ const AISystemDetail = RecordDetail.attach({
       ["limitations", "Limitations", n("limitations")],
       ["model_weaknesses", "Weaknesses", n("model_weaknesses")],
       ["data_sources", "Data sources", n("data_sources")],
+      ["fairness_assessments", "Fairness", n("fairness_assessments")],
       ["remediation_steps", "Remediation", n("remediation_steps")],
       ["review", "Review", n("review_notes")],
       ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],

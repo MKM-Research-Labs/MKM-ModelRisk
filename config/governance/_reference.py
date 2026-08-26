@@ -26,7 +26,9 @@ from __future__ import annotations
 from config.governance._collections import (IMPACT_LIST, PRIORITY_LIST, VERSION_LIFECYCLE_LIST, VALID_VERSION_LIFECYCLE,
                                             REMEDIATION_STATUS_LIST, VALID_IMPACT,
                                             VALID_PRIORITY, VALID_REMEDIATION_STATUS,
-                                            VALID_VQ_STATUSES, VQ_STATUS_LIST, VALID_DATA_SOURCE_KINDS)
+                                            VALID_VQ_STATUSES, VQ_STATUS_LIST,
+                                            VALID_DATA_SOURCE_KINDS, VALID_DATA_EGRESS,
+                                            VALID_DATA_SENSITIVITY)
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES,
                                           VALID_VALIDATION_STATUSES,
                                           VALIDATION_STATUS_LIST)
@@ -211,6 +213,10 @@ REFERENCE_SPECS = {
     DATA_SOURCE_LIST: {"label": "Data Source", "id_prefix": "DS", "display": "value", "fields": [
         {"key": "value", "label": "Data source", "type": "text", "required": True},
         {"key": "kind", "label": "Internal or external", "type": "choice", "options": VALID_DATA_SOURCE_KINDS},
+        # What is IN the feed, and whether it is allowed out. Held here rather than on
+        # each model's row: a feed's sensitivity does not change with who reads it.
+        {"key": "sensitivity", "label": "Sensitivity", "type": "choice", "options": VALID_DATA_SENSITIVITY},
+        {"key": "egress", "label": "May it leave", "type": "choice", "options": VALID_DATA_EGRESS},
     ]},
     # --- Model classification ---
     # ``binding_role`` is the machine-readable half of a type: the name is for

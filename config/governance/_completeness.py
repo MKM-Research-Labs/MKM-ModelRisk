@@ -203,6 +203,18 @@ COLLECTION_CRITICALITY = {
     # quality question turns on. Empty is a genuine gap: every live model
     # consumes data from somewhere.
     "data_sources": 0.65,
+    # Below the 0.60 default, and the only weight here set BELOW it. Not because
+    # bias matters less than data provenance -- where it applies it matters more --
+    # but because it is the one collection that does not apply to every record. A
+    # model that ranks retail applicants must answer it; a flood-depth curve has
+    # nobody to disadvantage, and scoring the two identically would make the finding
+    # noise on half an estate and people stop reading noise.
+    #
+    # The proper fix is a record saying whether its output bears on people, and there
+    # is no such field yet. Until there is, this is deliberately a nudge rather than
+    # a cliff: on a 27-record estate it moved mean completeness 0.905 -> 0.892 and
+    # pushed nothing below its threshold.
+    "fairness_assessments": 0.55,
     "raci_roles": 0.60,
     "version_history": 0.50,
     "signoff_history": 0.70,
