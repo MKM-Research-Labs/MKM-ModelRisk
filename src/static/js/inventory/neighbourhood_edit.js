@@ -78,14 +78,25 @@ const NeighbourhoodEdit = {
 
   _tray(n) {
     const c = this._candidates(n);
+    // A source is only drawn where a chain starts, so mid-chain the canvas has no
+    // band to drop one on and chips here would be an affordance that goes nowhere.
+    // The declaration itself is not withdrawn — the Data sources register below the
+    // canvas still adds one, for the reader who means it despite the picture.
+    const sourceRow = n.focus.is_source
+      ? '<div class="nbhd-tray-row"><span class="nbhd-tray-label">Data sources</span>' +
+        '<div class="nbhd-chips">' + this._chips("source", c.sources) + "</div></div>"
+      : '<div class="nbhd-tray-row"><span class="nbhd-tray-label">Data sources</span>' +
+        '<span class="muted" style="font-size:11.5px">' +
+        esc(n.focus.model_id) + " is fed by another model, so its inputs come from " +
+        "there — add a data source in the register below if it takes one as well." +
+        "</span></div>";
     return '<div class="nbhd-tray">' +
       '<div class="nbhd-tray-head"><b>Connect</b> ' +
       '<span class="muted" style="font-size:11.5px">drag onto the canvas below</span>' +
       '<input id="nbhd-filter" class="nbhd-filter" placeholder="filter…"></div>' +
       '<div class="nbhd-tray-row"><span class="nbhd-tray-label">Models</span>' +
       '<div class="nbhd-chips">' + this._chips("model", c.models) + "</div></div>" +
-      '<div class="nbhd-tray-row"><span class="nbhd-tray-label">Data sources</span>' +
-      '<div class="nbhd-chips">' + this._chips("source", c.sources) + "</div></div></div>";
+      sourceRow + "</div>";
   },
 
   _bind(host) {
