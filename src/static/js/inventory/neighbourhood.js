@@ -19,16 +19,20 @@
 // SOFTWARE.
 
 // The per-model neighbourhood on a model's Connections tab, and the canvas the
-// declarations are made on. Data sources sit on the top row as amber nodes, each
-// with an arrow down to the focus model and to any of its upstream models that draw
-// on it. Below them the dependency chain: the models that feed the focus (solid
+// declarations are made on. Data sources sit on the top row as amber nodes arrowed
+// down at the focus — but only where the focus is the top of its stack, nothing
+// feeding it. A model another model feeds takes its inputs from that model; a source
+// arrow beside it would read as a second origin (the server decides this — see
+// ``model_inventory/sources.py``), so mid-chain the row is empty.
+// Below it the dependency chain: the models that feed the focus (solid
 // arrows point at the focus), the focus in the middle, and the models it feeds
 // beneath. A terminal focus (nothing consumes it — the end of a chain) is drawn
 // teal, the same coverage cue the Model Chain screen uses.
 //
-// The three rows are always drawn, empty or not, because they are drop targets:
+// The feed rows are always drawn, empty or not, because they are drop targets:
 // NeighbourhoodEdit (loaded after this) drags models and sources onto them to
-// declare a feed, and hit-tests against the layout this module records in
+// declare a feed (the source row is there only where one can land — see
+// ``_measure``), and hit-tests against the layout this module records in
 // ``_layout``. Clicking a model re-centres; clicking an arrow opens the handoff —
 // what actually crosses that edge, field by field.
 const Neighbourhood = {
@@ -66,8 +70,11 @@ const Neighbourhood = {
   _rowW(k, w) { const u = w || this._W; return k > 0 ? k * u + (k - 1) * this._COL : 0; },
 
   _status(n) {
+    // Counted off the focus's own declarations, not off the drawn source row: a
+    // mid-chain model's source is a fact about it even where the picture leaves the
+    // arrow off, and a count that disagreed with its register would read as loss.
     const f = n.focus, up = n.feeds.upstream.length, down = n.feeds.downstream.length,
-      src = (n.sources || []).length;
+      src = (f.data_sources || []).length;
     let position;
     if (f.terminal && f.is_source) position = "Isolated — nothing feeds it and nothing consumes it.";
     else if (f.terminal) position = "Terminal — the end of a chain; no model consumes its output.";
@@ -103,27 +110,35 @@ const Neighbourhood = {
   _measure(n) {
     const W = this._W, H = this._H, PAD = this._PAD, SW = this._SW, SH = this._SH;
     const up = n.feeds.upstream, down = n.feeds.downstream, sources = n.sources || [];
+    // Mid-chain the source row is not merely empty, it is not applicable — the
+    // server draws no source against a model another model feeds — so the row and
+    // its band collapse rather than reserving a blank strip above the chain that
+    // reads as something missing. Where the focus does start a chain the row is kept
+    // even with nothing on it: there it is an empty drop target, an invitation.
+    const hasSrcRow = !!n.focus.is_source;
     const srcRowW = this._rowW(sources.length, SW);
     const maxW = Math.max(W, this._MINW - 2 * PAD,
       this._rowW(up.length), this._rowW(down.length), srcRowW);
     const Xc = PAD + maxW / 2;
     const ySrc = PAD;
-    const yUp = ySrc + SH + this._SRCGAP;
+    const yUp = hasSrcRow ? ySrc + SH + this._SRCGAP : PAD;
     const yFocus = yUp + H + this._ROW;
     const yDown = yFocus + H + this._ROW;
     const row = (nodes, y, w) => {
       const x0 = Xc - this._rowW(nodes.length, w) / 2;
       return nodes.map((m, i) => ({ m, x: x0 + i * (w + this._COL), y, w, h: w === SW ? SH : H }));
     };
+    const bands = {
+      upstream: { y: yUp - this._BANDPAD, h: H + 2 * this._BANDPAD },
+      downstream: { y: yDown - this._BANDPAD, h: H + 2 * this._BANDPAD },
+    };
+    if (hasSrcRow) bands.sources = { y: ySrc - this._BANDPAD, h: SH + 2 * this._BANDPAD };
     return {
       W, H, SW, SH, Xc, width: PAD + maxW + PAD, height: yDown + H + PAD,
       focus: { x: Xc - W / 2, y: yFocus, w: W, h: H, m: n.focus },
-      up: row(up, yUp, W), down: row(down, yDown, W), src: row(sources, ySrc, SW),
-      bands: {
-        upstream: { y: yUp - this._BANDPAD, h: H + 2 * this._BANDPAD },
-        downstream: { y: yDown - this._BANDPAD, h: H + 2 * this._BANDPAD },
-        sources: { y: ySrc - this._BANDPAD, h: SH + 2 * this._BANDPAD },
-      },
+      up: row(up, yUp, W), down: row(down, yDown, W),
+      src: row(hasSrcRow ? sources : [], ySrc, SW),
+      bands: bands,
     };
   },
 

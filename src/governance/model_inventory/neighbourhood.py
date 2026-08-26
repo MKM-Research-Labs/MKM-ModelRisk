@@ -20,11 +20,11 @@
 """One model's neighbourhood: its data sources, what feeds it, and what it feeds.
 
 The chain screen (see ``chain.py``) shows the whole estate. This is the per-model
-cut rendered on a model's Connections tab: the data sources at the top (each drawn
-as a node feeding the models that draw on it), then the models one hop away on the
-declared dependency graph — the ones that feed the focus above it, the ones it feeds
-below. Terminal-ness — "is this the end of a chain?" — is a property of the focus
-here, so a coverage gap (a model nothing consumes) reads at a glance.
+cut rendered on a model's Connections tab: the models one hop away on the declared
+dependency graph — the ones that feed the focus above it, the ones it feeds below —
+and, above them, the focus's data sources, drawn only where the focus starts a chain
+(see ``sources.py``). Terminal-ness — "is this the end of a chain?" — is a property
+of the focus here, so a coverage gap (a model nothing consumes) reads at a glance.
 
 Derived and stateless: the ``dependencies`` and ``data_sources`` collections on the
 models are the truth; this only re-shapes them around one model.
@@ -33,9 +33,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import DATA_SOURCES_COLLECTION
 from src.governance.model_inventory.chain import all_edges, declarations_by_edge
 from src.governance.model_inventory.projection import list_models
+from src.governance.model_inventory.sources import declared_sources, source_nodes
 
 
 def _node(model: dict[str, Any]) -> dict[str, Any]:
@@ -61,21 +61,15 @@ def _edge_detail(edge, declarations) -> dict[str, Any]:
     return {"from": edge[0], "to": edge[1], "declared_by": declarations.get(edge, [])}
 
 
-def _sources(model: dict[str, Any]) -> set[str]:
-    """The set of data-source values a model declares it pulls inputs from."""
-    items = (model.get("data", {}) or {}).get(DATA_SOURCES_COLLECTION, []) or []
-    return {s for s in (item.get("data_source") for item in items) if s}
-
-
 def derive_neighbourhood(model_id: str, config=None) -> dict[str, Any] | None:
     """The neighbourhood of one model, or ``None`` if the model does not exist.
 
     ``feeds.upstream`` are the models that feed the focus (they sit above it in a
     chain); ``feeds.downstream`` are the models it feeds. ``terminal`` is true when
     nothing consumes the focus's output — the end of a chain — and ``is_source``
-    when nothing feeds it. ``shared_sources`` are models joined to the focus *only*
-    by a common data source (a feed neighbour is already drawn as an edge, so it is
-    not repeated here); each carries the ``shared`` source list that connects them.
+    when nothing feeds it. ``sources`` are the data sources drawn above the picture —
+    the focus's own, and only where it is a chain start, so a source never reads as a
+    second origin for a model another model already supplies.
     """
     # A model's own neighbourhood, including a hibernated one: this view has to
     # render for the very model somebody is looking at, and a neighbour that has
@@ -91,23 +85,18 @@ def derive_neighbourhood(model_id: str, config=None) -> dict[str, Any] | None:
     downstream_ids = sorted({b for a, b in edges if a == model_id})
     declarations = declarations_by_edge(config=config)
 
-    focus_sources = _sources(focus)
-    # Data sources are drawn as nodes upstream of the models that draw on them: each
-    # source links down to the focus and to any of its upstream models that use it.
-    # Scoping to the focus + its dependencies keeps a ubiquitous source (e.g. every
-    # model on "Simulated") from webbing the whole estate together.
-    scope_ids = [model_id] + upstream_ids
-    src_map: dict[str, set[str]] = {}
-    for mid in scope_ids:
-        for name in _sources(by_id[mid]):
-            src_map.setdefault(name, set()).add(mid)
-    sources = [{"name": name, "models": sorted(ids)} for name, ids in sorted(src_map.items())]
+    # The tab shows one hop either side of the focus, and a data source only where
+    # the focus is the top of the stack — nothing feeds it, so an external feed is
+    # what starts it. Drawn against a model that another model feeds, a source reads
+    # as a second origin the record never declared (see ``sources.py``), which is how
+    # a blanket "Simulated" ends up claiming to supply half an estate.
+    sources = source_nodes([model_id], by_id, edges)
 
     return {
         "focus": {
             **_node(focus),
             "vendor": (focus.get("data", {}) or {}).get("vendor"),
-            "data_sources": sorted(focus_sources),
+            "data_sources": sorted(declared_sources(focus)),
             "terminal": not downstream_ids,
             "is_source": not upstream_ids,
         },

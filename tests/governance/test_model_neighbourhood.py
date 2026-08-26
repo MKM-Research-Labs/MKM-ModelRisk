@@ -71,25 +71,28 @@ def test_focus_reports_feeds_and_chain_position():
     assert n["focus"]["data_sources"] == ["Bloomberg"]
 
 
-def test_sources_are_nodes_scoped_to_focus_and_upstream():
+def test_a_mid_chain_focus_draws_no_source_node():
     _build_estate()
     n = derive_neighbourhood("M-FOCUS")
-    # Bloomberg is drawn as a source node linking to the focus and any upstream model
-    # that uses it. FOCUS uses Bloomberg; its upstream A/B do not; C (downstream) is
-    # out of scope. So the source points at the focus only.
-    by_name = {s["name"]: s for s in n["sources"]}
-    assert set(by_name) == {"Bloomberg"}
-    assert by_name["Bloomberg"]["models"] == ["M-FOCUS"]
+    # FOCUS declares Bloomberg, but A and B feed it — so what supplies FOCUS is those
+    # models, and a source arrow into it would claim a second origin. The declaration
+    # still stands on the record; it is only the arrow that goes.
+    assert n["sources"] == []
+    assert n["focus"]["data_sources"] == ["Bloomberg"]
 
 
-def test_source_links_to_upstream_that_uses_it():
+def test_source_is_drawn_where_the_chain_starts():
     _build_estate()
-    # Give an upstream model (A) the same source, so it should appear on the edge too.
     _source("M-A", "Bloomberg")
     rebuild_inventory_view()
-    n = derive_neighbourhood("M-FOCUS")
-    by_name = {s["name"]: s for s in n["sources"]}
-    assert by_name["Bloomberg"]["models"] == ["M-A", "M-FOCUS"]
+    # A is the top of its stack — nothing feeds it — so its source is where data
+    # enters, and is drawn.
+    by_name = {s["name"]: s for s in derive_neighbourhood("M-A")["sources"]}
+    assert set(by_name) == {"Bloomberg"}
+    assert by_name["Bloomberg"]["models"] == ["M-A"]
+    # It is not repeated onto the view of the model A feeds: that tab is about its
+    # own focus, one hop either side, and FOCUS is fed by A, not by Bloomberg.
+    assert derive_neighbourhood("M-FOCUS")["sources"] == []
 
 
 def test_terminal_model_has_no_downstream():
