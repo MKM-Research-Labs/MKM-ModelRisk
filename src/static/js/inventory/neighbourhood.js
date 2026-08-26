@@ -19,9 +19,12 @@
 // SOFTWARE.
 
 // The per-model neighbourhood on a model's Connections tab, and the canvas the
-// declarations are made on. Data sources sit on the top row as amber nodes, each
-// with an arrow down to the focus model and to any of its upstream models that draw
-// on it. Below them the dependency chain: the models that feed the focus (solid
+// declarations are made on. Data sources sit on the top row as amber nodes arrowed
+// down at the focus — but only where the focus is the top of its stack, nothing
+// feeding it. A model another model feeds takes its inputs from that model; a source
+// arrow beside it would read as a second origin (the server decides this — see
+// ``model_inventory/sources.py``), so mid-chain the row is empty.
+// Below it the dependency chain: the models that feed the focus (solid
 // arrows point at the focus), the focus in the middle, and the models it feeds
 // beneath. A terminal focus (nothing consumes it — the end of a chain) is drawn
 // teal, the same coverage cue the Model Chain screen uses.
@@ -66,8 +69,11 @@ const Neighbourhood = {
   _rowW(k, w) { const u = w || this._W; return k > 0 ? k * u + (k - 1) * this._COL : 0; },
 
   _status(n) {
+    // Counted off the focus's own declarations, not off the drawn source row: a
+    // mid-chain model's source is a fact about it even where the picture leaves the
+    // arrow off, and a count that disagreed with its register would read as loss.
     const f = n.focus, up = n.feeds.upstream.length, down = n.feeds.downstream.length,
-      src = (n.sources || []).length;
+      src = (f.data_sources || []).length;
     let position;
     if (f.terminal && f.is_source) position = "Isolated — nothing feeds it and nothing consumes it.";
     else if (f.terminal) position = "Terminal — the end of a chain; no model consumes its output.";

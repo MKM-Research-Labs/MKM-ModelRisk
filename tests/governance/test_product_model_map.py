@@ -66,12 +66,14 @@ def test_components_and_one_hop_feeds_are_in_the_map():
     assert mp["links"] == [{"from": "M-UP", "to": "M-AN"}]
 
 
-def test_sources_are_nodes_linking_to_the_models_that_use_them():
+def test_sources_are_drawn_only_where_the_chain_starts():
     _build()
     mp = derive_product_map("P-1")
+    # Both M-AN and M-UP declare Bloomberg, but M-UP feeds M-AN — so the source is
+    # drawn against M-UP alone, where data actually enters the chain.
     by_name = {s["name"]: s for s in mp["sources"]}
     assert set(by_name) == {"Bloomberg"}
-    assert by_name["Bloomberg"]["models"] == ["M-AN", "M-UP"]
+    assert by_name["Bloomberg"]["models"] == ["M-UP"]
 
 
 def test_unknown_product_returns_none():
