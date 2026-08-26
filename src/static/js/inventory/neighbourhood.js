@@ -29,9 +29,10 @@
 // beneath. A terminal focus (nothing consumes it — the end of a chain) is drawn
 // teal, the same coverage cue the Model Chain screen uses.
 //
-// The three rows are always drawn, empty or not, because they are drop targets:
+// The feed rows are always drawn, empty or not, because they are drop targets:
 // NeighbourhoodEdit (loaded after this) drags models and sources onto them to
-// declare a feed, and hit-tests against the layout this module records in
+// declare a feed (the source row is there only where one can land — see
+// ``_measure``), and hit-tests against the layout this module records in
 // ``_layout``. Clicking a model re-centres; clicking an arrow opens the handoff —
 // what actually crosses that edge, field by field.
 const Neighbourhood = {
@@ -109,27 +110,35 @@ const Neighbourhood = {
   _measure(n) {
     const W = this._W, H = this._H, PAD = this._PAD, SW = this._SW, SH = this._SH;
     const up = n.feeds.upstream, down = n.feeds.downstream, sources = n.sources || [];
+    // Mid-chain the source row is not merely empty, it is not applicable — the
+    // server draws no source against a model another model feeds — so the row and
+    // its band collapse rather than reserving a blank strip above the chain that
+    // reads as something missing. Where the focus does start a chain the row is kept
+    // even with nothing on it: there it is an empty drop target, an invitation.
+    const hasSrcRow = !!n.focus.is_source;
     const srcRowW = this._rowW(sources.length, SW);
     const maxW = Math.max(W, this._MINW - 2 * PAD,
       this._rowW(up.length), this._rowW(down.length), srcRowW);
     const Xc = PAD + maxW / 2;
     const ySrc = PAD;
-    const yUp = ySrc + SH + this._SRCGAP;
+    const yUp = hasSrcRow ? ySrc + SH + this._SRCGAP : PAD;
     const yFocus = yUp + H + this._ROW;
     const yDown = yFocus + H + this._ROW;
     const row = (nodes, y, w) => {
       const x0 = Xc - this._rowW(nodes.length, w) / 2;
       return nodes.map((m, i) => ({ m, x: x0 + i * (w + this._COL), y, w, h: w === SW ? SH : H }));
     };
+    const bands = {
+      upstream: { y: yUp - this._BANDPAD, h: H + 2 * this._BANDPAD },
+      downstream: { y: yDown - this._BANDPAD, h: H + 2 * this._BANDPAD },
+    };
+    if (hasSrcRow) bands.sources = { y: ySrc - this._BANDPAD, h: SH + 2 * this._BANDPAD };
     return {
       W, H, SW, SH, Xc, width: PAD + maxW + PAD, height: yDown + H + PAD,
       focus: { x: Xc - W / 2, y: yFocus, w: W, h: H, m: n.focus },
-      up: row(up, yUp, W), down: row(down, yDown, W), src: row(sources, ySrc, SW),
-      bands: {
-        upstream: { y: yUp - this._BANDPAD, h: H + 2 * this._BANDPAD },
-        downstream: { y: yDown - this._BANDPAD, h: H + 2 * this._BANDPAD },
-        sources: { y: ySrc - this._BANDPAD, h: SH + 2 * this._BANDPAD },
-      },
+      up: row(up, yUp, W), down: row(down, yDown, W),
+      src: row(hasSrcRow ? sources : [], ySrc, SW),
+      bands: bands,
     };
   },
 
