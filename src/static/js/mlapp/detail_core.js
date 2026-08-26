@@ -60,6 +60,7 @@ const MLAppDetail = RecordDetail.attach({
       ["training_runs", "Trains", n("training_runs")],
       ["review", "Review", cov],
       ["risk", "Risk Rating", null],
+      ["fairness_assessments", "Fairness", n("fairness_assessments")],
       ["linkage", "MRC linkage", n("signoff_history")],
       ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],
       ["danger", "Danger", null],

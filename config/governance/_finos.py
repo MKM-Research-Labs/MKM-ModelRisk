@@ -86,10 +86,12 @@ FINOS_RISK_CATALOGUE = (
     ("AIR-OP-014", "Inadequate System Alignment", "ai_alignment",
      "The use case the system is meant to serve, bounded by the filtering that "
      "keeps it there."),
-    ("AIR-OP-016", "Bias and Discrimination", "ai_fairness",
-     "A recorded fairness and bias assessment. Counted over AI Systems only: the "
-     "model and ML estate still carries no protected attributes and no subgroup "
-     "performance, which is a gap this row does not report."),
+    ("AIR-OP-016", "Bias and Discrimination", "fairness",
+     "An assessment recorded against each attribute considered, naming what was "
+     "measured and what it showed. Counted over the whole estate rather than over AI "
+     "Systems alone -- bias is a question about anything that scores people, and a "
+     "model that ranks retail applicants raises it exactly as a generative system "
+     "does."),
     ("AIR-OP-017", "Lack of Explainability", "ai_explainability",
      "The explainability approach recorded against the system. An explanation of "
      "one particular output remains a runtime artefact the platform does not hold."),

@@ -60,7 +60,7 @@ What this record deliberately does NOT carry, and why:
 """
 from __future__ import annotations
 
-from config.governance._collections import COLLECTION_SPECS
+from config.governance._collections import COLLECTION_SPECS, FAIRNESS_COLLECTION
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY,
                                           VALID_REVIEW_STATUSES,
                                           VALID_LIFECYCLE_STAGES, VALID_MATERIALITY,
@@ -213,6 +213,10 @@ ML_APPLICATION_COLLECTION_SPECS = {
     # The feeds it draws on -- for an ML Application, where the training and scoring
     # data comes from. Shared shape, so "which records share a source" is one query.
     "data_sources": COLLECTION_SPECS["data_sources"],
+    # Same collection, same name, on all three record types: "who could this
+    # disadvantage" is the same question of a model, an ML Application and an AI
+    # System, and three shapes would make the estate-wide answer unobtainable.
+    FAIRNESS_COLLECTION: COLLECTION_SPECS[FAIRNESS_COLLECTION],
     "change_history": COLLECTION_SPECS["change_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],

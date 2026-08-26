@@ -62,12 +62,34 @@ DEPENDENCIES_COLLECTION = "dependencies"
 # fields come from which source) can be layered on later without breaking this —
 # for now it is the recognition that the model pulls data from these sources.
 DATA_SOURCES_COLLECTION = "data_sources"
+# Fairness and bias assessment, one row per attribute assessed. Shared across the
+# model inventory, ML Applications and AI Systems: "who could this disadvantage" is
+# the same question of all three, and asking it three different ways would make the
+# estate-wide answer unobtainable.
+FAIRNESS_COLLECTION = "fairness_assessments"
 # Whether a feed comes from inside the institution or from a third party. The
 # distinction is a governance one, not a label: an EXTERNAL source is a third-party
 # dependency, so the questions that follow are provenance, licensing, and whether the
 # fit could be reproduced if the feed changed or went away. An internal one raises
 # none of those. Blank means nobody has said yet, which is not the same as internal.
 VALID_DATA_SOURCE_KINDS = ("Internal", "External")
+# How sensitive the data in a feed is. A property of the FEED rather than of any one
+# record that consumes it, for the same reason ``kind`` is: reclassifying a feed
+# should happen once, not once per model that happens to read it.
+#
+# Ordered by how much it would matter if it were exposed, so a reader can see at a
+# glance which end of the list a source sits at. Blank means nobody has classified it,
+# which is not the same as "not sensitive" -- and is the finding.
+VALID_DATA_SENSITIVITY = ("Public", "Internal", "Confidential",
+                          "Personal data (PII)", "Regulated client data")
+# Whether this feed may leave the institution at all. The question AIR-RC-001 turns
+# on, and it has to be answerable about the FEED before it can be answered about any
+# system that sends it somewhere: a record saying "we send confidential data to a
+# hosted model" means nothing until somebody has said whether that feed was ever
+# allowed out.
+VALID_DATA_EGRESS = ("May not leave the institution",
+                     "May leave under contract",
+                     "May leave freely")
 # A version's place in the development lifecycle. "New" = a fresh version just
 # cut; "Being Enhanced" = active development against it; "No New Development" =
 # stable, still in use but frozen; "Marked for Removal" = scheduled to retire.
@@ -180,6 +202,28 @@ COLLECTION_SPECS = {
         {"key": "model_id", "label": "Related model", "type": "text",
          "reference": "model_inventory", "required": True},
         {"key": "note", "label": "Note", "type": "text"},
+    ]},
+    # Who could be disadvantaged by this record's output, and what was actually
+    # measured about it. A COLLECTION rather than a paragraph, because the question is
+    # asked per attribute and the answers differ: a model may be tested against age
+    # and never against postcode-as-a-proxy, and a single "we assessed fairness" field
+    # cannot say which. One row per attribute is what makes "which attributes has
+    # anything been measured against" a query rather than a reading exercise.
+    #
+    # ``attribute`` is free text on purpose. Which characteristics are protected is a
+    # matter of law and it differs by jurisdiction -- a fixed list of ours would be
+    # wrong somewhere on its first day, and an institution that needs a controlled
+    # vocabulary can make it an admin list without this shape changing.
+    #
+    # ``finding`` is deliberately not a pass/fail. "No disparity above the threshold"
+    # and "not measured" are different answers, and a boolean collapses them.
+    FAIRNESS_COLLECTION: {"label": "Fairness assessment", "id_prefix": "FAIR", "fields": [
+        {"key": "attribute", "label": "Attribute or group", "type": "text",
+         "required": True},
+        {"key": "how_assessed", "label": "How it was assessed", "type": "textarea"},
+        {"key": "metric", "label": "Metric", "type": "text"},
+        {"key": "finding", "label": "What it showed", "type": "textarea"},
+        {"key": "assessed_on", "label": "Assessed on", "type": "date"},
     ]},
     # Data sources (feeds) the model pulls its inputs from. ``data_source`` is a
     # strict reference to the admin Data Source list, so "these two models share a
