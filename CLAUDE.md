@@ -75,14 +75,11 @@ pytest tests/e2e -m e2e
 **not** a pass — that exit code is the shell's. Always read the final line:
 `PASS: 0 gated finding(s)` or `FINDINGS: N gated finding(s)`.
 
-**Known-red at HEAD (verified 2026-08-21 on `main`) — 1 test. Do not chase it:**
+**Known-red at HEAD: nothing. `pytest` is green (verified 2026-08-26 on `main`).**
 
-```
-tests/audit/test_audit_large_files.py::test_source_tree_within_limit
-```
-
-It fails for the same reason the audit gate sits at 2: the two over-long source files
-below. Fixing one fixes the other; there is nothing else to find in it.
+The list was one test — `tests/audit/test_audit_large_files.py::test_source_tree_within_limit`
+— and it is now passing, because the two files it named were split. Do not add an
+entry here without a date and a reason; do not leave one once it stops being true.
 
 This list shrinks as well as grows. The two product-API entries that sat here were
 tests asserting a retired design — a Product seeds four RACI roles at registration, and
@@ -106,21 +103,28 @@ you run it:
 - Killing a run leaves `tests/e2e/_runserver.py` orphaned (parent PID 1). It serves
   stale JS on a port nothing points at. Check for strays before blaming a change.
 
-The audit's own gate sits at **2 findings** — two over-long source files, verified
-2026-08-21 on `main`:
+The audit's own gate reads **`PASS: 0 gated finding(s)`**, verified 2026-08-26 on
+`main`. **Any finding you see is yours.** That is a stronger position than the baseline
+this file carried for months, and it is worth keeping: with a zero gate a regression is
+unmistakable, where a gate of 2 meant reading the list every time to see whether the
+number had moved for your reason or somebody else's.
 
-```
-384  src/governance/client/pack.py
-326  src/web/api_mrc/lifecycle.py
-```
+The last two entries went in the same week, and both split along a seam the code already
+had rather than at a line count:
 
-Anything beyond these is yours — diff against `main` before assuming otherwise, since the
-list moves. It moved most recently during the ML Application work: `api_models.py` had
-been the third entry at 301 lines, and dropped to 263 when its `_grouped_specs` /
-`_collection_specs` were extracted to `src/web/_helpers.py`. Four APIs had a copy of
-those (models, product, client, ML Application) and only the inventory's carried
-``option_labels``, so a status vocabulary renamed in Admin displayed by its stored value
-on every screen but a model's. One helper now, and one fewer gated finding.
+- `src/governance/client/pack.py` (384) → 228, with `_pack_sources.py` (what the pack
+  covers — shared, because `pack_manifest` previews without compiling and is only honest
+  while both walk the same sources) and `_pack_cover.py` (how the pack explains itself).
+- `src/web/api_mrc/lifecycle.py` (326) → 224, with `models_scope.py` beside the
+  `products_scope.py` that already existed. Lifecycle is what happens TO a meeting;
+  those two are what it is ABOUT.
+
+Before them, during the ML Application work, `api_models.py` dropped from 301 to 263 when
+its `_grouped_specs` / `_collection_specs` moved to `src/web/_helpers.py`. Four APIs had a
+copy of those and only the inventory's carried ``option_labels``, so a status vocabulary
+renamed in Admin displayed by its stored value on every screen but a model's. One helper
+now, and one fewer gated finding — the recurring lesson being that an over-long file is
+usually two things that were never one.
 
 **Test files are gated too, at 400 lines.** It is not in the list above only because
 nothing currently exceeds it, and a few added comments are enough to trip it — run the
