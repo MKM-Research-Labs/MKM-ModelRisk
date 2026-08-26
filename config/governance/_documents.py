@@ -100,6 +100,28 @@ DOC_CATEGORIES = (tuple(c for c in DOC_TAB_CATEGORIES if c not in DOC_TAB_GROUPS
                   + TESTING_DOC_CATEGORIES + EVIDENCE_DOC_CATEGORIES
                   + REVIEW_DOC_CATEGORIES + TRAINING_DOC_CATEGORIES)
 
+# What the completeness audit DEMANDS of a Product. Filing is unchanged: a product
+# may still hold a sensitivity study or a test pack, and it is still categorised as
+# one -- DOC_CATEGORIES above stays the filing vocabulary for every record kind.
+# This tuple only decides what its absence is scored as.
+#
+# A Product's analytics ARE its component models, and the paper about those
+# analytics -- the testing, the sensitivities, the wider analysis, the training
+# artefacts -- is demanded of the models that produce it. Demanding it again here
+# scores a product against evidence that already exists one link away, and the only
+# way to close the finding is to file a second copy of it: exactly the restatement
+# DOC_CATEGORY_SATISFIED_BY exists to prevent, one level up. It also follows the
+# decision already taken on the collections side, where a Product carries no SR 26-2
+# validation questions because it "validates through its component models"
+# (PRODUCT_COLLECTION_SPECS).
+#
+# What is left is what only the product can answer: what the product IS
+# (Core Documentation) and how its use is watched (Monitoring). The two evidence
+# categories stay because they are conditional -- they are demanded only once the
+# product's OWN register records an event or a remediation step to evidence, so they
+# raise nothing against a product that has neither.
+PRODUCT_AUDIT_DOC_CATEGORIES = ("Core Documentation", "Monitoring") + EVIDENCE_DOC_CATEGORIES
+
 # --- Artefacts: what the institution ISSUES ---------------------------------
 # The Documents tab's second panel. Filed per division, plus a company-wide shelf for
 # what belongs to the institution rather than to one division (the user guide, a

@@ -28,11 +28,16 @@ from src.governance.completeness.report import (
     build_completeness_tex, render_completeness_pdf)
 from src.governance.completeness.scan import scoped_models
 from src.governance.completeness.scan import (
-    MODEL_KIND, _retrievable, product_scope, scan)
+    MODEL_KIND, PRODUCT_KIND, _retrievable, product_scope, scan)
 from src.governance.model_inventory import rebuild_inventory_view, register_model
 from src.governance.product import rebuild_product_view, register_product
 
 AS_OF = "2026-06-22"
+# The evidence a product's component models produce, which the product is therefore
+# not scored on holding a copy of.
+ANALYTICS_CATEGORIES = ("Sensitivity", "Analysis", "Test Results", "Unit Test",
+                        "Integration Test", "Benchmark Test", "Calibration",
+                        "Convergence", "Segment analysis")
 SETTINGS = {"fields": {"org_name": "MKM"}}
 
 
@@ -86,6 +91,25 @@ def test_a_recorded_document_with_no_file_is_not_counted_as_present(tmp_path, mo
     (tmp_path / "model" / "M1").mkdir(parents=True)
     (tmp_path / "model" / "M1" / "there.pdf").write_bytes(b"%PDF-")
     assert check({"filename": "there.pdf"}) is True
+
+
+def test_product_is_not_scored_on_its_components_analytics_evidence(register):
+    """A Product's analytics are its component models, so the paper about them --
+    testing, sensitivities, the wider analysis, the training artefacts -- is demanded
+    of those models and not restated here. Scoring it on both would raise a finding
+    the product could only close by filing a second copy of the model's evidence.
+    """
+    rows = {r["entity_kind"]: r for r in scan(AS_OF)}
+    demanded = {g["key"] for g in rows[PRODUCT_KIND]["gaps"] if g["kind"].startswith("document")}
+    assert not demanded & set(ANALYTICS_CATEGORIES), (
+        "a product should not be scored on its component models' evidence")
+    assert "Core Documentation" in demanded, (
+        "what the product itself IS is still the product's own obligation")
+    # The same categories are still demanded of a model, or the evidence would have
+    # been dropped from the estate rather than moved to where it is produced.
+    model_gaps = {g["key"] for g in rows[MODEL_KIND]["gaps"]}
+    assert set(ANALYTICS_CATEGORIES) <= model_gaps, (
+        "the model that produces the analytics is still asked to evidence them")
 
 
 def test_product_scope_mirrors_the_model_one():
