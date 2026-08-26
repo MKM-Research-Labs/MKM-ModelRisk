@@ -35,6 +35,7 @@ from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
     FINOS_SHELF,
     DOC_CATEGORIES,
     MODEL_FIELD_SPECS,
+    PRODUCT_AUDIT_DOC_CATEGORIES,
     PRODUCT_COLLECTION_SPECS,
     PRODUCT_FIELD_SPECS,
 )
@@ -74,11 +75,17 @@ def _retrievable(scope: str):
     return check
 
 
-def _audit(kind, entity_id, name, data, field_specs, collection_specs, scope, as_of):
+def _audit(kind, entity_id, name, data, field_specs, collection_specs, scope, as_of,
+           doc_categories=DOC_CATEGORIES):
+    """One record's audit. ``doc_categories`` is what this KIND of record is asked to
+    evidence, which is not the same as what it may file: a Product is scored on the
+    shorter ``PRODUCT_AUDIT_DOC_CATEGORIES`` because the paper about its analytics is
+    demanded of its component models, and scoring it here too would raise a finding
+    closable only by filing a second copy."""
     return audit_entity(
         entity_kind=kind, entity_id=entity_id, entity_name=name or "", data=data,
         field_specs=field_specs, collection_specs=collection_specs,
-        doc_categories=DOC_CATEGORIES, risk=compute_risk_rating(data, as_of=as_of),
+        doc_categories=doc_categories, risk=compute_risk_rating(data, as_of=as_of),
         as_of=as_of, available=_retrievable(scope),
     )
 
@@ -115,7 +122,8 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
         rows.append(_audit(
             PRODUCT_KIND, product["product_id"], data.get("product"), data,
             PRODUCT_FIELD_SPECS, PRODUCT_COLLECTION_SPECS,
-            product_scope(product["product_id"]), as_of))
+            product_scope(product["product_id"]), as_of,
+            doc_categories=PRODUCT_AUDIT_DOC_CATEGORIES))
     # ML Applications are audited on the same terms as everything else. An estate
     # half of which is ML, audited on the other half, reports a gap picture that is
     # wrong in the direction that flatters — and nothing on the page would say so.
