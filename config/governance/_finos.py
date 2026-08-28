@@ -194,7 +194,11 @@ FINOS_MITIGATION_CATALOGUE = (
     ("AIR-DET-013", "Providing Citations and Source Traceability for AI-Generated "
      "Information", EVIDENCE_PROBE, ""),
     ("AIR-DET-015", "Using Large Language Models for Automated Evaluation "
-     "(LLM-as-a-Judge)", EVIDENCE_PROBE, ""),
+     "(LLM-as-a-Judge)", "judged",
+     "A judge evaluation recorded against the record, with what it returned. The "
+     "second mitigation evidenced from the register rather than from a filed "
+     "description -- reporting it unevidenced because nobody had also written a "
+     "paper about it would be the register disowning evidence it holds."),
     ("AIR-DET-016", "Preserving Source Data Access Controls in AI Systems",
      EVIDENCE_PROBE, ""),
     ("AIR-DET-021", "Agent Decision Audit and Explainability", EVIDENCE_PROBE,

@@ -46,6 +46,7 @@ which is why it is written down here rather than left to be inferred.
 from __future__ import annotations
 
 from config.governance._ai import DEPLOYMENT_PATTERNS
+from config.governance._collections import EVALUATIONS_COLLECTION
 from src.governance.completeness._gaps import _recorded
 from src.governance.completeness._probe_helpers import _any_entries, _filled, _share
 
@@ -69,6 +70,17 @@ def _multi_agent(data: dict) -> bool:
     return _is_ai_system(data) and data.get("deployment_pattern") == _MULTI_AGENT_PATTERN
 
 
+def _evaluated(data: dict, kind: str | None = None) -> bool:
+    """Whether an evaluation is recorded -- optionally, one of a particular kind.
+
+    Naming a kind matters where a row turns on a specific exercise: a reproducibility
+    check answers non-determinism and a held-out score does not, and counting any
+    evaluation for either would report a measurement nobody made.
+    """
+    rows = data.get(EVALUATIONS_COLLECTION) or []
+    return any(r.get("kind") == kind for r in rows) if kind else bool(rows)
+
+
 def _ai(predicate, applies=_is_ai_system):
     """A probe over the AI Systems on the register."""
     return lambda estate: _share(estate, predicate, applies=applies)
@@ -80,11 +92,20 @@ AI_PROBES = {
     # AIR-OP-005: not "which version" but "can it change under us". Both halves are
     # required, because a pinned version with no policy behind it is an accident.
     "ai_versioning": _ai(lambda d: _filled(d, "pinned_version", "version_policy")),
-    # AIR-OP-006
-    "ai_determinism": _ai(lambda d: _filled(d, "output_variability")),
-    # AIR-OP-004: what stops a confident wrong answer -- grounding, and the human
-    # who would catch it. Hallucination is not closed by either alone.
-    "ai_grounding": _ai(lambda d: _filled(d, "grounding", "human_oversight")),
+    # AIR-OP-006. Described AND checked: a reproducibility run is the one evaluation
+    # kind that answers this row, so it is named rather than accepting any evaluation.
+    "ai_determinism": _ai(lambda d: _filled(d, "output_variability")
+                          and _evaluated(d, "Reproducibility check")),
+    # AIR-OP-004: what stops a confident wrong answer, and whether anybody checked.
+    #
+    # Strengthened when the evaluation record arrived. It used to ask only that
+    # grounding and human oversight be DESCRIBED, and a description is an intention:
+    # "answers are drawn only from the retrieved documents" is what the team meant to
+    # build, not evidence it works. An evaluation is the measurement. Hallucination is
+    # the row where that distinction matters most -- the whole risk is output that
+    # reads correct, so the control evidence has to be somebody having checked.
+    "ai_grounding": _ai(lambda d: _filled(d, "grounding", "human_oversight")
+                        and _any_entries(d, EVALUATIONS_COLLECTION)),
     # AIR-OP-017
     "ai_explainability": _ai(lambda d: _filled(d, "explainability_approach")),
     # AIR-OP-007: who supplies it and how it is reached. A system whose provider is

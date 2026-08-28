@@ -215,6 +215,13 @@ COLLECTION_CRITICALITY = {
     # a cliff: on a 27-record estate it moved mean completeness 0.905 -> 0.892 and
     # pushed nothing below its threshold.
     "fairness_assessments": 0.55,
+    # What testing returned, as opposed to the three Yes/No flags saying it happened.
+    # Weighted at the same level as the feeds a model draws on: for a record that is
+    # scored or relied upon, "what did the test say" is provenance of the same order
+    # as "where did the data come from". Above fairness because, unlike bias, this
+    # applies to everything on the register -- a curve model has nobody to
+    # disadvantage but it still has to have been checked against something.
+    "evaluations": 0.65,
     "raci_roles": 0.60,
     "version_history": 0.50,
     "signoff_history": 0.70,

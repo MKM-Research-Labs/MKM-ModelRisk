@@ -79,6 +79,7 @@ const AISystemDetail = RecordDetail.attach({
       ["model_weaknesses", "Weaknesses", n("model_weaknesses")],
       ["data_sources", "Data sources", n("data_sources")],
       ["fairness_assessments", "Fairness", n("fairness_assessments")],
+      ["evaluations", "Evaluations", n("evaluations")],
       ["remediation_steps", "Remediation", n("remediation_steps")],
       ["review", "Review", n("review_notes")],
       ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],

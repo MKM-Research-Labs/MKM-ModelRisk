@@ -247,10 +247,19 @@ def test_filling_the_ai_fields_moves_the_finos_risk_rows():
         return next(r for r in rows
                     if r["framework"] == FINOS_RISKS and r["ref"] == ref)
 
-    # AIR-OP-016 is no longer here: it is counted over the whole estate from the
-    # fairness_assessments collection, so it is exercised in its own test rather than
-    # by filling scalar fields on one record.
-    moved = ("AIR-OP-004", "AIR-OP-005", "AIR-OP-006", "AIR-OP-007", "AIR-OP-014",
+    # Three rows have left this list as the record grew, and each for the same
+    # reason: they stopped being answerable by filling in scalar fields.
+    #
+    #   AIR-OP-016  counted over the whole estate from fairness_assessments.
+    #   AIR-OP-004  needs an evaluation as well as a description of grounding —
+    #               "answers are drawn only from the retrieved documents" is what
+    #               the team meant to build, not evidence it works.
+    #   AIR-OP-006  needs a reproducibility check specifically.
+    #
+    # All three are exercised in their own tests (test_evaluations,
+    # test_fairness_and_classification). What remains here is the set that a
+    # well-filled record genuinely does evidence on its own.
+    moved = ("AIR-OP-005", "AIR-OP-007", "AIR-OP-014",
              "AIR-OP-017", "AIR-SEC-010", "AIR-RC-001")
 
     _register()

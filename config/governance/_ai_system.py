@@ -68,7 +68,8 @@ from config.governance._ai import (AI_SYSTEM_QUESTION_LIST, DATA_EGRESS_CLASSES,
                                    DEPLOYMENT_PATTERNS, EU_AI_ACT_CLASSES,
                                    FOUNDATION_MODEL_LIST, HOSTING_MODES,
                                    HUMAN_OVERSIGHT_MODES, VERSION_POLICIES)
-from config.governance._collections import COLLECTION_SPECS, FAIRNESS_COLLECTION
+from config.governance._collections import (COLLECTION_SPECS, EVALUATIONS_COLLECTION,
+                                            FAIRNESS_COLLECTION)
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY,
                                           VALID_LIFECYCLE_STAGES, VALID_MATERIALITY,
                                           VALID_RAG_RATINGS, VALID_REVIEW_FREQUENCIES,
@@ -216,6 +217,9 @@ AI_SYSTEM_COLLECTION_SPECS = {
     # disadvantage" is the same question of a model, an ML Application and an AI
     # System, and three shapes would make the estate-wide answer unobtainable.
     FAIRNESS_COLLECTION: COLLECTION_SPECS[FAIRNESS_COLLECTION],
+    # What testing actually returned. Same collection on all three record types,
+    # because "has this been measured, and what did it say" is one question.
+    EVALUATIONS_COLLECTION: COLLECTION_SPECS[EVALUATIONS_COLLECTION],
     "change_history": COLLECTION_SPECS["change_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],

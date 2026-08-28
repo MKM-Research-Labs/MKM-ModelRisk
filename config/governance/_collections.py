@@ -18,6 +18,9 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 """Structured-collection field specs on a model (coding rule R1)."""
+from config.governance._assessments import (  # noqa: F401 (re-export)
+    ASSESSMENT_COLLECTION_SPECS, EVALUATIONS_COLLECTION, FAIRNESS_COLLECTION,
+    VALID_EVALUATION_KINDS, VALID_EVALUATION_VERDICTS)
 from config.governance._inventory import VALID_RAG_RATINGS
 from config.governance._signoff_collections import (  # noqa: F401 (re-export)
     SIGNOFF_COLLECTION_SPECS, SIGNOFF_COLLECTIONS, SIGNOFF_HISTORY_COLLECTION,
@@ -66,7 +69,15 @@ DATA_SOURCES_COLLECTION = "data_sources"
 # model inventory, ML Applications and AI Systems: "who could this disadvantage" is
 # the same question of all three, and asking it three different ways would make the
 # estate-wide answer unobtainable.
-FAIRNESS_COLLECTION = "fairness_assessments"
+
+# What a test actually returned, one row per evaluation run. Shared across the model
+# inventory, ML Applications and AI Systems: "has this been measured, and what did it
+# say" is the same question of all three.
+#
+# This is what turns ``benchmark_tests: Yes`` into evidence. That flag records that
+# testing happened and nothing else -- not what was tested, not against what, not what
+# it found, not when. A committee cannot challenge a Yes.
+
 # Whether a feed comes from inside the institution or from a third party. The
 # distinction is a governance one, not a label: an EXTERNAL source is a third-party
 # dependency, so the questions that follow are provenance, licensing, and whether the
@@ -203,28 +214,6 @@ COLLECTION_SPECS = {
          "reference": "model_inventory", "required": True},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
-    # Who could be disadvantaged by this record's output, and what was actually
-    # measured about it. A COLLECTION rather than a paragraph, because the question is
-    # asked per attribute and the answers differ: a model may be tested against age
-    # and never against postcode-as-a-proxy, and a single "we assessed fairness" field
-    # cannot say which. One row per attribute is what makes "which attributes has
-    # anything been measured against" a query rather than a reading exercise.
-    #
-    # ``attribute`` is free text on purpose. Which characteristics are protected is a
-    # matter of law and it differs by jurisdiction -- a fixed list of ours would be
-    # wrong somewhere on its first day, and an institution that needs a controlled
-    # vocabulary can make it an admin list without this shape changing.
-    #
-    # ``finding`` is deliberately not a pass/fail. "No disparity above the threshold"
-    # and "not measured" are different answers, and a boolean collapses them.
-    FAIRNESS_COLLECTION: {"label": "Fairness assessment", "id_prefix": "FAIR", "fields": [
-        {"key": "attribute", "label": "Attribute or group", "type": "text",
-         "required": True},
-        {"key": "how_assessed", "label": "How it was assessed", "type": "textarea"},
-        {"key": "metric", "label": "Metric", "type": "text"},
-        {"key": "finding", "label": "What it showed", "type": "textarea"},
-        {"key": "assessed_on", "label": "Assessed on", "type": "date"},
-    ]},
     # Data sources (feeds) the model pulls its inputs from. ``data_source`` is a
     # strict reference to the admin Data Source list, so "these two models share a
     # source" matches on a defined id, never on free-text spelling.
@@ -297,3 +286,8 @@ COLLECTION_SPECS = {
         {"key": "updates", "label": "Updates", "type": "text", "hidden": True},
     ]},
 }
+
+# The measured-about-a-record collections, folded in so COLLECTION_SPECS stays the one
+# table every record type reads. They live in their own module (see _assessments) but
+# there is no second place to look them up.
+COLLECTION_SPECS.update(ASSESSMENT_COLLECTION_SPECS)

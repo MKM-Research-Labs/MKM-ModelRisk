@@ -60,7 +60,8 @@ What this record deliberately does NOT carry, and why:
 """
 from __future__ import annotations
 
-from config.governance._collections import COLLECTION_SPECS, FAIRNESS_COLLECTION
+from config.governance._collections import (COLLECTION_SPECS, EVALUATIONS_COLLECTION,
+                                            FAIRNESS_COLLECTION)
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY,
                                           VALID_REVIEW_STATUSES,
                                           VALID_LIFECYCLE_STAGES, VALID_MATERIALITY,
@@ -217,6 +218,9 @@ ML_APPLICATION_COLLECTION_SPECS = {
     # disadvantage" is the same question of a model, an ML Application and an AI
     # System, and three shapes would make the estate-wide answer unobtainable.
     FAIRNESS_COLLECTION: COLLECTION_SPECS[FAIRNESS_COLLECTION],
+    # What testing actually returned. Same collection on all three record types,
+    # because "has this been measured, and what did it say" is one question.
+    EVALUATIONS_COLLECTION: COLLECTION_SPECS[EVALUATIONS_COLLECTION],
     "change_history": COLLECTION_SPECS["change_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],

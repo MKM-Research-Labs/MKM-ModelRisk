@@ -140,6 +140,9 @@ const Detail = {
       // Rating rather than under Connections: it is a property of the assessment, not
       // of the wiring.
       ["fairness_assessments", "Fairness", n("fairness_assessments")],
+      // What testing returned, beside Fairness: both are measurements about the
+      // model rather than descriptions of it.
+      ["evaluations", "Evaluations", n("evaluations")],
       // Outstanding actions count here too: the badge should say there is something
       // still owed to the committee, not only how much history the tab holds.
       ["decisions", "MRC linkage", (d.signoff_history || []).length +

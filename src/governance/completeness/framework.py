@@ -147,6 +147,17 @@ PROBES = {
     # A recorded assessment, not a recorded intention: an entry names the attribute
     # assessed and what the measurement showed.
     "fairness": lambda e: _share(e, lambda d: _any_entries(d, "fairness_assessments")),
+    # AIR-DET-015. The SECOND mitigation the platform evidences from the register
+    # rather than from a filed description, on the same reasoning as acceptance
+    # testing: a judge evaluation recorded against the record IS the evidence this row
+    # asks for, and reporting it unevidenced because nobody had also written a paper
+    # about it would be the register disowning what it holds.
+    #
+    # Counted over the records that carry evaluations at all, so an estate that has
+    # never used a judge reads Not evidenced rather than dragging every record down.
+    "judged": lambda e: _share(
+        e, lambda d: any(r.get("kind") == "LLM-as-a-judge"
+                         for r in (d.get("evaluations") or []))),
     "acceptance": lambda e: _share(
         e, lambda d: _filled(d, "unit_tests", "integration_tests", "benchmark_tests")),
     # The FINOS risk rows that only an AI System can answer. Kept in their own
