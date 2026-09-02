@@ -48,6 +48,17 @@ def open_tab(page: Page, name: str) -> None:
     expect(page.locator(f"#tab-{name}")).to_be_visible()
 
 
+def open_committee(page: Page, mrc: str) -> None:
+    """Open the MRC tab and drill into one committee.
+
+    The tab lists the committees the region navigator covers before it shows any
+    one of them -- as the Models and Products tabs do -- so the schedule form and
+    a committee's meetings are one click further in than the tab itself."""
+    open_tab(page, "mrc")
+    page.click(f"tr.clickable[data-mrc='{mrc}']")
+    expect(page.locator("#mt-list")).to_be_visible()
+
+
 def confirm(page: Page) -> None:
     """Accept the confirm-to-amend modal and wait for it to close."""
     expect(page.locator("#confirm-overlay")).to_be_visible()
