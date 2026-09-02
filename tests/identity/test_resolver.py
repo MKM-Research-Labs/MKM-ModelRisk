@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import pytest
 
+from config.identity import IDENTITY_DEV_FALLBACK
 from src.identity import IdentityError, resolve_principal
 from src.identity._principal import SOURCE_FALLBACK, SOURCE_SSO_HEADER
 
@@ -46,8 +47,10 @@ def test_header_lookup_is_case_insensitive():
 
 
 def test_fallback_actor_when_no_header_and_allowed():
+    """The fallback is whoever config names, and config names nobody in
+    particular -- an unauthenticated caller is a guest, not a developer."""
     principal = resolve_principal({}, allow_fallback=True)
-    assert principal.actor == "david.kelly@mkmresearchlabs.com"
+    assert principal.actor == IDENTITY_DEV_FALLBACK == "Guest"
     assert principal.source == SOURCE_FALLBACK
 
 

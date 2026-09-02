@@ -283,9 +283,12 @@ const Reference = {
     // A prose field takes the width that is going. The add row is a flex row, so a
     // textarea sized by its rows attribute alone sat in a small box with the rest of
     // the line empty beside it — on the review questions, the field holding the
-    // longest text on the screen was the narrowest thing on it.
+    // longest text on the screen was the narrowest thing on it. A multichoice is
+    // the same shape of problem: it lists its options down the row and got no more
+    // room than a one-line text box, which left the roles picker cramped.
+    const wide = (f) => f.type === "textarea" || f.type === "multichoice";
     const addInputs = cols.filter((f) => !f.readonly).map((f) =>
-      '<div class="field"' + (f.type === "textarea" ? ' style="flex:1;min-width:280px"' : "") +
+      '<div class="field"' + (wide(f) ? ' style="flex:1;min-width:280px"' : "") +
       "><label>" + esc(f.label) + (f.required ? " *" : "") + "</label>" +
       inputControl("add-" + spec.key + "-" + f.key, f) + "</div>").join("");
     container.innerHTML =
