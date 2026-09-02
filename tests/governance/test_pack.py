@@ -51,9 +51,10 @@ MEETING = {
 def test_build_tex_includes_logo_org_and_sections():
     tex = build_tex(MEETING, {"fields": {"org_name": "MKM Labs"}}, logo=True)
     # The house style: the uploaded logo on the title page (graphicx picks its
-    # extension), the org in the running header, and CONFIDENTIAL marking.
+    # extension) and the org in the running header. The classification banner is
+    # the adopter's own and unset here, so it is asserted in test_latex.py instead.
     assert "\\includegraphics" in tex and "{" + LOGO_ASSET + "}" in tex
-    assert "MKM Labs" in tex and "Q2 MRC" in tex and "CONFIDENTIAL" in tex
+    assert "MKM Labs" in tex and "Q2 MRC" in tex
     for section in ("Participants", "Agenda", "Minutes", "Decisions", "Actions"):
         assert section in tex
     assert tex.strip().endswith("\\end{document}")

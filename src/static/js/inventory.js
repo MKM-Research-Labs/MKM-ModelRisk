@@ -59,7 +59,9 @@ function inputControl(id, spec, division) {
       '<option value="' + esc(o) + '"' +
       (explain[o] ? ' title="' + esc(explain[o]) + '"' : "") + ">" + esc(o) +
       "</option>").join("");
-    return '<select id="' + id + '" multiple size="' +
+    // A multi-select has no intrinsic width, so it collapsed to its content on a
+    // narrow viewport — a roles picker too cramped to read.
+    return '<select id="' + id + '" multiple style="min-width:180px" size="' +
       Math.min((spec.options || []).length, 6) + '">' + opts + "</select>";
   }
   if (spec.type === "date") return '<input id="' + id + '" type="date">';

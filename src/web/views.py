@@ -34,7 +34,8 @@ views_bp = Blueprint("views", __name__)
 def index():
     # Pre-fill the "Acting as" field with the resolved principal: the SSO user in
     # a deployment, or the configured dev fallback (IDENTITY_DEV_FALLBACK)
-    # locally — so a demo attributes changes to the operator, not david.kelly@mkmresearchlabs.com.
+    # locally — so a demo attributes changes to whoever is running it rather than
+    # to whichever developer's address happened to be the shipped default.
     # asset_version busts any stale CSS/JS a browser cached under an earlier
     # policy; without it a served-but-unseen console is indistinguishable from a
     # missing feature.

@@ -23,6 +23,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from src.governance import wording
+from config.reporting import DEFAULT_CLASSIFICATION
 from src.governance.latex import (
     DEFAULT_ORG,
     LOGO_ASSET,
@@ -35,18 +36,21 @@ from src.governance.latex import (
 from src.governance.mrc_settings import set_field
 
 
-def test_preamble_carries_org_title_and_confidential_footer():
+def test_preamble_carries_org_title_and_page_footer():
     tex = preamble("My Report", doc_version="2.0", org_name="Acme")
     assert "Acme" in tex and "My Report --- v2.0" in tex
-    assert "CONFIDENTIAL" in tex and "\\pageref{LastPage}" in tex
+    assert "\\pageref{LastPage}" in tex
     # The brand colour is defined from config/theme rather than named in the source;
     # "mkmblue" was the literal it replaced (rule R10).
     assert "\\definecolor{brand}{HTML}{" in tex
     assert "mkmblue" not in tex
 
 
-def test_preamble_defaults_the_org():
-    assert DEFAULT_ORG in preamble("X")
+def test_preamble_names_no_org_of_its_own():
+    """The name on a document is the name of the institution that produced it, so
+    nothing is shipped to fall back to -- an unset org prints as nothing."""
+    assert DEFAULT_ORG == ""
+    assert "Acme" not in preamble("X")
 
 
 def test_classification_is_settings_driven():
@@ -56,10 +60,12 @@ def test_classification_is_settings_driven():
     assert "OFFICIAL-SENSITIVE" in title_page("T", "s", logo=False)
 
 
-def test_classification_falls_back_to_the_shipped_default(monkeypatch):
+def test_classification_falls_back_to_the_configured_default(monkeypatch):
     # Nothing recorded (a fresh install, or the settings unreadable): the document
-    # still carries the banner config ships rather than none at all.
+    # carries whatever config names, and config ships naming nothing -- a banner an
+    # institution did not choose is worse than no banner.
     monkeypatch.setattr(wording, "_settings_fields", lambda settings=None: {})
+    assert DEFAULT_CLASSIFICATION == ""
     monkeypatch.setattr(wording, "DEFAULT_CLASSIFICATION", "OFFICIAL-SENSITIVE")
     assert "OFFICIAL-SENSITIVE" in preamble("X")
 
@@ -71,7 +77,7 @@ def test_author_line_is_settings_driven():
 
 def test_title_page_with_logo_references_the_cover_asset():
     tex = title_page("T", "sub", logo=True, author="Alice")
-    assert LOGO_ASSET in tex and "Alice" in tex and "CONFIDENTIAL" in tex
+    assert LOGO_ASSET in tex and "Alice" in tex
 
 
 def test_title_page_without_logo_omits_the_graphic():

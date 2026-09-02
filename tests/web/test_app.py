@@ -20,6 +20,7 @@
 """Tests for the Flask app factory and the index view."""
 from __future__ import annotations
 
+from config.identity import IDENTITY_DEV_FALLBACK
 from config.web import WEB_HOST, WEB_PORT
 from src.web import create_app
 
@@ -46,7 +47,7 @@ def test_index_actor_field_prefills_from_sso_header(client):
 def test_index_actor_field_falls_back_when_no_header(client):
     # With no SSO header, it falls back to the configured dev identity.
     html = client.get("/").get_data(as_text=True)
-    assert 'id="actor-input" data-default="david.kelly@mkmresearchlabs.com"' in html
+    assert f'id="actor-input" data-default="{IDENTITY_DEV_FALLBACK}"' in html
 
 
 def test_create_app_runs_migrations_by_default():

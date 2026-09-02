@@ -45,7 +45,9 @@ def test_report_wording_is_served_to_the_misc_tab(client):
     misc = {spec["key"] for spec in settings["specs"] if spec["group"] == "misc"}
     assert {"report_classification", "report_author", "report_legal_notice"} <= misc
     assert settings["fields"]["report_classification"] == DEFAULT_CLASSIFICATION
-    assert DEFAULT_LEGAL_NOTICE[0] in settings["fields"]["report_legal_notice"]
+    # Both ship empty for the adopter to fill in, so the tab has to serve the keys
+    # even when there is nothing yet to show against them.
+    assert settings["fields"]["report_legal_notice"] == "".join(DEFAULT_LEGAL_NOTICE)
 
 
 def test_update_report_legal_notice(client):

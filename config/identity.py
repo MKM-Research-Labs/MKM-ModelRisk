@@ -38,7 +38,10 @@ IDENTITY_NAME_HEADER = os.environ.get(
 
 # Actor used for local development when no SSO header is present. Only honoured
 # when the caller explicitly allows a fallback (never in a hardened deployment).
-IDENTITY_DEV_FALLBACK = os.environ.get("IDENTITY_DEV_FALLBACK", "david.kelly@mkmresearchlabs.com")
+# A named person is the wrong default: every unattributed local change was landing
+# in the event log under one developer's email, on installs they had never seen.
+# "Guest" is nobody, which is what an unauthenticated caller is.
+IDENTITY_DEV_FALLBACK = os.environ.get("IDENTITY_DEV_FALLBACK", "Guest")
 
 # Actor recorded for changes the platform makes on its own initiative rather than
 # on behalf of a signed-in user — currently only the first-run seeding of the
