@@ -39,7 +39,7 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e._flows import confirm, open_app, open_tab
+from tests.e2e._flows import confirm, open_app, open_committee, open_tab
 
 pytestmark = pytest.mark.journey
 
@@ -80,9 +80,9 @@ def _register_product(page: Page, product_id: str, name: str, agent: str) -> Non
 
 
 def _schedule_meeting(page: Page, meeting_id: str, title: str, date: str) -> None:
-    # The MRC tab auto-selects the sole committee, so the schedule form is bound
-    # to it; scheduling is ungated (no confirm modal).
-    open_tab(page, "mrc")
+    # The schedule form lives on the committee, so it is bound to whichever one
+    # was opened; scheduling is ungated (no confirm modal).
+    open_committee(page, "MRC-CO")
     page.fill("#sc-meeting_id", meeting_id)
     page.fill("#sc-title", title)
     page.fill("#sc-date", date)
@@ -103,7 +103,7 @@ def _propose_rag(page: Page, model_id: str, rag: str) -> None:
 
 
 def _approve_signoff(page: Page, meeting_id: str) -> None:
-    open_tab(page, "mrc")
+    open_committee(page, "MRC-CO")
     page.click(f"tr.clickable[data-id='{meeting_id}']")
     page.click("[data-mtab='models_in_scope']")
     approve = page.locator("[data-agapprove]").first

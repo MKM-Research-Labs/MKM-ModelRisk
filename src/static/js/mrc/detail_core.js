@@ -258,7 +258,7 @@ const MeetingDetail = {
   _bindInfo(d) {
     const self = this;
     document.getElementById("mt-back").onclick = function () {
-      document.getElementById("mt-detail").innerHTML = ""; MRC.loadList();
+      document.getElementById("mt-detail").innerHTML = ""; MRC.loadMeetings();
     };
     document.getElementById("mt-pdf").onclick = function () {
       window.open("/api/meetings/" + self._id + "/pack.pdf", "_blank");
@@ -295,7 +295,7 @@ const MeetingDetail = {
       }
       App.amend("Set " + f.label + ' = "' + input.value + '" on ' + this._id + ".", "POST",
         "/api/meetings/" + this._id + "/field", { field: key, value: input.value.trim() },
-        () => { this.show(this._id, this._tab); MRC.loadList(); });
+        () => { this.show(this._id, this._tab); MRC.loadMeetings(); });
     };
   },
 };

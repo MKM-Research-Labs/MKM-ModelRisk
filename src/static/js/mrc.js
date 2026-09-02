@@ -18,14 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// The MRC tab. There can be several MRC committees (set up under Admin > MRC);
-// a selector picks one, and the page then shows that committee's chair/cadence,
-// its Terms of Reference and its meetings — so meetings are scheduled per MRC.
+// The MRC tab. Committees are set up under Admin > MRC and attach to the org tree
+// at Company, Division or Line of Business level. The tab opens on a LIST of the
+// committees the region navigator's current selection covers — as the Models and
+// Products tabs do — and opening one shows that committee's chair/cadence, its
+// Terms of Reference and its meetings, so meetings are scheduled per MRC.
 const MRC = {
   _specs: null,
   _committees: [],
   _ref: {},         // reference data (mrc / division / line_of_business) for the org tree
-  _mrc: null,       // the selected committee's id (value), survives re-renders
+  _mrc: null,       // the open committee's id (value); null while the list is showing
+  _meetings: [],    // every meeting, for the list's per-committee counts
 
   async specs() {
     // Always re-fetch: field options (incl. references) track the admin lists.
@@ -41,11 +44,13 @@ const MRC = {
     return this._committees.find((c) => c.value === this._mrc) || null;
   },
 
+  // --- the committee list ---
+
   async render() {
-    const specs = await this.specs();
+    await this.specs();
     // Archived committees are retained for history but never offered for
-    // scheduling new meetings — filter them out of the selector. Reference data
-    // is shared/cached via MrcNav so switching tabs doesn't re-fetch it.
+    // scheduling new meetings — filter them out. Reference data is shared/cached
+    // via MrcNav so switching tabs doesn't re-fetch it.
     const nav = await MrcNav.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
@@ -55,19 +60,117 @@ const MRC = {
         "Create one under Admin &rarr; MRC, then schedule meetings against it.</div></div>";
       return;
     }
-    // The active committee follows the shared MRC-region bar (persisted across
-    // the Models/Products/Audit tabs); the page always resolves to one.
-    this._mrc = MrcNav.activeCommittee(this._committees, this._ref);
-    const committee = this._committee();
+    this._meetings = await App.get("/api/meetings");
+    this._mrc = null;
+    const scoped = this._committees.filter((c) => this._committeeInScope(c));
     el.innerHTML =
+      '<div id="mrc-list">' + this._listSummary(scoped) + this._listTable(scoped) + "</div>" +
+      '<div id="mrc-detail"></div>';
+    const self = this;
+    el.querySelectorAll("#mrc-list tr.clickable").forEach(function (tr) {
+      tr.title = "Open committee";
+      tr.onclick = function () { self.showCommittee(tr.getAttribute("data-mrc")); };
+    });
+  },
+
+  // Which committees the current region selection covers. A committee is not a
+  // rung of the org tree, so this reads its own scope against the selection:
+  // Company-level committees govern everything and are always listed; a
+  // Division-level one shows for its division (an unscoped one shows anywhere,
+  // since it names no division to be excluded by); a Line of Business-level one
+  // shows for its line of business, and also for that line's parent division
+  // when only the division is selected.
+  _committeeInScope(c) {
+    const s = MrcNav.state || {};
+    if (!s.div) return true;                            // "All"
+    if (!c || c.level === "Company") return true;
+    if (c.level === "Division") return !c.scope_value || c.scope_value === s.div;
+    if (c.level === "Line of Business") {
+      if (s.lob) return c.scope_value === s.lob;
+      const lob = (this._ref.line_of_business || []).find((l) => l.value === c.scope_value);
+      return !!lob && lob.division === s.div;
+    }
+    return true;
+  },
+
+  _meetingsFor(value) {
+    return this._meetings.filter((m) => (m.data || {}).mrc === value);
+  },
+
+  _listSummary(scoped) {
+    const ids = {};
+    scoped.forEach((c) => { ids[c.value] = true; });
+    const meetings = this._meetings.filter((m) => ids[(m.data || {}).mrc]);
+    const c = (s) => meetings.filter((m) => m.status === s).length;
+    const card = (lbl, v, color) =>
+      '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
+      lbl + '</div><div class="val">' + v + "</div></div>";
+    return '<div class="summary">' +
+      card("Committees", scoped.length, Theme.value("accent")) +
+      card("Meetings", meetings.length, Theme.value("accent")) +
+      card("Scheduled", c("Scheduled"), Theme.value("accent")) +
+      card("Completed", c("Completed"), Theme.value("green")) + "</div>";
+  },
+
+  _listTable(scoped) {
+    if (!scoped.length) {
+      return '<div class="card"><div class="empty">No MRC committees cover this scope. ' +
+        "Pick another region above, or create one under Admin &rarr; MRC.</div></div>";
+    }
+    const self = this;
+    let rows = "";
+    scoped.forEach(function (c) {
+      const meetings = self._meetingsFor(c.value);
+      rows += '<tr class="clickable" data-mrc="' + esc(c.value) + '">' +
+        '<td class="modelid">' + esc(c.value) + "</td>" +
+        "<td>" + fieldDisplay(c.name) + "</td>" +
+        "<td>" + fieldDisplay(c.level) + "</td>" +
+        "<td>" + fieldDisplay(c.scope_value) + "</td>" +
+        "<td>" + fieldDisplay(c.chair) + "</td>" +
+        "<td>" + fieldDisplay(c.frequency) + "</td>" +
+        '<td class="num">' + meetings.length + "</td>" +
+        '<td class="num">' +
+        meetings.filter((m) => m.status === "Scheduled").length + "</td></tr>";
+    });
+    return '<div class="card"><h3>Model Risk Committees</h3>' +
+      "<table><thead><tr><th>MRC</th><th>Name</th><th>Level</th><th>Scope</th>" +
+      "<th>Chair</th><th>Frequency</th><th>Meetings</th><th>Scheduled</th>" +
+      "</tr></thead><tbody>" + rows + "</tbody></table></div>";
+  },
+
+  // --- one committee ---
+
+  // Render `value`'s detail in place of the list. Returns false when the id names
+  // no live committee, so a caller with more to draw knows to stop.
+  async showCommittee(value) {
+    this._mrc = value;
+    const committee = this._committee();
+    if (!committee) { this._mrc = null; return false; }
+    const list = document.getElementById("mrc-list");
+    if (list) list.style.display = "none";
+    document.getElementById("mrc-detail").innerHTML =
+      '<div style="margin-bottom:var(--space-6)">' +
+      '<button class="btn small" id="mrc-back">&larr; Back to committees</button></div>' +
       this._headerCards(committee) +
       this._torCard(committee) +
-      this._scheduleCard(specs, committee) +
+      this._scheduleCard(this._specs, committee) +
       '<div id="mt-summary"></div>' +
       '<div class="card"><h3>Meetings</h3><div id="mt-list"></div></div>' +
       '<div id="mt-detail"></div>';
+    document.getElementById("mrc-back").onclick = () => this.render();
     document.getElementById("mt-schedule").onclick = () => this._schedule();
-    await this.loadList();
+    await this.loadMeetings();
+    return true;
+  },
+
+  // A deep link (#mrc/<meeting-id>) lands on the list, where the meeting detail
+  // has nowhere to render — open the committee that owns the meeting first.
+  async openMeeting(meetingId) {
+    if (!this._committees.length) return;
+    const m = this._meetings.find((x) => x.meeting_id === meetingId);
+    const value = (m && (m.data || {}).mrc) ||
+      MrcNav.activeCommittee(this._committees, this._ref);
+    if (await this.showCommittee(value)) await MeetingDetail.show(meetingId);
   },
 
   _headerCards(c) {
@@ -119,11 +222,13 @@ const MRC = {
       const v = val("sc-" + f.key);
       if (v !== "") fields[f.key] = v;
     });
-    App.amend('Schedule meeting "' + id + '" for ' + this._mrc + ".", "POST", "/api/meetings",
-      { meeting_id: id, title: title, date: date, fields: fields }, () => this.render());
+    const mrc = this._mrc;
+    App.amend('Schedule meeting "' + id + '" for ' + mrc + ".", "POST", "/api/meetings",
+      { meeting_id: id, title: title, date: date, fields: fields },
+      () => this.render().then(() => this.showCommittee(mrc)));
   },
 
-  _summary(meetings) {
+  _meetingSummary(meetings) {
     const c = (s) => meetings.filter((m) => m.status === s).length;
     const card = (lbl, v, color) =>
       '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
@@ -134,10 +239,11 @@ const MRC = {
       card("Completed", c("Completed"), Theme.value("green")) + "</div>";
   },
 
-  async loadList() {
+  async loadMeetings() {
     const all = await App.get("/api/meetings");
+    this._meetings = all;
     const meetings = all.filter((m) => (m.data || {}).mrc === this._mrc);
-    document.getElementById("mt-summary").innerHTML = this._summary(meetings);
+    document.getElementById("mt-summary").innerHTML = this._meetingSummary(meetings);
     const box = document.getElementById("mt-list");
     if (!meetings.length) {
       box.innerHTML = '<div class="empty">No meetings for this MRC yet. Schedule one above.</div>';

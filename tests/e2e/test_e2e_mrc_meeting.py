@@ -24,7 +24,7 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e._flows import confirm, open_app, open_tab, register_model
+from tests.e2e._flows import confirm, open_app, open_committee, register_model
 
 pytestmark = pytest.mark.e2e
 
@@ -43,7 +43,7 @@ def _schedule(page: Page, base_url: str, meeting_id: str, title: str) -> None:
     # Seeded via the API — drop MrcNav's cached reference data so the MRC tab
     # sees the new committee and renders the schedule form.
     page.evaluate("typeof MrcNav !== 'undefined' && MrcNav.invalidate()")
-    open_tab(page, "mrc")
+    open_committee(page, "MRC-DEFAULT")
     page.fill("#sc-meeting_id", meeting_id)
     page.fill("#sc-title", title)
     page.fill("#sc-date", "2026-09-15")
@@ -97,7 +97,7 @@ def test_meeting_participants_roster_and_guests(page: Page, base_url: str):
                             "date": "2026-10-01", "fields": {"mrc": "MRC-P"},
                             "confirmed": True}, headers=_HEADERS)
     open_app(page, base_url)
-    open_tab(page, "mrc")
+    open_committee(page, "MRC-P")
     page.click("tr.clickable[data-id='MTG-P']")
     # Participants are shown in the persistent left panel, not a tab.
     panel = page.locator(".mtd-left")

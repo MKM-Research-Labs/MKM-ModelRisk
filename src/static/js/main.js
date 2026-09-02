@@ -87,7 +87,7 @@ const DEEP_LINK = {
   product: (id) => ProductDetail.show(id),
   mlapps: (id) => MLAppDetail.show(id),
   aisystems: (id) => AISystemDetail.show(id),
-  mrc: (id) => MeetingDetail.show(id),
+  mrc: (id) => MRC.openMeeting(id),
 };
 
 // Open whatever the current hash names. Returns false when it names nothing we

@@ -18,13 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// The two-tier MRC region navigator (divisions on the top row, their committees
+// The two-tier org navigator (divisions on the top row, their lines of business
 // below) shared by the MRC, Models, Products and Audit Trail tabs. The selection
 // lives here on `state` so the chosen region persists as the user moves between
-// those tabs. state = {div, mrc}: both null = "All"; a division with mrc null =
-// the whole division; div + mrc = one committee's scope.
+// those tabs. state = {div, lob}: both null = "All"; a division with lob null =
+// the whole division; div + lob = one line of business.
+//
+// The org hierarchy is Company > Division > Line of Business. MRC committees are
+// *attached* to that tree, not part of it — so they are not what this bar
+// navigates. The MRC tab lists the committees in the selected region instead.
 const MrcNav = {
-  state: { div: null, mrc: null },
+  state: { div: null, lob: null },
   _cache: null,             // {ref, committees} — shared so tab switches don't re-fetch
   _gen: 0,                  // bumped by invalidate(); see load()
 
@@ -65,7 +69,8 @@ const MrcNav = {
 
   // Show the bar for a region tab and render it (from cache) if not already
   // current. Merely switching tabs leaves the existing DOM in place — no rebuild,
-  // so no flicker.
+  // so no flicker. The signature covers what the bar draws: the org tree, not the
+  // committee list, which is why committee edits alone leave it standing.
   async showFor() {
     const el = document.getElementById("region-nav");
     if (!el) return;
@@ -73,84 +78,63 @@ const MrcNav = {
     const { committees, ref } = await this.load();
     this.normalize(committees, ref);
     const key = JSON.stringify(this.state) + "|" +
-      committees.map((c) => c.value).join(",") + "|" +
-      ((ref && ref.division) || []).map((d) => d.value).join(",");
+      ((ref && ref.division) || []).map((d) => d.value).join(",") + "|" +
+      ((ref && ref.line_of_business) || []).map((l) => l.value + "@" + l.division).join(",");
     if (key === this._key && el.firstChild) return;   // unchanged → leave as-is
     this._key = key;
-    el.innerHTML = this.html(committees, ref);
-    this.bind(el, committees, ref, () => {
+    el.innerHTML = this.html(ref);
+    this.bind(el, () => {
       this._key = null;                 // selection changed → allow re-render
       this.showFor();
       if (this._reload) this._reload();
     });
   },
 
-  // The division a committee rolls up to: a Division-level MRC's scope is itself
-  // a division; a Line of Business-level one inherits its line of business's division;
-  // Company-level (or unresolved) MRCs share a "Company" bucket.
-  divisionOf(c, ref) {
-    if (!c) return "Company";
-    if (c.level === "Division") return c.scope_value || "Company";
-    if (c.level === "Line of Business") {
-      const lob = ((ref && ref.line_of_business) || []).find((d) => d.value === c.scope_value);
-      return (lob && lob.division) || "Other";
-    }
-    return "Company";
+  // The lines of business under `div`, in reference order.
+  lobsForDivision(div, ref) {
+    if (!div) return [];
+    return ((ref && ref.line_of_business) || []).filter((l) => l.division === div);
   },
 
-  // committees grouped by division: { divisionValue: [committee, …] }.
-  groups(committees, ref) {
-    const groups = {};
-    committees.forEach((c) => {
-      const dv = this.divisionOf(c, ref);
-      (groups[dv] = groups[dv] || []).push(c);
-    });
-    return groups;
+  // Every division from reference data, in reference order, so the top row
+  // showcases the whole org tree — including divisions with no lines of business
+  // or models yet, so you can select one and register into it.
+  orderedDivisions(ref) {
+    return ((ref && ref.division) || []).map((d) => d.value);
   },
 
-  // Every division from reference data (in reference order), so the top row
-  // showcases the whole org tree — including divisions with no committees or
-  // models yet, so you can select one and register into it. Any extra buckets
-  // committees roll up to (Company/Other) are appended after.
-  orderedDivisions(groups, ref) {
-    const refOrder = ((ref && ref.division) || []).map((d) => d.value);
-    return refOrder.concat(Object.keys(groups).filter((dv) => !refOrder.includes(dv)));
-  },
-
-  // Repair the shared state if its division/committee no longer exists.
+  // Repair the shared state if its division/line of business no longer exists.
+  // `committees` is unused — see the note above the scope helpers below.
   normalize(committees, ref) {
-    const s = this.state || { div: null, mrc: null };
-    if (!s.div) { this.state = { div: null, mrc: null }; return; }
-    const groups = this.groups(committees, ref);
-    // A division is valid if it exists in reference data (even with no
-    // committees) or is a synthetic Company/Other bucket.
-    if (!this.orderedDivisions(groups, ref).includes(s.div)) {
-      this.state = { div: null, mrc: null }; return;
+    const s = this.state || { div: null, lob: null };
+    if (!s.div) { this.state = { div: null, lob: null }; return; }
+    if (!this.orderedDivisions(ref).includes(s.div)) {
+      this.state = { div: null, lob: null }; return;
     }
-    if (s.mrc && !(groups[s.div] || []).some((c) => c.value === s.mrc)) {
-      this.state = { div: s.div, mrc: null }; return;
+    if (s.lob && !this.lobsForDivision(s.div, ref).some((l) => l.value === s.lob)) {
+      this.state = { div: s.div, lob: null }; return;
     }
-    this.state = { div: s.div, mrc: s.mrc };
+    this.state = { div: s.div, lob: s.lob };
   },
 
   // Two-tier tab strip: an "All" tab and the divisions on top; when a division is
-  // active, its "All <div>" tab plus that division's committees appear below.
-  html(committees, ref) {
+  // active, its "All <div>" tab plus that division's lines of business below.
+  html(ref) {
     const state = this.state;
-    const groups = this.groups(committees, ref);
-    const divisions = this.orderedDivisions(groups, ref);
+    const divisions = this.orderedDivisions(ref);
     if (!divisions.length) return "";
     const tab = (label, active, attr) =>
       '<button class="dtab' + (active ? " active" : "") + '" ' + attr + ">" + esc(label) + "</button>";
     const top = tab("All", !state.div, 'data-all="1"') +
       divisions.map((dv) => tab(dv, state.div === dv, 'data-div="' + esc(dv) + '"')).join("");
     let second = "";
-    if (state.div && groups[state.div]) {
+    const lobs = state.div ? this.lobsForDivision(state.div, ref) : [];
+    if (lobs.length) {
       second =
         '<div class="dtabs" style="margin-top:var(--space-4);border-top:1px solid var(--line);padding-top:var(--space-4)">' +
-        tab("All " + state.div, !state.mrc, 'data-divall="1"') +
-        groups[state.div].map((c) =>
-          tab(c.name || c.value, state.mrc === c.value, 'data-mrc="' + esc(c.value) + '"')).join("") +
+        tab("All " + state.div, !state.lob, 'data-divall="1"') +
+        lobs.map((l) =>
+          tab(l.value, state.lob === l.value, 'data-lob="' + esc(l.value) + '"')).join("") +
         "</div>";
     }
     return '<div class="card" style="padding:var(--space-4) var(--space-6);margin-bottom:var(--space-6)">' +
@@ -159,69 +143,69 @@ const MrcNav = {
 
   // Wire selection clicks inside `container`; update the shared state and call
   // onChange() (no args) so the calling tab can re-render/re-filter.
-  bind(container, committees, ref, onChange) {
+  bind(container, onChange) {
     const set = (s) => { this.state = s; onChange(); };
     container.querySelectorAll("[data-all]").forEach((b) =>
-      (b.onclick = () => set({ div: null, mrc: null })));
+      (b.onclick = () => set({ div: null, lob: null })));
     container.querySelectorAll("[data-div]").forEach((b) =>
-      (b.onclick = () => set({ div: b.getAttribute("data-div"), mrc: null })));
+      (b.onclick = () => set({ div: b.getAttribute("data-div"), lob: null })));
     container.querySelectorAll("[data-divall]").forEach((b) =>
-      (b.onclick = () => set({ div: this.state.div, mrc: null })));
-    container.querySelectorAll("[data-mrc]").forEach((b) =>
-      (b.onclick = () => set({ div: this.state.div, mrc: b.getAttribute("data-mrc") })));
+      (b.onclick = () => set({ div: this.state.div, lob: null })));
+    container.querySelectorAll("[data-lob]").forEach((b) =>
+      (b.onclick = () => set({ div: this.state.div, lob: b.getAttribute("data-lob") })));
   },
+
+  // --- what the selection means to the tabs that share the bar ---
+  //
+  // Scope is read straight off the org tree now: a record is in a division, or in
+  // a line of business, and no committee stands between the two. So `normalize`,
+  // `inScope` and `currentScope` no longer need `committees` — they still take it,
+  // unused, so the six call sites across the list tabs read alike. The two
+  // committee helpers at the end genuinely do use it.
 
   // Does a model/product `data` fall under the current selection?
   inScope(committees, ref, data) {
     const state = this.state;
     if (!state.div) return true;                        // "All"
     data = data || {};
-    if (state.mrc) {
-      const c = committees.find((x) => x.value === state.mrc);
-      if (!c || c.level === "Company") return true;
-      if (c.level === "Division") return data.division === c.scope_value;
-      if (c.level === "Line of Business") return data.line_of_business === c.scope_value;
-      return true;
-    }
-    if (state.div === "Company" || state.div === "Other") return true;  // synthetic buckets
+    if (state.lob) return data.line_of_business === state.lob;
     return data.division === state.div;                 // whole division
   },
 
   // The org assignment implied by the current selection, for pre-filling the
-  // register modals: {division, line_of_business}. A Line of Business-level committee pins
-  // both; a Division-level one (or the whole-division view) pins only the
-  // division. Synthetic buckets (Company/Other) pin nothing.
+  // register modals: {division, line_of_business}.
   currentScope(committees, ref) {
     const s = this.state || {};
-    let division = (s.div && s.div !== "Company" && s.div !== "Other") ? s.div : "";
-    let line_of_business = "";
-    if (s.mrc) {
-      const c = (committees || []).find((x) => x.value === s.mrc);
-      if (c && c.level === "Line of Business") {
-        line_of_business = c.scope_value || "";
-        division = this.divisionOf(c, ref) || division;
-      } else if (c && c.level === "Division") {
-        division = c.scope_value || division;
-      }
-    }
-    return { division, line_of_business };
+    return { division: s.div || "", line_of_business: s.lob || "" };
   },
 
-  // The committee the MRC page should show for the current shared selection —
-  // it always needs a concrete committee, unlike the list pages' "All" view.
+  // The committee the MRC page falls back to when it needs one concrete
+  // committee and the user has not picked from its list. Resolved in priority
+  // order: the committee for the selected line of business, then the one for the
+  // selected division, then a Company-level one, then whatever exists.
   activeCommittee(committees, ref) {
-    const has = (v) => committees.some((c) => c.value === v);
-    if (this.state.mrc && has(this.state.mrc)) return this.state.mrc;
-    if (this.state.div) {
-      const g = this.groups(committees, ref)[this.state.div];
-      if (g && g.length) return g[0].value;
-    }
-    return committees.length ? committees[0].value : null;
+    const s = this.state || {};
+    const at = (level, value) =>
+      (committees || []).find((c) => c.level === level && c.scope_value === value);
+    let c = s.lob && at("Line of Business", s.lob);
+    if (!c) c = s.div && at("Division", s.div);
+    if (!c) c = (committees || []).find((x) => x.level === "Company");
+    if (c) return c.value;
+    return committees && committees.length ? committees[0].value : null;
   },
 
-  // Explicit committee pick (from the MRC page) → set both div and committee.
+  // An explicit committee pick → move the org selection to that committee's own
+  // scope, so the rest of the console follows it.
   selectCommittee(committees, ref, value) {
-    const c = committees.find((x) => x.value === value);
-    this.state = { div: c ? this.divisionOf(c, ref) : null, mrc: value };
+    const c = (committees || []).find((x) => x.value === value);
+    if (!c) { this.state = { div: null, lob: null }; return; }
+    if (c.level === "Line of Business") {
+      const lob = ((ref && ref.line_of_business) || []).find((l) => l.value === c.scope_value);
+      this.state = { div: (lob && lob.division) || null, lob: c.scope_value || null };
+    } else if (c.level === "Division") {
+      this.state = { div: c.scope_value || null, lob: null };
+    } else {
+      this.state = { div: null, lob: null };
+    }
   },
 };

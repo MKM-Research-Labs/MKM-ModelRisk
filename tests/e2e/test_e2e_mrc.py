@@ -24,7 +24,7 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page, expect
 
-from tests.e2e._flows import confirm, open_app, open_model, open_tab, register_model
+from tests.e2e._flows import confirm, open_app, open_committee, open_model, open_tab, register_model
 
 pytestmark = pytest.mark.e2e
 
@@ -54,7 +54,7 @@ def _schedule(page: Page, base_url: str, meeting_id: str, title: str):
     # invalidation — drop MrcNav's cached reference data so the MRC tab sees it
     # (otherwise the schedule form stays hidden behind "No committees yet").
     page.evaluate("typeof MrcNav !== 'undefined' && MrcNav.invalidate()")
-    open_tab(page, "mrc")
+    open_committee(page, "MRC-DEFAULT")
     page.fill("#sc-meeting_id", meeting_id)
     page.fill("#sc-title", title)
     page.fill("#sc-date", "2026-09-15")
@@ -256,7 +256,7 @@ def test_signoff_workflow_owner_requests_and_mrc_approves(page: Page, base_url: 
     expect(page.locator("#dt-content")).to_contain_text("MRC-SO")
     # MRC approves via the Models tab — sign-offs live under Models → Approvals
     # now, no longer as agenda lines.
-    open_tab(page, "mrc")
+    open_committee(page, "MRC-DEFAULT")
     page.click("tr.clickable[data-id='MRC-SO']")
     page.click("[data-mtab='models_in_scope']")
     approve = page.locator("[data-agapprove]").first
@@ -331,7 +331,7 @@ def test_meeting_models_tab_scoped_to_line_of_business_mrc(page: Page, base_url:
                             "confirmed": True}, headers=headers)
 
     open_app(page, base_url)
-    open_tab(page, "mrc")
+    open_committee(page, "MRC-DEPT-RATES")
     page.click("tr.clickable[data-id='MRC-M3']")
     page.click("[data-mtab='models_in_scope']")
     # Only the Rates Trading model is a candidate; the Equity Derivatives one is hidden.
@@ -363,7 +363,7 @@ def test_retire_request_shows_in_approvals_and_can_be_ratified(page: Page, base_
     post("/api/models/MKM-RET-AP/request-retire", {"confirmed": True})
 
     open_app(page, base_url)
-    open_tab(page, "mrc")
+    open_committee(page, "MRC-RET-AP")
     page.click("tr.clickable[data-id='MTG-RET-AP']")
     page.click("[data-mtab='models_in_scope']")
     # The Approvals row names it a retirement, not a (blank) rating.
