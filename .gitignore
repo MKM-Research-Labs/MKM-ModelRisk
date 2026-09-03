@@ -19,7 +19,7 @@ htmlcov/
 .DS_Store
 
 # Local runtime / generated artifacts (uploads, audit report PDFs, native pg helper)
-.pgdata/
+.pgdata*/
 uploads/
 pgctl.sh
 
