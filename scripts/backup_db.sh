@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
 #
-# Hourly (or on-demand) backup of the ModelRisk Postgres database.
+# Hourly (or on-demand) backup of the ModelRisk estate: the Postgres database, and
+# the uploaded documents the governance record references.
 #
 # Writes a timestamped custom-format dump to the backup directory on the INTERNAL
 # disk, so a backup survives the external SSD being unmounted or failing (the live
@@ -66,6 +67,34 @@ else
   log "backup FAILED — pg_dump error (see log above)"
   rm -f "$OUT"
   exit 1
+fi
+
+# --- mirror the uploaded documents ----------------------------------------------
+# pg_dump captures the governance record; the documents it references live on disk
+# and are in no dump. Restoring without them yields a record full of dangling
+# references — evidence packs pointing at files that no longer exist — so the
+# documents are mirrored alongside every dump.
+#
+# Deliberately AFTER the dump. A document is written to disk before the event that
+# references it is appended, so a file arriving between the two lands in the mirror
+# while no dump references it yet — a harmless orphan. Mirroring first would invert
+# that into the damaging case: a dump referencing a file the mirror never captured.
+#
+# No --delete: the mirror only ever grows. The dumps are the point-in-time record;
+# this is the evidence behind them, and a document removed from the live tree must
+# not vanish from the backups that older dumps still reference.
+UPLOADS="${UPLOAD_DIR:-$REPO/uploads}"
+MIRROR="${UPLOADS_MIRROR:-$BACKUP_DIR/../uploads}"
+if [ -d "$UPLOADS" ]; then
+  mkdir -p "$MIRROR"
+  if rsync -a "$UPLOADS/" "$MIRROR/" 2>>"$LOG"; then
+    FILES="$(find "$MIRROR" -type f | wc -l | tr -d ' ')"
+    log "uploads mirrored -> $MIRROR ($FILES files)"
+  else
+    log "uploads mirror FAILED — rsync error (see log above)"
+  fi
+else
+  log "no uploads directory at $UPLOADS — nothing to mirror"
 fi
 
 # --- prune old dumps ------------------------------------------------------------
