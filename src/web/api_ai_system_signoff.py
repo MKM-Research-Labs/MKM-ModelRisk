@@ -21,7 +21,9 @@
 
 The same trip a model and an ML Application take: the owner PROPOSES a rating, it
 is routed to the committee responsible for the record's division, and the stored
-rating does not move until that committee approves it.
+rating does not move until that committee approves it. Retiring travels the same
+route — hibernating a record is the committee's decision, not its owner's — and so
+does bringing one back.
 
 Built at the same time as the record rather than left for later. An ML rating
 applied directly until somebody noticed it was the one class of record exempt from
@@ -34,24 +36,15 @@ from __future__ import annotations
 from flask import jsonify
 
 from src.governance.ai_system import get_ai_system
-from src.governance.mrc import matching_mrc
-from src.governance.reference import get_reference_lists
 from src.web._helpers import context_from_request, json_body
+from src.web._lifecycle_request import request_lifecycle_change, target_mrc
 from src.web._signoff_routing import raise_signoff
 from src.web._signoff_subject import AI_SYSTEM_SUBJECT
 from src.web.api_ai_system import ai_system_bp
 
-
-def _target_mrc(record: dict):
-    """The committee responsible for this AI System, or an error response."""
-    data = record["data"] or {}
-    mrc, _level = matching_mrc(data.get("division"), data.get("line_of_business"),
-                               get_reference_lists())
-    if mrc is None:
-        return None, (jsonify({"error": "no MRC committee covers this AI System's "
-                                        "division / line of business — configure one "
-                                        "under Admin → MRC first"}), 400)
-    return mrc, None
+# How the record type is named back to whoever raised the request. It lives on the
+# Subject so the error, the minute and the screen all say the same word.
+NOUN = AI_SYSTEM_SUBJECT.noun
 
 
 @ai_system_bp.post("/<ai_system_id>/request-signoff")
@@ -60,15 +53,33 @@ def request_signoff(ai_system_id: str):
     otherwise left Pending for the next meeting of that committee to pick up."""
     record = get_ai_system(ai_system_id)
     if record is None:
-        return jsonify({"error": "AI System not found"}), 404
+        return jsonify({"error": f"{NOUN} not found"}), 404
     body = json_body()
     proposed_rag = body.get("proposed_rag")
     if not proposed_rag:
         return jsonify({"error": "proposed_rag is required"}), 400
-    mrc, error = _target_mrc(record)
+    mrc, error = target_mrc(record, NOUN)
     if error:
         return error
     raise_signoff(context_from_request(body), AI_SYSTEM_SUBJECT, ai_system_id,
                   kind="rag", proposed_rag=proposed_rag, target_mrc=mrc["value"],
                   note=body.get("note"))
     return jsonify(get_ai_system(ai_system_id)), 201
+
+
+@ai_system_bp.post("/<ai_system_id>/request-retire")
+def request_retire(ai_system_id: str):
+    """Owner asks the MRC to ratify retiring (hibernating) the AI System.
+
+    The record stays in the estate and editable while the request is queued — it
+    only drops out once the committee approves.
+    """
+    return request_lifecycle_change(AI_SYSTEM_SUBJECT, ai_system_id, kind="retire",
+                                    expect_retired=False)
+
+
+@ai_system_bp.post("/<ai_system_id>/request-reactivate")
+def request_reactivate(ai_system_id: str):
+    """Owner asks the MRC to ratify bringing a hibernated AI System back."""
+    return request_lifecycle_change(AI_SYSTEM_SUBJECT, ai_system_id, kind="reactivate",
+                                    expect_retired=True)

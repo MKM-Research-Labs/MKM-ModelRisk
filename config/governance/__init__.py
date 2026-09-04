@@ -166,7 +166,6 @@ from config.governance._mrc import (
     MEETING_FIELD_SPECS,
     MEETING_FIELDS,
     MISC_SETTINGS_GROUP,
-    MRC_COLLECTION_SPECS,
     MRC_SETTINGS_DEFAULTS,
     MRC_SETTINGS_KEYS,
     MRC_SETTINGS_SPECS,
@@ -179,6 +178,8 @@ from config.governance._mrc import (
     VALID_MEETING_STATUSES,
     VALID_PARTICIPANT_STATUS,
 )
+# What a meeting CONTAINS, split from what it IS — see _mrc_collections.
+from config.governance._mrc_collections import MRC_COLLECTION_SPECS
 from config.governance._review import (
     APPEND_ONLY_COLLECTIONS,
     CHALLENGED_VERDICT,

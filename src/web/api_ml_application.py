@@ -34,7 +34,7 @@ from src.governance.ml_application import (add_collection_item, get_ml_applicati
                                            list_ml_applications,
                                            rebuild_ml_application_view,
                                            register_ml_application, remove_collection_item,
-                                           retire_ml_application, update_collection_item,
+                                           update_collection_item,
                                            update_ml_application_field)
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.reference import get_reference_lists
@@ -147,13 +147,11 @@ def update_field(ml_application_id: str):
     return jsonify(scoped(get_ml_application(ml_application_id)))
 
 
-@ml_application_bp.post("/<ml_application_id>/retire")
-def retire(ml_application_id: str):
-    body = json_body()
-    dispatch("retire_ml_application", retire_ml_application,
-             context=context_from_request(body), ml_application_id=ml_application_id)
-    rebuild_ml_application_view()
-    return jsonify(scoped(get_ml_application(ml_application_id)))
+# There is no retire endpoint here, and that absence is the design. Retiring is
+# hibernation and the committee's decision: the owner raises it at
+# POST /<ml_application_id>/request-retire (api_ml_application_signoff) and the MRC
+# ratifies it, which is where retire_ml_application is finally dispatched. A route
+# here would be a second way to the same event, and the un-gated one.
 
 
 @ml_application_bp.post("/<ml_application_id>/collections/<collection>")

@@ -20,6 +20,7 @@
 """HTTP API for the AI System aggregate."""
 from __future__ import annotations
 
+from src.governance.ai_system import rebuild_ai_system_view, retire_ai_system
 from tests.web.conftest import HEADERS
 
 _MINIMUM = {"name": "Client mail summariser", "division": "Risk",
@@ -87,9 +88,12 @@ def test_tools_round_trip_through_the_collection(client):
 
 
 def test_retiring_takes_it_out_of_the_list(client):
+    """Retirement is ratified by the committee (test_mrc_retire_aiml_api walks that
+    journey); what this asserts is what it MEANS — out of the estate, and back only
+    for a read that asks."""
     _register(client)
-    assert client.post("/api/ai-systems/AIS-0001/retire",
-                       json={"actor": "admin"}, headers=HEADERS).status_code == 200
+    retire_ai_system(ai_system_id="AIS-0001", actor="admin")
+    rebuild_ai_system_view()
     assert client.get("/api/ai-systems").get_json() == []
     assert len(client.get("/api/ai-systems?include_retired=1").get_json()) == 1
 

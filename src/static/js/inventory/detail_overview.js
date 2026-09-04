@@ -82,54 +82,11 @@ Object.assign(Detail, {
       esc(org) + "). Set one up under Admin &rarr; MRC.</div></div>";
   },
 
-  // Contents of the "Danger" dtab — replaces the earlier below-card danger zone.
-  // Sits inside #dt-content so the tab bar handles activation, and reuses the
-  // existing .danger-zone card styling for the red border + header.
-  // The retire/reactivate request already queued with the MRC, if any. While one
-  // is outstanding the model must not be able to raise another.
-  _pendingLifecycle(d) {
-    const open = (d.signoff_requests || []).filter(
-      (r) => (r.kind === "retire" || r.kind === "reactivate") &&
-        (r.status === "Pending" || r.status === "Attached"));
-    return open.length ? open[open.length - 1] : null;
-  },
-
-  _dangerZone(body) {
-    return '<div class="danger-zone"><div class="dz-header">Danger Zone</div>' +
-      '<div class="dz-row">' + body + "</div></div>";
-  },
-
+  // The Danger tab is DangerZone's, drawn from the record and the noun. The model
+  // screen had this flow first and now shares it, so a change to how a hibernation
+  // is asked for reaches every record type rather than only this one.
   _dangerContent() {
-    const d = this._model.data || {};
-    const pending = this._pendingLifecycle(d);
-    if (pending) {
-      const where = pending.meeting_id
-        ? " at " + esc(pending.meeting_id)
-        : ", awaiting that committee's next meeting";
-      return this._dangerZone(
-        '<div class="dz-text"><b>' +
-        (pending.kind === "retire" ? "Retirement" : "Reactivation") +
-        " awaiting MRC ratification</b>" +
-        '<p class="muted">Queued with ' + esc(pending.target_mrc || "the MRC") + where +
-        ". Nothing changes until the committee approves it.</p></div>");
-    }
-    if (this._model.retired) {
-      return this._dangerZone(
-        '<div class="dz-text"><b>Reactivate this model</b>' +
-        '<p class="muted">This model is hibernated: it is out of the active inventory and ' +
-        "read-only. Bringing it back is the committee's decision, so this asks the MRC to " +
-        "ratify it.</p></div>" +
-        '<div class="dz-action"><button class="btn small" id="d-reactivate">' +
-        "Request reactivate&hellip;</button></div>");
-    }
-    return this._dangerZone(
-      '<div class="dz-text"><b>Retire this model</b>' +
-      '<p class="muted">Retiring hibernates the model: it drops out of the active inventory ' +
-      "and becomes read-only, though its data and audit trail are kept and it can be brought " +
-      "back later. The MRC must ratify it, so the model stays active until the committee " +
-      "approves.</p></div>" +
-      '<div class="dz-action"><button class="btn danger small" id="d-retire">' +
-      "Request retire&hellip;</button></div>");
+    return DangerZone.content("model", this._model);
   },
 
   _editLink(key) {
@@ -256,23 +213,12 @@ Object.assign(Detail, {
     };
   },
 
-  // Both buttons raise a request for the MRC rather than changing the model:
-  // whichever is on screen depends on where the model currently sits.
   _bindRetire() {
     const self = this;
-    const ask = function (id, path, summary) {
-      const button = document.getElementById(id);
-      if (button) button.onclick = function () {
-        App.amend(summary, "POST", "/api/models/" + self._id + path, {},
-          function () { Detail.show(self._id, "danger"); Inventory.loadList(); });
-      };
-    };
-    ask("d-retire", "/request-retire",
-      "Ask the MRC to ratify retiring " + self._id +
-      ". It stays active until the committee approves.");
-    ask("d-reactivate", "/request-reactivate",
-      "Ask the MRC to ratify reactivating " + self._id +
-      ". It stays hibernated until the committee approves.");
+    DangerZone.bind({
+      api: "/api/models", id: this._id,
+      onDone: function () { Detail.show(self._id, "danger"); Inventory.loadList(); },
+    });
   },
 
   _edit(f, current) {

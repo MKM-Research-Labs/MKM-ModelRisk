@@ -305,3 +305,17 @@ def test_an_unassessable_row_stays_absent_however_well_kept_the_record_is():
                    if r["framework"] == FINOS_RISKS and r["ref"] == ref)
         assert row["state"] == COVERAGE_ABSENT
         assert row["evidence"].strip()
+
+
+def test_an_event_the_aggregate_does_not_know_leaves_the_state_alone():
+    """The fold ignores what it does not recognise, rather than raising.
+
+    A stream is replayed by every read, and it carries whatever the aggregate has
+    ever emitted. An unknown type has to be a no-op or a single retired event kind
+    would make the record unreadable for good — which, in an append-only log, is
+    not a thing that can be undone.
+    """
+    from src.governance.ai_system._state import apply, initial_state
+
+    state = initial_state()
+    assert apply(state, "SomethingFromALaterVersion", {"any": "payload"}) is state

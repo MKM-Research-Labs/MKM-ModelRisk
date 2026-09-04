@@ -29,8 +29,9 @@ from config.governance._ai_system import (AI_REVIEW_QUESTIONS_COLLECTION,
                                           AI_SYSTEM_FIELD_SPECS)
 from src.database import Event, append_event, read_stream
 from src.governance.ai_system._rules import (decide_add_item, decide_edit_field,
-                                             decide_register, decide_remove_item,
-                                             decide_retire, decide_update_item)
+                                             decide_reactivate, decide_register,
+                                             decide_remove_item, decide_retire,
+                                             decide_update_item)
 from src.governance.ai_system._state import AISystemState, apply, initial_state
 from src.governance.reference import reject_unknown_values
 from src.governance.seeding import seed_items
@@ -129,8 +130,19 @@ def update_ai_system_field(*, ai_system_id: str, field: str, value: Any, actor: 
 
 def retire_ai_system(*, ai_system_id: str, actor: str, reason: str = "",
                      config=None) -> Event:
+    """Hibernate an AI System — it drops out of the estate and can no longer be
+    edited. Ratified by the MRC, so this runs off an approved request rather than
+    straight from the owner."""
     state, version = _load(ai_system_id, config)
     return _record(ai_system_id, decide_retire(state), version, actor, reason, config)
+
+
+def reactivate_ai_system(*, ai_system_id: str, actor: str, reason: str = "",
+                         config=None) -> Event:
+    """Bring a hibernated AI System back. Ratified by the MRC on the same footing
+    as the retire that put it there."""
+    state, version = _load(ai_system_id, config)
+    return _record(ai_system_id, decide_reactivate(state), version, actor, reason, config)
 
 
 def add_collection_item(*, ai_system_id: str, collection: str, fields: dict[str, Any],

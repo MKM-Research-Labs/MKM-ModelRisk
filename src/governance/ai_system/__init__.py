@@ -26,6 +26,7 @@ carries a model's field names exactly.
 from src.governance.ai_system.commands import (
     AGGREGATE_TYPE,
     add_collection_item,
+    reactivate_ai_system,
     register_ai_system,
     remove_collection_item,
     retire_ai_system,
@@ -40,6 +41,7 @@ from src.governance.ai_system.projection import (
 
 __all__ = [
     "AGGREGATE_TYPE", "add_collection_item", "get_ai_system", "list_ai_systems",
-    "rebuild_ai_system_view", "register_ai_system", "remove_collection_item",
-    "retire_ai_system", "update_ai_system_field", "update_collection_item",
+    "reactivate_ai_system", "rebuild_ai_system_view", "register_ai_system",
+    "remove_collection_item", "retire_ai_system", "update_ai_system_field",
+    "update_collection_item",
 ]

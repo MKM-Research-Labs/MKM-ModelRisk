@@ -35,6 +35,10 @@ from src.governance import collections as coll
 EVENT_REGISTERED = "MLApplicationRegistered"
 EVENT_FIELD_EDITED = "MLApplicationFieldEdited"
 EVENT_RETIRED = "MLApplicationRetired"
+# Retirement is hibernation, not deletion: the committee that ratified the retire
+# can ratify bringing the record back, so the flag flips both ways and both
+# decisions stay in the log.
+EVENT_REACTIVATED = "MLApplicationReactivated"
 
 
 @dataclass(frozen=True)
@@ -78,6 +82,8 @@ def apply(state: MLApplicationState, event_type: str,
         # vocabulary and is not overwritten with a word we chose. A model retires the
         # same way, and its screens read the flag rather than a stage.
         return replace(state, retired=True)
+    if event_type == EVENT_REACTIVATED:
+        return replace(state, retired=False)
     folded = coll.fold(state.collections, event_type, payload)
     if folded is not None:
         return replace(state, collections=folded)

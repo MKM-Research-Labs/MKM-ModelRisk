@@ -145,11 +145,14 @@ const MLApps = {
     const nav = await MrcNav.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
-    const all = await App.get("/api/ml-applications");
     // Retired records are out of the estate and out of every figure, exactly as a
-    // hibernated model is: they appear only when the Lifecycle filter asks for them.
-    const wanted = this.list().wantsHibernated()
-      ? all : all.filter((r) => !r.retired);
+    // hibernated model is: they appear only when the Lifecycle filter asks for them,
+    // and they are not even fetched until it does. Asking is the only route back to a
+    // hibernated record, which is where its reactivation is raised with the MRC.
+    const wantsHibernated = this.list().wantsHibernated();
+    const all = await App.get(
+      "/api/ml-applications" + (wantsHibernated ? "?include_retired=1" : ""));
+    const wanted = wantsHibernated ? all : all.filter((r) => !r.retired);
     const records = wanted.filter((r) => MrcNav.inScope(this._committees, this._ref, r.data));
     this.list().mount(records, (id) => MLAppDetail.show(id));
   },

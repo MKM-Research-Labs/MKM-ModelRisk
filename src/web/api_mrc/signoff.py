@@ -63,22 +63,22 @@ def _minute_text(signoff_kind: str, subject, subject_id: str, owner_bit: str,
     if signoff_kind == "owner":
         return (
             f"Model owner ratified — {subject_id}",
-            f"MRC has reviewed the change of {subject.kind} owner for {subject_id} and "
+            f"MRC has reviewed the change of {subject.noun} owner for {subject_id} and "
             "has ratified the appointment. The new owner answers for the model from "
             "the date of the change, which the record already shows.",
         )
     if signoff_kind == "retire":
         return (
             f"Retire ratified — {subject_id}",
-            f"MRC has reviewed the retire request from the {subject.kind} owner"
-            f"{owner_bit} and has ratified it. The {subject.kind} is hibernated "
+            f"MRC has reviewed the retire request from the {subject.noun} owner"
+            f"{owner_bit} and has ratified it. The {subject.noun} is hibernated "
             f"and drops out of the active inventory.",
         )
     if signoff_kind == "reactivate":
         return (
             f"Reactivate ratified — {subject_id}",
-            f"MRC has reviewed the reactivate request from the {subject.kind} owner"
-            f"{owner_bit} and has ratified it. The {subject.kind} returns to the "
+            f"MRC has reviewed the reactivate request from the {subject.noun} owner"
+            f"{owner_bit} and has ratified it. The {subject.noun} returns to the "
             f"active inventory.",
         )
     if signoff_kind == "handoff":
@@ -89,7 +89,7 @@ def _minute_text(signoff_kind: str, subject, subject_id: str, owner_bit: str,
         )
     return (
         f"Sign-off approved — {subject_id}",
-        f"MRC has reviewed the sign-off request from the {subject.kind} owner"
+        f"MRC has reviewed the sign-off request from the {subject.noun} owner"
         f"{owner_bit} and has granted approval and has set a date of next review "
         f"on {next_review or 'not set'}." + review_bit,
     )
