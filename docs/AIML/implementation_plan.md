@@ -1,6 +1,6 @@
 # AI & Agentic Governance Module — Implementation Plan
 
-Derived from `AI_Agentic_Governance_Module_Spec_v0.4.docx` §13, re-expressed as executable
+Derived from `AI_Agentic_Governance_Module_Spec_v0.5.docx` §13, re-expressed as executable
 steps against this codebase. Written 2026-09-04, baselined on `main` at the state of this
 branch.
 
@@ -54,8 +54,9 @@ already holds. It is inserted below as **Phase 1R**, and it is a prerequisite fo
 System review surfaces in Phases 3–5 — building those first would mean building a second
 review implementation and then merging two.
 
-**Action:** correct §3.9 in a v0.5 of the spec. Until then this document is the accurate
-statement.
+**Resolved.** Spec v0.5 (2026-09-04) corrects §3.9, adds the Review generalisation row to
+its Decision Log, and carries Phase 1R in its own §13 — so the specification and this plan now
+agree. v0.4 and earlier still carry the overstatement; treat v0.5 as the current draft.
 
 ### 2.2 `config/governance/_reference.py` is one line from the R2 gate
 
@@ -248,9 +249,9 @@ registered record of each type carries a composed questionnaire.
 
 ### Phase 1R — Generalise the review workflow
 
-*Not in the spec's §13. Inserted here per §2.1: the six-stage review exists for models only,
-and Phases 3–5 need it for AI Systems. Building it there instead would produce a second
-implementation to be merged later.*
+*Added to the spec in v0.5 (§13, phase 1R) after this plan surfaced it; v0.4 and earlier
+have no such phase. The six-stage review exists for models only, and Phases 3–5 need it for AI
+Systems — building it there instead would produce a second implementation to be merged later.*
 
 #### 1R.1 Extract the stage machinery
 
