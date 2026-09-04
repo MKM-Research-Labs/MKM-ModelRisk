@@ -637,14 +637,14 @@ const MLAppDetail = RecordDetail.attach({
       }
       return;
     }
+    // Retiring an ML Application is the MRC's decision, exactly as it is for a model,
+    // so the tab is DangerZone's three states rather than a button of its own.
     if (this._tab === "danger") {
-      box.innerHTML = this._record.retired
-        ? '<div class="empty">This ML Application is retired.</div>'
-        : '<div class="section-header">Retire</div><p class="muted">Retiring stops all ' +
-          'further edits. The record and its history are kept.</p>' +
-          '<button class="btn small" id="mla-retire" style="color:var(--red)">Retire</button>';
-      const btn = document.getElementById("mla-retire");
-      if (btn) btn.onclick = () => this._retire();
+      box.innerHTML = DangerZone.content("ML Application", this._record);
+      DangerZone.bind({
+        api: "/api/ml-applications", id: this.recordId(),
+        onDone: () => { this.show(this.recordId(), "danger"); MLApps.loadList(); },
+      });
       return;
     }
     if (this._tab === "review") {
@@ -676,12 +676,6 @@ const MLAppDetail = RecordDetail.attach({
   },
 
   _bindCollections(keys) { this.bindCollections(keys); },
-
-  _retire() {
-    App.amend("Retire ML Application " + this._record.ml_application_id + ".", "POST",
-      "/api/ml-applications/" + encodeURIComponent(this._record.ml_application_id) + "/retire",
-      {}, () => this.refresh());
-  },
 }, {
   api: "/api/ml-applications",
   idKey: "ml_application_id",

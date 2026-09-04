@@ -28,6 +28,8 @@ from __future__ import annotations
 import pytest
 
 from config.governance import ESTIMATOR_LIST, ML_REVIEW_QUESTIONS_COLLECTION
+from src.governance.ml_application import (rebuild_ml_application_view,
+                                          retire_ml_application)
 from src.governance.reference import add_option, ensure_default_estimators
 from tests.web.conftest import HEADERS
 
@@ -120,13 +122,17 @@ def test_collections_can_be_added_and_removed(client):
     assert res.get_json()["data"]["limitations"] == []
 
 
-def test_retiring_through_the_api(client):
+def test_retiring_flips_the_flag_and_leaves_the_lifecycle_stage_alone(client):
+    """Retirement is ratified by the committee (test_mrc_retire_aiml_api walks that
+    journey). ``retired`` is the fact; the lifecycle stage is the institution's own
+    vocabulary and is not overwritten with a word we chose."""
     ensure_default_estimators()
     _register(client)
-    res = client.post("/api/ml-applications/MLA-0001/retire",
-                      json={"confirmed": True}, headers=HEADERS)
-    assert res.get_json()["retired"] is True
-    assert not res.get_json()["data"].get("lifecycle_stage")
+    retire_ml_application(ml_application_id="MLA-0001", actor="admin")
+    rebuild_ml_application_view()
+    record = client.get("/api/ml-applications/MLA-0001").get_json()
+    assert record["retired"] is True
+    assert not record["data"].get("lifecycle_stage")
 
 
 def test_the_list_endpoint_returns_registered_records(client):

@@ -22,7 +22,8 @@
 The ML twin of ``api_models_signoff``. An ML Application's rating goes to the
 committee exactly as a model's does: the owner PROPOSES a rating, it is routed to the
 committee responsible for the record's division, and the stored rating does not move
-until that committee approves it.
+until that committee approves it. Retiring travels the same route — hibernating a
+record is the committee's decision, not its owner's — and so does bringing one back.
 
 Before this existed an ML rating applied directly — which meant the one class of
 record most likely to be argued about was the one class exempt from the committee
@@ -34,25 +35,16 @@ from flask import jsonify
 
 from src.governance.ml_application import get_ml_application
 from src.governance.ml_application.review_scope import guard_review_complete
-from src.governance.mrc import matching_mrc
-from src.governance.reference import get_reference_lists
 from src.web._helpers import context_from_request, json_body
+from src.web._lifecycle_request import request_lifecycle_change, target_mrc
 from src.web._ml_scope import scoped
 from src.web._signoff_routing import raise_signoff
 from src.web._signoff_subject import ML_APPLICATION_SUBJECT
 from src.web.api_ml_application import ml_application_bp
 
-
-def _target_mrc(record: dict):
-    """The committee responsible for this ML Application, or an error response."""
-    data = record["data"] or {}
-    mrc, _level = matching_mrc(data.get("division"), data.get("line_of_business"),
-                               get_reference_lists())
-    if mrc is None:
-        return None, (jsonify({"error": "no MRC committee covers this ML Application's "
-                                        "division / line of business — configure one "
-                                        "under Admin → MRC first"}), 400)
-    return mrc, None
+# How the record type is named back to whoever raised the request. It lives on the
+# Subject so the error, the minute and the screen all say the same word.
+NOUN = ML_APPLICATION_SUBJECT.noun
 
 
 @ml_application_bp.post("/<ml_application_id>/request-signoff")
@@ -61,12 +53,12 @@ def request_signoff(ml_application_id: str):
     otherwise left Pending for the next meeting of that committee to pick up."""
     record = get_ml_application(ml_application_id)
     if record is None:
-        return jsonify({"error": "ML Application not found"}), 404
+        return jsonify({"error": f"{NOUN} not found"}), 404
     body = json_body()
     proposed_rag = body.get("proposed_rag")
     if not proposed_rag:
         return jsonify({"error": "proposed_rag is required"}), 400
-    mrc, error = _target_mrc(record)
+    mrc, error = target_mrc(record, NOUN)
     if error:
         return error
     # The committee is asked to sign off a review, so the review has to be one. Raised
@@ -77,3 +69,23 @@ def request_signoff(ml_application_id: str):
                   kind="rag", proposed_rag=proposed_rag, target_mrc=mrc["value"],
                   note=body.get("note"))
     return jsonify(scoped(get_ml_application(ml_application_id))), 201
+
+
+@ml_application_bp.post("/<ml_application_id>/request-retire")
+def request_retire(ml_application_id: str):
+    """Owner asks the MRC to ratify retiring (hibernating) the ML Application.
+
+    The record stays in the estate and editable while the request is queued — it
+    only drops out once the committee approves.
+    """
+    return request_lifecycle_change(ML_APPLICATION_SUBJECT, ml_application_id,
+                                    kind="retire", expect_retired=False,
+                                    serialise=scoped)
+
+
+@ml_application_bp.post("/<ml_application_id>/request-reactivate")
+def request_reactivate(ml_application_id: str):
+    """Owner asks the MRC to ratify bringing a hibernated ML Application back."""
+    return request_lifecycle_change(ML_APPLICATION_SUBJECT, ml_application_id,
+                                    kind="reactivate", expect_retired=True,
+                                    serialise=scoped)

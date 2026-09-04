@@ -250,8 +250,12 @@ const InventoryList = {
     bind(this._cfg.p + "rag", "rag", "onchange");
     bind(this._cfg.p + "owner", "owner", "onchange");
     bind(this._cfg.p + "review", "review", "onchange");
+    // ``self``, not ``this``: inside the handler ``this`` is the <select>, which has
+    // no _cfg — so reading the id off it threw, and the Lifecycle filter did nothing
+    // at all on any of the three screens. It surfaced when hibernated records became
+    // reachable-by-filter only: this is the sole route back to one.
     document.getElementById(this._cfg.p + "lifecycle").onchange = function () {
-      const el = document.getElementById(this._cfg.p + "lifecycle");
+      const el = document.getElementById(self._cfg.p + "lifecycle");
       const was = self._filters.lifecycle === HIBERNATED_FILTER;
       self._filters.lifecycle = el.value;
       // Hibernated models are not in the list this page was drawn from, so

@@ -35,6 +35,10 @@ from src.governance import collections as coll
 EVENT_REGISTERED = "AISystemRegistered"
 EVENT_FIELD_EDITED = "AISystemFieldEdited"
 EVENT_RETIRED = "AISystemRetired"
+# Retirement is hibernation, not deletion: the committee that ratified the retire
+# can ratify bringing the record back, so the flag flips both ways and both
+# decisions stay in the log.
+EVENT_REACTIVATED = "AISystemReactivated"
 
 
 @dataclass(frozen=True)
@@ -72,6 +76,8 @@ def apply(state: AISystemState, event_type: str,
         # ``retired`` is the fact; the lifecycle stage is the institution's own
         # vocabulary and is not overwritten with a word we chose.
         return replace(state, retired=True)
+    if event_type == EVENT_REACTIVATED:
+        return replace(state, retired=False)
     folded = coll.fold(state.collections, event_type, payload)
     if folded is not None:
         return replace(state, collections=folded)
@@ -79,4 +85,5 @@ def apply(state: AISystemState, event_type: str,
 
 
 __all__ = ["AISystemState", "initial_state", "record_data", "apply",
-           "EVENT_REGISTERED", "EVENT_FIELD_EDITED", "EVENT_RETIRED"]
+           "EVENT_REGISTERED", "EVENT_FIELD_EDITED", "EVENT_RETIRED",
+           "EVENT_REACTIVATED"]
