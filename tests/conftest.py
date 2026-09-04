@@ -141,6 +141,13 @@ def _clean_event_log():
             cur.execute("DELETE FROM model_chain_view")
             cur.execute("DELETE FROM model_handoff_view")
             cur.execute("DELETE FROM ml_application_view")
+            # ``ai_system_view`` was missing here until the change register was
+            # built: events truncate, view rows do not, so an AI System survived
+            # into the next test as a row no event could explain. Same hazard as
+            # the ``_REBUILDERS`` omission in ``src/web/_startup.py`` — a
+            # hand-maintained list of views that a new view is forgotten from.
+            cur.execute("DELETE FROM ai_system_view")
+            cur.execute("DELETE FROM change_view")
             # Observations, not projections — but per-test state all the same. Left
             # behind, one test's finding history ages another test's findings and
             # the dashboard's verdict starts depending on test order.

@@ -39,6 +39,8 @@ from src.governance.ai_system import (add_collection_item, get_ai_system,
                                       retire_ai_system, update_ai_system_field,
                                       update_collection_item)
 from src.governance.model_inventory.risk import compute_risk_rating
+from src.web._review_stages import review_specs
+from src.web._signoff_subject import AI_SYSTEM_SUBJECT
 from src.web._helpers import (collection_field_specs, context_from_request,
                               document_specs, grouped_field_specs, json_body,
                               reference_options, resolve_mrc_for_org)
@@ -59,6 +61,7 @@ def field_specs():
         "register": list(AI_SYSTEM_REGISTER_FIELDS),
         "collections": collection_field_specs(AI_SYSTEM_COLLECTION_SPECS),
         **document_specs(),
+        **review_specs(AI_SYSTEM_SUBJECT),
     })
 
 

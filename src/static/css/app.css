@@ -302,3 +302,10 @@ textarea { box-sizing: border-box; }
    editor and on the record, so what an administrator ticks is what a reviewer sees. */
 tr.mandatory > td:first-child,
 .mandatory-item { border-left: 3px solid var(--red); padding-left: var(--space-3); }
+
+/* The add-a-row form under a collection table. A grid so the labels line up and a
+   textarea does not drag its neighbours out of alignment; the action sits on its own
+   full-width line so it never floats between two fields. */
+.add-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space-4) var(--space-5); align-items: start; margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--line); }
+.add-form textarea { min-height: 4.5rem; }
+.add-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }

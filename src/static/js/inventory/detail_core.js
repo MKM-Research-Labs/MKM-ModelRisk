@@ -151,6 +151,9 @@ const Detail = {
         .concat(this._specs.testing_doc_categories || []))],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
+      // Changes sits before Danger: an open Material change is a reason to look
+      // at the record, and it should not be reached past the retire button.
+      ["changes", "Changes", null],
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
     ];
     return DetailShell.tabBar(tabs, this._tab, "data-dtab");
@@ -188,6 +191,11 @@ const Detail = {
         DetailTabs.risk(this._risk, false, d.division);  // events are product-only
       this._bindEdits();          // the risk-assessment fields are editable here now
       this._bindSignoffRequest();
+      return;
+    }
+    if (this._tab === "changes") {
+      box.innerHTML = '<div id="dt-changes"></div>';
+      Changes.render("model", this._id, "dt-changes", this._model.retired);
       return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }

@@ -180,8 +180,12 @@ def test_every_status_maps_to_a_token_that_exists():
 def test_the_domains_without_a_default_are_the_ones_that_must_show_a_dash():
     # An unknown rating or an unrated tier renders as a dash. Giving these a default
     # would paint a grey badge asserting a classification nobody made.
+    # ``change_class`` takes a default because an unrecognised tier is still a
+    # classification somebody recorded — the log holds it — and the honest rendering is
+    # the word itself, uncoloured. That is the ``validation_question`` case, not the
+    # unrated-tier case.
     assert set(STATUS_COLOUR_DEFAULTS) == {"validation_question", "mrc_state", "lifecycle",
-                                           "product_status"}
+                                           "product_status", "change_class"}
     assert {"rag", "mission_criticality", "meeting_status",
             "review_thread"}.isdisjoint(STATUS_COLOUR_DEFAULTS)
 
@@ -206,6 +210,9 @@ def test_the_status_mapping_covers_every_value_the_console_had_a_colour_for():
         "rag": 3, "mission_criticality": 5, "meeting_status": 4,
         "validation_question": 4, "mrc_state": 7, "lifecycle": 4,
         "product_status": 4, "review_thread": 2, "attention": 4,
+        # Configured here from the start, like "attention" — the four change tiers
+        # never lived as a colour map in the JavaScript.
+        "change_class": 4,
     }
 
 

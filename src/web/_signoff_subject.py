@@ -28,7 +28,12 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
+from config.governance._review import (REVIEW_QUESTION_COLLECTIONS,
+                                       review_stages_for)
 from src.command import CommandContext, dispatch
+from src.governance.documents import (ai_system_scope, ml_application_scope,
+                                      model_scope)
+from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory import (
     add_collection_item as _model_add,
     get_model,
@@ -39,6 +44,8 @@ from src.governance.model_inventory import (
     update_collection_item as _model_update,
     update_model_field,
 )
+from src.governance.ml_application.commands import (
+    AGGREGATE_TYPE as ML_APPLICATION_AGGREGATE)
 from src.governance.ml_application import (
     add_collection_item as _ml_add,
     get_ml_application,
@@ -48,6 +55,7 @@ from src.governance.ml_application import (
     update_collection_item as _ml_update,
     update_ml_application_field,
 )
+from src.governance.ai_system.commands import AGGREGATE_TYPE as AI_SYSTEM_AGGREGATE
 from src.governance.ai_system import (
     add_collection_item as _ai_add,
     get_ai_system,
@@ -81,8 +89,15 @@ class Subject:
 
     def __init__(self, *, kind: str, agenda_id_field: str, id_key: str,
                  get: Callable, list_all: Callable, add_cmd, update_cmd, field_cmd,
-                 rebuild: Callable, id_kwarg: str, retire_cmd=None, reactivate_cmd=None):
+                 rebuild: Callable, id_kwarg: str, retire_cmd=None, reactivate_cmd=None,
+                 aggregate_type: str | None = None, doc_scope: Callable | None = None):
         self.kind = kind
+        # Where a generated document is filed against this record. Carried only by the
+        # record types a review can be signed off on; a Product or a handoff has no
+        # review to file a report from, and None says so rather than pointing at a
+        # scope that would never be written to.
+        self.aggregate_type = aggregate_type
+        self._doc_scope = doc_scope
         self.agenda_id_field = agenda_id_field   # e.g. "subject_model_id"
         self.id_key = id_key                       # e.g. "model_id" (row key)
         self._get = get
@@ -104,19 +119,58 @@ class Subject:
     def rebuild(self) -> None:
         self._rebuild()
 
-    def add_item(self, ctx: CommandContext, subject_id: str, collection: str, fields: dict) -> None:
-        dispatch("add_collection_item", self._add_cmd, context=ctx,
+    # The three writes, each in two forms. The ``_as`` form names the command it is
+    # running; the plain form is that same call under the generic name. The review
+    # workflow needs the named form because "approve_review_stage" and
+    # "add_collection_item" are different acts in the audit trail even though both
+    # add a row to a collection — and a trail that called an interim approval
+    # "add_collection_item" would not be an audit trail of the review.
+    def add_item_as(self, command: str, ctx: CommandContext, subject_id: str,
+                    collection: str, fields: dict) -> None:
+        dispatch(command, self._add_cmd, context=ctx,
                  collection=collection, fields=fields, **{self._id_kwarg: subject_id})
 
-    def update_item(self, ctx: CommandContext, subject_id: str, collection: str,
-                    item_id: str, fields: dict) -> None:
-        dispatch("update_collection_item", self._update_cmd, context=ctx,
+    def update_item_as(self, command: str, ctx: CommandContext, subject_id: str,
+                       collection: str, item_id: str, fields: dict) -> None:
+        dispatch(command, self._update_cmd, context=ctx,
                  collection=collection, item_id=item_id, fields=fields,
                  **{self._id_kwarg: subject_id})
 
-    def set_field(self, ctx: CommandContext, subject_id: str, field: str, value: Any) -> None:
-        dispatch("update_field", self._field_cmd, context=ctx,
+    def set_field_as(self, command: str, ctx: CommandContext, subject_id: str,
+                     field: str, value: Any) -> None:
+        dispatch(command, self._field_cmd, context=ctx,
                  field=field, value=value, **{self._id_kwarg: subject_id})
+
+    def add_item(self, ctx: CommandContext, subject_id: str, collection: str, fields: dict) -> None:
+        self.add_item_as("add_collection_item", ctx, subject_id, collection, fields)
+
+    def update_item(self, ctx: CommandContext, subject_id: str, collection: str,
+                    item_id: str, fields: dict) -> None:
+        self.update_item_as("update_collection_item", ctx, subject_id, collection,
+                            item_id, fields)
+
+    def set_field(self, ctx: CommandContext, subject_id: str, field: str, value: Any) -> None:
+        self.set_field_as("update_field", ctx, subject_id, field, value)
+
+    def doc_scope(self, subject_id: str) -> str | None:
+        """The upload scope a document filed against this record belongs in."""
+        return self._doc_scope(subject_id) if self._doc_scope else None
+
+    def reviewable(self) -> bool:
+        """Whether this record type carries the review workflow.
+
+        The three model-governed record types do; a Product and a handoff are governed
+        differently and are not reviewed stage by stage.
+        """
+        return bool(self.questions_collection() and self.aggregate_type)
+
+    def questions_collection(self) -> str | None:
+        """Where this record type keeps the questionnaire its review works through."""
+        return REVIEW_QUESTION_COLLECTIONS.get(self.kind)
+
+    def review_stages(self) -> tuple[dict, ...]:
+        """The review stages as this record type words them."""
+        return review_stages_for(self.kind)
 
     def retire(self, ctx: CommandContext, subject_id: str) -> None:
         """Hibernate the subject — the committee ratified a retire request."""
@@ -142,6 +196,7 @@ MODEL_SUBJECT = Subject(
     get=get_model, list_all=list_models, add_cmd=_model_add, update_cmd=_model_update,
     field_cmd=update_model_field, rebuild=rebuild_inventory_view, id_kwarg="model_id",
     retire_cmd=retire_model, reactivate_cmd=reactivate_model,
+    aggregate_type=MODEL_AGGREGATE, doc_scope=model_scope,
 )
 # A product can be retired but not yet brought back — ``supports`` keeps the
 # committee from being offered a decision the subject cannot carry out.
@@ -172,6 +227,7 @@ ML_APPLICATION_SUBJECT = Subject(
     add_cmd=_ml_add, update_cmd=_ml_update, field_cmd=update_ml_application_field,
     rebuild=rebuild_ml_application_view, id_kwarg="ml_application_id",
     retire_cmd=retire_ml_application,
+    aggregate_type=ML_APPLICATION_AGGREGATE, doc_scope=ml_application_scope,
 )
 # An AI System takes the same trip as a model and an ML Application: the owner
 # proposes a rating and the stored one does not move until the committee approves it.
@@ -184,9 +240,21 @@ AI_SYSTEM_SUBJECT = Subject(
     add_cmd=_ai_add, update_cmd=_ai_update, field_cmd=update_ai_system_field,
     rebuild=rebuild_ai_system_view, id_kwarg="ai_system_id",
     retire_cmd=retire_ai_system,
+    aggregate_type=AI_SYSTEM_AGGREGATE, doc_scope=ai_system_scope,
 )
 SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT, HANDOFF_SUBJECT, ML_APPLICATION_SUBJECT,
             AI_SYSTEM_SUBJECT)
+
+
+def subject_by_kind(kind: str) -> Subject | None:
+    """The adapter for a record type, or ``None`` if that is not a record type.
+
+    One lookup rather than a dict built beside ``SUBJECTS``, which would be a second
+    list to keep in step with the first. Callers that need to know a record exists —
+    the change register, and the routing resolver after it — go through here rather
+    than importing five ``get_*`` functions and choosing between them.
+    """
+    return next((subject for subject in SUBJECTS if subject.kind == kind), None)
 
 
 def subject_for_agenda_item(item: dict) -> tuple[Subject | None, str | None]:

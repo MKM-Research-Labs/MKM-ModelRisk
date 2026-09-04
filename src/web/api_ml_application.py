@@ -39,6 +39,8 @@ from src.governance.ml_application import (add_collection_item, get_ml_applicati
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.reference import get_reference_lists
 from src.web._ml_scope import scoped, scoped_list
+from src.web._review_stages import review_specs
+from src.web._signoff_subject import ML_APPLICATION_SUBJECT
 from src.web._helpers import (collection_field_specs, context_from_request,
                               resolve_mrc_for_org,
                               document_specs, grouped_field_specs, json_body,
@@ -106,6 +108,7 @@ def field_specs():
                         for key, spec in TRAINING_FIELD_SPECS.items() if spec.get("when")],
         },
         **document_specs(),
+        **review_specs(ML_APPLICATION_SUBJECT),
     })
 
 

@@ -29,6 +29,7 @@ from src.ingest import SchemaValidationError
 from src.web.api_audit import audit_bp
 from src.web.api_artefacts import artefacts_bp
 from src.web.api_audit_reports import audit_reports_bp
+from src.web.api_change import change_bp
 from src.web.api_client import client_bp
 from src.web.api_dashboard import dashboard_bp
 from src.web.api_documents import documents_bp
@@ -45,9 +46,11 @@ from src.web.api_mrc_settings import settings_bp
 from src.web.api_ai_system import ai_system_bp
 from src.web import api_ai_system_signoff  # noqa: F401 — attaches endpoints to ai_system_bp
 from src.web import api_ai_system_documents  # noqa: F401 — attaches endpoints to ai_system_bp
+from src.web import api_ai_system_review  # noqa: F401 — attaches endpoints to ai_system_bp
 from src.web.api_ml_application import ml_application_bp
 from src.web import api_ml_application_documents  # noqa: F401 — attaches endpoints to ml_application_bp
 from src.web import api_ml_application_signoff  # noqa: F401 — attaches endpoints to ml_application_bp
+from src.web import api_ml_application_review  # noqa: F401 — attaches endpoints to ml_application_bp
 from src.web.api_product import product_bp
 from src.web import api_product_signoff  # noqa: F401 — attaches endpoints to product_bp
 from src.web import api_product_risk  # noqa: F401 — attaches endpoints to product_bp
@@ -104,6 +107,7 @@ def create_app(run_db_migrations: bool = True) -> Flask:
     app.register_blueprint(product_bp)
     app.register_blueprint(ml_application_bp)
     app.register_blueprint(ai_system_bp)
+    app.register_blueprint(change_bp)
     app.register_blueprint(client_bp)
     app.register_blueprint(mrc_bp)
     app.register_blueprint(settings_bp)

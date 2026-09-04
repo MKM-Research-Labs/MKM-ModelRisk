@@ -64,6 +64,8 @@ What this record deliberately does NOT carry:
 """
 from __future__ import annotations
 
+from config.governance._review import REVIEW_FIELD_SPECS
+
 from config.governance._ai import (AI_SYSTEM_QUESTION_LIST, DATA_EGRESS_CLASSES,
                                    DEPLOYMENT_PATTERNS, EU_AI_ACT_CLASSES,
                                    FOUNDATION_MODEL_LIST, HOSTING_MODES,
@@ -185,6 +187,11 @@ AI_SYSTEM_FIELD_SPECS = {
     "mrc_signoff_date": {"label": "MRC sign-off", "type": "date", "group": "Review dates"},
     "mrc_signoff_meeting": {"label": "MRC sign-off meeting", "type": "text",
                             "group": "Review dates"},
+    # --- Review. The workflow's own fields, shared with the model inventory and
+    # the other governed record types (config/governance/_review.py). This record
+    # type is reviewed through the same seven stages a model is, so it records the
+    # same things about why the review is happening and what its scope is.
+    **REVIEW_FIELD_SPECS,
     # --- Monitoring ---
     "monitoring_approach": {"label": "Monitoring approach", "type": "textarea",
                             "group": "Monitoring"},

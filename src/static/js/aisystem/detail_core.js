@@ -37,7 +37,7 @@ const AISystemDetail = RecordDetail.attach({
   _EXPOSURE: ["data_egress", "data_egress_basis", "eu_ai_act_class",
               "eu_ai_act_rationale"],
   _CONTROLS: ["human_oversight", "guardrails", "grounding", "output_variability",
-              "explainability_approach", "monitoring_approach"],
+              "explainability_approach"],
   _TESTING: ["unit_tests", "integration_tests", "benchmark_tests"],
 
   _agentic() {
@@ -70,21 +70,23 @@ const AISystemDetail = RecordDetail.attach({
     // Only where it can act. An empty Tools tab on a summariser invites somebody to
     // fill it in, and there is nothing true to put there.
     if (this._agentic()) tabs.push(["agent_tools", "Tools", n("agent_tools")]);
+    // The tab bar mirrors a model's, because an AI System is a model-governed record
+    // and is reviewed identically. Assumptions, the questions, weaknesses, limitations
+    // and remediation are NOT tabs: they are stages of the review, reached through it,
+    // each with its interim approval and its record of challenge. They were top-level
+    // here, which let somebody fill in the registers without a review ever happening —
+    // and left nobody able to say how far through a review actually was.
     tabs.push(
-      ["ai_review_questions", "Questions",
+      ["review", "Review",
        asked.filter((q) => q.status === "Addressed").length + "/" + asked.length],
       ["risk", "Risk", null],
-      ["assumptions", "Assumptions", n("assumptions")],
-      ["limitations", "Limitations", n("limitations")],
-      ["model_weaknesses", "Weaknesses", n("model_weaknesses")],
       ["data_sources", "Data sources", n("data_sources")],
       ["fairness_assessments", "Fairness", n("fairness_assessments")],
       ["evaluations", "Evaluations", n("evaluations")],
-      ["remediation_steps", "Remediation", n("remediation_steps")],
-      ["review", "Review", n("review_notes")],
       ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],
+      ["changes", "Changes", null],
       ["audit", "Audit", null],
-      ["danger", "Retire", null]);
+      ["danger", "Danger", null]);
     return DetailShell.tabBar(tabs, this._tab, "data-aistab");
   },
 
@@ -189,6 +191,17 @@ const AISystemDetail = RecordDetail.attach({
                        "/api/ai-systems/", () => this.refresh(), "aisdocs-host");
       return;
     }
+    if (this._tab === "review") {
+      box.innerHTML = this._reviewTab(d);
+      this._bindReviewRail();
+      return;
+    }
+    if (this._tab === "changes") {
+      box.innerHTML = '<div id="ais-changes"></div>';
+      Changes.render("ai_system", this.recordId(), "ais-changes",
+                     this._record.retired);
+      return;
+    }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") {
       box.innerHTML = '<div class="section-header">Retire</div>' +
@@ -214,4 +227,12 @@ const AISystemDetail = RecordDetail.attach({
   specs: () => AISystems._specs || AISystems.specs(),
   fieldSpec: (key) => AISystems.fieldSpec(key),
   onClose: () => AISystems.loadList(),
+});
+
+// The Review tab: the shared review panel (review_panel.js), the same workflow a model's
+// review runs. The defaults in the contract already suit a RecordDetail screen, so the
+// only thing supplied here is the list refresh after an interim approval — the list
+// column shows review status, and it is stale the moment a stage is agreed.
+Object.assign(AISystemDetail, ReviewPanelContract, ReviewPanel, {
+  _rvAfterApprove() { if (typeof AISystems !== "undefined") AISystems.loadList(); },
 });

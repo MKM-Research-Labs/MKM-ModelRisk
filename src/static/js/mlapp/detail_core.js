@@ -64,6 +64,7 @@ const MLAppDetail = RecordDetail.attach({
       ["evaluations", "Evaluations", n("evaluations")],
       ["linkage", "MRC linkage", n("signoff_history")],
       ["docs", "Docs", DocLinks.countIn(d.documents, this._specs.doc_tab_categories)],
+      ["changes", "Changes", null],
       ["danger", "Danger", null],
       ["audit", "Audit", this._audit.length],
     ], this._tab, "data-mlatab");
@@ -92,8 +93,10 @@ const MLAppDetail = RecordDetail.attach({
   // this one is not optional furniture: the completeness audit scores INDEPENDENCE by
   // comparing it against the owner, so a record with nowhere to set it is a record
   // marked down for a field nobody can reach.
-  _REVIEW_FIELDS: ["peer_reviewer", "validation_status", "unit_tests",
-                   "integration_tests", "benchmark_tests"],
+  // ``peer_reviewer`` is not here: it is part of the review's brief
+  // (REVIEW_BRIEF_FIELDS in config), and the review stage renders it.
+  _TESTING_FIELDS: ["validation_status", "unit_tests", "integration_tests",
+                    "benchmark_tests"],
   _TRAINS_FIELDS: ["monitoring_approach"],
 
   // Governance, in the model's order. Deliberately NOT here, exactly as on a model:
@@ -557,7 +560,14 @@ const MLAppDetail = RecordDetail.attach({
     const box = document.getElementById("mla-content");
     if (this._tab === "overview") { box.innerHTML = this._overview(); this._bindEdits(); return; }
     if (this._tab === "training") {
-      box.innerHTML = this._trainingSections(d);
+      // Testing evidence sits here, beside the record's other technical facts, exactly
+      // where an AI System keeps it. It used to be on the Review tab, which is now the
+      // staged review itself — and validation status and test coverage are properties
+      // of the build, not steps of a review.
+      box.innerHTML = this._trainingSections(d) +
+        '<div class="section-header" style="margin-top:var(--space-8)">Testing evidence</div>' +
+        this._TESTING_FIELDS.map((k) => this._row(k)).join("");
+      this._bindEdits();
       this._bindFirstTrain();
       this._bindSectionRail();
       this._bindTrainEdits(d);
@@ -575,6 +585,12 @@ const MLAppDetail = RecordDetail.attach({
         this.riskTable() +
         DetailTabs.risk(this._risk, false, d.division);  // events are product-only
       this._bindEdits();
+      return;
+    }
+    if (this._tab === "changes") {
+      box.innerHTML = '<div id="mla-changes"></div>';
+      Changes.render("ml_application", this.recordId(), "mla-changes",
+                     this._record.retired);
       return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
@@ -648,27 +664,12 @@ const MLAppDetail = RecordDetail.attach({
       return;
     }
     if (this._tab === "review") {
-      box.innerHTML =
-        '<div class="section-header">Testing evidence</div>' +
-        this._REVIEW_FIELDS.map((k) => this._row(k)).join("") +
-        '<div class="section-header" style="margin-top:var(--space-8)">Review questions</div>' +
-        this._questionGap() +
-        '<div id="mla-questions"></div>';
-      this._bindEdits();
-      // Only the questions this division asks. A record keeps every question ever
-      // put to it -- one switched off is hidden, never removed -- so the filtered
-      // copy is for rendering and nothing else.
-      const scoped = Object.assign({}, d, {
-        ml_review_questions: (d.ml_review_questions || [])
-          .filter((q) => this._questionInUse(q)),
-      });
-      // {collections: [...]}, not a bare array — see RecordDetail.renderCollection.
-      // Rendered into its own box with a row class, so it cannot use that helper.
-      document.getElementById("mla-questions").innerHTML = Collections.render(
-        scoped, {collections: [this.collSpec("ml_review_questions")]},
-        this._record.retired, false, true,
-        (item) => (this._questionMandatory(item) ? "mandatory" : ""));
-      this._bindCollections(["ml_review_questions"]);
+      // The shared review panel: the same seven stages, interim approvals, record of
+      // challenge and sign-off a model's review runs. This tab used to be the testing
+      // fields plus a flat question list, which is not a review — nothing recorded how
+      // far through one had got, and nothing carried the reviewer's verdict.
+      box.innerHTML = this._reviewTab(d);
+      this._bindReviewRail();
       return;
     }
     // Everything else is an ordinary spec-driven collection.
@@ -692,4 +693,22 @@ const MLAppDetail = RecordDetail.attach({
   specs: () => MLApps._specs || MLApps.specs(),
   fieldSpec: (key) => MLApps.fieldSpec(key),
   onClose: () => MLApps.loadList(),
+});
+
+// The Review tab: the shared review panel (review_panel.js), the same workflow a model's
+// review runs. The defaults in the contract already suit a RecordDetail screen, so the
+// only thing supplied here is the list refresh after an interim approval — the list
+// column shows review status, and it is stale the moment a stage is agreed.
+Object.assign(MLAppDetail, ReviewPanelContract, ReviewPanel, {
+  _rvAfterApprove() { if (typeof MLApps !== "undefined") MLApps.loadList(); },
+});
+
+// The two places an ML Application's review legitimately differs from a model's, both
+// because of its review policy (Admin > ML Review Policy): a question the division
+// switched off is hidden, and the gap note says what the policy still expects.
+Object.assign(MLAppDetail, {
+  _rvQuestions(d) {
+    return (d[this._rvQuestionsKey()] || []).filter((q) => this._questionInUse(q));
+  },
+  _rvQuestionsLead() { return this._questionGap(); },
 });

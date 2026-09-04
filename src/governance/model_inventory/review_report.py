@@ -55,13 +55,13 @@ def _register(rows: list, columns: list[tuple[str, str]], weights: list[float]) 
                        weights)
 
 
-def _questions(data: dict) -> str:
+def _questions(data: dict, collection: str) -> str:
     """The nine questions with both sides shown — the owner's answer and the
     reviewer's verdict on it. Shown together because a question the owner called
     Addressed and the reviewer Challenged is the single most interesting row in
     the document, and splitting them into two tables would bury it."""
     rows = []
-    for i, q in enumerate(data.get("validation_questions") or [], start=1):
+    for i, q in enumerate(data.get(collection) or [], start=1):
         rows.append([
             str(i) + ". " + (q.get("short_label") or ""),
             q.get("status") or "",
@@ -105,7 +105,8 @@ def _challenge_record(data: dict, stage_key: str) -> str:
     return "".join(out)
 
 
-def _stage_body(data: dict, stage: dict, approvals: dict) -> str:
+def _stage_body(data: dict, stage: dict, approvals: dict,
+                questions_collection: str = "validation_questions") -> str:
     """One stage: what was agreed, the argument that got there, and who agreed it."""
     key = stage["key"]
     if key == "documents":
@@ -116,7 +117,7 @@ def _stage_body(data: dict, stage: dict, approvals: dict) -> str:
                           ("Monitoring", "monitoring"), ("Mitigation", "mitigation")],
                          [0.34, 0.10, 0.28, 0.28])
     elif key == "questions":
-        body = _questions(data)
+        body = _questions(data, questions_collection)
     elif key == "weaknesses":
         body = _register(data.get("model_weaknesses") or [],
                          [("Weakness", "description"), ("Impact", "impact")], [0.85, 0.15])
@@ -126,6 +127,16 @@ def _stage_body(data: dict, stage: dict, approvals: dict) -> str:
                           ("Monitoring trigger", "monitoring_trigger"),
                           ("Compensating control", "compensating_control")],
                          [0.34, 0.10, 0.28, 0.28])
+    elif key == "remediation":
+        # Its own branch, which it did not have: every stage after "limitations" fell
+        # through to the monitoring approach, so the remediation section of every
+        # report issued to date restated the monitoring paragraph instead of listing
+        # what the review found outstanding. The stage exists precisely so the
+        # committee sees that list before it signs anything off.
+        body = _register(data.get("remediation_steps") or [],
+                         [("Finding", "description"), ("Action", "action"),
+                          ("Owner", "owner"), ("Status", "status")],
+                         [0.34, 0.34, 0.16, 0.16])
     else:
         body = _prose(data.get("monitoring_approach"))
     approval = approvals.get(key) or {}
@@ -140,23 +151,36 @@ def _stage_body(data: dict, stage: dict, approvals: dict) -> str:
 
 
 def build_review_report_tex(model: dict, settings: dict, signoff: dict, as_of: str,
-                            approvals: dict, *, logo: bool = False) -> str:
-    """LaTeX source for one model's Model Review Report."""
+                            approvals: dict, *, logo: bool = False,
+                            id_key: str = "model_id",
+                            questions_collection: str = "validation_questions",
+                            stages: tuple = REVIEW_STAGES) -> str:
+    """LaTeX source for one record's Model Review Report.
+
+    The defaults are a model's, so every existing caller is unchanged. The three
+    parameters exist because an ML Application and an AI System are reviewed through
+    exactly this workflow and receive exactly this report -- they differ only in which
+    key holds their id, where their questionnaire lives, and what the questions stage
+    is called. The report is deliberately still titled a Model Review Report: these are
+    model-governed records, and the platform already gives them a model's governance
+    vocabulary so one probe counts all three.
+    """
     data = model.get("data") or {}
     org = settings.get("fields", {}).get("org_name", "")
-    title = str(model["model_id"]) + " --- " + str(data.get("name") or "")
+    record_id = str(model.get(id_key) or "")
+    title = record_id + " --- " + str(data.get("name") or "")
     return (
         preamble(DOC_TITLE, org_name=org) + "\\begin{document}\n"
         + front_matter(title, DOC_TITLE, org_name=org, date=as_of, logo=logo, toc=True)
         + history_page(as_of, DOC_TITLE + " signed off by the reviewer", org_name=org)
         + _section("Scope and basis", _prose(
-            "This report records the review of " + str(model["model_id"]) + ", stage by "
+            "This report records the review of " + record_id + ", stage by "
             "stage, including the exchange between the model owner and the reviewer. It is "
             "placed before the Model Risk Committee as the evidence supporting the model's "
             "risk rating; the committee's own decision is that rating, not this review."))
         + _section("The review", _para_table(
             ["Field", "Value"],
-            [["Model", str(model["model_id"])],
+            [["Record", record_id],
              ["Owner", data.get("owner") or ""],
              ["Reviewer", data.get("peer_reviewer") or ""],
              ["Why this review", data.get("review_trigger") or ""],
@@ -164,19 +188,24 @@ def build_review_report_tex(model: dict, settings: dict, signoff: dict, as_of: s
              ["Signed off at", (signoff.get("signed_at") or "").replace("T", " ")[:16]]],
             [0.3, 0.7]))
         + "".join(
-            _section(str(i) + ". " + stage["label"], _stage_body(data, stage, approvals))
-            for i, stage in enumerate(REVIEW_STAGES))
+            _section(str(i) + ". " + stage["label"],
+                     _stage_body(data, stage, approvals, questions_collection))
+            for i, stage in enumerate(stages))
         + _section("Reviewer's final commentary", _prose(signoff.get("commentary")))
         + "\\end{document}\n"
     )
 
 
 def render_review_report_pdf(model: dict, settings: dict, signoff: dict, as_of: str,
-                             approvals: dict) -> bytes:
-    """Build and compile the Model Review Report to PDF bytes."""
+                             approvals: dict, **record_type) -> bytes:
+    """Build and compile the Model Review Report to PDF bytes.
+
+    ``record_type`` carries ``id_key`` / ``questions_collection`` / ``stages`` through
+    for a non-model record; omitted, it renders a model's exactly as before.
+    """
     assets = logo_asset(settings)
     tex = build_review_report_tex(model, settings, signoff, as_of, approvals,
-                                  logo=bool(assets))
+                                  logo=bool(assets), **record_type)
     return compile_tex(tex, assets=assets)
 
 

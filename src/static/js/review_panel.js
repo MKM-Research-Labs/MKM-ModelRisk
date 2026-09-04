@@ -1,0 +1,596 @@
+// Copyright (c) 2022-2026 MKM Research Labs.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+// The Review panel: a review run as a workflow, one stage at a time.
+//
+// Shared by every governed record type — a model, an ML Application and an AI System
+// are reviewed identically, so they are reviewed by this. Each screen mixes the panel
+// in and supplies the handful of `_rv*` accessors below, which is the whole of what
+// differs between them.
+//
+// Nothing here names a stage, a verdict or a trigger. Those come from the record
+// type's own /fields payload (review_specs in src/web/_review_stages.py), because a
+// console carrying its own copy is a console that offers an adopter's renamed stage
+// under the old name — or a trigger the start-cycle endpoint then refuses.
+//
+// The stages are the work in the order it happens, ending in the reviewer's sign-off,
+// which files the report the MRC receives. See docs/design/review-workflow.md.
+const REVIEW_DOC_CATEGORY = "Review";
+
+// What a host screen must provide. The defaults suit a RecordDetail-based screen (the
+// ML Application and AI System details), so those two supply nothing at all; the
+// model's Detail predates RecordDetail and overrides the six that differ.
+const ReviewPanelContract = {
+  // --- The review's shape, from the record type's own /fields payload -------
+  _rvSpecs() { return this._specs || {}; },
+  _rvStages() {
+    // Numbered here rather than served numbered: the number is a position in the rail,
+    // which is a fact about the screen, not about the workflow. Sign-off closes the
+    // rail and is not a stage the server approves, so it is appended here.
+    const stages = (this._rvSpecs().review_stages || []).map((s, i) =>
+      ({ key: s.key, label: s.label, n: i }));
+    return stages.concat([{ key: "signoff", label: "Sign-off", n: stages.length }]);
+  },
+  _rvQuestionsKey() { return this._rvSpecs().review_questions_collection; },
+  _rvVerdicts() { return this._rvSpecs().reviewer_verdicts || []; },
+  _rvTriggers() { return this._rvSpecs().review_triggers || []; },
+  _rvBriefFields() { return this._rvSpecs().review_brief_fields || []; },
+  _rvChecklist() { return this._rvSpecs().new_version_checklist || []; },
+  _rvNewVersionTrigger() { return this._rvSpecs().new_version_trigger; },
+
+  // --- The record the panel is reviewing -----------------------------------
+  _rvRecord() { return this._record; },
+  _rvSet(record) { this._record = record; },
+  _rvData() { return (this._rvRecord() || {}).data || {}; },
+  _rvRetired() { return !!(this._rvRecord() || {}).retired; },
+  _rvId() { return this.recordId(); },
+  _rvApi() { return this._cfg.api + "/"; },
+
+  // --- Element scoping -----------------------------------------------------
+  // Every id this panel emits is prefixed with the host's content element, and every
+  // lookup is scoped to it. Without that they are global: switching main tabs leaves
+  // the previous screen's detail in the DOM, so a second screen rendering its review
+  // found the FIRST screen's "review-stage" and wrote into a hidden container. The
+  // ML Application's review body vanished that way while the model's stale detail
+  // silently absorbed it.
+  _rvPfx() { return this._cfg.contentEl + "-"; },
+  _rvScope() { return document.getElementById(this._cfg.contentEl) || document; },
+  _rvEl(id) { return this._rvScope().querySelector("#" + CSS.escape(this._rvPfx() + id)); },
+  _rvVal(id) {
+    const el = this._rvEl(id);
+    if (!el) return "";
+    if (el.multiple) return [...el.selectedOptions].map((o) => o.value);
+    return el.value.trim();
+  },
+  _rvAll(selector) { return this._rvScope().querySelectorAll(selector); },
+
+  // --- Redrawing ------------------------------------------------------------
+  _rvRerender() { this._render(); },
+  // Refetch and redraw in place. Deliberately not the screen's own show(), which
+  // resets the open tab to the overview — reloading after posting a note would throw
+  // the reviewer out of the review they are in the middle of.
+  async _rvReload() {
+    try {
+      this._rvSet(await App.get(this._rvApi() + this._rvId()));
+      this._rvRerender();
+    } catch (e) { App.toast(e.message, "error"); }
+  },
+  // Run after an interim approval, for screens whose list shows review status.
+  _rvAfterApprove() {},
+
+  // --- Fields and collections ----------------------------------------------
+  _rvRow(key) { return this.fieldRow(key); },
+  _rvBindEdits() { if (this._bindEdits) this._bindEdits(); },
+  _rvColl(key, d) {
+    return Collections.render(d, { collections: [this.collSpec(key)] }, this._rvRetired());
+  },
+  _rvBindColls(keys) { this.bindCollections(keys); },
+
+  // The owner's half of the questions stage: status and rationale, saved as they are
+  // typed. The reviewer's half posts to its own endpoint, which stamps who and when —
+  // see _bindVerdictSaves. Updating a question is a non-critical edit, so it applies
+  // without a confirmation dialog.
+  // Which questions the questions stage shows, and anything to say above them. The
+  // ML Application filters by its division's review policy — a question switched off
+  // is hidden, never removed — so the stage has to ask rather than read the
+  // collection directly.
+  _rvQuestions(d) { return d[this._rvQuestionsKey()] || []; },
+  _rvQuestionsLead() { return ""; },
+
+  _rvBindOwnerAnswers() {
+    if (this._rvRetired()) return;
+    const self = this;
+    const save = async function (itemId) {
+      try {
+        const updated = await App.send(
+          "POST", self._rvApi() + self._rvId() + "/collections/" +
+          self._rvQuestionsKey() + "/" + itemId,
+          { fields: { status: self._rvVal("vq-" + itemId + "-status"),
+                      rationale: self._rvVal("vq-" + itemId + "-rationale") } });
+        self._rvSet(updated);
+        if (typeof MrcNav !== "undefined") MrcNav.invalidate();
+        if (typeof Nav !== "undefined") Nav.markAllDirty();
+        App.toast("Change recorded in the audit trail", "ok");
+        self._rvRerender();
+      } catch (e) {
+        App.toast(e.message, "error");
+      }
+    };
+    self._rvAll("select[data-vq-item], input[data-vq-item], textarea[data-vq-item]")
+      .forEach(function (el) { el.onchange = () => save(el.getAttribute("data-vq-item")); });
+  },
+};
+
+const ReviewPanel = {
+  // Which stage is open. Held on Detail (not in the URL) so switching model tabs
+  // and coming back leaves the reviewer where they were.
+  _reviewStage: "documents",
+
+  _reviewTab(d) {
+    const rail = this._rvStages().map((s) =>
+      '<button class="dtab' + (s.key === this._reviewStage ? " active" : "") +
+      '" data-rstage="' + s.key + '">' + s.n + ". " + esc(s.label) +
+      this._stageBadge(s.key, d) + "</button>").join("");
+    return '<p class="muted" style="font-size:var(--size-sm);margin:0 0 var(--space-4)">The review, in the order it ' +
+      "runs. Each stage is agreed between the model owner and the reviewer before the review " +
+      "moves on; the reviewer signs off at the end and the report goes to the MRC with the " +
+      "risk rating.</p>" +
+      '<div class="dtabs">' + rail + "</div>" +
+      '<div id="' + this._rvPfx() + 'review-stage" style="margin-top:var(--space-6)"></div>';
+  },
+
+  // What the stage has to show for itself: a tick once agreed, else a count of
+  // the work in it — or nothing, where a count would mean nothing.
+  _stageBadge(key, d) {
+    const n = (k) => (d[k] || []).length;
+    // An agreed stage says so, in place of its count: once the reviewer has
+    // approved it, how many rows it holds is no longer the interesting fact.
+    if ((d.review_progress || []).some((r) => r.stage === key)) return " ✓";
+    if (key === "documents") {
+      return " (" + DocLinks.countIn(d.documents, [REVIEW_DOC_CATEGORY]) + ")";
+    }
+    if (key === "questions") {
+      const vq = d[this._rvQuestionsKey()] || [];
+      return " (" + vq.filter((q) => q.status === "Addressed").length + "/" + vq.length + ")";
+    }
+    if (key === "assumptions") return " (" + n("assumptions") + ")";
+    if (key === "weaknesses") return " (" + n("model_weaknesses") + ")";
+    if (key === "limitations") return " (" + n("limitations") + ")";
+    return "";
+  },
+
+  _renderReviewStage() {
+    const d = this._rvData();
+    const box = this._rvEl("review-stage");
+    const docOpts = {
+      category: REVIEW_DOC_CATEGORY, docs: d.documents || [], base: this._rvApi(),
+      id: this._rvId(), retired: this._rvRetired(),
+      refresh: () => this._rvReload(),
+    };
+    if (this._reviewStage === "documents") {
+      box.innerHTML = '<div class="section-header">The brief</div>' +
+        '<p class="muted" style="font-size:var(--size-sm)">What this review is for, who is doing it, and ' +
+        "by when. A reviewer handed a model and no brief writes the review they imagine is " +
+        "wanted.</p>" +
+        this._rvBriefFields().map((k) => this._rvRow(k, d)).join("") +
+        this._newVersionChecklist(d) +
+        '<div class="section-header" style="margin-top:var(--space-8)">Preliminary documents</div>' +
+        '<p class="muted" style="font-size:var(--size-sm)">The pack the reviewer works from. These are ' +
+        "the review's own working papers — the model's documentation lives on the Docs tab.</p>" +
+        DocPanel.html(docOpts) + this._thread("documents", d) + this._stageApproval("documents", d);
+      DocPanel.bind(docOpts);
+      this._rvBindEdits();
+      this._bindThread("documents");
+      this._bindStageApproval("documents");
+      return;
+    }
+    if (this._reviewStage === "assumptions") {
+      box.innerHTML = '<p class="muted" style="font-size:var(--size-sm)">What the model takes to be true ' +
+        "for its results to hold &mdash; and what is watched, or done, if one stops holding. " +
+        "The sixth of the nine questions asks whether these are documented and justified, which " +
+        "is why they are agreed before the questions rather than after.</p>" +
+        this._rvColl("assumptions", d) + this._thread("assumptions", d) +
+        this._stageApproval("assumptions", d);
+      this._rvBindColls(["assumptions"]);
+      this._bindThread("assumptions");
+      this._bindStageApproval("assumptions");
+      return;
+    }
+    if (this._reviewStage === "questions") {
+      box.innerHTML = this._questionsTable(d) + this._thread("questions", d) + this._stageApproval("questions", d);
+      this._rvBindOwnerAnswers();
+      this._bindVerdictSaves();
+      this._bindThread("questions");
+      this._bindStageApproval("questions");
+      return;
+    }
+    if (this._reviewStage === "weaknesses") {
+      box.innerHTML = '<p class="muted" style="font-size:var(--size-sm)">What the model does badly, or ' +
+        "not at all &mdash; proposed by the owner, agreed with the reviewer.</p>" +
+        this._rvColl("model_weaknesses", d) + this._thread("weaknesses", d) + this._stageApproval("weaknesses", d);
+      this._rvBindColls(["model_weaknesses"]);
+      this._bindThread("weaknesses");
+      this._bindStageApproval("weaknesses");
+      return;
+    }
+    if (this._reviewStage === "limitations") {
+      box.innerHTML = '<p class="muted" style="font-size:var(--size-sm)">Where the model may and may not ' +
+        "be used, with the trigger that would surface a breach and the control that compensates.</p>" +
+        this._rvColl("limitations", d) + this._thread("limitations", d) + this._stageApproval("limitations", d);
+      this._rvBindColls(["limitations"]);
+      this._bindThread("limitations");
+      this._bindStageApproval("limitations");
+      return;
+    }
+    if (this._reviewStage === "monitoring") {
+      box.innerHTML = '<div class="section-header">Monitoring approach</div>' +
+        '<p class="muted" style="font-size:var(--size-sm)">How this model will be watched once it is in ' +
+        "use, in your own words &mdash; what would be looked at, how often, and what would " +
+        "prompt a second look.</p>" + this._rvRow("monitoring_approach", d) +
+        this._thread("monitoring", d) + this._stageApproval("monitoring", d);
+      this._rvBindEdits();
+      this._bindThread("monitoring");
+      this._bindStageApproval("monitoring");
+      return;
+    }
+    if (this._reviewStage === "remediation") {
+      box.innerHTML = '<div class="section-header">Remediation</div>' +
+        '<p class="muted" style="font-size:var(--size-sm)">What the review found that has to be put ' +
+        "right, and where each step has got to. The committee sees these before it signs the " +
+        "review off.</p>" +
+        this._rvColl("remediation_steps", d) +
+        this._thread("remediation", d) + this._stageApproval("remediation", d);
+      this._rvBindColls(["remediation_steps"]);
+      this._bindThread("remediation");
+      this._bindStageApproval("remediation");
+      return;
+    }
+    box.innerHTML = this._signoffPanel(d);
+    this._bindThread("signoff");
+    this._bindSignoff();
+    this._bindCycle();
+  },
+
+  // What stands between this review and its sign-off. Computed here from the same
+  // facts the endpoint uses, so the button says exactly why it is disabled and the
+  // server refuses for exactly those reasons.
+  _signoffBlockers(d) {
+    const agreed = new Set((d.review_progress || []).map((r) => r.stage));
+    const out = this._rvStages().filter((s) => s.key !== "signoff" && !agreed.has(s.key))
+      .map((s) => s.label + " not agreed");
+    const notes = d.review_notes || [];
+    const answered = new Set(notes.map((n) => n.resolves).filter(Boolean));
+    const open = notes.filter((n) => n.kind === "Challenge" && !answered.has(n.item_id));
+    if (open.length) {
+      out.push(open.length + " open challenge" + (open.length === 1 ? "" : "s") +
+        " (" + open.map((n) => n.item_id).join(", ") + ")");
+    }
+    return out;
+  },
+
+  // The filed report is served by document item, not by filename, so the link is
+  // built from the document this sign-off produced.
+  _reportLink(d, signoff) {
+    const doc = (d.documents || []).find((x) => x.filename === signoff.report_filename);
+    if (!doc) return "";
+    return '<a class="btn small" style="margin-top:var(--space-3)" target="_blank" rel="noopener" href="' + this._rvApi() +
+      esc(this._rvId()) + "/documents/" + esc(doc.item_id) +
+      '/download">&darr; Model Review Report</a>';
+  },
+
+  _signoffPanel(d) {
+    const signed = (d.review_signoffs || []);
+    const history = signed.map((s) =>
+      '<div class="inforow"><div class="k">' + esc((s.signed_at || "").slice(0, 10)) +
+      '</div><div class="v"><b>' + esc(s.signed_by || "") + "</b>" +
+      '<div style="white-space:pre-wrap;margin-top:var(--space-2)">' + esc(s.commentary || "") + "</div>" +
+      this._reportLink(d, s) + "</div></div>").join("");
+    const blockers = this._signoffBlockers(d);
+    const gate = blockers.length
+      ? '<div class="quorum-banner">The review is not finished: ' +
+        esc(blockers.join("; ")) + ".</div>"
+      : "";
+    const form = this._rvRetired() ? "" :
+      '<div class="field" style="margin-top:var(--space-4)"><label for="rs-commentary">Final commentary</label>' +
+      '<textarea id="' + this._rvPfx() + 'rs-commentary" rows="4" placeholder="What the reviewer concludes, in ' +
+      'their own words — this is printed in the report the committee reads"></textarea></div>' +
+      '<button class="btn small primary" id="' + this._rvPfx() + 'rs-signoff"' +
+      (blockers.length ? " disabled" : "") + ">Sign off &amp; file the report&hellip;</button>";
+    return this._nextCycle(d) + '<div class="section-header">Reviewer sign-off</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">Signing off files the Model Review Report ' +
+      "against this model &mdash; every stage, both sides of the nine questions, the registers " +
+      "and the record of challenge. The MRC receives that report and signs off the risk " +
+      "rating; it does not adjudicate the review.</p>" +
+      (history ? '<div class="section-header" style="margin-top:var(--space-6)">Signed</div>' + history : "") +
+      gate + form + this._thread("signoff", d);
+  },
+
+  // Once a review is signed off, the tab's job is to start the next one — and to
+  // say why it is happening, because what a reviewer should look at differs
+  // between a periodic review, a new version, a change of owner and a direction
+  // from the committee.
+  _nextCycle(d) {
+    const signed = (d.review_signoffs || []).length;
+    const started = (d.review_progress || []).filter((r) => r.stage === "cycle-start").length;
+    if (!signed || this._rvRetired()) return "";
+    if (started > signed - 1 && d.review_status !== "Signed off") return "";
+    return '<div class="section-header">Start the next review</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">This review is signed off. Starting another ' +
+      "clears the stages for the new one &mdash; nothing is erased: the approvals, the " +
+      "record of challenge and the report just signed stay on the model.</p>" +
+      '<div class="row" style="align-items:center">' +
+      '<select id="' + this._rvPfx() + 'rc-trigger">' +
+      ((this._rvSpecs()).review_triggers || this._rvTriggers()).map((x) =>
+        "<option>" + esc(x) + "</option>").join("") + "</select>" +
+      '<input id="' + this._rvPfx() + 'rc-note" placeholder="Why now (optional)" style="flex:1">' +
+      '<button class="btn small" id="' + this._rvPfx() + 'rc-start">Start a review&hellip;</button></div>';
+  },
+
+  _bindCycle() {
+    const btn = this._rvEl("rc-start");
+    if (!btn) return;
+    btn.onclick = () => {
+      App.amend("Start a new review of " + this._rvId() + ".", "POST",
+        this._rvApi() + this._rvId() + "/review/start-cycle",
+        { trigger: this._rvVal("rc-trigger"), note: this._rvVal("rc-note") },
+        () => { this._reviewStage = "documents"; this._rvReload(); });
+    };
+  },
+
+  _bindSignoff() {
+    const btn = this._rvEl("rs-signoff");
+    if (!btn || btn.disabled) return;
+    btn.onclick = () => {
+      const commentary = this._rvVal("rs-commentary");
+      if (!commentary) { App.toast("The sign-off needs your final commentary", "error"); return; }
+      App.amend("Sign off the review of " + this._rvId() + " and file the report.", "POST",
+        this._rvApi() + this._rvId() + "/review/sign-off", { commentary: commentary },
+        () => this._rvReload());
+    };
+  },
+
+  // The record of challenge: the exchange between owner and reviewer, under the
+  // stage it happened on. It is not chat — it is the evidence that the model was
+  // challenged, it is printed in the report the committee receives, and nothing
+  // posted here can be edited or taken back. A correction is another note.
+  _thread(stage, d) {
+    const notes = (d.review_notes || []).filter((n) => n.stage === stage);
+    const answered = new Set(notes.map((n) => n.resolves).filter(Boolean));
+    const open = notes.filter((n) => n.kind === "Challenge" && !answered.has(n.item_id));
+    const line = (n) => {
+      const challenge = n.kind === "Challenge";
+      const isOpen = challenge && !answered.has(n.item_id);
+      const tag = challenge
+        ? '<span class="pill" style="background:' + Theme.colour("review_thread", isOpen ? "open" : "answered") +
+          ';color:var(--inverse)">' + (isOpen ? "Challenge — open" : "Challenge — answered") + "</span> "
+        : "";
+      const answers = n.resolves
+        ? '<span class="muted" style="font-size:var(--size-xs)"> answering ' + esc(n.resolves) + "</span>" : "";
+      return '<div style="padding:var(--space-4) 0;border-bottom:1px solid var(--line)">' +
+        '<div class="muted" style="font-size:var(--size-xs)">' + esc(n.author_role || "") + " &middot; " +
+        esc(n.author || "") + " &middot; " + esc((n.posted_at || "").replace("T", " ").slice(0, 16)) +
+        " &middot; " + esc(n.item_id) + answers + "</div>" +
+        tag + '<span style="white-space:pre-wrap">' + esc(n.text || "") + "</span></div>";
+    };
+    const banner = open.length
+      ? '<div class="quorum-banner">' + open.length + " open challenge" +
+        (open.length === 1 ? "" : "s") + " on this stage &mdash; a challenge is answered by " +
+        "another note, never by deleting it.</div>"
+      : "";
+    const answering = open.map((n) =>
+      '<option value="' + esc(n.item_id) + '">answers ' + esc(n.item_id) + " — " +
+      esc((n.text || "").slice(0, 60)) + "</option>").join("");
+    const composer = this._rvRetired() ? "" :
+      '<div class="row" style="margin-top:var(--space-4);align-items:flex-start">' +
+      '<textarea id="' + this._rvPfx() + 'rn-text-' + stage + '" rows="2" placeholder="Add a note, or raise a challenge" ' +
+      'style="flex:1;resize:vertical"></textarea>' +
+      '<select id="' + this._rvPfx() + 'rn-kind-' + stage + '"><option>Note</option><option>Challenge</option></select>' +
+      (answering ? '<select id="' + this._rvPfx() + 'rn-resolves-' + stage + '"><option value="">&mdash;</option>' +
+        answering + "</select>" : "") +
+      '<button class="btn small primary" id="' + this._rvPfx() + 'rn-post-' + stage + '">Post</button></div>';
+    return '<div class="section-header" style="margin-top:var(--space-8)">Record of challenge</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">What the owner and the reviewer said to each ' +
+      "other about this stage. Append-only, and printed in the report the MRC receives.</p>" +
+      banner +
+      (notes.length ? notes.map(line).join("") : '<div class="empty">Nothing said yet.</div>') +
+      composer;
+  },
+
+  _bindThread(stage) {
+    const btn = this._rvEl("rn-post-" + stage);
+    if (!btn) return;
+    btn.onclick = async () => {
+      const text = this._rvVal("rn-text-" + stage);
+      if (!text) { App.toast("A note cannot be empty", "error"); return; }
+      const resolves = this._rvEl("rn-resolves-" + stage);
+      try {
+        this._rvSet(await App.send("POST", this._rvApi() + this._rvId() + "/review/note",
+          { stage: stage, text: text, kind: this._rvVal("rn-kind-" + stage),
+            resolves: resolves ? resolves.value : "" }));
+        App.toast("Note recorded", "ok");
+        this._rvRerender();
+      } catch (e) {
+        App.toast(e.message, "error");
+      }
+    };
+  },
+
+  // The nine questions, both sides. The owner says what the model does; the
+  // reviewer says whether that answer stands. They are shown on one row because
+  // the disagreement between them is the point — a question can be Addressed by
+  // its owner and Challenged by its reviewer, and a record that cannot hold that
+  // is not recording a review.
+  _questionsTable(d) {
+    const questions = this._rvQuestions(d);
+    const statuses = ["Addressed", "Partially Addressed", "Not Addressed", "Not Applicable"];
+    const counts = { "Addressed": 0, "Partially Addressed": 0, "Not Addressed": 0, "Not Applicable": 0 };
+    questions.forEach((q) => { if (counts[q.status] !== undefined) counts[q.status]++; });
+    const challenged = questions.filter((q) => q.reviewer_verdict === "Challenged").length;
+    const accepted = questions.filter((q) => q.reviewer_verdict === "Accepted").length;
+    const total = questions.length;
+    const pct = total ? Math.round((counts.Addressed / total) * 100) : 0;
+    const card = (lbl, v, color) =>
+      '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
+      lbl + '</div><div class="val">' + v + "</div></div>";
+    const options = (list, current) => list.map((o) =>
+      "<option" + (o === current ? " selected" : "") + ">" + o + "</option>").join("");
+    const ownerSelect = (q) => '<select data-vq-item="' + esc(q.item_id) + '" id="' + this._rvPfx() + 'vq-' +
+      esc(q.item_id) + '-status" style="width:100%">' + options(statuses, q.status) + "</select>";
+    const verdictSelect = (q) => '<select data-vq-verdict="' + esc(q.item_id) + '" id="' + this._rvPfx() + 'vq-verdict-' +
+      esc(q.item_id) + '" style="width:100%">' +
+      options(this._rvVerdicts(), q.reviewer_verdict || this._rvVerdicts()[0]) + "</select>";
+    const rows = questions.map((q, i) => {
+      const readOnly = this._rvRetired();
+      const owner = readOnly
+        ? vqBadge(q.status) + '<div class="muted">' + fieldDisplay(q.rationale) + "</div>"
+        : ownerSelect(q) +
+          '<textarea data-vq-item="' + esc(q.item_id) + '" id="' + this._rvPfx() + 'vq-' + esc(q.item_id) +
+          '-rationale" rows="3" style="width:100%;resize:vertical;overflow-y:auto;margin-top:var(--space-2)">' +
+          esc(q.rationale || "") + "</textarea>";
+      const stamp = q.reviewed_by
+        ? '<div class="muted" style="font-size:var(--size-xs)">' + esc(q.reviewed_by) + " &middot; " +
+          esc((q.reviewed_at || "").slice(0, 10)) + "</div>"
+        : "";
+      const reviewer = readOnly
+        ? fieldDisplay(q.reviewer_verdict) + '<div class="muted">' +
+          fieldDisplay(q.reviewer_comment) + "</div>" + stamp
+        : verdictSelect(q) +
+          '<textarea data-vq-verdict-item="' + esc(q.item_id) + '" id="' + this._rvPfx() + 'vq-' + esc(q.item_id) +
+          '-comment" rows="3" placeholder="Reviewer\'s comment" ' +
+          'style="width:100%;resize:vertical;overflow-y:auto;margin-top:var(--space-2)">' +
+          esc(q.reviewer_comment || "") + "</textarea>" + stamp;
+      return "<tr><td>" + (i + 1) + "</td><td><b>" + fieldDisplay(q.short_label) +
+        '</b><br><span class="muted">' + fieldDisplay(q.question) + "</span></td><td>" +
+        owner + "</td><td>" + reviewer + "</td></tr>";
+    }).join("");
+    const stage = this._rvStages().find((x) => x.key === "questions") || {};
+    return '<p class="muted">' + esc(stage.label || "The review questions") +
+      ". The owner sets a status and a " +
+      "rationale; the reviewer accepts it or challenges it. Every change saves as you make " +
+      "it, and who reviewed what is stamped from the signed-in identity.</p>" +
+      this._rvQuestionsLead() +
+      '<div class="summary">' + card("Addressed", counts.Addressed, Theme.value("green")) +
+      card("Partially", counts["Partially Addressed"], Theme.value("amber")) +
+      card("Not Addressed", counts["Not Addressed"], Theme.value("red")) +
+      card("Accepted", accepted, Theme.value("accent")) +
+      card("Challenged", challenged, Theme.value("violet")) + "</div>" +
+      '<div class="muted" style="margin-bottom:var(--space-3)">Owner coverage: ' + counts.Addressed +
+      "/" + total + " (" + pct + "%)</div>" +
+      '<div class="progress"><div class="bar" style="width:' + pct + "%;background:" +
+      barColor(pct) + '"></div></div>' +
+      '<table style="table-layout:fixed;width:100%"><colgroup><col style="width:4%">' +
+      '<col style="width:28%"><col style="width:34%"><col style="width:34%"></colgroup>' +
+      "<thead><tr><th>#</th><th>Question</th><th>Owner</th><th>Reviewer</th></tr>" +
+      "</thead><tbody>" + rows + "</tbody></table>";
+  },
+
+  // The reviewer's verdict posts to its own endpoint, which stamps who and when.
+  // Sending those from here would make the attribution the browser's word.
+  _bindVerdictSaves() {
+    if (this._rvRetired()) return;
+    const self = this;
+    const save = async (itemId) => {
+      try {
+        const updated = await App.send(
+          "POST", self._rvApi() + self._rvId() + "/review/question-verdict",
+          { item_id: itemId, verdict: self._rvVal("vq-verdict-" + itemId),
+            comment: self._rvVal("vq-" + itemId + "-comment") });
+        self._rvSet(updated);
+        App.toast("Reviewer verdict recorded", "ok");
+        self._render();
+      } catch (e) {
+        App.toast(e.message, "error");
+      }
+    };
+    self._rvAll("[data-vq-verdict], [data-vq-verdict-item]").forEach((el) => {
+      el.onchange = () => save(el.getAttribute("data-vq-verdict") ||
+        el.getAttribute("data-vq-verdict-item"));
+    });
+  },
+
+  // The three documents that go stale together when a model is re-versioned. The
+  // owner ticks each; alongside the tick we show what is actually on file, so the
+  // confirmation is made against the record rather than from memory.
+  _newVersionChecklist(d) {
+    if (d.review_trigger !== this._rvNewVersionTrigger()) return "";
+    const held = {
+      review_docs_updated: DocLinks.countIn(d.documents, ["Core Documentation"]),
+      review_sensitivities_updated: DocLinks.countIn(d.documents, ["Sensitivity"]),
+      review_test_docs_updated: DocLinks.countIn(d.documents, ["Test Results"]),
+    };
+    return '<div class="section-header" style="margin-top:var(--space-8)">New version checklist</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">This review follows a new version, so the ' +
+      "model's own documents need to have caught up with it. The count beside each is what " +
+      "is on file today.</p>" +
+      this._rvChecklist().map((k) =>
+        this._rvRow(k, d).replace("</div><span class=\"edit-btn\"",
+          '<span class="muted" style="font-size:var(--size-xs);margin-left:var(--space-5)">' +
+          held[k] + " on file</span></div><span class=\"edit-btn\"")).join("");
+  },
+
+  // The reviewer's interim approval of a stage: the button, or the record of the
+  // approval already given. Not a lock — the stage stays editable afterwards, and
+  // approving again after a reopening simply adds another row.
+  _stageApproval(stageKey, d) {
+    const given = (d.review_progress || []).filter((r) => r.stage === stageKey).slice(-1)[0];
+    const label = this._rvStages().find((s) => s.key === stageKey).label;
+    const record = given
+      ? '<div class="muted" style="font-size:var(--size-sm)">Interim approval by <b>' +
+        esc(given.approved_by || "") + "</b> on " + esc((given.approved_at || "").slice(0, 10)) +
+        (given.note ? ' &mdash; "' + esc(given.note) + '"' : "") + "</div>"
+      : '<div class="muted" style="font-size:var(--size-sm)">Not yet agreed.</div>';
+    if (this._rvRetired()) return '<div style="margin-top:var(--space-8)">' + record + "</div>";
+    return '<div class="section-header" style="margin-top:var(--space-9)">Interim approval</div>' +
+      '<p class="muted" style="font-size:var(--size-sm)">The reviewer agrees ' + esc(label.toLowerCase()) +
+      " and the review moves on. This does not close the stage &mdash; it stays open if you " +
+      "need to come back to it.</p>" + record +
+      '<div class="row" style="margin-top:var(--space-4)"><input id="' + this._rvPfx() + 'rv-note" placeholder="Note (optional)" ' +
+      'style="flex:1"><button class="btn small primary" data-rapprove="' + esc(stageKey) + '">' +
+      (given ? "Approve again&hellip;" : "Interim approval&hellip;") + "</button></div>";
+  },
+
+  _bindStageApproval(stageKey) {
+    const btn = this._rvScope().querySelector('[data-rapprove="' + stageKey + '"]');
+    if (!btn) return;
+    btn.onclick = () => {
+      const label = this._rvStages().find((s) => s.key === stageKey).label;
+      const note = this._rvVal("rv-note");
+      App.amend('Interim approval of "' + label + '" for ' + this._rvId() + ".", "POST",
+        this._rvApi() + this._rvId() + "/review/approve-stage", { stage: stageKey, note: note },
+        () => {
+          // Approving moves the review on: land the reviewer on the next stage.
+          const i = this._rvStages().findIndex((s) => s.key === stageKey);
+          this._reviewStage = this._rvStages()[Math.min(i + 1, this._rvStages().length - 1)].key;
+          this._rvReload();
+          this._rvAfterApprove();
+        });
+    };
+  },
+
+  _bindReviewRail() {
+    this._rvAll("[data-rstage]").forEach((btn) => {
+      btn.onclick = () => {
+        this._reviewStage = btn.getAttribute("data-rstage");
+        this._rvRerender();
+      };
+    });
+    this._renderReviewStage();
+  },
+};

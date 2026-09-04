@@ -100,8 +100,14 @@ const Collections = {
     const inputs = this._visible(c).map((f) =>
       '<div class="field"><label>' + esc(f.label) + (f.required ? " *" : "") + "</label>" +
       inputControl("add-" + c.key + "-" + f.key, f) + "</div>").join("");
-    return '<div class="row" style="margin-top:var(--space-4)">' + inputs +
-      '<button class="btn small" data-add="' + c.key + '">Add…</button></div>';
+    // A grid, not a flex row. Every field in one wrapping row put short inputs
+    // beside four-row textareas with nothing aligning them, so the controls floated
+    // at different heights and wrapped raggedly — the same form on every collection
+    // tab of every record type. The grid gives even columns, tops that line up, and
+    // the button on its own line.
+    return '<div class="add-form">' + inputs +
+      '<div class="add-form-actions"><button class="btn small" data-add="' +
+      c.key + '">Add…</button></div></div>';
   },
 
   _bulkAddForm(c) {

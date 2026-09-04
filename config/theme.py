@@ -252,12 +252,22 @@ STATUS_COLOUR_TOKENS = {
     # lesser emergency -- it is a different kind of thing.
     "attention": {"escalate": "red", "act": "amber", "monitor": "accent",
                   "clear": "green"},
+    # The four change tiers. Ascending severity, and drawn so a reader can rank them
+    # at a glance without reading the word: Material takes the alarm colour because it
+    # invalidates the approval the record holds. Measurement is amber rather than a
+    # second red -- the record still does what it did, but the evidence for it was
+    # produced by a different instrument. Administrative is grey deliberately: a
+    # register where every row looks urgent is one nobody scans.
+    "change_class": {"Administrative": "grey", "Bounded": "accent",
+                     "Measurement": "amber", "Material": "red"},
 }
 
 # What an unrecognised value is drawn in, per domain. A domain absent from here has no
 # default on purpose: an unknown rating or an unrated tier must render as a dash, not
 # as a grey badge asserting a classification nobody made.
 STATUS_COLOUR_DEFAULTS = {
+    # An unclassified change has no tier yet, and grey says so without asserting one.
+    "change_class": "grey",
     "validation_question": "grey",
     "mrc_state": "grey",
     "lifecycle": "grey",

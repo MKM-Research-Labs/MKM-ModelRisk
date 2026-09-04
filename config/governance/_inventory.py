@@ -24,7 +24,8 @@ fields: each entry carries a label, an input type, its group (for the grouped
 detail view), and — for choice fields — its options. ``EDITABLE_FIELDS`` and
 ``FIELD_CHOICES`` are derived from it so validation and the UI never drift apart.
 """
-from config.governance._review import (VALID_REVIEW_STATUSES,  # noqa: F401 (re-export)
+from config.governance._review import (REVIEW_FIELD_SPECS,
+                                       VALID_REVIEW_STATUSES,  # noqa: F401 (re-export)
                                        VALID_REVIEW_TRIGGERS)
 
 VALID_RAG_RATINGS = ("Green", "Amber", "Red")
@@ -159,32 +160,10 @@ MODEL_FIELD_SPECS = {
     "recertification_date": {"label": "Recertification", "type": "date", "group": "Review dates"},
     "validation_date": {"label": "Validation date", "type": "date", "group": "Review dates"},
     # --- Review ---
-    # Stage 1: the owner says what this review is for before anyone starts it.
-    # A reviewer handed a model and no brief writes the review they imagine is
-    # wanted; the scope is where the owner says what has changed and what they
-    # want looked at.
-    "review_scope": {"label": "Scope of this review", "type": "textarea", "group": "Review"},
-    "review_trigger": {
-        "label": "Why this review", "type": "choice",
-        "options": VALID_REVIEW_TRIGGERS, "group": "Review",
-    },
-    "review_due_date": {"label": "Expected completion", "type": "date", "group": "Review"},
-    # The new-version checklist. Shown only when the trigger is a new version:
-    # the owner confirms the three documents that go stale together have been
-    # brought up to date and loaded, so the reviewer is not reading last
-    # version's write-up against this version's model.
-    "review_docs_updated": {
-        "label": "Model documentation updated and loaded", "type": "choice",
-        "options": ("Yes", "No"), "group": "Review",
-    },
-    "review_sensitivities_updated": {
-        "label": "Sensitivities updated and loaded", "type": "choice",
-        "options": ("Yes", "No"), "group": "Review",
-    },
-    "review_test_docs_updated": {
-        "label": "Test documentation updated and loaded", "type": "choice",
-        "options": ("Yes", "No"), "group": "Review",
-    },
+    # The workflow's own fields, shared with every record type that carries the
+    # review (config/governance/_review.py). Defined there rather than here so a
+    # model, an ML Application and an AI System cannot drift apart on them.
+    **REVIEW_FIELD_SPECS,
     # Stage 5 of the review: how the model will be watched once it is in use, in
     # the owner's and reviewer's own words. Deliberately a narrative rather than a
     # register of metrics and thresholds — an approach is agreed in sentences long

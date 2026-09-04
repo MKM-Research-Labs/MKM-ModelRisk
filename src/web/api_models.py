@@ -47,6 +47,8 @@ from src.governance.model_inventory import (
     update_model_field,
 )
 from src.web._owner_ratification import set_model_field
+from src.web._review_stages import review_specs
+from src.web._signoff_subject import MODEL_SUBJECT
 from src.web._helpers import (collection_field_specs, grouped_field_specs,
     context_from_request,
     json_body,
@@ -74,6 +76,7 @@ def field_specs():
         # drift and a legitimate trigger starts being refused.
         "review_triggers": list(VALID_REVIEW_TRIGGERS),
         **document_specs(),
+        **review_specs(MODEL_SUBJECT),
     })
 
 
