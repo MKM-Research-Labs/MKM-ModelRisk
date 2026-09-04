@@ -21,20 +21,37 @@
 // MeetingDetail — sign-offs (the Models tab's Approvals section). Sign-off items
 // are agenda items carrying a subject + proposed RAG; they render here (not on
 // the agenda) with the committee's Sign off / Reject decision + next review.
-// What a sign-off item is about, and which Approvals tab it belongs on. Written
-// once: the subject was previously spelled out at every call site, so adding a
-// third kind meant finding all of them.
-const SUBJECT_LABEL = { model: "model", product: "product", handoff: "handoff",
-                        owner: "model owner" };
+// What a sign-off item is about, and which Approvals tab it belongs on. One table
+// rather than a chain per call site: the fields were spelled out twice below, and
+// an ML Application request routed onto the agenda exactly as a model's does but
+// then matched no kind here — so it rendered on no Approvals tab at all, and fell
+// through to the running order as an item with no decision on it. Adding a record
+// type is now one row.
+const SUBJECT_KINDS = [
+  { kind: "model", field: "subject_model_id", label: "model" },
+  { kind: "product", field: "subject_product_id", label: "product" },
+  { kind: "handoff", field: "subject_handoff_id", label: "handoff" },
+  { kind: "ml_application", field: "subject_ml_application_id", label: "ML Application" },
+  { kind: "ai_system", field: "subject_ai_system_id", label: "AI System" },
+];
+
+// "owner" is a kind of DECISION, not a kind of subject, so it has a tab label but
+// no subject field of its own.
+const SUBJECT_LABEL = { owner: "model owner" };
+SUBJECT_KINDS.forEach(function (s) { SUBJECT_LABEL[s.kind] = s.label; });
+
+function _subjectEntry(item) {
+  return SUBJECT_KINDS.find((s) => item[s.field]);
+}
 
 function subjectOf(item) {
-  return item.subject_model_id || item.subject_product_id || item.subject_handoff_id || "";
+  const entry = _subjectEntry(item);
+  return entry ? item[entry.field] : "";
 }
 
 function subjectKind(item) {
-  if (item.subject_product_id) return "product";
-  if (item.subject_handoff_id) return "handoff";
-  return "model";
+  const entry = _subjectEntry(item);
+  return entry ? entry.kind : "model";
 }
 
 Object.assign(MeetingDetail, {
@@ -113,6 +130,11 @@ Object.assign(MeetingDetail, {
     };
     return '<div class="dtabs" style="margin-bottom:var(--space-4)">' +
       btn("model", "Models") + btn("product", "Products") + btn("handoff", "Handoffs") +
+      // An ML Application and an AI System each get their own tab rather than
+      // sitting among the models: they are separate records the committee decides
+      // on separately, and a rating argued over an ML Application is not a model
+      // rating.
+      btn("ml_application", "ML Apps") + btn("ai_system", "AI Systems") +
       btn("owner", "Model Owner") +
       // Beside the model-owner changes: both are things an owner raises and the
       // committee ratifies, rather than a rating it grants.

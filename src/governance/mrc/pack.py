@@ -32,38 +32,19 @@ from pathlib import Path
 from typing import Any
 
 from config.governance import CLOSED_REMEDIATION_STATUS
+# How one agenda item READS (which requests the committee is answering, and what each
+# asks) lives beside this, which is how the document is BUILT. Re-exported so the
+# existing private names in this module keep working.
+from src.governance.mrc._pack_signoffs import (  # noqa: F401
+    signoff_ask as _signoff_ask,
+    subject_of as _subject_of,
+)
 # The LaTeX string helpers and the shared house style live in one place now; this
 # module keeps re-exporting _esc/_table/_section for its existing callers.
 from src.governance.latex import (
     _esc, _para_table, _section, _table, front_matter, history_page, logo_asset,
     preamble,
 )
-
-
-def _subject_of(item: dict) -> str:
-    """The model, product or handoff a routed sign-off is about — empty for an
-    ordinary agenda item, which is what separates the running order from the
-    requests the committee is answering."""
-    return (item.get("subject_model_id") or item.get("subject_product_id")
-            or item.get("subject_handoff_id") or "")
-
-
-def _signoff_ask(item: dict) -> str:
-    """What the committee was asked to ratify, in one cell.
-
-    Mirrors the console's Approvals row so the pack and the screen describe the same
-    decision: a rating names the RAG proposed, a change of owner names who it moves
-    between, and a lifecycle decision names itself. Plain ASCII for the arrow — the
-    preamble loads ``inputenc`` with utf8, and a literal arrow is a compile risk this
-    document should not take on.
-    """
-    kind = item.get("signoff_kind") or "rag"
-    if kind == "owner":
-        return (f"{item.get('from_owner') or 'unassigned'} -> "
-                f"{item.get('to_owner') or 'unassigned'}")
-    if kind in ("retire", "reactivate"):
-        return kind.capitalize()
-    return item.get("proposed_rag") or ""
 
 
 def _owners(action: dict) -> str:
