@@ -142,3 +142,10 @@ def test_a_sign_off_cannot_be_rewritten_afterwards(client):
 
 def test_blockers_on_an_unknown_model_is_404(client):
     assert client.get("/api/models/NOPE/review/blockers").status_code == 404
+
+
+def test_signing_off_a_model_nobody_registered_is_404(client):
+    response = client.post("/api/models/NOPE/review/sign-off",
+                           json={"commentary": "Reviewed.", "confirmed": True},
+                           headers=HEADERS)
+    assert response.status_code == 404

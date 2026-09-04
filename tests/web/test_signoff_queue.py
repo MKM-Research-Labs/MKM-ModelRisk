@@ -76,3 +76,24 @@ def test_product_mrc_surfaces_pending_without_meeting(client):
     pending = client.get("/api/products/P1/mrc").get_json()["pending_signoff"]
     assert pending["status"] == "Pending"
     assert "meeting_id" not in pending
+
+
+def test_a_decision_about_a_subject_that_is_no_longer_there_is_404(client):
+    """The agenda item is a pointer, and the log it points into is append-only —
+    so an item can outlive what it named. The committee is told, rather than the
+    decision being recorded against nothing."""
+    ms._seed_mrc(client)
+    ms._schedule_meeting(client)
+    added = client.post("/api/meetings/MTG1/collections/agenda",
+                        json={"fields": {"title": "Ratify the rating",
+                                         "subject_product_id": "GHOST",
+                                         "signoff_kind": "rag",
+                                         "proposed_rag": "Green"},
+                              "confirmed": True}, headers=HEADERS)
+    item = [a for a in added.get_json()["data"]["agenda"] if a.get("title") == "Ratify the rating"][0]
+    item_id = item["item_id"]
+    refused = client.post(
+        f"/api/meetings/MTG1/agenda/{item_id}/approve-signoff",
+        json={"confirmed": True}, headers=HEADERS)
+    assert refused.status_code == 404
+    assert "GHOST" in refused.get_json()["error"]

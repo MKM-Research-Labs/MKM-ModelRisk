@@ -54,3 +54,13 @@ def test_create_app_runs_migrations_by_default():
     # Default path applies migrations (idempotent); the app builds successfully.
     app = create_app()
     assert app.test_client().get("/").status_code == 200
+
+
+def test_the_browser_icons_are_served_from_the_static_image_directory(client):
+    """Browsers ask for these by fixed path whatever the app is mounted at, and an
+    unanswered /favicon.ico is a 404 in the log every time the console is opened."""
+    for path in ("/favicon.ico", "/apple-touch-icon.png",
+                 "/apple-touch-icon-precomposed.png"):
+        response = client.get(path)
+        assert response.status_code == 200, path
+        assert response.data

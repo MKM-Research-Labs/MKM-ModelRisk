@@ -30,7 +30,10 @@ from __future__ import annotations
 import io
 
 from config.governance import FINOS_SHELF
+from src.files import upload_path
 from src.governance.completeness.scan import finos_evidence
+from src.governance.documents import (GOVERNANCE_ARTEFACTS_AGGREGATE,
+                                      find_document)
 from tests.web.conftest import HEADERS
 
 
@@ -89,3 +92,62 @@ def test_an_untagged_finos_document_is_filed_but_evidences_nothing(client):
 
 def test_an_unknown_shelf_is_refused(client):
     assert _upload(client, "Nonexistent").status_code == 404
+
+
+# --- Retrieval and removal ----------------------------------------------------
+
+def _company_shelf(client):
+    return client.get("/api/artefacts").get_json()["shelves"][0]
+
+
+def test_an_artefact_can_be_retrieved_and_taken_off_the_shelf(client):
+    shelf = _company_shelf(client)
+    item_id = _upload(client, shelf).get_json()[0]["item_id"]
+
+    download = client.get(f"/api/artefacts/{shelf}/{item_id}/download")
+    assert download.status_code == 200 and download.data == b"PDFDATA"
+    assert "attachment" in download.headers["Content-Disposition"]
+    inline = client.get(f"/api/artefacts/{shelf}/{item_id}/download?inline=1")
+    assert "inline" in inline.headers["Content-Disposition"]
+
+    removed = client.post(f"/api/artefacts/{shelf}/{item_id}/delete", headers=HEADERS)
+    assert removed.status_code == 200 and removed.get_json() == []
+
+
+def test_an_artefact_nobody_filed_can_be_neither_downloaded_nor_removed(client):
+    shelf = _company_shelf(client)
+    assert client.get(f"/api/artefacts/{shelf}/DOC-999/download").status_code == 404
+    assert client.post(f"/api/artefacts/{shelf}/DOC-999/delete",
+                       headers=HEADERS).status_code == 404
+
+
+def test_an_artefact_whose_file_has_gone_missing_is_404_not_a_500(client):
+    shelf = _company_shelf(client)
+    item_id = _upload(client, shelf).get_json()[0]["item_id"]
+    upload_path(f"artefact/{shelf}", find_document(
+        GOVERNANCE_ARTEFACTS_AGGREGATE, shelf, item_id)["filename"]).unlink()
+    assert client.get(f"/api/artefacts/{shelf}/{item_id}/download").status_code == 404
+
+
+# --- What the shelf will not accept -------------------------------------------
+
+def test_an_upload_with_no_file_is_400(client):
+    response = client.post("/api/artefacts/" + _company_shelf(client),
+                           data={"kind": "Policy"},
+                           content_type="multipart/form-data", headers=HEADERS)
+    assert response.status_code == 400
+
+
+def test_a_kind_outside_the_vocabulary_is_refused_and_the_options_listed(client):
+    """The kind is what the tiles are read by, so an invented one would file the
+    document somewhere nobody looks."""
+    response = client.post(
+        "/api/artefacts/" + _company_shelf(client),
+        data={"file": (io.BytesIO(b"PDFDATA"), "x.pdf"), "kind": "Nonsense"},
+        content_type="multipart/form-data", headers=HEADERS)
+    assert response.status_code == 400
+    assert "kind must be one of" in response.get_json()["error"]
+
+
+def test_an_extension_the_platform_will_not_store_is_400(client):
+    assert _upload(client, _company_shelf(client), filename="evil.exe").status_code == 400

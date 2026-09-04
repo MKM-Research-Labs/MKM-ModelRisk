@@ -85,3 +85,21 @@ def test_reconcile_repopulates_a_stale_meeting_view():
     meeting = get_meeting("MTG-RECON-TEST")
     assert meeting is not None
     assert meeting["data"]["title"] == "Reconcile Test"
+
+
+def test_a_view_that_cannot_be_rebuilt_is_skipped_rather_than_aborting_startup(
+        monkeypatch):
+    """Serving one stale view is better than refusing to boot, so a broken
+    projection costs its own label and nothing else."""
+    broken = [("first", "src.governance.mrc.projection", "no_such_rebuilder"),
+              *_REBUILDERS[:1]]
+    monkeypatch.setattr("src.web._startup._REBUILDERS", broken)
+    counts = reconcile_read_models()
+    assert "first" not in counts
+    assert _REBUILDERS[0][0] in counts
+
+
+def test_the_rebuild_can_be_turned_off_for_a_process_that_must_start_fast(
+        monkeypatch):
+    monkeypatch.setenv("REBUILD_VIEWS_ON_STARTUP", "off")
+    assert reconcile_read_models() == {}

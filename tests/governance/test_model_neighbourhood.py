@@ -26,6 +26,7 @@ from src.governance.model_inventory import (
     rebuild_inventory_view,
     register_model,
 )
+from src.governance.model_inventory.sources import source_nodes
 from src.governance.reference import add_option
 
 
@@ -105,3 +106,10 @@ def test_terminal_model_has_no_downstream():
 
 def test_unknown_model_returns_none():
     assert derive_neighbourhood("ghost") is None
+
+
+def test_a_model_that_is_not_in_the_index_draws_no_source():
+    """The ids and the index come from different reads, so one can name a model
+    the other has not got. Drawing a source above a model nobody can resolve
+    would claim an origin for a record that is not on the canvas."""
+    assert source_nodes(["M-GHOST"], {}, []) == []

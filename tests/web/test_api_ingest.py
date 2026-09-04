@@ -20,7 +20,13 @@
 """HTTP tests for the ingest collector endpoints."""
 from __future__ import annotations
 
+import pytest
+
+from config.governance import TRAINING_RUNS_COLLECTION
 from config.ingest import INGEST_DEV_TOKEN, INGEST_TOKEN_HEADER
+from src.governance.ml_application import (get_ml_application,
+                                           rebuild_ml_application_view,
+                                           register_ml_application)
 
 AUTH = {INGEST_TOKEN_HEADER: INGEST_DEV_TOKEN}
 
@@ -159,3 +165,65 @@ def test_post_field_lineage_created_and_idempotent(client):
     # An identical push is a no-op, reported as 200 rather than 201.
     assert client.post("/api/ingest/field-lineage", json=body,
                        headers=AUTH).status_code == 200
+
+
+# --- ml-training-run endpoint ---
+# The producer here is the code that performed the fit, so what it reports is
+# facts about the run. Re-reporting the same fit_id must UPDATE that train: a long
+# fit reports as it progresses, and a run that crashes after reporting has to be
+# able to report again without becoming two trains.
+
+TRAIN = {"ml_application_id": "MLA-1", "fit_id": "2026-03-03-v1.2",
+         "fields": {"snapshot_id": "sha256:ab", "metric_test": "0.9557",
+                    "random_seed": "20260303"}}
+
+
+def _train_body(payload=None):
+    return {"artifact": "ml-training-run", "provenance": PROV,
+            "payload": payload if payload is not None else TRAIN}
+
+
+@pytest.fixture
+def ml_application():
+    register_ml_application(
+        ml_application_id="MLA-1", actor="admin",
+        fields={"name": "Retail PD scorecard", "division": "Risk", "owner": "Dana",
+                "estimator": "GradientBoostingClassifier",
+                "use_case": "Ranks retail applicants."})
+    rebuild_ml_application_view()
+
+
+def test_post_ml_training_run_records_the_train(client, ml_application):
+    resp = client.post("/api/ingest/ml-training-run", json=_train_body(), headers=AUTH)
+    assert resp.status_code == 201
+    summary = resp.get_json()["data"]["summary"]
+    assert summary["fit_id"] == "2026-03-03-v1.2" and summary["created"] is True
+    train = get_ml_application("MLA-1")["data"][TRAINING_RUNS_COLLECTION][0]
+    assert train["metric_test"] == "0.9557"
+
+
+def test_reporting_the_same_fit_again_updates_it_rather_than_adding_one(
+        client, ml_application):
+    client.post("/api/ingest/ml-training-run", json=_train_body(), headers=AUTH)
+    later = {**TRAIN, "fields": {**TRAIN["fields"], "metric_test": "0.9601"}}
+    resp = client.post("/api/ingest/ml-training-run", json=_train_body(later),
+                       headers=AUTH)
+    # 200, not 201: the train already existed. The receipt records the last report.
+    assert resp.status_code == 200
+    trains = get_ml_application("MLA-1")["data"][TRAINING_RUNS_COLLECTION]
+    assert len(trains) == 1 and trains[0]["metric_test"] == "0.9601"
+
+
+def test_ml_training_run_status_lists_the_receipt(client, ml_application):
+    client.post("/api/ingest/ml-training-run", json=_train_body(), headers=AUTH)
+    resp = client.get("/api/ingest/status/ml-training-run", headers=AUTH)
+    assert [r["data"]["source_repo"] for r in resp.get_json()["receipts"]] \
+        == ["PhysicalRisk"]
+
+
+def test_a_train_without_a_fit_id_is_unprocessable(client, ml_application):
+    """The fit_id is what makes a re-report an update; without one the collector
+    cannot tell a second report from a second fit."""
+    resp = client.post("/api/ingest/ml-training-run",
+                       json=_train_body({"ml_application_id": "MLA-1"}), headers=AUTH)
+    assert resp.status_code == 422

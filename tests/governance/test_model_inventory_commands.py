@@ -32,6 +32,7 @@ from src.governance.model_inventory import (
     retire_model,
     update_model_field,
 )
+from src.governance.model_inventory.commands import _review_questions
 from src.governance.reference import add_option
 
 
@@ -135,3 +136,16 @@ def test_data_source_collection_item_is_strict_referenced():
     with pytest.raises(DomainError):
         add_collection_item(model_id="M1", collection="data_sources",
                             fields={"data_source": "Made Up Feed"}, actor="alice")
+
+
+def test_the_shipped_questionnaire_stands_in_when_the_register_cannot_be_read(
+        monkeypatch):
+    """A model registered before the first-run seed still has to be asked
+    something. Returning nothing would leave it with an empty review for good —
+    the copy is taken once, at registration, and never rewritten."""
+    def _unavailable(*args, **kwargs):
+        raise RuntimeError("reference view not migrated yet")
+
+    monkeypatch.setattr("src.governance.reference.get_reference_lists", _unavailable)
+    questions = _review_questions(None)
+    assert questions and all(q["question"] for q in questions)
