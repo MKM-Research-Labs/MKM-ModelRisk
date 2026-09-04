@@ -35,6 +35,7 @@ import pytest
 
 from config.erm import ERM_API_PREFIX, ERM_DEV_TOKEN, ERM_TOKEN_HEADER
 from config.governance import ATTENTION_STATES
+from src.web.api_erm.model_risk import _href
 from tests.web.conftest import HEADERS
 
 CONTRACTS = pathlib.Path(__file__).resolve().parents[2] / "contracts" / "erm" / "v1"
@@ -155,3 +156,9 @@ def test_the_operational_feed_names_its_window(client):
     operational = _get(client)["operational"]
     assert operational["window_days"] > 0
     assert operational["failures_in_window"] == 0
+
+
+def test_a_kind_the_console_does_not_show_gets_no_link_rather_than_a_dead_one():
+    """A dead link in somebody else's dashboard is worse than no link, because it
+    is discovered by a person who cannot fix it."""
+    assert _href({"kind": "Something the console has no tab for", "id": "X"}) is None

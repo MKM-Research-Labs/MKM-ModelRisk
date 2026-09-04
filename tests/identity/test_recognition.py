@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import pytest
 
+from src.governance.reference import add_option
 from src.identity import _recognition
 from src.identity._recognition import (
     UnrecognisedActor,
@@ -106,3 +107,34 @@ def test_enforcement_can_be_turned_off_and_on_wholesale(monkeypatch):
     assert enforcement_applies("mkm_modelrisk") is False
     monkeypatch.setattr(_recognition, "ENFORCE_KNOWN_ACTORS", "always")
     assert enforcement_applies("mkm_modelrisk_test_p123") is True
+
+
+# --- The People list itself -------------------------------------------------
+# Every test above substitutes ``registered_identities``, so the one function that
+# actually reads the register was never run. These exercise it for real: the rule
+# is only as good as the lookup underneath it.
+
+def test_registered_identities_reads_both_spellings_from_people():
+    """A person is recognised by either spelling, normalised the same way the
+    incoming actor is — the console sends the name, SSO sends the email."""
+    add_option(list_name="people",
+               fields={"name": "  Jane   Doe ", "email": "JANE@firm"}, actor="admin")
+    assert _recognition.registered_identities() == {"jane doe", "jane@firm"}
+
+
+def test_a_person_recorded_without_an_email_is_still_recognised():
+    """The People screen only requires a name, so a half-filled row must not
+    become an identity nobody can author under."""
+    add_option(list_name="people", fields={"name": "Rob Ellis"}, actor="admin")
+    assert _recognition.registered_identities() == {"rob ellis"}
+
+
+def test_an_empty_people_list_recognises_nobody():
+    assert _recognition.registered_identities() == set()
+
+
+def test_enforcement_reads_the_database_in_use_when_none_is_named(monkeypatch):
+    """The production call site passes no name: the rule has to find the database
+    itself, and the suite's own disposable one must fall outside it."""
+    monkeypatch.setattr(_recognition, "ENFORCE_KNOWN_ACTORS", "protected")
+    assert enforcement_applies() is False

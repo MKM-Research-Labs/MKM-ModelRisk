@@ -21,7 +21,9 @@
 the PDF, and gate the meeting close on signing it off."""
 from __future__ import annotations
 
+from src.files import upload_path
 from src.governance.mrc.pack import TectonicNotFound
+from src.web.api_mrc.completeness import AUDIT_SCOPE
 from tests.web._signoff_flows import _add, _register_subject_model, _schedule_meeting, _seed_mrc
 from tests.web.conftest import HEADERS
 
@@ -143,3 +145,30 @@ def test_close_blocked_until_audit_item_resolved(client, monkeypatch):
     response = client.post("/api/meetings/MTG1/close", json={"confirmed": True}, headers=HEADERS)
     assert response.status_code == 400
     assert "Governance completeness audit" in response.get_json()["error"]
+
+
+def test_a_meeting_scheduled_before_the_audit_existed_says_so(client, monkeypatch):
+    """Those meetings have no standing audit item until the backfill adds one, and
+    the refusal names the missing item rather than reporting an empty audit."""
+    _scoped_meeting(client, monkeypatch)
+    item_id = _audit_item(client)["item_id"]
+    client.post(f"/api/meetings/MTG1/collections/agenda/{item_id}/delete",
+                json={"confirmed": True}, headers=HEADERS)
+    refused = client.post("/api/meetings/MTG1/completeness-audit/run", json={},
+                          headers=HEADERS)
+    assert refused.status_code == 404
+    assert "no completeness-audit item" in refused.get_json()["error"]
+
+
+def test_the_audit_pdf_for_a_meeting_that_is_not_there_is_404(client):
+    assert client.get("/api/meetings/NOPE/completeness-audit.pdf").status_code == 404
+
+
+def test_an_audit_pdf_whose_file_has_gone_missing_is_404_not_a_500(client,
+                                                                  monkeypatch):
+    _scoped_meeting(client, monkeypatch)
+    client.post("/api/meetings/MTG1/completeness-audit/run", json={}, headers=HEADERS)
+    upload_path(AUDIT_SCOPE, _audit_item(client)["audit_filename"]).unlink()
+    response = client.get("/api/meetings/MTG1/completeness-audit.pdf")
+    assert response.status_code == 404
+    assert "file missing" in response.get_json()["error"]

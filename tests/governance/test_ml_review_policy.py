@@ -160,3 +160,18 @@ def test_the_live_policy_is_what_was_approved_not_what_was_last_proposed():
     assert get_ml_review_policy(DIV) == {
         LEARNING_TASK: {"in_use": True, "mandatory": True}}
     assert mandatory_keys(DIV) == ("learning_task",)
+
+
+def test_a_register_row_with_no_topic_is_not_a_reviewable_item(monkeypatch):
+    """The policy keys on the topic, because that is what a record's copy of a
+    question carries. A row with none cannot be joined to anything, so it is
+    skipped rather than given an item nothing will ever resolve against."""
+    monkeypatch.setattr(
+        "src.governance.ml_review_policy._store.get_reference_lists",
+        lambda config=None: {ML_APPLICATION_QUESTION_LIST: [
+            {"item_id": "MLQ-001", "short_label": "", "question": "Orphaned?"},
+            {"item_id": "MLQ-002", "short_label": "Training data",
+             "question": "What was it fitted on?"}]})
+    keys = [item["key"] for item in catalogue()
+            if item["source"] == QUESTION_ITEM_SOURCE]
+    assert keys == ["Training data"]

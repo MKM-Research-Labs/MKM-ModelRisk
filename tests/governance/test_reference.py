@@ -22,11 +22,15 @@ from __future__ import annotations
 
 import pytest
 
-from config.governance import REFERENCE_LISTS
+from config.governance import (DEFAULT_MODEL_TYPES, ML_TRAINING_VOCABULARIES,
+                               MODEL_TYPE_LIST, REFERENCE_LISTS)
 
 from src.governance.errors import DomainError
-from src.governance.reference import (add_option, ensure_default_reference_lists,
-                                      get_reference_lists, remove_option, update_option)
+from src.governance.reference import (add_option, ensure_default_ml_training_vocabularies,
+                                      ensure_default_model_types,
+                                      ensure_default_reference_lists,
+                                      get_reference_lists, model_type_roles,
+                                      remove_option, update_option)
 
 
 def test_update_option_edits_fields():
@@ -111,3 +115,36 @@ def test_add_unknown_list_raises():
 def test_remove_unknown_item_raises():
     with pytest.raises(DomainError):
         remove_option(list_name="division", item_id="DV-999", actor="admin")
+
+
+def test_the_model_type_seed_never_repopulates_a_curated_list():
+    """Seeds a vacuum only. An adopter who has pruned the shipped types back to
+    the three they use must not find them all back after a restart."""
+    assert ensure_default_model_types() == len(DEFAULT_MODEL_TYPES)
+    assert ensure_default_model_types() == 0
+
+
+def test_the_training_vocabularies_are_seeded_one_list_at_a_time():
+    """Each vocabulary is its own vacuum: adding a new one in a later release must
+    reach an estate that already curated the others."""
+    ensure_default_ml_training_vocabularies()
+    first = next(iter(ML_TRAINING_VOCABULARIES))
+    seeded = get_reference_lists()[first]
+    remove_option(list_name=first, item_id=seeded[0]["item_id"], actor="admin")
+
+    ensure_default_ml_training_vocabularies()
+    assert len(get_reference_lists()[first]) == len(seeded) - 1, \
+        "a list an adopter has curated is left alone"
+
+
+def test_what_a_model_type_means_to_a_product_is_read_not_inferred():
+    """Callers ask what a type IS rather than comparing its name, so renaming a
+    type in Admin cannot change how the estate binds."""
+    add_option(list_name=MODEL_TYPE_LIST,
+               fields={"value": "Curve Model", "binding_role": "Market Data"},
+               actor="admin")
+    add_option(list_name=MODEL_TYPE_LIST,
+               fields={"value": "Pricing Engine", "binding_role": "Neither"},
+               actor="admin")
+    assert model_type_roles() == {"Curve Model": "Market Data",
+                                  "Pricing Engine": "Neither"}

@@ -102,3 +102,38 @@ def test_it_is_rated_by_the_same_engine_a_model_is(client):
 
 def test_an_unknown_record_is_a_404(client):
     assert client.get("/api/ai-systems/AIS-9999").status_code == 404
+
+
+def test_a_tool_can_be_amended_and_withdrawn(client):
+    """What a tool is allowed to do changes as the system is hardened, so the row
+    has to be editable rather than only add-and-delete."""
+    _register(client)
+    added = client.post("/api/ai-systems/AIS-0001/collections/agent_tools",
+                        json={"fields": {"name": "payments.transfer",
+                                         "authority": "Initiates a payment",
+                                         "approval": "Always"},
+                              "actor": "admin"}, headers=HEADERS)
+    item_id = added.get_json()["data"]["agent_tools"][0]["item_id"]
+
+    amended = client.post(
+        f"/api/ai-systems/AIS-0001/collections/agent_tools/{item_id}",
+        json={"fields": {"approval": "Above a threshold"}, "actor": "admin"},
+        headers=HEADERS)
+    assert amended.status_code == 200
+    assert amended.get_json()["data"]["agent_tools"][0]["approval"] \
+        == "Above a threshold"
+
+    withdrawn = client.post(
+        f"/api/ai-systems/AIS-0001/collections/agent_tools/{item_id}/delete",
+        json={"actor": "admin"}, headers=HEADERS)
+    assert withdrawn.get_json()["data"]["agent_tools"] == []
+
+
+def test_the_responsible_committee_is_resolved_from_the_org_unit(client):
+    _register(client)
+    assert "mrc" in client.get("/api/ai-systems/AIS-0001/mrc").get_json()
+
+
+def test_neither_a_rating_nor_a_committee_for_a_record_nobody_registered(client):
+    for path in ("/risk-rating", "/mrc"):
+        assert client.get("/api/ai-systems/AIS-9999" + path).status_code == 404

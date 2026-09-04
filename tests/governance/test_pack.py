@@ -300,3 +300,39 @@ def test_render_pack_pulls_remediations_from_inventory(monkeypatch):
     # The outstanding-action register is collected the same way — from the projection,
     # so the pack shows what the rest of the platform shows.
     assert captured["carried"] == []
+
+
+def test_a_scope_row_naming_no_model_is_skipped_rather_than_printed_blank():
+    """A row can be in scope before anybody has said which model it is about. A
+    subsection headed by an empty id would read as a model with no name."""
+    meeting = {"meeting_id": "MTG1", "data": {
+        "title": "Q3 MRC",
+        "models_in_scope": [{"model_id": ""}, {"model_id": "MDL-A"}]}}
+    tex = build_tex(meeting, {"fields": {}}, remediations_by_model={
+        "MDL-A": [{"item_id": "RM-001", "description": "Recalibrate", "owner": "A",
+                   "priority": "High", "due_date": "2026-12-01", "status": "Open"}]})
+    assert "subsection*{MDL-A}" in tex
+    assert "subsection*{}" not in tex
+
+
+def test_a_model_listed_in_scope_twice_is_gathered_once(monkeypatch):
+    """The scope is a collection an owner edits, so it can carry the same model
+    twice. Gathering it twice would print its remediation plan twice."""
+    _stub_compile(monkeypatch)
+    captured: dict = {}
+    monkeypatch.setattr("src.governance.mrc.pack.build_tex",
+                        lambda meeting, settings, logo, remediations_by_model,
+                        carried_forward:
+                        (captured.update(remediations=remediations_by_model) or "tex"))
+    calls = []
+
+    def _get(mid):
+        calls.append(mid)
+        return {"data": {"remediation_steps": [
+            {"item_id": "RM-1", "description": "Fix", "status": "Open"}]}}
+
+    monkeypatch.setattr("src.governance.model_inventory.get_model", _get)
+    render_pack_pdf({"meeting_id": "M", "data": {"models_in_scope": [
+        {"model_id": "MDL-X"}, {"model_id": "MDL-X"}]}}, {"fields": {}, "logo": None})
+    assert calls == ["MDL-X"], "the inventory is read once per model, not once per row"
+    assert list(captured["remediations"]) == ["MDL-X"]

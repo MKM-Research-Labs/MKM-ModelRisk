@@ -78,3 +78,20 @@ def test_sources_are_drawn_only_where_the_chain_starts():
 
 def test_unknown_product_returns_none():
     assert derive_product_map("ghost") is None
+
+
+def test_a_model_a_component_feeds_is_drawn_too():
+    """One hop out is one hop in BOTH directions. A component whose output feeds a
+    downstream model is part of the product's chain just as its inputs are, and a
+    map that only walked upstream would stop at the product's own edge."""
+    _build()
+    register_model(model_id="M-DN", name="Downstream", actor="a")
+    rebuild_inventory_view()
+    add_model_item(model_id="M-DN", collection="dependencies",
+                   fields={"direction": "upstream", "model_id": "M-AN"}, actor="a")
+    rebuild_inventory_view()
+
+    mp = derive_product_map("P-1")
+    roles = {n["model_id"]: n["role"] for n in mp["nodes"]}
+    assert roles["M-DN"] == "feed"
+    assert {"from": "M-AN", "to": "M-DN"} in mp["links"]

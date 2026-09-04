@@ -212,3 +212,10 @@ def test_a_hibernated_model_accepts_signoff_items_but_nothing_else():
     # Everything else stays read-only.
     with pytest.raises(DomainError):
         decide_add_item(retired, collection="limitations", fields={"description": "x"})
+
+
+def test_a_vocabulary_the_platform_owns_is_checked_against_its_own_options():
+    """The risk bands come from the division's ratified policy; the workflow
+    vocabularies do not, and are checked here against what the platform ships."""
+    with pytest.raises(DomainError, match="lifecycle_stage must be one of"):
+        decide_update_field(_registered(), field="lifecycle_stage", value="Nonsense")
