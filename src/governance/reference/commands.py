@@ -263,7 +263,11 @@ def ensure_default_reference_lists(*, actor: str = SYSTEM_ACTOR, config=None) ->
         if collections.get(list_name):
             continue
         for value in values:
-            add_option(list_name=list_name, fields={"value": value}, actor=actor,
+            # A default is either a bare value or a full row. Data sources carry
+            # ``kind`` because whether a feed originates outside the institution is a
+            # fact about the feed; vendors are still bare strings.
+            fields = {"value": value} if isinstance(value, str) else dict(value)
+            add_option(list_name=list_name, fields=fields, actor=actor,
                        reason=f"Seed default {list_name} on first run", config=config)
         added += len(values)
     return added

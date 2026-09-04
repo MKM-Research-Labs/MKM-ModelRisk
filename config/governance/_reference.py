@@ -140,7 +140,7 @@ DEFAULT_MODEL_TYPES = (
 # menu as though it supplied their models. "In-house" is the honest starting
 # point (most banks build their own), and every real supplier — including this
 # one, on the MKM estate — is added in Admin > Vendor.
-DEFAULT_DATA_SOURCES = ("ICE", "Reuters", "Bloomberg", "Manual", "Simulated", "Other")
+from config.governance._data_sources import DEFAULT_DATA_SOURCES  # noqa: E402
 DEFAULT_VENDORS = ("In-house", "Other")
 
 # MRC committees are anchored to one of the three org tiers. A Line of Business-level

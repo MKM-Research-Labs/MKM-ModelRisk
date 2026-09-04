@@ -22,7 +22,8 @@ from __future__ import annotations
 
 import pytest
 
-from config.governance import REFERENCE_LISTS
+from config.governance import (DEFAULT_DATA_SOURCES, DEFAULT_VENDORS,
+                               REFERENCE_LISTS)
 
 from src.governance.errors import DomainError
 from src.governance.reference import (add_option, ensure_default_reference_lists,
@@ -81,12 +82,16 @@ def test_add_calculating_agent():
 def test_ensure_default_reference_lists_seeds_and_is_idempotent():
     added = ensure_default_reference_lists()
     lists = get_reference_lists()
-    assert [o["value"] for o in lists["data_source"]] == [
-        "ICE", "Reuters", "Bloomberg", "Manual", "Simulated", "Other"]
+    # The catalogue itself is asserted in test_data_sources.py; what matters here is
+    # that the seed lays it down whole and in order, carrying the fields it defines.
+    assert [o["value"] for o in lists["data_source"]] == \
+        [entry["value"] for entry in DEFAULT_DATA_SOURCES]
+    assert lists["data_source"][0]["kind"] == DEFAULT_DATA_SOURCES[0]["kind"]
     # The vendor seed names no institution — a fresh install must not plant the
-    # platform's author in an adopter's inventory.
+    # platform's author in an adopter's inventory. Bare values, unlike data sources:
+    # the same loop seeds both, and it takes either shape.
     assert [o["value"] for o in lists["vendor"]] == ["In-house", "Other"]
-    assert added == 8
+    assert added == len(DEFAULT_DATA_SOURCES) + len(DEFAULT_VENDORS)
     # Seeds a vacuum only — a second run adds nothing and never repopulates a
     # list an adopter has since curated.
     assert ensure_default_reference_lists() == 0
