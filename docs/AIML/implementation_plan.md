@@ -867,11 +867,13 @@ A new read model is three things, and the third is the one that gets forgotten:
 3. **an entry in `_REBUILDERS` in `src/web/_startup.py:62`** — the table of every
    read-model rebuild, so the view reconciles at startup.
 
-> **Pre-existing gap, worth fixing while in here.** `_REBUILDERS` has ten entries and
-> `ml_application` is not among them, although `0011_ml_application_view.sql` and
-> `rebuild_ml_application_view()` both exist. Every other read model reconciles at startup;
-> that one does not. It is not caused by this plan, but 1.5's backfill depends on that view
-> being current, so fix it there at the latest.
+> **Fixed 2026-09-04, before the phases began.** `_REBUILDERS` had ten entries and
+> `ml_application` was not among them, although `0011_ml_application_view.sql` and
+> `rebuild_ml_application_view()` both existed — so that view alone never reconciled at
+> startup and could drift from the log. It is now registered, and
+> `test_every_defined_rebuilder_is_registered_for_startup` compares the source tree against
+> the list rather than the list against itself, which is what stops the next one being
+> forgotten. Step 1.5's backfill depended on that view being current.
 
 ### 13.7 New event types
 

@@ -20,9 +20,40 @@
 """Startup read-model reconciliation rebuilds every view from the event log."""
 from __future__ import annotations
 
+import re
+
+from audit._walk import REPO_ROOT
 from src.database import append_event
 from src.governance.mrc.projection import get_meeting
 from src.web._startup import _REBUILDERS, reconcile_read_models
+
+_REBUILD_DEF = re.compile(r"^def (rebuild_\w+_view)\b", re.MULTILINE)
+
+
+def _defined_rebuilders() -> set[str]:
+    """Every ``rebuild_*_view`` the source tree defines, found by reading it.
+
+    Deliberately not by import: ``_REBUILDERS`` names its modules as strings so the
+    imports stay lazy, and a test that imported them all to find the functions would
+    lose the very property that keeps a broken feature module from taking down startup.
+    """
+    return {match.group(1)
+            for path in REPO_ROOT.glob("src/**/projection.py")
+            for match in _REBUILD_DEF.finditer(path.read_text(encoding="utf-8"))}
+
+
+def test_every_defined_rebuilder_is_registered_for_startup():
+    """No projection may define a rebuild and be left out of ``_REBUILDERS``.
+
+    ``ml_application`` was exactly that for as long as the record type existed: its
+    migration and its ``rebuild_ml_application_view`` were both in place, but nothing
+    reconciled the view at startup, so it could drift from the event log and present
+    as data loss when the log was intact. The comparison below is against the source
+    tree rather than against ``_REBUILDERS`` itself -- the test above compares that
+    list with its own labels, which can never catch something missing from it.
+    """
+    registered = {func for _label, _module, func in _REBUILDERS}
+    assert _defined_rebuilders() - registered == set()
 
 
 def test_reconcile_rebuilds_every_registered_view():
