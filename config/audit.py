@@ -64,6 +64,16 @@ JSON_FILES_REPORT_PDF_NAME = "json_files_report.pdf"
 REFRESH_STATE_NAME = ".refresh_state.json"
 REFRESH_WRITE_LOCK_NAME = ".refresh_write.lock"
 
+# How long one suite invocation may take before the refresh gives up on it. The
+# unit suite alone runs for roughly fourteen minutes and the audit's variant also
+# writes the browsable HTML coverage tree, so the old 900s sat close enough to the
+# real time that a busy machine tipped it over -- and a timed-out run writes no
+# coverage.xml at all, leaving the R3 table showing the previous run's numbers with
+# nothing on the page to say the refresh had failed. Generous rather than tight:
+# this runs in the background, so waiting costs nothing and giving up costs the
+# report.
+SUITE_TIMEOUT_SECONDS = 2400
+
 # What the status endpoint reports when the refresh's owning process is gone --
 # killed, restarted or crashed. Without it an interrupted run is indistinguishable
 # from a finished one, and the tab presents stale artefacts as fresh output.
