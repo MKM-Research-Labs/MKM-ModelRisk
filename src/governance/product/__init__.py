@@ -21,6 +21,7 @@
 from src.governance.product.commands import (
     AGGREGATE_TYPE,
     add_collection_item,
+    reactivate_product,
     rebind_component,
     register_product,
     remove_collection_item,
@@ -42,6 +43,7 @@ __all__ = [
     "register_product",
     "rebind_component",
     "update_product_field",
+    "reactivate_product",
     "retire_product",
     "add_collection_item",
     "update_collection_item",

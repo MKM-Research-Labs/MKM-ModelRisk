@@ -37,12 +37,14 @@ from config.governance import (
     PRODUCT_EDITABLE_FIELDS,
     PRODUCT_FIELD_CHOICES,
     PRODUCT_FIELD_SPECS,
+    SIGNOFF_COLLECTIONS,
 )
 from src.governance import collections as coll
 from src.governance.errors import DomainError
 from src.governance.product._state import (
     EVENT_FIELD_EDITED,
     EVENT_REBOUND,
+    EVENT_REACTIVATED,
     EVENT_REGISTERED,
     EVENT_RETIRED,
     ProductState,
@@ -127,11 +129,40 @@ def decide_edit_field(
 
 
 def decide_retire(state: ProductState) -> tuple[str, dict[str, Any]]:
+    """Hibernate a Product. Ratified by the MRC, so this runs off an approved
+    request rather than straight from the owner.
+
+    Carries the status it is about to overwrite, so a later reactivation can put
+    it back. A Product retired before this recorded it simply has none, which
+    ``decide_reactivate`` handles rather than guessing.
+    """
     if not state.exists:
         raise DomainError("Product does not exist")
     if state.retired:
         raise DomainError("Product is already retired")
-    return EVENT_RETIRED, {}
+    payload: dict[str, Any] = {}
+    current = state.fields.get("status")
+    if current and current != "Retired":
+        payload["from_status"] = current
+    return EVENT_RETIRED, payload
+
+
+def decide_reactivate(state: ProductState) -> tuple[str, dict[str, Any]]:
+    """Bring a hibernated Product back. Ratified by the MRC on the same footing
+    as the retire that put it there.
+
+    Restores the status the retire displaced. Where the retire recorded none the
+    status stays "Retired" on a live Product -- wrong, but visible, and editable
+    again the moment the record is back. The alternative is picking a status out
+    of the vocabulary on the committee's behalf, which is the sort of invention an
+    audit trail exists to prevent.
+    """
+    if not state.exists:
+        raise DomainError("Product does not exist")
+    if not state.retired:
+        raise DomainError("Product is not retired")
+    return EVENT_REACTIVATED, ({"status": state.status_before_retire}
+                               if state.status_before_retire else {})
 
 
 def _validate_component(fields: dict[str, Any]) -> None:
@@ -148,6 +179,22 @@ def _validate_component(fields: dict[str, Any]) -> None:
         raise DomainError("component_type is required for a model component")
 
 
+def _require_signoff_writable(state: ProductState, collection: str) -> None:
+    """A hibernated Product is read-only, except to the committee's own machinery.
+
+    Reactivating it has to be requested *on* it, and the decision that hibernated it
+    still has to be recordable against it -- so the sign-off queue and history stay
+    writable while everything else is frozen. Every subject in the routing carries
+    this exemption; without it the committee cannot complete the request it just
+    approved.
+    """
+    if collection in SIGNOFF_COLLECTIONS:
+        if not state.exists:
+            raise DomainError("Product does not exist")
+        return
+    _require_editable(state)
+
+
 def decide_add_item(
     state: ProductState, *, collection: str, fields: dict[str, Any],
     duplicate: bool = False,
@@ -160,7 +207,7 @@ def decide_add_item(
     thing registered twice. The command computes it (it needs the other Products);
     the rule only decides what to do about it.
     """
-    _require_editable(state)
+    _require_signoff_writable(state, collection)
     if collection == PRODUCT_COMPONENTS:
         _validate_component(fields)
     if duplicate:
@@ -173,7 +220,7 @@ def decide_add_item(
 def decide_update_item(
     state: ProductState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
-    _require_editable(state)
+    _require_signoff_writable(state, collection)
     return coll.decide_update(
         state.collections, PRODUCT_COLLECTION_SPECS, collection=collection, item_id=item_id, fields=fields)
 

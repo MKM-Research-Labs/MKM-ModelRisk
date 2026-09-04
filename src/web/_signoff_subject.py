@@ -71,6 +71,7 @@ from src.governance.product import (
     add_collection_item as _product_add,
     get_product,
     list_products,
+    reactivate_product,
     rebuild_product_view,
     retire_product,
     update_collection_item as _product_update,
@@ -151,13 +152,14 @@ MODEL_SUBJECT = Subject(
     field_cmd=update_model_field, rebuild=rebuild_inventory_view, id_kwarg="model_id",
     retire_cmd=retire_model, reactivate_cmd=reactivate_model,
 )
-# A product can be retired but not yet brought back — ``supports`` keeps the
-# committee from being offered a decision the subject cannot carry out.
+# Retire and reactivate travel the same route, as they do for every other subject:
+# retiring is hibernation, so the committee that ratified it is the one that can
+# undo it. A Product was the last of the five to be brought onto that route.
 PRODUCT_SUBJECT = Subject(
     kind="product", agenda_id_field="subject_product_id", id_key="product_id",
     get=get_product, list_all=list_products, add_cmd=_product_add, update_cmd=_product_update,
     field_cmd=update_product_field, rebuild=rebuild_product_view, id_kwarg="product_id",
-    retire_cmd=retire_product,
+    retire_cmd=retire_product, reactivate_cmd=reactivate_product, noun="Product",
 )
 # A handoff goes to the committee to have its compatibility ratified. It is never
 # retired/reactivated (those belong to the models it connects), so it carries

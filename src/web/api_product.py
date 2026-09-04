@@ -48,7 +48,6 @@ from src.governance.product import (
     rebuild_product_view,
     register_product,
     remove_collection_item,
-    retire_product,
     update_collection_item,
     update_product_field,
 )
@@ -166,12 +165,11 @@ def rebind(product_id: str):
     return jsonify(get_product(product_id))
 
 
-@product_bp.post("/<product_id>/retire")
-def retire(product_id: str):
-    body = json_body()
-    dispatch("retire_product", retire_product, context=context_from_request(body), product_id=product_id)
-    rebuild_product_view()
-    return jsonify(get_product(product_id))
+# There is no retire endpoint here, and that absence is the design. Retiring is
+# hibernation and the committee's decision: the owner raises it at
+# POST /<product_id>/request-retire (api_product_signoff) and the MRC ratifies it,
+# which is where retire_product is finally dispatched. A route here would be a
+# second way to the same event, and the un-gated one.
 
 
 @product_bp.post("/<product_id>/collections/<collection>")

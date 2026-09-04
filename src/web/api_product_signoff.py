@@ -38,6 +38,7 @@ from src.web._signoff_routing import (
     _newest,
     raise_signoff,
 )
+from src.web._lifecycle_request import request_lifecycle_change
 from src.web.api_product import product_bp
 
 
@@ -108,3 +109,22 @@ def product_request_signoff(product_id: str):
                   proposed_rag=proposed_rag, target_mrc=mrc["value"], note=json_body().get("note"))
     return jsonify(get_product(product_id)), 201
 
+
+@product_bp.post("/<product_id>/request-retire")
+def product_request_retire(product_id: str):
+    """Owner asks the MRC to ratify retiring (hibernating) the Product.
+
+    The Product stays in the estate and editable while the request is queued — it
+    only drops out once the committee approves. A Product used to retire the moment
+    its owner pressed the button, which made it the last record type whose
+    hibernation nobody ratified.
+    """
+    return request_lifecycle_change(PRODUCT_SUBJECT, product_id, kind="retire",
+                                    expect_retired=False)
+
+
+@product_bp.post("/<product_id>/request-reactivate")
+def product_request_reactivate(product_id: str):
+    """Owner asks the MRC to ratify bringing a hibernated Product back."""
+    return request_lifecycle_change(PRODUCT_SUBJECT, product_id, kind="reactivate",
+                                    expect_retired=True)

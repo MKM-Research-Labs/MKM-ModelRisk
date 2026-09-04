@@ -67,9 +67,18 @@ def test_register_product_requires_confirmation(client):
     assert r.status_code == 409
 
 
-def test_retire_product_requires_confirmation(client):
+def test_asking_to_retire_a_product_requires_confirmation(client):
+    """Hibernating a Product takes two gates — the owner confirms the request, the
+    MRC ratifies it. This is the first, and it is refused before anything is queued.
+
+    The committee is seeded because the request is routed before it is confirmed: with
+    none covering the Product the route refuses for that reason instead, which is a
+    different rule and would make this test pass without proving anything.
+    """
+    _seed_mrc(client)
     _product(client)
-    assert client.post("/api/products/P1/retire", json={}, headers=HEADERS).status_code == 409
+    assert client.post("/api/products/P1/request-retire", json={},
+                       headers=HEADERS).status_code == 409
 
 
 # --- critical fields: owner + risk rating still require confirmation ---
