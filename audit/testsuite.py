@@ -35,12 +35,12 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from config.audit import (COVERAGE_HTML_DIRNAME, COVERAGE_XML_NAME,
-                          E2E_JUNIT_XML_NAME, JUNIT_XML_NAME)
+                          E2E_JUNIT_XML_NAME, JUNIT_XML_NAME,
+                          SUITE_TIMEOUT_SECONDS)
 
 from audit._walk import REPO_ROOT
 
 _TEST_DB = "mkm_modelrisk_test"
-_TIMEOUT = 900
 
 # Set on every suite subprocess so a nested audit run — e.g. an e2e test that
 # POSTs to /generate while the e2e suite is itself running under an audit run —
@@ -67,7 +67,7 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess:
     env = {**os.environ, "PYTHONUNBUFFERED": "1", "DB_NAME": _TEST_DB,
            SUITE_ACTIVE_ENV: "1"}
     return subprocess.run(cmd, cwd=str(REPO_ROOT), env=env,
-                          capture_output=True, timeout=_TIMEOUT, check=False)
+                          capture_output=True, timeout=SUITE_TIMEOUT_SECONDS, check=False)
 
 
 def parse_junit(path: Path) -> dict | None:
