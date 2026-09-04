@@ -35,7 +35,11 @@ from __future__ import annotations
 from datetime import date
 
 
-from config.governance import SIGNOFF_HISTORY_COLLECTION, SIGNOFF_REQUESTS_COLLECTION
+from config.governance import (
+    CLOSED_MEETING_STATUS,
+    SIGNOFF_HISTORY_COLLECTION,
+    SIGNOFF_REQUESTS_COLLECTION,
+)
 from src.command import CommandContext, dispatch
 # The adapter moved to its own module, but this stays the front door for the
 # whole sign-off flow — re-exported so call sites import the routing and its
@@ -84,6 +88,14 @@ def earliest_scheduled_for_mrc(target_mrc: str, config=None) -> dict | None:
     return scheduled[0] if scheduled else None
 
 
+def _meeting_is_open(meeting_id: str, config=None) -> bool:
+    """Can this meeting still be amended? A closed one is a finished record."""
+    meeting = get_meeting(meeting_id, config=config)
+    if meeting is None:
+        return False
+    return (meeting.get("data") or {}).get("status") != CLOSED_MEETING_STATUS
+
+
 # A request the committee has not decided yet. Raising a replacement supersedes
 # exactly these; anything already Completed, Rejected or Withdrawn is history and
 # is left alone.
@@ -125,7 +137,14 @@ def _supersede_open_requests(ctx: CommandContext, subject: Subject, subject_id: 
     for request in open_requests:
         agenda_item_id = request.get("agenda_item_id")
         meeting_id = request.get("meeting_id")
-        if agenda_item_id and meeting_id:
+        # Only a meeting still open can have the item taken off it. A committee that
+        # closed without deciding a request leaves it Attached to a sealed meeting,
+        # and trying to amend that meeting refuses — which used to fail the WHOLE
+        # supersession, so the owner could never raise the proposal again. The
+        # closed meeting keeps the item it was given; the request is withdrawn here
+        # and re-raised for the next meeting, which is how a correction reaches a
+        # committee anyway.
+        if agenda_item_id and meeting_id and _meeting_is_open(meeting_id, config):
             withdraw_agenda_item(ctx, meeting_id, agenda_item_id, config=config)
         subject.update_item(ctx, subject_id, REQUESTS, request["item_id"],
                             {"status": "Withdrawn"})

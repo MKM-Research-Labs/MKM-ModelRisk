@@ -102,3 +102,63 @@ def test_the_stored_rating_does_not_move_when_a_proposal_is_raised(client):
     pending = [r for r in data.get("signoff_requests") or []
                if r.get("proposed_rag") == "Red"]
     assert pending, "the proposal is queued for the committee"
+
+
+def test_every_subject_the_routing_knows_is_a_subject_the_pack_knows():
+    """The pack splits an agenda into the running order and the requests the committee
+    is answering by looking for a subject field. A Subject registered in the routing but
+    missing from that list is not merely unnamed: its decision is counted as part of the
+    running order and never reaches the sign-offs table — which is what happened to ML
+    Applications on the console's Approvals tabs. Asserted rather than remembered."""
+    from src.governance.mrc._pack_signoffs import SUBJECT_FIELDS, subject_of
+
+    assert {s.agenda_id_field for s in SUBJECTS} <= set(SUBJECT_FIELDS)
+    assert subject_of({"subject_ml_application_id": "MLA-0001"}) == "MLA-0001"
+    assert subject_of({"title": "Any Other Business"}) == ""
+
+
+def _seed_division_mrc():
+    from src.governance.reference import add_option
+
+    add_option(list_name="division", fields={"value": "Risk"}, actor="admin")
+    add_option(list_name="mrc", fields={"value": "MRC-RISK", "name": "Risk MRC",
+                                        "level": "Division", "scope_value": "Risk",
+                                        "quorum_require_chair": "No",
+                                        "quorum_require_secretary": "No",
+                                        "quorum_min_voting": "0"}, actor="admin")
+
+
+def test_a_proposal_left_undecided_by_a_closed_meeting_can_be_raised_again(client):
+    """A committee that closes without deciding a request leaves it Attached to a
+    sealed meeting. Superseding it used to try to take the item off that meeting,
+    which refuses — so the owner could never propose a rating again and the record was
+    stuck. The closed meeting keeps what it was given; the request is withdrawn and
+    re-raised for the next meeting, which is how a correction reaches a committee."""
+    _seed_division_mrc()
+    _register(client)
+    client.post("/api/meetings", json={"meeting_id": "MTG-A", "title": "Q1",
+                                       "date": "2026-06-30", "fields": {"mrc": "MRC-RISK"},
+                                       "confirmed": True}, headers=HEADERS)
+    first = client.post("/api/ml-applications/MLA-0001/request-signoff",
+                        json={"proposed_rag": "Amber", "confirmed": True}, headers=HEADERS)
+    assert first.status_code == 201
+    client.post("/api/meetings/MTG-A/field",
+                json={"field": "status", "value": "Completed", "confirmed": True},
+                headers=HEADERS)
+    client.post("/api/meetings", json={"meeting_id": "MTG-B", "title": "Q2",
+                                       "date": "2026-09-30", "fields": {"mrc": "MRC-RISK"},
+                                       "confirmed": True}, headers=HEADERS)
+
+    again = client.post("/api/ml-applications/MLA-0001/request-signoff",
+                        json={"proposed_rag": "Red", "confirmed": True}, headers=HEADERS)
+    assert again.status_code == 201, again.get_json()
+
+    requests = (get_ml_application("MLA-0001")["data"] or {}).get("signoff_requests") or []
+    stranded = [r for r in requests if r.get("proposed_rag") == "Amber"]
+    assert [r["status"] for r in stranded] == ["Withdrawn"]
+    live = [r for r in requests if r.get("proposed_rag") == "Red"]
+    assert [r["status"] for r in live] == ["Attached"]
+    assert live[0]["meeting_id"] == "MTG-B"
+    # The sealed meeting is a finished record: nothing was taken off it.
+    closed = client.get("/api/meetings/MTG-A").get_json()["data"]
+    assert [a for a in closed["agenda"] if a.get("subject_ml_application_id")]

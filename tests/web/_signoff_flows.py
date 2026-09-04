@@ -25,6 +25,7 @@ being copied per test module.
 """
 from __future__ import annotations
 
+from src.governance.mrc._pack_signoffs import subject_of
 from tests.web.conftest import HEADERS
 
 
@@ -87,8 +88,12 @@ def _request_signoff(client, model_id="M1", proposed_rag="Green"):
 
 def _signoff_agenda_items(agenda):
     """The sign-off items on a meeting's agenda — every meeting also seeds the
-    five standing agenda items, so a sign-off is never alone or necessarily first."""
-    return [a for a in agenda if a.get("subject_model_id") or a.get("subject_product_id")]
+    five standing agenda items, so a sign-off is never alone or necessarily first.
+
+    Asks the shipped vocabulary which fields carry a subject rather than keeping a
+    fourth copy of the list, so a record type added to the routing is visible here
+    without anyone remembering to come back."""
+    return [a for a in agenda if subject_of(a)]
 
 
 def _signoff_item(client, meeting_id="MTG1"):
