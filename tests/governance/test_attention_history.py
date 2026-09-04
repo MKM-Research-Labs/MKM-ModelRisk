@@ -26,7 +26,11 @@ must not read as a new one, because "we have not looked yet" is not a measuremen
 """
 from __future__ import annotations
 
+from datetime import date, timedelta
+
+from config.history import CLOSED_FINDING_RETENTION_DAYS
 from src.governance.attention import _rules, history
+from src.governance.attention.history import _iso
 
 AS_OF = "2026-08-25"
 LATER = "2026-09-25"
@@ -156,3 +160,30 @@ def test_the_trend_comes_back_oldest_first_with_its_dates():
     series = history.trend()
     assert [row["as_of"] for row in series] == [AS_OF, LATER]
     assert [row["records_meeting_standard"] for row in series] == [1, 2]
+
+
+def test_a_finding_settled_years_ago_falls_off_the_history():
+    """The history is kept so a finding can be aged and a trend drawn, not as a
+    permanent record — the event log is that. One closed beyond the retention
+    window is dropped rather than carried for ever."""
+    history.observe(AS_OF, _rows(_gap()), {})
+    empty = [{"entity_kind": "Model", "entity_id": "M1", "gaps": []}]
+    closed = history.observe(LATER, empty, {})
+    assert closed["findings"]["carried"] == 1
+
+    much_later = _iso(date.fromisoformat(LATER)
+                      + timedelta(days=CLOSED_FINDING_RETENTION_DAYS + 1))
+    aged_out = history.observe(much_later, empty, {})
+    assert aged_out["findings"]["carried"] == 0
+    assert aged_out["findings"]["closed"] == 0, "it was already counted when it closed"
+
+
+def test_a_finding_whose_stored_date_is_unreadable_is_left_unaged(monkeypatch):
+    """Reported as open rather than as aged: an age computed from a date nobody
+    can parse is a number that looks like a measurement and is not one."""
+    history.observe(AS_OF, _rows(_gap()), {})
+    rows = [{**row, "first_seen": "not-a-date"}
+            for row in history.read_view(history.FINDINGS, history.FINDING_COLUMNS)]
+    monkeypatch.setattr(history, "read_view",
+                        lambda view, columns, config=None: rows)
+    assert history.ages(LATER) == {}

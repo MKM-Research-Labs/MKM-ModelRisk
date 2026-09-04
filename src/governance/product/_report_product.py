@@ -80,11 +80,6 @@ COLLECTIONS = [
 ]
 
 
-
-
-def _value(data: dict, key: str) -> str:
-    return rb.value(data, key)
-
 def _groups() -> dict[str, list[str]]:
     """The product's field groups, in the order the specs declare them."""
     return rb.field_groups(PRODUCT_FIELD_SPECS, SKIP_FIELDS)

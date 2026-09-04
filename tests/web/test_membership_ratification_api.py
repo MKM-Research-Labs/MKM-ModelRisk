@@ -25,6 +25,7 @@ Until then the proposal has no effect on what the system believes a person may b
 from __future__ import annotations
 
 from src.identity import roles_for
+from tests.web._signoff_flows import _schedule_meeting, _seed_mrc
 from tests.web.conftest import HEADERS
 
 PEOPLE = "/api/reference/collections/people"
@@ -139,3 +140,92 @@ def test_ratification_is_audited(client):
     granting = [e for e in events if meeting_id in str(e.get("payload"))
                 and "administrator" in str(e.get("payload"))]
     assert granting, "the grant did not reach the audit trail"
+
+
+# --- Which committee rules on whom --------------------------------------------
+
+def _division_mrc(client, value="MRC-DIV", division="Markets"):
+    client.post("/api/reference/collections/mrc",
+                json={"fields": {"value": value, "name": value, "level": "Division",
+                                 "scope_value": division,
+                                 "quorum_require_chair": "No",
+                                 "quorum_require_secretary": "No",
+                                 "quorum_min_voting": "0"},
+                      "confirmed": True}, headers=HEADERS)
+
+
+def _anchored_person(client, name, division, pending):
+    client.post(PEOPLE, json={"fields": {"name": name, "division": division,
+                                         "pending_roles": pending},
+                              "confirmed": True}, headers=HEADERS)
+
+
+def test_a_division_committee_rules_on_its_own_division_and_the_unanchored(client):
+    """A person anchored elsewhere is another committee's business; a person with
+    no division belongs to the company tier rather than to nobody, so they are
+    never left without a committee that can grant them a role."""
+    _division_mrc(client)
+    client.post("/api/meetings",
+                json={"meeting_id": "MTG-DIV", "title": "Q1", "date": "2026-09-01",
+                      "fields": {"mrc": "MRC-DIV"}, "confirmed": True}, headers=HEADERS)
+    _anchored_person(client, "Markets Owner", "Markets", ["owner"])
+    _anchored_person(client, "Rates Owner", "Rates", ["owner"])
+    _person(client, "Unanchored Reader", ["reader"])
+
+    names = {p["name"] for p in
+             client.get("/api/meetings/MTG-DIV/membership").get_json()["proposals"]}
+    assert "Markets Owner" in names
+    assert "Unanchored Reader" in names
+    assert "Rates Owner" not in names
+
+
+def test_a_proposal_that_changes_nothing_never_reaches_the_agenda(client):
+    """Re-proposing what somebody already holds is not a change, and an agenda
+    padded with non-decisions is one the committee stops reading."""
+    meeting_id = _meeting(client, "MTG-MEM-H")
+    person = _person(client, "Already Owner", ["owner"])
+    client.post(f"/api/meetings/{meeting_id}/membership/{person['item_id']}/ratify",
+                json={"confirmed": True}, headers=HEADERS)
+    client.post(f"{PEOPLE}/{person['item_id']}",
+                json={"fields": {"pending_roles": ["owner"]}, "confirmed": True},
+                headers=HEADERS)
+    proposals = client.get(
+        f"/api/meetings/{meeting_id}/membership").get_json()["proposals"]
+    assert not [p for p in proposals if p["item_id"] == person["item_id"]]
+
+
+# --- Meetings that cannot rule -------------------------------------------------
+
+def test_membership_for_a_meeting_that_is_not_there_is_404(client):
+    assert client.get("/api/meetings/NOPE/membership").status_code == 404
+
+
+def test_a_ruling_at_a_meeting_that_is_not_there_is_404(client):
+    person = _person(client, "Nowhere Ratified", ["reader"])
+    assert client.post(
+        f"/api/meetings/NOPE/membership/{person['item_id']}/ratify",
+        json={"confirmed": True}, headers=HEADERS).status_code == 404
+
+
+def test_a_closed_meeting_cannot_still_be_granting_seats(client, monkeypatch):
+    """A sealed meeting is a finished record. A grant recorded against one after
+    the fact would say the committee decided something it never sat for."""
+    monkeypatch.setattr("src.governance.mrc.pack.compile_tex",
+                        lambda tex, assets=None: b"%PDF-close")
+    _seed_mrc(client)
+    _schedule_meeting(client, meeting_id="MTG-MEM-I")
+    agenda = client.get("/api/meetings/MTG-MEM-I").get_json()["data"]["agenda"]
+    for item in agenda:
+        client.post(f"/api/meetings/MTG-MEM-I/collections/agenda/{item['item_id']}",
+                    json={"fields": {"status": "Completed"}, "confirmed": True},
+                    headers=HEADERS)
+    assert client.post("/api/meetings/MTG-MEM-I/close",
+                       json={"confirmed": True}, headers=HEADERS).status_code == 200
+
+    # Proposed after the committee rose: it is the next meeting's business.
+    person = _person(client, "Late Grant", ["reader"])
+    refused = client.post(
+        f"/api/meetings/MTG-MEM-I/membership/{person['item_id']}/ratify",
+        json={"confirmed": True}, headers=HEADERS)
+    assert refused.status_code == 400
+    assert "closed" in refused.get_json()["error"]

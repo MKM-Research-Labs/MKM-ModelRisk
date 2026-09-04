@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import io
 
+from config.governance import ACTION_EVIDENCE_SCOPE
+from src.files import upload_path
 from tests.web._signoff_flows import _add, _schedule, _seed_mrc
 from tests.web.conftest import HEADERS
 
@@ -222,3 +224,75 @@ def test_an_empty_update_is_refused(client):
     item_id = _meeting_with_action(client)
     refused = _update(client, item_id)
     assert refused.status_code == 400
+
+
+# --- What the endpoints refuse ------------------------------------------------
+
+def test_an_update_against_a_meeting_or_action_that_is_not_there_is_404(client):
+    _meeting_with_action(client)
+    absent_meeting = client.post(
+        "/api/meetings/MTG9/collections/actions/AC-001/updates",
+        data={"note": "progress"}, content_type="multipart/form-data", headers=HEADERS)
+    assert absent_meeting.status_code == 404
+    assert _update(client, "AC-999", note="progress").status_code == 404
+
+
+def test_evidence_the_platform_will_not_store_is_refused_with_the_update(client):
+    """The update and its evidence are one record: storing the note and dropping
+    the file would leave a history saying evidence was filed when it was not."""
+    item_id = _meeting_with_action(client)
+    refused = _update(client, item_id, note="Backtest output",
+                      file=(io.BytesIO(b"MZ"), "backtest.exe"))
+    assert refused.status_code == 400
+
+
+def test_evidence_on_an_action_that_is_not_there_is_404(client):
+    _meeting_with_action(client)
+    assert client.get(
+        "/api/meetings/MTG1/collections/actions/AC-999/evidence/x.pdf",
+        headers=HEADERS).status_code == 404
+
+
+def test_evidence_whose_file_has_gone_missing_is_404_not_a_500(client):
+    item_id = _meeting_with_action(client)
+    stored = _update(client, item_id, note="Backtest output",
+                     file=(io.BytesIO(b"%PDF-1.4 backtest"), "backtest.pdf"))
+    filename = stored.get_json()["data"]["actions"][0]["updates"][0]["filename"]
+    upload_path(ACTION_EVIDENCE_SCOPE, filename).unlink()
+    assert client.get(
+        f"/api/meetings/MTG1/collections/actions/{item_id}/evidence/{filename}",
+        headers=HEADERS).status_code == 404
+
+
+def test_outstanding_actions_for_a_meeting_that_is_not_there_is_404(client):
+    assert client.get("/api/meetings/MTG9/outstanding-actions").status_code == 404
+
+
+def test_a_closure_cannot_be_ratified_at_a_meeting_that_is_not_there(client):
+    item_id = _meeting_with_action(client, status=REQUESTED)
+    assert _ratify(client, item_id, meeting_id="MTG9").status_code == 404
+
+
+def test_a_closure_cannot_be_ratified_for_an_action_that_is_not_there(client):
+    _meeting_with_action(client)
+    assert _ratify(client, "AC-999").status_code == 404
+
+
+def test_an_inquorate_meeting_cannot_ratify_a_closure(client):
+    """Closing somebody's obligation is a decision, so it needs the committee that
+    was actually in the room."""
+    client.post("/api/reference/collections/mrc",
+                json={"fields": {"value": "MRC-Q", "name": "MRC-Q", "level": "Company",
+                                 "quorum_require_chair": "Yes",
+                                 "quorum_require_secretary": "Yes",
+                                 "quorum_min_voting": "3"},
+                      "confirmed": True}, headers=HEADERS)
+    _schedule(client, meeting_id="MTG-Q", mrc="MRC-Q")
+    added = client.post("/api/meetings/MTG-Q/collections/actions",
+                        json={"fields": {"description": "Re-run the backtest",
+                                         "status": REQUESTED}, "confirmed": True},
+                        headers=HEADERS)
+    item_id = added.get_json()["data"]["actions"][0]["item_id"]
+    refused = _ratify(client, item_id, meeting_id="MTG-Q")
+    assert refused.status_code == 400
+    assert "quorate" in refused.get_json()["error"]

@@ -25,6 +25,7 @@ import zipfile
 
 import pytest
 
+from src.governance.client._pack_sources import handover_edge
 from src.governance.client.pack import build_client_pack, pack_manifest
 from src.governance.client._pack_events import event_rows
 
@@ -286,3 +287,98 @@ def test_event_rows_sorted_newest_first_across_products():
     ]
     rows = event_rows(products)
     assert rows[0][0] == "P2" and rows[1][0] == "P1"
+
+
+# --- Handovers are re-rendered, never packed as they were filed ----------------
+
+_HANDOVER = "handover_MKM-EF-001_to_MKM-GH-001.pdf"
+
+
+def _handover_doc():
+    return [{"category": "Core Documentation", "filename": "handover.pdf",
+             "original_name": _HANDOVER}]
+
+
+def _stub_handoff(monkeypatch, exists=True):
+    monkeypatch.setattr("src.governance.client._pack_sources.get_handoff_for_edge",
+                        lambda a, b, config=None: {"handoff_id": f"{a}->{b}"}
+                        if exists else None)
+    monkeypatch.setattr("src.governance.client.pack.get_handoff_for_edge",
+                        lambda a, b, config=None: {"handoff_id": f"{a}->{b}"}
+                        if exists else None)
+    monkeypatch.setattr("src.governance.client._pack_sources.render_handover_pdf",
+                        lambda handoff, provider, consumer, as_of: b"%PDF-fresh-handover")
+
+
+@pytest.mark.parametrize("name,edge", [
+    ("handover_MKM-EF-001_to_MKM-GH-001.pdf", ("MKM-EF-001", "MKM-GH-001")),
+    ("handover__to_MKM-GH-001.pdf", None),      # no provider
+    ("handover_MKM-EF-001_to_.pdf", None),      # no consumer
+    ("handover_MKM-EF-001.pdf", None),          # no separator at all
+    ("sensitivity.pdf", None),                  # not a handover
+])
+def test_a_handover_filename_names_the_edge_it_documents(name, edge):
+    """``_to_`` is the separator because model ids carry no underscores — so the
+    two ends are recoverable from the name a previous pack wrote."""
+    assert handover_edge(name) == edge
+
+
+def test_a_handover_is_recompiled_from_its_handoff_record(stub, monkeypatch):
+    """The pack carries the current template and lineage, not whatever was
+    uploaded as evidence months ago — a stale handover misdescribes the interface
+    it is the evidence for."""
+    _model(monkeypatch, docs=_handover_doc())
+    _no_meetings_or_products(monkeypatch)
+    _stub_handoff(monkeypatch)
+    archive = _open(build_client_pack(
+        _client([{"link_type": "Model", "subject_id": "MKM-EF-001"}]),
+        SETTINGS, "2026-07-27", "2026-07-27T09:30:00"))
+    packed = f"models/MKM-EF-001/Core Documentation/{_HANDOVER}"
+    assert archive.read(packed) == b"%PDF-fresh-handover"
+
+
+def test_a_handover_whose_edge_no_longer_exists_falls_back_to_the_filed_copy(
+        stub, monkeypatch):
+    """Nothing to regenerate from, so the recorded file is the only evidence there
+    is — and it is reported missing rather than quietly dropped."""
+    _model(monkeypatch, docs=_handover_doc())
+    _no_meetings_or_products(monkeypatch)
+    _stub_handoff(monkeypatch, exists=False)
+    contents = _open(build_client_pack(
+        _client([{"link_type": "Model", "subject_id": "MKM-EF-001"}]),
+        SETTINGS, "2026-07-27", "2026-07-27T09:30:00")).read("CONTENTS.txt").decode()
+    assert _HANDOVER in contents
+    assert "not available at the time of packing" in contents
+
+
+def test_the_manifest_does_not_warn_about_a_handover_it_can_regenerate(
+        stub, monkeypatch):
+    """The preview has to agree with the pack. Warning about a missing evidence
+    file the pack will simply recompile sends somebody hunting for a file that
+    does not need to exist."""
+    _model(monkeypatch, docs=_handover_doc())
+    _no_meetings_or_products(monkeypatch)
+    _stub_handoff(monkeypatch)
+    manifest = pack_manifest(
+        _client([{"link_type": "Model", "subject_id": "MKM-EF-001"}]), SETTINGS)
+    assert not [w for w in manifest["warnings"] if _HANDOVER in w]
+
+
+# --- Several committees, several Terms of Reference ---------------------------
+
+def test_each_committees_terms_of_reference_are_labelled_when_there_are_several(
+        stub, monkeypatch):
+    """Two committees whose ToR files are both called "ToR.docx" would collide in
+    one folder, and the reader could not tell whose was whose."""
+    (stub / "mrc" / "tor2.docx").write_bytes(b"TOR-TWO")
+    _model(monkeypatch)
+    _no_meetings_or_products(monkeypatch)
+    _stub_tor(monkeypatch, [
+        {"item_id": "MRC-001", "name": "Division MRC", "tor_filename": "tor.docx",
+         "tor_original_name": "ToR.docx"},
+        {"item_id": "MRC-002", "name": "Group MRC", "tor_filename": "tor2.docx",
+         "tor_original_name": "ToR.docx"}])
+    names = _open(build_client_pack(
+        _client([]), SETTINGS, "2026-07-27", "2026-07-27T09:30:00")).namelist()
+    assert "governance/Division MRC --- ToR.docx" in names
+    assert "governance/Group MRC --- ToR.docx" in names

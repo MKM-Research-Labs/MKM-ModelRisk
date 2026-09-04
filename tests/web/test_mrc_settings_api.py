@@ -24,6 +24,7 @@ import base64
 import io
 
 from config.reporting import DEFAULT_CLASSIFICATION, DEFAULT_LEGAL_NOTICE
+from src.files import upload_path
 from tests.web.conftest import HEADERS
 
 PNG = base64.b64decode(
@@ -143,3 +144,14 @@ def test_tor_bad_extension_is_400(client):
         content_type="multipart/form-data", headers=HEADERS,
     )
     assert response.status_code == 400
+
+
+def test_a_tor_whose_file_has_gone_missing_is_404_not_a_500(client):
+    """The settings still record the ToR; the file underneath is gone. That is a
+    404 about the file rather than a stack trace about the store."""
+    client.post("/api/mrc/settings/tor",
+                data={"file": (io.BytesIO(b"%PDF-fake"), "mrc-tor.pdf")},
+                content_type="multipart/form-data", headers=HEADERS)
+    filename = client.get("/api/mrc/settings").get_json()["tor"]["filename"]
+    upload_path("mrc", filename).unlink()
+    assert client.get("/api/mrc/tor").status_code == 404

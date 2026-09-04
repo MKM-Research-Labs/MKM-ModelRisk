@@ -266,3 +266,16 @@ def test_model_analysis_remove_detaches_it_from_the_meeting(client):
 def test_model_analysis_remove_unknown_meeting_is_404(client):
     assert client.post("/api/meetings/none/models/M-A/analysis/remove",
                        json={}, headers=HEADERS).status_code == 404
+
+
+def test_model_analysis_remove_for_a_model_not_in_scope_is_400(client):
+    """Nothing to detach: the model was never tabled at this meeting, and saying so
+    is more useful than clearing a field on a row that does not exist."""
+    _seed_mrc(client)
+    _schedule_meeting(client)
+    client.post("/api/models", json={"model_id": "MKM-XR-001", "name": "X",
+                                     "confirmed": True}, headers=HEADERS)
+    refused = client.post("/api/meetings/MTG1/models/MKM-XR-001/analysis/remove",
+                          json={}, headers=HEADERS)
+    assert refused.status_code == 400
+    assert "not in scope" in refused.get_json()["error"]
