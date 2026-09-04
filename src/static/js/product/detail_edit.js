@@ -115,29 +115,20 @@ Object.assign(ProductDetail, {
     };
   },
 
-  // Danger tab: retire the Product (mirrors the model's Danger zone).
+  // Danger tab: DangerZone's, the same three states every record type has. This
+  // screen used to offer a bare Retire button that hibernated the Product on the
+  // spot, and told a retired one that nothing further could be changed — which was
+  // the whole problem, because asking to come back is a thing that can be changed.
   _dangerContent() {
-    if (this._product.retired) {
-      return '<div class="empty">This Product is retired and read-only. Nothing further can be changed.</div>';
-    }
-    return '<div class="danger-zone">' +
-      '<div class="dz-header">Danger Zone</div>' +
-      '<div class="dz-row">' +
-      '<div class="dz-text"><b>Retire this Product</b>' +
-      '<p class="muted">Retired Products become read-only — no further amendments are accepted. ' +
-      "Existing data and audit trail are preserved.</p></div>" +
-      '<div class="dz-action"><button class="btn danger small" id="product-retire">Retire Product&hellip;</button></div>' +
-      "</div></div>";
+    return DangerZone.content("Product", this._product);
   },
 
   _bindDanger() {
     const self = this;
-    if (this._product.retired) return;
-    const retire = document.getElementById("product-retire");
-    if (retire) retire.onclick = function () {
-      App.amend("Retire Product " + self._id + " (it can no longer be edited).", "POST",
-        "/api/products/" + self._id + "/retire", {}, function () { Product.render(); });
-    };
+    DangerZone.bind({
+      api: "/api/products", id: this._id,
+      onDone: function () { ProductDetail.show(self._id, "danger"); Product.loadList(); },
+    });
   },
 
   _bindEdits() {

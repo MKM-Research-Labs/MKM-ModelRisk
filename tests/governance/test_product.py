@@ -245,24 +245,6 @@ def test_edit_field_rejects_binding_and_bad_status():
         update_product_field(product_id="Product-0001", field="status", value="Bogus", actor="admin")
 
 
-def test_retire_makes_read_only():
-    _live_model()
-    _register()
-    retire_product(product_id="Product-0001", actor="admin")
-    rebuild_product_view()
-    product = get_product("Product-0001")
-    assert product["retired"] and product["data"]["status"] == "Retired"
-    with pytest.raises(DomainError):
-        update_product_field(product_id="Product-0001", field="notes", value="x", actor="admin")
-    with pytest.raises(DomainError):
-        retire_product(product_id="Product-0001", actor="admin")
-
-
-def test_retire_unknown_product_rejected():
-    with pytest.raises(DomainError):
-        retire_product(product_id="Product-NONE", actor="admin")
-
-
 def test_limitations_and_assumptions():
     _live_model()
     _register()

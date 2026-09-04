@@ -40,6 +40,7 @@ CONFIRM_REQUIRED_COMMANDS = frozenset({
     "register_product",
     "register_client",
     "reactivate_model",
+    "reactivate_product",
     "reactivate_ai_system",
     "reactivate_ml_application",
     "retire_model",

@@ -35,6 +35,7 @@ from src.governance.product._rules import (
     decide_rebind,
     decide_register,
     decide_remove_item,
+    decide_reactivate,
     decide_retire,
     decide_update_item,
 )
@@ -140,9 +141,24 @@ def update_product_field(
 
 
 def retire_product(*, product_id: str, actor: str, reason: str | None = None, config=None) -> Event:
-    """Retire a Product (terminal; it can no longer be edited)."""
+    """Hibernate a Product -- it drops out of the active estate and can no longer
+    be edited. Ratified by the MRC, so this runs off an approved request rather
+    than straight from the owner.
+
+    Not terminal, which this docstring used to say it was: the committee that
+    ratified the retire can ratify bringing the Product back.
+    """
     state, version = _load(product_id, config)
     decision = decide_retire(state)
+    return _record(product_id, decision, version, actor, reason, config)
+
+
+def reactivate_product(*, product_id: str, actor: str, reason: str | None = None,
+                       config=None) -> Event:
+    """Bring a hibernated Product back. Ratified by the MRC on the same footing as
+    the retire that put it there."""
+    state, version = _load(product_id, config)
+    decision = decide_reactivate(state)
     return _record(product_id, decision, version, actor, reason, config)
 
 
