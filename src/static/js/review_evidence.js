@@ -28,6 +28,12 @@
 //
 // Assigns onto ReviewPanel; loads after review_panel.js.
 
+// How far through the questions the review is, as a colour. Lived in inventory_tabs.js,
+// which never called it — this is its only caller.
+function barColor(pct) {
+  return pct >= 75 ? Theme.value("green") : pct >= 45 ? Theme.value("amber") : Theme.value("red");
+}
+
 Object.assign(ReviewPanel, {
 
   // The record of challenge: the exchange between owner and reviewer, under the
