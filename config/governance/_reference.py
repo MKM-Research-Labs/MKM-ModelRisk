@@ -34,6 +34,8 @@ from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_
                                           VALIDATION_STATUS_LIST)
 from config.governance._ai import AI_REFERENCE_LISTS, AI_REFERENCE_SPECS
 from config.governance._ml import ML_REFERENCE_LISTS, ML_REFERENCE_SPECS
+from config.governance._questions_common import (COMMON_REFERENCE_LISTS,
+                                                 COMMON_REFERENCE_SPECS)
 from config.governance._standing_agenda import STANDING_AGENDA_ROLES
 from config.governance._vocabulary import status_vocabulary_spec as _status_vocabulary_spec
 from config.permissions import ROLES
@@ -100,7 +102,8 @@ REFERENCE_LISTS = (
     "division", "line_of_business", "mrc", "calculating_agent", DATA_SOURCE_LIST,
     MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
     STANDING_AGENDA_LIST,
-) + tuple(STATUS_VOCABULARIES) + ML_REFERENCE_LISTS + AI_REFERENCE_LISTS
+) + tuple(STATUS_VOCABULARIES) + COMMON_REFERENCE_LISTS + ML_REFERENCE_LISTS \
+  + AI_REFERENCE_LISTS
 
 # What a model type means to a Product's bindings. A Product binds one analytics
 # engine and one market-data source, and it picks each from the inventory filtered
@@ -119,29 +122,12 @@ MARKET_DATA_ROLE = "Market Data"
 # An adopter renames or extends these in Admin; the roles are what the bindings
 # read, so the names are safe to change.
 #
-# Analytical models price or quantify risk; Curve Models produce the hazard and
-# damage curves the analytical engines consume; Market Data Models produce
-# calibrated curves/surfaces. All are models -- they involve methodology and
-# judgement, not raw vendor feeds -- which is why they sit on one inventory.
-DEFAULT_MODEL_TYPES = (
-    {"value": "Analytical Model", "binding_role": "Analytics"},
-    {"value": "Curve Model", "binding_role": "Analytics"},
-    {"value": "Market Data Model", "binding_role": "Market Data"},
-    {"value": "Other", "binding_role": "Neither"},
-)
-
-# Simple single-value lists seeded on first use (same "seed a vacuum, never
-# reconcile a curated list" rule as the model types above). Data sources are the
-# feeds a model pulls its inputs from; Vendor names who supplies the model
-# itself. Both are strict lists an adopter re-seeds to its own estate.
-#
-# The vendor seed names no institution: a fresh install should not plant this
-# platform's author in an adopter's inventory, where it would sit in the Vendor
-# menu as though it supplied their models. "In-house" is the honest starting
-# point (most banks build their own), and every real supplier — including this
-# one, on the MKM estate — is added in Admin > Vendor.
-from config.governance._data_sources import DEFAULT_DATA_SOURCES  # noqa: E402
-DEFAULT_VENDORS = ("In-house", "Other")
+# What these lists are SEEDED with lives in ``_reference_defaults`` and is re-exported
+# here, so every existing import goes on working. Split at the seam
+# ``_data_sources`` already opened: a list's shape and its starting rows are two things.
+from config.governance._reference_defaults import (DEFAULT_DATA_SOURCES,  # noqa: E402
+                                                   DEFAULT_MODEL_TYPES,
+                                                   DEFAULT_VENDORS)
 
 # MRC committees are anchored to one of the three org tiers. A Line of Business-level
 # MRC only sees models in that line of business; Division sees everything across its
@@ -294,6 +280,7 @@ REFERENCE_SPECS.update({
 
 # The Estimator menu and the ML questionnaire, kept in their own module so the ML
 # vocabulary can evolve without disturbing this one (see _ml.py).
+REFERENCE_SPECS.update(COMMON_REFERENCE_SPECS)
 REFERENCE_SPECS.update(ML_REFERENCE_SPECS)
 # The foundation-model list and the AI questionnaire, folded in the same way.
 REFERENCE_SPECS.update(AI_REFERENCE_SPECS)

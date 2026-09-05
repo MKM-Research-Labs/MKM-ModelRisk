@@ -22,6 +22,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance._questions_common import (COMMON_QUESTION_LIST,
+                                                 COMMON_QUESTIONS)
 from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
                                ML_TRAINING_VOCABULARIES,
                                DEFAULT_ESTIMATORS, ESTIMATOR_LIST,
@@ -187,6 +189,26 @@ def ensure_default_ml_application_questions(*, actor: str = SYSTEM_ACTOR, config
         add_option(list_name=ML_APPLICATION_QUESTION_LIST, fields=dict(question), actor=actor,
                    reason="Seed the ML Application questions on first run", config=config)
     return len(ML_APPLICATION_QUESTIONS)
+
+
+def ensure_default_common_questions(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
+    """Seed the shared questionnaire on a fresh install; return how many.
+
+    The five questions asked of any application of a model, whatever produced it. Seeded
+    like the ML list rather than left to the shipped fallback the AI list relies on, so
+    an administrator can see and edit them on day one — they are the questions most
+    likely to need an institution's own wording, because they are the ones asked of
+    everything.
+
+    Same rule as every other list: seeds a vacuum, never reconciles a curated one.
+    """
+    collections, _ = load(config)
+    if collections.get(COMMON_QUESTION_LIST):
+        return 0
+    for question in COMMON_QUESTIONS:
+        add_option(list_name=COMMON_QUESTION_LIST, fields=dict(question), actor=actor,
+                   reason="Seed the common questions on first run", config=config)
+    return len(COMMON_QUESTIONS)
 
 
 def ensure_default_ml_training_vocabularies(*, actor: str = SYSTEM_ACTOR, config=None) -> int:

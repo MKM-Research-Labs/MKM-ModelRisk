@@ -44,6 +44,13 @@ register that nothing in their estate uses.
 ``REVIEW_QUESTION_LIST`` and deliberately not shared with it: an ML Application is
 asked different questions, and the two sets have to move independently. Same
 mechanism, same copy-at-registration snapshot, different content.
+**What this list is NOT.** It is no longer the whole questionnaire an ML Application is
+asked. Five questions — use case, human oversight, who could be disadvantaged,
+explainability, and what would show it had stopped working — are asked of any
+application of a model and live in ``_questions_common.py``; a record is copied those
+first and these beneath them. What is left here is what is particular to a fitted estimator, which is the argument this module has always made and now makes
+precisely: the PROCESSES stay separate, and the questions that are genuinely the same
+question stop being asked twice in two wordings.
 """
 from __future__ import annotations
 
@@ -96,8 +103,6 @@ DEFAULT_ESTIMATORS = (
 # naming one. Area under the curve is a CLASSIFICATION metric; a regression model
 # has RMSE, MAE and R-squared, and half this estate is regression.
 ML_APPLICATION_QUESTIONS = (
-    {"short_label": "Use Case",
-     "question": "What decision does this model inform, and what is it explicitly not to be used for?"},
     {"short_label": "Algorithm Choice",
      "question": "Why this estimator rather than a simpler or alternative one?"},
     {"short_label": "Training Data",
@@ -110,10 +115,6 @@ ML_APPLICATION_QUESTIONS = (
      "question": "How does it compare with a simple baseline a reviewer would recognise?"},
     {"short_label": "Overfitting and Stability",
      "question": "How were hyperparameters selected, and how stable is performance across resamples and over time?"},
-    {"short_label": "Explainability",
-     "question": "Can an individual prediction be explained to someone affected by it?"},
-    {"short_label": "Drift and Monitoring",
-     "question": "What would show that it has stopped working, and who is watching for it?"},
     {"short_label": "Weaknesses and Misinterpretation",
      "question": "Where does it fail, and how might its output be misread by a consumer?"},
 )

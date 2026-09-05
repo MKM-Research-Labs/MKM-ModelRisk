@@ -51,9 +51,23 @@ const Reference = {
     // The running order every meeting is seeded with. Beside the questionnaire
     // because they are the same kind of thing: a standard the institution sets,
     // copied onto each record it applies to.
-    // The ML questionnaire, beside the model one and deliberately separate from it:
-    // an ML Application is asked different questions, and the two sets move apart.
+    // The three questionnaires an APPLICATION of a model is asked, in the order a
+    // record is asked them: the five shared questions first, then whichever
+    // type-specific set applies. Grouped here rather than scattered, because "which
+    // list is this question on" is the first thing an administrator editing them
+    // needs to know.
+    //
+    // Common sits apart from Model Review above it: a model answers the institution's
+    // own review questionnaire, while an ML Application and an AI System both answer
+    // these five and then their own.
+    ["common_questions", "Common (AI/ML)"],
+    // The ML questionnaire, deliberately separate from the AI one: the two processes
+    // ask different things, and the sets move apart. What they SHARE is above.
     ["ml_application_questions", "ML Review"],
+    // The AI questionnaire, which had no tab at all — the list was reachable only
+    // through the shipped fallback, so an institution could not reword the questions
+    // its own AI Systems are asked.
+    ["ai_system_questions", "AI Review"],
     // The enumerations the Training tab is typed against. One tab, not eleven —
     // the same reasoning as the status vocabularies below: shown together rather
     // than as eleven tabs nobody would find.

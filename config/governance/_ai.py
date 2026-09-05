@@ -35,6 +35,15 @@ about generative and agentic systems, and 19 of its 23 risk rows read Not eviden
 for one reason: no such system can be registered. See docs/design/finos-coverage.md
 section 6.1.
 
+**What this list is NOT.** It is no longer the whole questionnaire an AI System is
+asked. Five questions — use case, human oversight, who could be disadvantaged,
+explainability, and what would show it had stopped working — are asked of any
+application of a model and live in ``_questions_common.py``; a record is copied those
+first and these beneath them. What is left here is what is particular to a generative
+or agentic system, which is the argument this module has always made and now makes
+precisely: the PROCESSES stay separate, and the questions that are genuinely the same
+question stop being asked twice in two wordings.
+
 ``FOUNDATION_MODEL_LIST`` seeds EMPTY, like the estimator list's versions do. Which
 models an institution has approved is a fact about their procurement and their legal
 review, and seeding our guesses would put models in their register that nobody has
@@ -83,9 +92,6 @@ EU_AI_ACT_CLASSES = ("Not assessed", "Minimal risk", "Limited risk",
 # answerable about a foundation model nobody in the firm trained. These are written
 # against the FINOS risk catalogue, so that answering them is what moves those rows.
 AI_SYSTEM_QUESTIONS = (
-    {"short_label": "Use Case",
-     "question": "What decision or task does this system support, and what is it "
-                 "explicitly not to be used for?"},
     {"short_label": "Model Provenance",
      "question": "Which foundation model and version is in use, who provides it, and "
                  "what happens when they change or retire it?"},
@@ -107,14 +113,6 @@ AI_SYSTEM_QUESTIONS = (
     {"short_label": "Agency and Authority",
      "question": "What can this system do without a human, which tools or APIs can it "
                  "call, and what is the worst it could do if manipulated?"},
-    {"short_label": "Bias and Fairness",
-     "question": "Who could be disadvantaged by its output, and how would you know?"},
-    {"short_label": "Explainability",
-     "question": "Can a particular output be explained to the person affected by it, "
-                 "and to a regulator?"},
-    {"short_label": "Human Oversight",
-     "question": "Who reviews what it produces, on what basis, and would they catch it "
-                 "being wrong?"},
     {"short_label": "Regulatory Classification",
      "question": "Under the EU AI Act and any other applicable regime, what class does "
                  "this system fall into, and who decided that?"},

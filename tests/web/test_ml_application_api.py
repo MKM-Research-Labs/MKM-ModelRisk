@@ -25,6 +25,8 @@ that the estimator cannot be something nobody has registered.
 """
 from __future__ import annotations
 
+from config.governance._ml import ML_APPLICATION_QUESTIONS
+from config.governance._questions_common import COMMON_QUESTIONS
 from config.governance import ESTIMATOR_LIST, ML_REVIEW_QUESTIONS_COLLECTION
 from src.governance.reference import add_option, ensure_default_estimators
 from tests.web.conftest import HEADERS
@@ -74,9 +76,15 @@ def test_register_returns_the_record_with_its_questionnaire(client):
     assert res.status_code == 201
     data = res.get_json()["data"]
     assert data["name"] == "Retail PD scorecard"
+    # The questionnaire is COMPOSED: the five questions asked of any application of a
+    # model, then the ML-specific ones. Counted from config rather than hard-coded, so
+    # rewording either list does not break this and adding to one does not silently
+    # pass. Common first is part of the contract, which is why row 0 is asserted.
     asked = data[ML_REVIEW_QUESTIONS_COLLECTION]
-    assert asked[0]["short_label"] == "Use Case"
-    assert len(asked) == 10
+    assert asked[0]["short_label"] == COMMON_QUESTIONS[0]["short_label"] == "Use Case"
+    assert len(asked) == len(COMMON_QUESTIONS) + len(ML_APPLICATION_QUESTIONS)
+    assert [q["short_label"] for q in asked[:len(COMMON_QUESTIONS)]] == \
+        [q["short_label"] for q in COMMON_QUESTIONS]
 
 
 def test_an_estimator_nobody_registered_is_refused(client):

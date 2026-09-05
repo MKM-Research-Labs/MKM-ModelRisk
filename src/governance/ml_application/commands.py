@@ -37,7 +37,7 @@ from src.governance.ml_application._rules import (decide_add_item, decide_edit_f
                                                   decide_retire, decide_update_item)
 from src.governance.ml_application._state import MLApplicationState, apply, initial_state
 from src.governance.reference import reject_unknown_values
-from src.governance.seeding import seed_items
+from src.governance.seeding import compose_questions, seed_items
 
 AGGREGATE_TYPE = "MLApplication"
 
@@ -60,23 +60,15 @@ def _record(ml_application_id, decision, version, actor, reason, config) -> Even
 
 
 def _ml_questions(config) -> list[dict[str, str]]:
-    """The institution's ML questionnaire (Admin > ML Review).
+    """The questionnaire an ML Application is asked: the common questions, then the ML
+    ones.
 
-    Falls back to the shipped set only where none has been recorded — a fresh
-    database before the first-run seed, or one whose list has been emptied. The
-    record is asked the questions that stood when it was registered; editing the
-    list afterwards never rewrites an answer already given, which is the whole
-    reason each record keeps its own copy.
+    Composed rather than read from one list. The five shared questions are asked of any
+    application of a model — an AI System answers the same five — and only what is
+    particular to a fitted estimator lives on the ML list beneath them.
     """
-    from src.governance.reference import get_reference_lists
-    try:
-        recorded = get_reference_lists(config=config).get(ML_APPLICATION_QUESTION_LIST) or []
-    except Exception:
-        recorded = []
-    asked = [{"short_label": q.get("short_label") or "", "question": q.get("question") or ""}
-             for q in recorded if (q.get("question") or "").strip()]
-    return asked or [dict(q) for q in ML_APPLICATION_QUESTIONS]
-
+    return compose_questions(ML_APPLICATION_QUESTION_LIST, ML_APPLICATION_QUESTIONS,
+                             config)
 
 def _seed_ml_review_questions(ml_application_id, after_version, actor, config) -> None:
     """Copy the ML questionnaire onto the record, immediately after registration."""

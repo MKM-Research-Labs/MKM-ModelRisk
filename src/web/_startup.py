@@ -91,7 +91,8 @@ def bootstrap(config=None) -> None:
     replay behind it would likewise run once per worker.
     """
     from src.database import run_migrations
-    from src.governance.reference import (ensure_default_estimators,
+    from src.governance.reference import (ensure_default_common_questions,
+                                          ensure_default_estimators,
                                           ensure_default_ml_application_questions,
                                           ensure_default_ml_training_vocabularies,
                                           ensure_default_model_types,
@@ -115,6 +116,10 @@ def bootstrap(config=None) -> None:
     ensure_default_estimators()
     ensure_default_ml_application_questions()
     ensure_default_ml_training_vocabularies()
+    # The five questions asked of any application of a model, whichever process governs
+    # it. Seeded so an administrator can see and reword them on day one — they are the
+    # ones most likely to need the institution's own wording.
+    ensure_default_common_questions()
     reconcile_read_models(config)
 
 

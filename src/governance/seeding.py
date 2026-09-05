@@ -55,3 +55,46 @@ def seed_items(*, aggregate_type: str, aggregate_id: str, collection: str,
             actor=actor, reason=reason, expected_version=version, config=config)
         version += 1
     return version
+
+
+def _recorded_or_shipped(list_name: str, shipped, config) -> list[dict[str, str]]:
+    """The institution's own version of a question list, or the shipped set.
+
+    Falls back only where nothing has been recorded — a fresh database before the
+    first-run seed, or a list somebody has emptied. Written once here because the ML
+    Application and the AI System each had a copy of it, and a third was about to be
+    written for the common list.
+    """
+    from src.governance.reference import get_reference_lists
+    try:
+        recorded = get_reference_lists(config=config).get(list_name) or []
+    except Exception:
+        recorded = []
+    asked = [{"short_label": q.get("short_label") or "", "question": q.get("question") or ""}
+             for q in recorded if (q.get("question") or "").strip()]
+    return asked or [dict(q) for q in shipped]
+
+
+def compose_questions(own_list: str, own_shipped, config=None) -> list[dict[str, str]]:
+    """The questionnaire a record is asked: the common questions, then its own.
+
+    **The order is part of the contract.** Common first, always: a reviewer opening any
+    record meets the same five questions in the same order, whatever kind of thing it
+    is, and a report comparing two record types compares row 1 with row 1.
+
+    The result is ONE flat list. Nothing downstream is told the questions came from two
+    places — the record carries a single questionnaire, its items numbered from one, and
+    the review works through them without knowing or caring where each was authored.
+    That is what lets the split happen without touching the review, the completeness
+    probes or the sign-off pack.
+
+    A record keeps what it was given. Editing either list afterwards never rewrites an
+    answer already recorded, which is why each record is copied its own snapshot.
+    """
+    from config.governance._questions_common import (COMMON_QUESTION_LIST,
+                                                     COMMON_QUESTIONS)
+    return (_recorded_or_shipped(COMMON_QUESTION_LIST, COMMON_QUESTIONS, config)
+            + _recorded_or_shipped(own_list, own_shipped, config))
+
+
+__all__ = ["compose_questions", "seed_items"]

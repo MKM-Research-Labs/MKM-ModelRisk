@@ -33,7 +33,7 @@ from src.governance.ai_system._rules import (decide_add_item, decide_edit_field,
                                              decide_retire, decide_update_item)
 from src.governance.ai_system._state import AISystemState, apply, initial_state
 from src.governance.reference import reject_unknown_values
-from src.governance.seeding import seed_items
+from src.governance.seeding import compose_questions, seed_items
 
 AGGREGATE_TYPE = "AISystem"
 
@@ -56,22 +56,13 @@ def _record(ai_system_id, decision, version, actor, reason, config) -> Event:
 
 
 def _ai_questions(config) -> list[dict[str, str]]:
-    """The institution's AI questionnaire (Admin > AI System questions).
+    """The questionnaire an AI System is asked: the common questions, then the AI ones.
 
-    Falls back to the shipped set only where none has been recorded -- a fresh
-    database before the first-run seed, or one whose list has been emptied. The
-    record is asked the questions that stood when it was registered; editing the
-    list afterwards never rewrites an answer already given, which is the whole
-    reason each record keeps its own copy.
+    Composed rather than read from one list. The five shared questions are asked of any
+    application of a model — an ML Application answers the same five — and only what is
+    particular to a generative or agentic system lives on the AI list beneath them.
     """
-    from src.governance.reference import get_reference_lists
-    try:
-        recorded = get_reference_lists(config=config).get(AI_SYSTEM_QUESTION_LIST) or []
-    except Exception:
-        recorded = []
-    asked = [{"short_label": q.get("short_label") or "", "question": q.get("question") or ""}
-             for q in recorded if (q.get("question") or "").strip()]
-    return asked or [dict(q) for q in AI_SYSTEM_QUESTIONS]
+    return compose_questions(AI_SYSTEM_QUESTION_LIST, AI_SYSTEM_QUESTIONS, config)
 
 
 def _seed_ai_review_questions(ai_system_id, after_version, actor, config) -> None:
