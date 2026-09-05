@@ -33,11 +33,13 @@ from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_EDITABLE_FIELDS,
                                ML_APPLICATION_FIELD_CHOICES,
                                ML_APPLICATION_FIELD_SPECS,
-                               ML_APPLICATION_REGISTER_FIELDS)
+                               ML_APPLICATION_REGISTER_FIELDS,
+                               SIGNOFF_COLLECTIONS)
 from src.governance import collections as coll
 from src.governance.errors import DomainError
-from src.governance.ml_application._state import (EVENT_FIELD_EDITED, EVENT_REGISTERED,
-                                                  EVENT_RETIRED, MLApplicationState)
+from src.governance.ml_application._state import (EVENT_FIELD_EDITED, EVENT_REACTIVATED,
+                                                  EVENT_REGISTERED, EVENT_RETIRED,
+                                                  MLApplicationState)
 from src.governance.risk_policy import get_risk_policy
 
 # Risk fields whose allowed values come from the record's DIVISION policy.
@@ -115,10 +117,35 @@ def decide_retire(state: MLApplicationState) -> tuple[str, dict[str, Any]]:
     return EVENT_RETIRED, {}
 
 
+def decide_reactivate(state: MLApplicationState) -> tuple[str, dict[str, Any]]:
+    """Bring a hibernated ML Application back into the estate."""
+    if not state.exists:
+        raise DomainError("ML Application does not exist")
+    if not state.retired:
+        raise DomainError("ML Application is not retired")
+    return EVENT_REACTIVATED, {}
+
+
+def _require_signoff_writable(state: MLApplicationState, collection: str) -> None:
+    """A hibernated record is read-only, except to the committee's own machinery.
+
+    Reactivating it has to be requested *on it*, and the decision that hibernated it
+    still has to be recordable against it — so the sign-off queue and history stay
+    writable while everything else is frozen. A model carries the same exemption for
+    the same reason; without it the committee cannot complete the very request it
+    just approved.
+    """
+    if collection in SIGNOFF_COLLECTIONS:
+        if not state.exists:
+            raise DomainError("ML Application does not exist")
+        return
+    _require_editable(state)
+
+
 def decide_add_item(
     state: MLApplicationState, *, collection: str, fields: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
-    _require_editable(state)
+    _require_signoff_writable(state, collection)
     return coll.decide_add(state.collections, ML_APPLICATION_COLLECTION_SPECS,
                            collection=collection, fields=fields)
 
@@ -126,7 +153,7 @@ def decide_add_item(
 def decide_update_item(
     state: MLApplicationState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
-    _require_editable(state)
+    _require_signoff_writable(state, collection)
     return coll.decide_update(state.collections, ML_APPLICATION_COLLECTION_SPECS,
                               collection=collection, item_id=item_id, fields=fields)
 

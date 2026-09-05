@@ -332,15 +332,14 @@ const AISystemDetail = RecordDetail.attach({
       return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
+    // Retiring an AI System is the MRC's decision, exactly as it is for a model, so
+    // the tab is DangerZone's three states rather than a button of its own.
     if (this._tab === "danger") {
-      box.innerHTML = '<div class="section-header">Retire</div>' +
-        this._lead("A retired AI System leaves the estate and every figure drawn from " +
-                   "it. The record survives in the log and can be brought back.") +
-        (this._record.retired
-          ? '<div class="empty">Already retired.</div>'
-          : '<button class="btn danger" id="ais-retire">Retire this AI System&hellip;</button>');
-      const btn = document.getElementById("ais-retire");
-      if (btn) btn.onclick = () => this.retire("AI System");
+      box.innerHTML = DangerZone.content("AI System", this._record);
+      DangerZone.bind({
+        api: "/api/ai-systems", id: this.recordId(),
+        onDone: () => { this.show(this.recordId(), "danger"); AISystems.loadList(); },
+      });
       return;
     }
     // Everything else is a collection, rendered and bound by the shared machinery.

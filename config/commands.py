@@ -40,9 +40,14 @@ CONFIRM_REQUIRED_COMMANDS = frozenset({
     "register_product",
     "register_client",
     "reactivate_model",
+    "reactivate_product",
+    "reactivate_ai_system",
+    "reactivate_ml_application",
     "retire_model",
     "retire_product",
     "retire_client",
+    "retire_ai_system",
+    "retire_ml_application",
 })
 
 # Reference lists whose edits require confirmation, keyed by the command. Most

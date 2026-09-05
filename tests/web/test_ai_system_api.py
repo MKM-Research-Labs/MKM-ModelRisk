@@ -20,6 +20,7 @@
 """HTTP API for the AI System aggregate."""
 from __future__ import annotations
 
+from src.governance.ai_system import rebuild_ai_system_view, retire_ai_system
 from tests.web.conftest import HEADERS
 
 _MINIMUM = {"name": "Client mail summariser", "division": "Risk",
@@ -87,9 +88,12 @@ def test_tools_round_trip_through_the_collection(client):
 
 
 def test_retiring_takes_it_out_of_the_list(client):
+    """Retirement is ratified by the committee (test_mrc_retire_aiml_api walks that
+    journey); what this asserts is what it MEANS — out of the estate, and back only
+    for a read that asks."""
     _register(client)
-    assert client.post("/api/ai-systems/AIS-0001/retire",
-                       json={"actor": "admin"}, headers=HEADERS).status_code == 200
+    retire_ai_system(ai_system_id="AIS-0001", actor="admin")
+    rebuild_ai_system_view()
     assert client.get("/api/ai-systems").get_json() == []
     assert len(client.get("/api/ai-systems?include_retired=1").get_json()) == 1
 
@@ -102,3 +106,38 @@ def test_it_is_rated_by_the_same_engine_a_model_is(client):
 
 def test_an_unknown_record_is_a_404(client):
     assert client.get("/api/ai-systems/AIS-9999").status_code == 404
+
+
+def test_a_tool_can_be_amended_and_withdrawn(client):
+    """What a tool is allowed to do changes as the system is hardened, so the row
+    has to be editable rather than only add-and-delete."""
+    _register(client)
+    added = client.post("/api/ai-systems/AIS-0001/collections/agent_tools",
+                        json={"fields": {"name": "payments.transfer",
+                                         "authority": "Initiates a payment",
+                                         "approval": "Always"},
+                              "actor": "admin"}, headers=HEADERS)
+    item_id = added.get_json()["data"]["agent_tools"][0]["item_id"]
+
+    amended = client.post(
+        f"/api/ai-systems/AIS-0001/collections/agent_tools/{item_id}",
+        json={"fields": {"approval": "Above a threshold"}, "actor": "admin"},
+        headers=HEADERS)
+    assert amended.status_code == 200
+    assert amended.get_json()["data"]["agent_tools"][0]["approval"] \
+        == "Above a threshold"
+
+    withdrawn = client.post(
+        f"/api/ai-systems/AIS-0001/collections/agent_tools/{item_id}/delete",
+        json={"actor": "admin"}, headers=HEADERS)
+    assert withdrawn.get_json()["data"]["agent_tools"] == []
+
+
+def test_the_responsible_committee_is_resolved_from_the_org_unit(client):
+    _register(client)
+    assert "mrc" in client.get("/api/ai-systems/AIS-0001/mrc").get_json()
+
+
+def test_neither_a_rating_nor_a_committee_for_a_record_nobody_registered(client):
+    for path in ("/risk-rating", "/mrc"):
+        assert client.get("/api/ai-systems/AIS-9999" + path).status_code == 404

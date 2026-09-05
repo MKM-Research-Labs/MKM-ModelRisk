@@ -29,6 +29,10 @@ EVENT_REGISTERED = "ProductRegistered"
 EVENT_REBOUND = "ProductComponentRebound"
 EVENT_FIELD_EDITED = "ProductFieldEdited"
 EVENT_RETIRED = "ProductRetired"
+# Retirement is hibernation, not deletion: the committee that ratified the retire
+# can ratify bringing the record back, so the flag flips both ways and both
+# decisions stay in the log.
+EVENT_REACTIVATED = "ProductReactivated"
 
 
 @dataclass(frozen=True)
@@ -39,6 +43,12 @@ class ProductState:
     retired: bool = False
     fields: dict[str, Any] = field(default_factory=dict)
     collections: dict[str, tuple] = field(default_factory=dict)
+    # What ``status`` said before retirement overwrote it with "Retired". A Product
+    # is the one aggregate whose retire moves its status field -- the others leave
+    # the institution's vocabulary alone -- so bringing one back has to put the word
+    # it displaced back. ``None`` for a Product retired before the retire event
+    # started recording this; see ``decide_reactivate``.
+    status_before_retire: str | None = None
 
 
 def initial_state() -> ProductState:
@@ -60,7 +70,16 @@ def apply(state: ProductState, event_type: str, payload: dict[str, Any]) -> Prod
     if event_type == EVENT_RETIRED:
         updated = dict(state.fields)
         updated["status"] = "Retired"
-        return replace(state, retired=True, fields=updated)
+        return replace(state, retired=True, fields=updated,
+                       status_before_retire=payload.get("from_status"))
+    if event_type == EVENT_REACTIVATED:
+        updated = dict(state.fields)
+        # Only where the retire recorded what it displaced. Otherwise the status is
+        # left saying "Retired" on a live Product, which is wrong but visible and
+        # editable -- as against quietly inventing a status the committee never saw.
+        if payload.get("status"):
+            updated["status"] = payload["status"]
+        return replace(state, retired=False, fields=updated, status_before_retire=None)
     folded = coll.fold(state.collections, event_type, payload)
     if folded is not None:
         return replace(state, collections=folded)

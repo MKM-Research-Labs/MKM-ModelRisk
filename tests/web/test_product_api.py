@@ -101,7 +101,7 @@ def test_get_unknown_is_404(client):
     assert client.get("/api/products/Product-NONE").status_code == 404
 
 
-def test_edit_field_rebind_and_retire(client):
+def test_edit_field_and_rebind(client):
     _live_model(client)
     _register(client)
     _component(client)
@@ -112,8 +112,6 @@ def test_edit_field_rebind_and_retire(client):
                           json={"component": "calculating_agent", "value": "Calypso", "confirmed": True},
                           headers=HEADERS)
     assert rebound.get_json()["data"]["identifier"] == "MKM-AN-001.Calypso"
-    retired = client.post("/api/products/Product-0001/retire", json={"confirmed": True}, headers=HEADERS)
-    assert retired.get_json()["retired"] is True
 
 
 def test_collections(client):
@@ -252,3 +250,18 @@ def test_raci_role_rejects_an_invalid_raci_code(client):
         headers=HEADERS,
     )
     assert resp.status_code == 400
+
+
+def test_the_model_map_names_the_components_and_annotates_the_arrows(client):
+    """The map is what a reader opens to ask which models the product is actually
+    made of, so the arrows carry what crosses them rather than being bare edges."""
+    _live_model(client)
+    _register(client)
+    _component(client)
+    body = client.get("/api/products/Product-0001/model-map").get_json()
+    assert [n["model_id"] for n in body["nodes"]] == ["MKM-AN-001"]
+    assert all("handoff" in link for link in body["links"])
+
+
+def test_a_model_map_for_a_product_nobody_registered_is_404(client):
+    assert client.get("/api/products/NONE/model-map").status_code == 404

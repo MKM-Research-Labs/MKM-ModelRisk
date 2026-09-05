@@ -50,6 +50,7 @@ from src.governance.ml_application import (
     add_collection_item as _ml_add,
     get_ml_application,
     list_ml_applications,
+    reactivate_ml_application,
     rebuild_ml_application_view,
     retire_ml_application,
     update_collection_item as _ml_update,
@@ -60,6 +61,7 @@ from src.governance.ai_system import (
     add_collection_item as _ai_add,
     get_ai_system,
     list_ai_systems,
+    reactivate_ai_system,
     rebuild_ai_system_view,
     retire_ai_system,
     update_ai_system_field,
@@ -77,6 +79,7 @@ from src.governance.product import (
     add_collection_item as _product_add,
     get_product,
     list_products,
+    reactivate_product,
     rebuild_product_view,
     retire_product,
     update_collection_item as _product_update,
@@ -90,8 +93,14 @@ class Subject:
     def __init__(self, *, kind: str, agenda_id_field: str, id_key: str,
                  get: Callable, list_all: Callable, add_cmd, update_cmd, field_cmd,
                  rebuild: Callable, id_kwarg: str, retire_cmd=None, reactivate_cmd=None,
-                 aggregate_type: str | None = None, doc_scope: Callable | None = None):
+                 aggregate_type: str | None = None, doc_scope: Callable | None = None,
+                 noun: str | None = None):
         self.kind = kind
+        # How the record type reads in a sentence written for a person — a minute the
+        # committee signs, an error the owner is shown. ``kind`` is the machine key and
+        # passes for the first three by luck; "the ai_system owner" is what happens
+        # when a fourth arrives and nobody looks at the minute it writes.
+        self.noun = noun or kind
         # Where a generated document is filed against this record. Carried only by the
         # record types a review can be signed off on; a Product or a handoff has no
         # review to file a report from, and None says so rather than pointing at a
@@ -198,13 +207,14 @@ MODEL_SUBJECT = Subject(
     retire_cmd=retire_model, reactivate_cmd=reactivate_model,
     aggregate_type=MODEL_AGGREGATE, doc_scope=model_scope,
 )
-# A product can be retired but not yet brought back — ``supports`` keeps the
-# committee from being offered a decision the subject cannot carry out.
+# Retire and reactivate travel the same route, as they do for every other subject:
+# retiring is hibernation, so the committee that ratified it is the one that can
+# undo it. A Product was the last of the five to be brought onto that route.
 PRODUCT_SUBJECT = Subject(
     kind="product", agenda_id_field="subject_product_id", id_key="product_id",
     get=get_product, list_all=list_products, add_cmd=_product_add, update_cmd=_product_update,
     field_cmd=update_product_field, rebuild=rebuild_product_view, id_kwarg="product_id",
-    retire_cmd=retire_product,
+    retire_cmd=retire_product, reactivate_cmd=reactivate_product, noun="Product",
 )
 # A handoff goes to the committee to have its compatibility ratified. It is never
 # retired/reactivated (those belong to the models it connects), so it carries
@@ -219,14 +229,15 @@ HANDOFF_SUBJECT = Subject(
 # directly, which meant an ML rating bypassed the committee that signs off every other
 # rating in the estate.
 #
-# Retire is carried; reactivate is not yet, so ``supports`` keeps the committee from
-# being offered a decision the subject cannot carry out.
+# Retire and reactivate travel the same route: retiring is hibernation, so the
+# committee that ratified it is the one that can undo it.
 ML_APPLICATION_SUBJECT = Subject(
     kind="ml_application", agenda_id_field="subject_ml_application_id",
     id_key="ml_application_id", get=get_ml_application, list_all=list_ml_applications,
     add_cmd=_ml_add, update_cmd=_ml_update, field_cmd=update_ml_application_field,
     rebuild=rebuild_ml_application_view, id_kwarg="ml_application_id",
-    retire_cmd=retire_ml_application,
+    retire_cmd=retire_ml_application, reactivate_cmd=reactivate_ml_application,
+    noun="ML Application",
     aggregate_type=ML_APPLICATION_AGGREGATE, doc_scope=ml_application_scope,
 )
 # An AI System takes the same trip as a model and an ML Application: the owner
@@ -239,7 +250,8 @@ AI_SYSTEM_SUBJECT = Subject(
     id_key="ai_system_id", get=get_ai_system, list_all=list_ai_systems,
     add_cmd=_ai_add, update_cmd=_ai_update, field_cmd=update_ai_system_field,
     rebuild=rebuild_ai_system_view, id_kwarg="ai_system_id",
-    retire_cmd=retire_ai_system,
+    retire_cmd=retire_ai_system, reactivate_cmd=reactivate_ai_system,
+    noun="AI System",
     aggregate_type=AI_SYSTEM_AGGREGATE, doc_scope=ai_system_scope,
 )
 SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT, HANDOFF_SUBJECT, ML_APPLICATION_SUBJECT,

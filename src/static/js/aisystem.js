@@ -155,8 +155,13 @@ const AISystems = {
     const nav = await MrcNav.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
-    const all = await App.get("/api/ai-systems");
-    const wanted = this.list().wantsHibernated() ? all : all.filter((r) => !r.retired);
+    // Hibernated records are fetched only when the Lifecycle filter asks for them —
+    // and asking is the only route back to one, which is where its reactivation is
+    // raised with the MRC.
+    const wantsHibernated = this.list().wantsHibernated();
+    const all = await App.get(
+      "/api/ai-systems" + (wantsHibernated ? "?include_retired=1" : ""));
+    const wanted = wantsHibernated ? all : all.filter((r) => !r.retired);
     const records = wanted.filter((r) => MrcNav.inScope(this._committees, this._ref, r.data));
     this.list().mount(records, (id) => AISystemDetail.show(id));
   },

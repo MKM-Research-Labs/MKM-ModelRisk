@@ -125,17 +125,23 @@ def test_request_retire_blocked_without_a_covering_mrc(client):
 
 
 def test_a_decision_the_subject_cannot_carry_out_is_rejected(client):
-    """A product has no reactivate command, so the committee must not be able to
-    ratify one against it — the guard is server-side, not just a hidden button."""
+    """A handoff is never retired or reactivated — those belong to the models it
+    connects — so the committee must not be able to ratify one against it. The guard
+    is server-side, not just a hidden button.
+
+    This used to be demonstrated with a Product, which had no reactivate command.
+    It has one now: every subject that can be hibernated can be brought back, and a
+    handoff is the remaining subject that can be neither.
+    """
     _seed_mrc(client)
     _schedule_meeting(client)
     # Found by its subject, not by position: the agenda comes back in the order the
     # meeting runs, which closes on AOB rather than on whatever was added last.
     agenda = _add(client, "agenda", {
-        "title": "Reactivate: P1", "subject_product_id": "P1",
+        "title": "Reactivate: H1", "subject_handoff_id": "H1",
         "signoff_kind": "reactivate", "status": "Pending",
     }).get_json()["data"]["agenda"]
-    item = next(a for a in agenda if a.get("subject_product_id") == "P1")
+    item = next(a for a in agenda if a.get("subject_handoff_id") == "H1")
     response = decide(client, item["item_id"])
     assert response.status_code == 400
     assert "cannot be the subject of a reactivate decision" in response.get_json()["error"]

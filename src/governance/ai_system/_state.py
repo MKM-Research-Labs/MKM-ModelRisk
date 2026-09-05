@@ -53,6 +53,10 @@ EVENT_THRESHOLD_SET = "TriggerThresholdSet"
 # only thing that makes it worth anything is that it cannot be adjusted after
 # somebody asks what was in the release.
 EVENT_MANIFEST_SEALED = "ReleaseManifestSealed"
+# Retirement is hibernation, not deletion: the committee that ratified the retire
+# can ratify bringing the record back, so the flag flips both ways and both
+# decisions stay in the log.
+EVENT_REACTIVATED = "AISystemReactivated"
 
 
 @dataclass(frozen=True)
@@ -112,6 +116,8 @@ def apply(state: AISystemState, event_type: str,
         # ``retired`` is the fact; the lifecycle stage is the institution's own
         # vocabulary and is not overwritten with a word we chose.
         return replace(state, retired=True)
+    if event_type == EVENT_REACTIVATED:
+        return replace(state, retired=False)
     folded = coll.fold(state.collections, event_type, payload)
     if folded is not None:
         return replace(state, collections=folded)
@@ -121,4 +127,4 @@ def apply(state: AISystemState, event_type: str,
 __all__ = ["AISystemState", "initial_state", "record_data", "apply",
            "EVENT_REGISTERED", "EVENT_FIELD_EDITED", "EVENT_RETIRED",
            "EVENT_SNAPSHOT_TAKEN", "EVENT_ENVELOPE_RECORDED",
-           "EVENT_THRESHOLD_SET", "EVENT_MANIFEST_SEALED"]
+           "EVENT_THRESHOLD_SET", "EVENT_MANIFEST_SEALED", "EVENT_REACTIVATED"]

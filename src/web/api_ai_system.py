@@ -36,8 +36,7 @@ from src.command import dispatch
 from src.governance.ai_system import (add_collection_item, get_ai_system,
                                       list_ai_systems, rebuild_ai_system_view,
                                       register_ai_system, remove_collection_item,
-                                      retire_ai_system, update_ai_system_field,
-                                      update_collection_item)
+                                      update_ai_system_field, update_collection_item)
 from src.governance.model_inventory.risk import compute_risk_rating
 from config.governance._ai_regimes import regimes_for
 from src.governance.ai_system._rules import diff_snapshots
@@ -109,13 +108,11 @@ def update_field(ai_system_id: str):
     return jsonify(get_ai_system(ai_system_id))
 
 
-@ai_system_bp.post("/<ai_system_id>/retire")
-def retire(ai_system_id: str):
-    body = json_body()
-    dispatch("retire_ai_system", retire_ai_system,
-             context=context_from_request(body), ai_system_id=ai_system_id)
-    rebuild_ai_system_view()
-    return jsonify(get_ai_system(ai_system_id))
+# There is no retire endpoint here, and that absence is the design. Retiring is
+# hibernation and the committee's decision: the owner raises it at
+# POST /<ai_system_id>/request-retire (api_ai_system_signoff) and the MRC ratifies
+# it, which is where retire_ai_system is finally dispatched. A route here would be
+# a second way to the same event, and the un-gated one.
 
 
 @ai_system_bp.post("/<ai_system_id>/collections/<collection>")

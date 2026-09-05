@@ -26,6 +26,7 @@ from config.governance import PRODUCT_COMPONENTS
 
 from src.governance.errors import DomainError
 from src.governance.model_inventory import rebuild_inventory_view, register_model, retire_model
+from src.governance.product.commands import _inherit_org_from, _is_duplicate
 from src.governance.product import (
     add_collection_item,
     derived_identifier,
@@ -244,24 +245,6 @@ def test_edit_field_rejects_binding_and_bad_status():
         update_product_field(product_id="Product-0001", field="status", value="Bogus", actor="admin")
 
 
-def test_retire_makes_read_only():
-    _live_model()
-    _register()
-    retire_product(product_id="Product-0001", actor="admin")
-    rebuild_product_view()
-    product = get_product("Product-0001")
-    assert product["retired"] and product["data"]["status"] == "Retired"
-    with pytest.raises(DomainError):
-        update_product_field(product_id="Product-0001", field="notes", value="x", actor="admin")
-    with pytest.raises(DomainError):
-        retire_product(product_id="Product-0001", actor="admin")
-
-
-def test_retire_unknown_product_rejected():
-    with pytest.raises(DomainError):
-        retire_product(product_id="Product-NONE", actor="admin")
-
-
 def test_limitations_and_assumptions():
     _live_model()
     _register()
@@ -317,3 +300,39 @@ def test_projection_ignores_unrelated_event():
                  event_type="Noise", payload={}, actor="system")
     rebuild_product_view()
     assert get_product("Product-0001")["data"]["product"] == "Government Bond"
+
+
+def test_two_unbuilt_products_of_one_name_are_not_duplicates_of_each_other():
+    """A Product registered but not yet built out is not a duplicate of every
+    other unbuilt Product of the same name — the components are what make two
+    registrations the same thing, so an empty set never collides."""
+    _register(product_id="Product-0001")
+    _register(product_id="Product-0002")
+    assert get_product("Product-0002") is not None
+    assert _is_duplicate("Government Bond", frozenset(),
+                         exclude_product_id="Product-0002", config=None) is False
+
+
+def test_the_org_default_is_skipped_when_the_component_names_no_model():
+    """``_inherit_org_from`` is called with whatever the row carried. A row with no
+    model behind it has no org to lend, and the component is still the thing being
+    recorded — so this returns rather than raising."""
+    _register()
+    _inherit_org_from("Product-0001", "", "admin", None)
+    rebuild_product_view()
+    assert not get_product("Product-0001")["data"].get("division")
+
+
+def test_the_org_default_never_fails_the_thing_it_was_defaulting_for():
+    """The component is what is being recorded; a default that could not be applied
+    is not a reason to lose it. A refused edit is absorbed, not propagated."""
+    register_model(model_id="MKM-AN-001", name="Analytics engine", actor="admin",
+                   fields={"division": "ANALYTICS"})
+    rebuild_inventory_view()
+    _register()
+    retire_product(product_id="Product-0001", actor="admin")
+    rebuild_product_view()
+
+    _inherit_org_from("Product-0001", "MKM-AN-001", "admin", None)   # must not raise
+    rebuild_product_view()
+    assert not get_product("Product-0001")["data"].get("division")

@@ -39,13 +39,11 @@ from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
                                           AI_SYSTEM_FIELD_CHOICES,
                                           AI_SYSTEM_FIELD_SPECS,
                                           AI_SYSTEM_REGISTER_FIELDS)
+from config.governance import SIGNOFF_COLLECTIONS
 from src.governance import collections as coll
-from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REGISTERED,
-                                             EVENT_RETIRED,
-                                             EVENT_ENVELOPE_RECORDED,
-                                             EVENT_MANIFEST_SEALED,
-                                             EVENT_THRESHOLD_SET,
-                                             EVENT_SNAPSHOT_TAKEN, AISystemState)
+from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REACTIVATED,
+                                             EVENT_REGISTERED, EVENT_RETIRED,
+                                             AISystemState)
 from src.governance.errors import DomainError
 from src.governance.risk_policy import get_risk_policy
 
@@ -124,10 +122,35 @@ def decide_retire(state: AISystemState) -> tuple[str, dict[str, Any]]:
     return EVENT_RETIRED, {}
 
 
+def decide_reactivate(state: AISystemState) -> tuple[str, dict[str, Any]]:
+    """Bring a hibernated AI System back into the estate."""
+    if not state.exists:
+        raise DomainError("AI System does not exist")
+    if not state.retired:
+        raise DomainError("AI System is not retired")
+    return EVENT_REACTIVATED, {}
+
+
+def _require_signoff_writable(state: AISystemState, collection: str) -> None:
+    """A hibernated record is read-only, except to the committee's own machinery.
+
+    Reactivating it has to be requested *on it*, and the decision that hibernated it
+    still has to be recordable against it — so the sign-off queue and history stay
+    writable while everything else is frozen. A model carries the same exemption for
+    the same reason; without it the committee cannot complete the very request it
+    just approved.
+    """
+    if collection in SIGNOFF_COLLECTIONS:
+        if not state.exists:
+            raise DomainError("AI System does not exist")
+        return
+    _require_editable(state)
+
+
 def decide_add_item(
     state: AISystemState, *, collection: str, fields: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
-    _require_editable(state)
+    _require_signoff_writable(state, collection)
     return coll.decide_add(state.collections, AI_SYSTEM_COLLECTION_SPECS,
                            collection=collection, fields=fields)
 
@@ -135,7 +158,7 @@ def decide_add_item(
 def decide_update_item(
     state: AISystemState, *, collection: str, item_id: str, fields: dict[str, Any]
 ) -> tuple[str, dict[str, Any]]:
-    _require_editable(state)
+    _require_signoff_writable(state, collection)
     return coll.decide_update(state.collections, AI_SYSTEM_COLLECTION_SPECS,
                               collection=collection, item_id=item_id, fields=fields)
 

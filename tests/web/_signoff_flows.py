@@ -101,14 +101,25 @@ def _signoff_item(client, meeting_id="MTG1"):
     return _signoff_agenda_items(agenda)[0]
 
 
-def request_retire(client, model_id="M1"):
-    return client.post(f"/api/models/{model_id}/request-retire",
+# Every record type that can be hibernated raises it the same way, so the helpers
+# take the API root rather than there being one pair per aggregate. The model root is
+# the default because the model journey is the one most of these tests walk.
+def request_retire(client, model_id="M1", api="/api/models"):
+    return client.post(f"{api}/{model_id}/request-retire",
                        json={"confirmed": True}, headers=HEADERS)
 
 
-def request_reactivate(client, model_id="M1"):
-    return client.post(f"/api/models/{model_id}/request-reactivate",
+def request_reactivate(client, model_id="M1", api="/api/models"):
+    return client.post(f"{api}/{model_id}/request-reactivate",
                        json={"confirmed": True}, headers=HEADERS)
+
+
+def signoff_item_of_kind(client, kind, meeting_id="MTG1"):
+    """The agenda item for a particular decision — a reactivate raised after a
+    retire is not the only sign-off on the agenda."""
+    agenda = client.get(f"/api/meetings/{meeting_id}").get_json()["data"]["agenda"]
+    return next(a for a in _signoff_agenda_items(agenda)
+                if (a.get("signoff_kind") or "rag") == kind)
 
 
 def decide(client, agenda_id, outcome="approve", meeting_id="MTG1"):

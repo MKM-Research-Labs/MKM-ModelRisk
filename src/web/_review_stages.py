@@ -121,7 +121,10 @@ def register_review_stage_routes(blueprint, subject) -> None:
     set of handlers serve ``/api/models/...``, ``/api/ml-applications/...`` and
     ``/api/ai-systems/...`` without three copies differing only in a noun.
     """
-    noun = subject.kind.replace("_", " ")
+    # The Subject carries how its record type reads in a sentence written for a
+    # person. Derived from ``kind`` here until main brought a better answer:
+    # "the ai_system was not found" is what string-munging a machine key gets you.
+    noun = subject.noun
 
     def _load(subject_id):
         record = subject.get(subject_id)

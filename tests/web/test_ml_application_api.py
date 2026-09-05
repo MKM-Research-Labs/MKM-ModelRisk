@@ -25,9 +25,13 @@ that the estimator cannot be something nobody has registered.
 """
 from __future__ import annotations
 
+import pytest
+
 from config.governance._ml import ML_APPLICATION_QUESTIONS
 from config.governance._questions_common import COMMON_QUESTIONS
 from config.governance import ESTIMATOR_LIST, ML_REVIEW_QUESTIONS_COLLECTION
+from src.governance.ml_application import (rebuild_ml_application_view,
+                                          retire_ml_application)
 from src.governance.reference import add_option, ensure_default_estimators
 from tests.web.conftest import HEADERS
 
@@ -126,13 +130,17 @@ def test_collections_can_be_added_and_removed(client):
     assert res.get_json()["data"]["limitations"] == []
 
 
-def test_retiring_through_the_api(client):
+def test_retiring_flips_the_flag_and_leaves_the_lifecycle_stage_alone(client):
+    """Retirement is ratified by the committee (test_mrc_retire_aiml_api walks that
+    journey). ``retired`` is the fact; the lifecycle stage is the institution's own
+    vocabulary and is not overwritten with a word we chose."""
     ensure_default_estimators()
     _register(client)
-    res = client.post("/api/ml-applications/MLA-0001/retire",
-                      json={"confirmed": True}, headers=HEADERS)
-    assert res.get_json()["retired"] is True
-    assert not res.get_json()["data"].get("lifecycle_stage")
+    retire_ml_application(ml_application_id="MLA-0001", actor="admin")
+    rebuild_ml_application_view()
+    record = client.get("/api/ml-applications/MLA-0001").get_json()
+    assert record["retired"] is True
+    assert not record["data"].get("lifecycle_stage")
 
 
 def test_the_list_endpoint_returns_registered_records(client):
@@ -141,3 +149,44 @@ def test_the_list_endpoint_returns_registered_records(client):
     _register(client, ml_application_id="MLA-0002", name="Fraud triage")
     listed = client.get("/api/ml-applications").get_json()
     assert [r["ml_application_id"] for r in listed] == ["MLA-0001", "MLA-0002"]
+
+
+def test_a_collection_item_can_be_edited_in_place(client):
+    """The screen re-renders from the write's own response, so an edit has to come
+    back carrying the same review scope the detail GET gave it."""
+    ensure_default_estimators()
+    _register(client)
+    added = client.post("/api/ml-applications/MLA-0001/collections/limitations",
+                        json={"fields": {"description": "Not calibrated below 500 GBP."},
+                              "confirmed": True}, headers=HEADERS)
+    item_id = added.get_json()["data"]["limitations"][0]["item_id"]
+
+    res = client.post(
+        f"/api/ml-applications/MLA-0001/collections/limitations/{item_id}",
+        json={"fields": {"description": "Not calibrated below 1,000 GBP."},
+              "confirmed": True}, headers=HEADERS)
+    assert res.status_code == 200
+    body = res.get_json()
+    assert body["data"]["limitations"][0]["description"].endswith("1,000 GBP.")
+    assert "review_scope" in body
+
+
+def test_it_is_rated_by_the_engine_a_model_is_rated_by(client):
+    """Decision 8: the same three dimensions and the same bands, so the rating comes
+    from the same code rather than a second implementation that would drift."""
+    ensure_default_estimators()
+    _register(client, tier=1, materiality="High", complexity="High")
+    rating = client.get("/api/ml-applications/MLA-0001/risk-rating").get_json()
+    assert "heatmap" in rating and "signed_off" in rating
+
+
+def test_the_responsible_committee_is_resolved_from_the_org_unit(client):
+    ensure_default_estimators()
+    _register(client)
+    resolved = client.get("/api/ml-applications/MLA-0001/mrc").get_json()
+    assert "mrc" in resolved
+
+
+@pytest.mark.parametrize("path", ["/risk-rating", "/mrc"])
+def test_a_record_nobody_registered_has_neither_a_rating_nor_a_committee(client, path):
+    assert client.get("/api/ml-applications/MLA-9999" + path).status_code == 404

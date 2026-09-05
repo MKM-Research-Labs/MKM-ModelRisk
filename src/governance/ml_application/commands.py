@@ -33,8 +33,9 @@ from src.governance import collections as coll
 from src.governance.ml_application._state import record_data
 from src.governance.ml_application.review_scope import (COMPLETING_REVIEW_STATUS, REVIEW_STATUS_FIELD, guard_review_complete)
 from src.governance.ml_application._rules import (decide_add_item, decide_edit_field,
-                                                  decide_register, decide_remove_item,
-                                                  decide_retire, decide_update_item)
+                                                  decide_reactivate, decide_register,
+                                                  decide_remove_item, decide_retire,
+                                                  decide_update_item)
 from src.governance.ml_application._state import MLApplicationState, apply, initial_state
 from src.governance.reference import reject_unknown_values
 from src.governance.seeding import compose_questions, seed_items
@@ -128,8 +129,20 @@ def update_ml_application_field(*, ml_application_id: str, field: str, value: An
 
 def retire_ml_application(*, ml_application_id: str, actor: str, reason: str = "",
                           config=None) -> Event:
+    """Hibernate an ML Application — it drops out of the estate and can no longer be
+    edited. Ratified by the MRC, so this runs off an approved request rather than
+    straight from the owner."""
     state, version = _load(ml_application_id, config)
     return _record(ml_application_id, decide_retire(state), version, actor, reason, config)
+
+
+def reactivate_ml_application(*, ml_application_id: str, actor: str, reason: str = "",
+                              config=None) -> Event:
+    """Bring a hibernated ML Application back. Ratified by the MRC on the same
+    footing as the retire that put it there."""
+    state, version = _load(ml_application_id, config)
+    return _record(ml_application_id, decide_reactivate(state), version, actor, reason,
+                   config)
 
 
 def add_collection_item(*, ml_application_id: str, collection: str, fields: dict[str, Any],

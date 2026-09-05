@@ -61,7 +61,10 @@ const RecordDetail = {
       return this._cfg.api + "/" + encodeURIComponent(id) + (suffix || "");
     },
 
-    async show(id) {
+    // ``tab`` reopens on a named tab rather than the Overview. A write raised from
+    // a tab redraws from the server, and landing back on the Overview loses the place
+    // of whoever pressed the button.
+    async show(id, tab) {
       this._specs = this._specs || await this._cfg.specs();
       // One round trip for the four things every detail screen opens with. Sequential
       // fetches here are four times the latency for no benefit -- nothing among them
@@ -76,7 +79,7 @@ const RecordDetail = {
       this._mrc = mrc;
       this._audit = audit.filter((e) => e.aggregate_id === id);
       this._risk = risk;
-      this._tab = "overview";
+      this._tab = tab || "overview";
       // style.display, not a "hidden" class. There is no generic `.hidden` rule in
       // the stylesheet -- only `.overlay.hidden` and `.toast.hidden` -- so adding the
       // class to a plain div does nothing at all, and the list stayed on screen
@@ -236,10 +239,8 @@ const RecordDetail = {
         this._record.retired, () => this.refresh(), this._record.data);
     },
 
-    retire(noun) {
-      App.amend("Retire this " + noun + ". It leaves the estate and its figures; the "
-        + "record survives in the log.", "POST",
-        this._url(this.recordId(), "/retire"), {}, () => { this.close(); });
-    },
+    // Retiring is not here, and that absence is the design: it is the committee's
+    // decision, so a screen asks for it through DangerZone rather than posting a
+    // retire of its own.
   },
 };

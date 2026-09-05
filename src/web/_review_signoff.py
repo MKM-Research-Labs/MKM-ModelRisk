@@ -85,7 +85,10 @@ def signoff_blockers(data: dict, approvals_by_stage: dict, stages: tuple) -> lis
 
 def register_review_signoff_routes(blueprint, subject) -> None:
     """Attach the blockers and sign-off endpoints for one record type."""
-    noun = subject.kind.replace("_", " ")
+    # The Subject carries how its record type reads in a sentence written for a
+    # person. Derived from ``kind`` here until main brought a better answer:
+    # "the ai_system was not found" is what string-munging a machine key gets you.
+    noun = subject.noun
 
     def _blockers(record):
         return signoff_blockers(record.get("data") or {}, approvals(record),

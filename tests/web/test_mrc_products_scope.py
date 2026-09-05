@@ -191,3 +191,31 @@ def test_download_product_analysis_file_gone_from_disk_is_404(client):
     item = next(i for i in meeting["data"]["products_in_scope"] if i["product_id"] == "P1")
     upload_path("meeting_analysis", item["analysis_filename"]).unlink()
     assert client.get("/api/meetings/MTG1/products/P1/analysis").status_code == 404
+
+
+def test_an_analysis_can_be_detached_from_a_product_in_scope(client):
+    """A paper attached to the wrong product has to come off again: the meeting is
+    still open, and what it tables is the committee's to correct."""
+    _model(client)
+    _product(client)
+    _schedule(client)
+    _set(client, ["P1"])
+    _upload(client)
+    removed = client.post("/api/meetings/MTG1/products/P1/analysis/remove",
+                          json={"confirmed": True}, headers=HEADERS)
+    assert removed.status_code == 200
+    assert client.get("/api/meetings/MTG1/products/P1/analysis").status_code == 404
+
+
+def test_removing_an_analysis_from_a_meeting_that_is_not_there_is_404(client):
+    assert client.post("/api/meetings/NOPE/products/P1/analysis/remove",
+                       json={"confirmed": True}, headers=HEADERS).status_code == 404
+
+
+def test_removing_an_analysis_from_a_product_not_in_scope_is_400(client):
+    _model(client)
+    _product(client)
+    _schedule(client)
+    refused = client.post("/api/meetings/MTG1/products/P1/analysis/remove",
+                          json={"confirmed": True}, headers=HEADERS)
+    assert refused.status_code == 400

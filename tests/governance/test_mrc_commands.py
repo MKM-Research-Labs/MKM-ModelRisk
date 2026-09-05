@@ -32,6 +32,7 @@ from src.governance.mrc import (
     update_collection_item,
     update_meeting_field,
 )
+from src.governance.mrc.commands import _standing_items
 
 
 def test_schedule_appends_first_event():
@@ -91,3 +92,15 @@ def test_meeting_is_sealed_once_closed():
     ):
         with pytest.raises(DomainError, match="closed"):
             call()
+
+
+def test_the_shipped_running_order_stands_in_when_the_register_cannot_be_read(
+        monkeypatch):
+    """A meeting with no agenda at all would be worse than one with the defaults,
+    so a register that cannot be read falls back rather than seeding nothing."""
+    def _unavailable(*args, **kwargs):
+        raise RuntimeError("reference view not migrated yet")
+
+    monkeypatch.setattr("src.governance.reference.get_reference_lists", _unavailable)
+    items = _standing_items(None)
+    assert items and all(item["title"] for item in items)

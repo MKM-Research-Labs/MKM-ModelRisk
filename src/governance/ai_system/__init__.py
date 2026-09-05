@@ -26,6 +26,7 @@ carries a model's field names exactly.
 from src.governance.ai_system.commands import (
     AGGREGATE_TYPE,
     add_collection_item,
+    reactivate_ai_system,
     register_ai_system,
     record_variability_envelope,
     seal_release_manifest,
@@ -59,13 +60,13 @@ from src.governance.ai_system.projection import (
 
 __all__ = [
     "AGGREGATE_TYPE", "add_collection_item", "get_ai_system", "list_ai_systems",
-    "rebuild_ai_system_view", "register_ai_system", "remove_collection_item",
     "all_failure_modes", "current_config_version", "failure_modes_for_risk",
-    "get_snapshot", "latest_envelope", "rebuild_failure_mode_register_view",
-    "rebuild_standing_risk_register_view", "standing_risks",
-    "list_snapshots", "rebuild_configuration_snapshot_view",
+    "get_snapshot", "latest_envelope", "reactivate_ai_system",
+    "rebuild_ai_system_view", "rebuild_configuration_snapshot_view",
+    "rebuild_failure_mode_register_view", "rebuild_standing_risk_register_view",
     "rebuild_variability_envelope_view", "record_variability_envelope",
-    "seal_release_manifest", "set_trigger_threshold",
-    "retire_ai_system", "take_configuration_snapshot",
+    "register_ai_system", "remove_collection_item", "retire_ai_system",
+    "list_snapshots", "seal_release_manifest", "set_trigger_threshold",
+    "standing_risks", "take_configuration_snapshot",
     "update_ai_system_field", "update_collection_item",
 ]

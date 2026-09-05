@@ -26,6 +26,7 @@ route -- so it evidences the same clauses without a second implementation of any
 of it.
 """
 from src.governance.ml_application.commands import (AGGREGATE_TYPE, add_collection_item,
+                                                    reactivate_ml_application,
                                                     register_ml_application,
                                                     remove_collection_item,
                                                     retire_ml_application,
@@ -36,6 +37,7 @@ from src.governance.ml_application.projection import (get_ml_application,
                                                       rebuild_ml_application_view)
 
 __all__ = ["AGGREGATE_TYPE", "add_collection_item", "get_ml_application",
-           "list_ml_applications", "rebuild_ml_application_view",
-           "register_ml_application", "remove_collection_item", "retire_ml_application",
+           "list_ml_applications", "reactivate_ml_application",
+           "rebuild_ml_application_view", "register_ml_application",
+           "remove_collection_item", "retire_ml_application",
            "update_collection_item", "update_ml_application_field"]

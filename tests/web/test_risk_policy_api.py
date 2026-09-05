@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import io
 
+from src.files import upload_path
 from tests.web.conftest import HEADERS
 
 
@@ -138,3 +139,34 @@ def test_upload_and_surface_the_policy_document(client, tmp_path, monkeypatch):
     assert client.get("/api/risk-policy/DocDiv").get_json()["document"] is not None
     dl = client.get("/api/risk-policy/DocDiv/document")
     assert dl.status_code == 200 and dl.data == b"%PDF-policy"
+
+
+def test_uploading_a_policy_document_with_no_file_is_400(client):
+    resp = client.post("/api/risk-policy/DocDiv/document", data={},
+                       content_type="multipart/form-data", headers=HEADERS)
+    assert resp.status_code == 400
+
+
+def test_an_extension_the_platform_will_not_store_is_400(client, tmp_path, monkeypatch):
+    monkeypatch.setattr("src.files.store.UPLOAD_DIR", tmp_path)
+    data = {"file": (io.BytesIO(b"x"), "policy.exe")}
+    resp = client.post("/api/risk-policy/DocDiv/document", data=data,
+                       content_type="multipart/form-data", headers=HEADERS)
+    assert resp.status_code == 400
+
+
+def test_a_division_that_has_filed_no_written_policy_is_404(client):
+    assert client.get("/api/risk-policy/NoDocDiv/document").status_code == 404
+
+
+def test_a_policy_document_whose_file_has_gone_missing_is_404(client, tmp_path,
+                                                              monkeypatch):
+    """The division still records that it filed one; the file underneath is gone.
+    That is a 404 about the file, not a stack trace about the store."""
+    monkeypatch.setattr("src.files.store.UPLOAD_DIR", tmp_path)
+    client.post("/api/risk-policy/DocDiv/document",
+                data={"file": (io.BytesIO(b"%PDF-policy"), "Risk Policy.pdf")},
+                content_type="multipart/form-data", headers=HEADERS)
+    filename = client.get("/api/risk-policy/DocDiv").get_json()["document"]["filename"]
+    upload_path("risk_policy", filename).unlink()
+    assert client.get("/api/risk-policy/DocDiv/document").status_code == 404

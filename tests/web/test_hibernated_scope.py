@@ -29,7 +29,9 @@ integrity check that has to see the whole declared graph.
 from __future__ import annotations
 
 from src.governance.completeness.scan import scan
-from src.governance.ml_application import list_ml_applications
+from src.governance.ml_application import (list_ml_applications,
+                                          rebuild_ml_application_view,
+                                          retire_ml_application)
 from src.governance.model_inventory import list_models
 from src.governance.reference import ensure_default_estimators
 from tests.web._signoff_flows import (
@@ -97,8 +99,8 @@ def test_its_own_page_still_works(client):
 
 # --- The same line, held for ML Applications --------------------------------
 #
-# An ML Application is retired directly rather than through the committee, but
-# what retirement MEANS is identical: out of the estate, out of every figure.
+# An ML Application is hibernated by its committee, as a model is, and what
+# retirement MEANS is identical: out of the estate, out of every figure.
 # The projection used to return hibernated records to every caller, so three
 # call sites each re-filtered them and the console list showed them anyway.
 
@@ -113,8 +115,11 @@ def _hibernate_ml(client):
                                  "estimator": "GradientBoostingClassifier",
                                  "use_case": "Ranks applicants by PD."}},
                 headers=HEADERS)
-    client.post("/api/ml-applications/MLA-0001/retire",
-                json={"confirmed": True}, headers=HEADERS)
+    # Straight to the command: the committee journey is walked in
+    # test_mrc_retire_aiml_api, and what this module is about is what a hibernated
+    # record is then left out of.
+    retire_ml_application(ml_application_id="MLA-0001", actor="admin")
+    rebuild_ml_application_view()
     assert client.get("/api/ml-applications/MLA-0001").get_json()["retired"] is True
 
 

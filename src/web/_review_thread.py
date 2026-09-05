@@ -103,7 +103,10 @@ def open_challenges(data: dict) -> list[dict]:
 
 def register_review_note_route(blueprint, subject) -> None:
     """Attach the thread endpoint for one record type."""
-    noun = subject.kind.replace("_", " ")
+    # The Subject carries how its record type reads in a sentence written for a
+    # person. Derived from ``kind`` here until main brought a better answer:
+    # "the ai_system was not found" is what string-munging a machine key gets you.
+    noun = subject.noun
 
     @blueprint.post("/<subject_id>/review/note")
     def post_note(subject_id: str):

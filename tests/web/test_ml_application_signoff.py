@@ -47,10 +47,10 @@ def test_an_ml_application_is_a_subject_the_committee_knows():
     assert ML_APPLICATION_SUBJECT in SUBJECTS
     assert ML_APPLICATION_SUBJECT.kind == "ml_application"
     assert ML_APPLICATION_SUBJECT.agenda_id_field == "subject_ml_application_id"
-    # Retire is carried; reactivate is not yet, so the committee is never offered a
-    # decision the subject cannot carry out.
+    # Hibernation reverses, so both halves are carried: the committee that ratified
+    # a retire is the one that can bring the record back.
     assert ML_APPLICATION_SUBJECT.supports("retire")
-    assert not ML_APPLICATION_SUBJECT.supports("reactivate")
+    assert ML_APPLICATION_SUBJECT.supports("reactivate")
 
 
 def test_the_agenda_can_name_an_ml_application_as_its_subject():

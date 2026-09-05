@@ -31,6 +31,7 @@ from __future__ import annotations
 
 from flask import jsonify
 
+from config.governance import CLOSED_MEETING_STATUS
 from src.governance.mrc import get_meeting_enriched as get_meeting
 from src.governance.reference import get_reference_lists, update_option
 from src.web._helpers import json_body, request_actor
@@ -99,7 +100,7 @@ def _rule(meeting_id: str, item_id: str, *, ratify: bool):
     meeting = get_meeting(meeting_id)
     if meeting is None:
         return jsonify({"error": "meeting not found"}), 404
-    if (meeting.get("data") or {}).get("status") == "Held":
+    if (meeting.get("data") or {}).get("status") == CLOSED_MEETING_STATUS:
         return jsonify({"error": "this meeting is closed"}), 400
     proposal = next((p for p in _proposals(meeting) if p["item_id"] == item_id), None)
     if proposal is None:

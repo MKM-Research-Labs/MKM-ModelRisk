@@ -20,6 +20,7 @@
 """Tests for meeting close-out: minutes generation, serving, and prior-minutes."""
 from __future__ import annotations
 
+from config.governance import STANDING_AGENDA_LIST
 from src.files import upload_path
 from tests.web.conftest import HEADERS
 from tests.web.test_mrc_signoff_api import _schedule_meeting, _seed_mrc
@@ -180,3 +181,39 @@ def test_prior_minutes_skips_later_dated_meeting(client, monkeypatch):
         client.post(f"/api/meetings/{meeting_id}/close", json={"confirmed": True}, headers=HEADERS)
     # Prior-minutes for the *earlier* meeting: the later MTG2 is excluded by date.
     assert client.get("/api/meetings/MTG1/prior-minutes").get_json() == []
+
+
+def test_a_committee_with_no_minutes_item_still_closes(client, monkeypatch):
+    """The successor is scheduled from the institution's own standing agenda. One
+    that carries no previous-minutes item simply has nowhere to table the paper —
+    which must cost the successor its tabled minutes, never the close."""
+    _stub_pdf(monkeypatch)
+    _seed_mrc(client)
+    client.post(f"/api/reference/collections/{STANDING_AGENDA_LIST}",
+                json={"fields": {"title": "Attendance", "kind": "rollcall"},
+                      "confirmed": True}, headers=HEADERS)
+    _schedule_meeting(client, meeting_id="MTG-NM-Q3", date="2026-06-30")
+    _resolve_all_agenda(client, "MTG-NM-Q3")
+    assert client.post("/api/meetings/MTG-NM-Q3/close", json={"confirmed": True},
+                       headers=HEADERS).status_code == 200
+
+    successor = [m for m in client.get("/api/meetings").get_json()
+                 if m["meeting_id"] != "MTG-NM-Q3"]
+    assert successor, "the next meeting is still scheduled"
+    agenda = client.get(
+        f"/api/meetings/{successor[0]['meeting_id']}").get_json()["data"]["agenda"]
+    assert [i["title"] for i in agenda] == ["Attendance"]
+
+
+def test_a_meeting_with_no_date_gets_no_successor(client, monkeypatch):
+    """Best-effort: the close is already recorded, so a meeting that cannot say
+    when the next one falls simply gets none rather than a failed close."""
+    _ready_to_close(client, monkeypatch, meeting_id="MTG-ND", date="2026-06-30")
+    blanked = client.post("/api/meetings/MTG-ND/field",
+                          json={"field": "date", "value": "", "confirmed": True},
+                          headers=HEADERS)
+    assert blanked.status_code == 200, blanked.get_json()
+    assert client.post("/api/meetings/MTG-ND/close", json={"confirmed": True},
+                       headers=HEADERS).status_code == 200
+    assert [m["meeting_id"] for m in client.get("/api/meetings").get_json()] \
+        == ["MTG-ND"]

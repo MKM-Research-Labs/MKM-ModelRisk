@@ -112,11 +112,6 @@ def history(data: dict) -> list[dict]:
     return sorted(entries, key=lambda e: str(e.get("date") or ""))
 
 
-
-
-def _value(data: dict, key: str) -> str:
-    return rb.value(data, key)
-
 def _groups() -> dict[str, list[str]]:
     """The Overview tab's field groups, in the order the detail view shows them."""
     return rb.field_groups(MODEL_FIELD_SPECS, SKIP_FIELDS)

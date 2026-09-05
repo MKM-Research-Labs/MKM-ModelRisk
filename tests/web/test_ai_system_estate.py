@@ -29,7 +29,9 @@ from __future__ import annotations
 import io
 
 from config.governance import COMPONENT_KIND_AI, VALID_COMPONENT_KINDS
+from src.files import upload_path
 from src.governance.ai_system import get_ai_system
+from src.governance.documents import ai_system_scope
 from tests.web.conftest import HEADERS
 
 _MINIMUM = {"name": "Client mail summariser", "division": "Risk",
@@ -152,3 +154,71 @@ def test_the_product_report_resolves_it_against_the_right_register():
     from config.governance import COMPONENT_KIND_ML
     assert set(_RESOLVERS) == {COMPONENT_KIND_ML, COMPONENT_KIND_AI, None}
     assert "AI System register" in _RESOLVERS[COMPONENT_KIND_AI][1]
+
+
+def test_a_rating_reaches_the_committee_that_covers_the_division(client):
+    """The proposal is queued rather than applied: the record keeps saying what the
+    committee last approved until the committee approves something else."""
+    from src.governance.reference import add_option
+
+    add_option(list_name="division", fields={"value": "Risk"}, actor="admin")
+    add_option(list_name="mrc", fields={"value": "MRC-RISK", "name": "Risk MRC",
+                                        "level": "Division", "scope_value": "Risk"},
+               actor="admin")
+    _register(client)
+    before = (get_ai_system("AIS-0001")["data"] or {}).get("rag_rating")
+    res = client.post("/api/ai-systems/AIS-0001/request-signoff",
+                      json={"proposed_rag": "Red", "actor": "admin"}, headers=HEADERS)
+    assert res.status_code == 201
+    data = get_ai_system("AIS-0001")["data"] or {}
+    assert data.get("rag_rating") == before
+    assert [r for r in data.get("signoff_requests") or []
+            if r.get("proposed_rag") == "Red"]
+
+
+def test_a_rating_cannot_be_proposed_for_a_record_nobody_registered(client):
+    res = client.post("/api/ai-systems/AIS-9999/request-signoff",
+                      json={"proposed_rag": "Amber", "actor": "admin"}, headers=HEADERS)
+    assert res.status_code == 404
+
+
+def test_a_document_against_a_record_nobody_registered_is_404(client):
+    res = client.post("/api/ai-systems/AIS-9999/documents", data={
+        "file": (io.BytesIO(b"X"), "x.pdf"), "category": "Analysis"},
+        content_type="multipart/form-data", headers=HEADERS)
+    assert res.status_code == 404
+
+
+def test_a_document_upload_with_no_file_is_400(client):
+    _register(client)
+    res = client.post("/api/ai-systems/AIS-0001/documents",
+                      data={"category": "Analysis"},
+                      content_type="multipart/form-data", headers=HEADERS)
+    assert res.status_code == 400
+
+
+def test_an_extension_the_platform_will_not_store_is_400(client):
+    _register(client)
+    res = client.post("/api/ai-systems/AIS-0001/documents", data={
+        "file": (io.BytesIO(b"X"), "evil.exe"), "category": "Analysis"},
+        content_type="multipart/form-data", headers=HEADERS)
+    assert res.status_code == 400
+
+
+def test_a_document_nobody_attached_cannot_be_downloaded(client):
+    _register(client)
+    assert client.get(
+        "/api/ai-systems/AIS-0001/documents/DOC-999/download").status_code == 404
+
+
+def test_a_document_whose_file_has_gone_missing_is_404_not_a_500(client):
+    _register(client)
+    res = client.post("/api/ai-systems/AIS-0001/documents", data={
+        "file": (io.BytesIO(b"PDFDATA"), "red-team-report.pdf"),
+        "category": "Analysis"},
+        content_type="multipart/form-data", headers=HEADERS)
+    doc = res.get_json()["data"]["documents"][0]
+    upload_path(ai_system_scope("AIS-0001"), doc["filename"]).unlink()
+    assert client.get(
+        "/api/ai-systems/AIS-0001/documents/" + doc["item_id"]
+        + "/download").status_code == 404
