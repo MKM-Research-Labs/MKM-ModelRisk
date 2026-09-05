@@ -111,6 +111,12 @@ def reference_options() -> dict[str, list]:
     # MRC decision's linked model, say) are not quietly offered ML Applications too.
     options["product_component"] = (options["model_inventory"] +
                                     [r["ml_application_id"] for r in list_ml_applications()])
+    # The judge that scored an evaluation, picked from the AI System register. A judge
+    # is a model and is governed like one, so it is chosen from records rather than
+    # typed as prose — which is what makes the dependency a lineage edge instead of a
+    # sentence somebody would have to read.
+    from src.governance.ai_system import list_ai_systems  # lazy: import cycle
+    options["ai_system_inventory"] = [r["ai_system_id"] for r in list_ai_systems()]
     return options
 
 

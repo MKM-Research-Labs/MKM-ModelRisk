@@ -29,6 +29,8 @@ from config.governance._ai_system import (AI_REVIEW_QUESTIONS_COLLECTION,
                                           AI_SYSTEM_FIELD_SPECS)
 from src.database import Event, append_event, read_stream
 from src.governance.ai_system._rules import (decide_add_item, decide_edit_field,
+                                             decide_record_envelope,
+                                             decide_take_snapshot,
                                              decide_register, decide_remove_item,
                                              decide_retire, decide_update_item)
 from src.governance.ai_system._state import AISystemState, apply, initial_state
@@ -146,4 +148,26 @@ def remove_collection_item(*, ai_system_id: str, collection: str, item_id: str,
                            actor: str, reason: str = "", config=None) -> Event:
     state, version = _load(ai_system_id, config)
     decision = decide_remove_item(state, collection=collection, item_id=item_id)
+    return _record(ai_system_id, decision, version, actor, reason, config)
+
+
+def take_configuration_snapshot(*, ai_system_id: str, actor: str, reason: str = "",
+                                taken_at: str | None = None, config=None) -> Event:
+    """Record the system's configuration as it stands now, as a new immutable version."""
+    from datetime import datetime, timezone
+    stamped = taken_at or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    state, version = _load(ai_system_id, config)
+    decision = decide_take_snapshot(state, taken_at=stamped)
+    return _record(ai_system_id, decision, version, actor, reason, config)
+
+
+def record_variability_envelope(*, ai_system_id: str, scores, actor: str,
+                                reason: str = "", note: str = "",
+                                measured_at: str | None = None, config=None) -> Event:
+    """Record the envelope N runs under the current configuration showed."""
+    from datetime import datetime, timezone
+    stamped = measured_at or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    state, version = _load(ai_system_id, config)
+    decision = decide_record_envelope(state, scores=scores, measured_at=stamped,
+                                      note=note)
     return _record(ai_system_id, decision, version, actor, reason, config)

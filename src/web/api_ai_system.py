@@ -40,6 +40,13 @@ from src.governance.ai_system import (add_collection_item, get_ai_system,
                                       update_collection_item)
 from src.governance.model_inventory.risk import compute_risk_rating
 from config.governance._ai_regimes import regimes_for
+from src.governance.ai_system._rules import diff_snapshots
+from src.governance.ai_system.envelope import envelope_status
+from src.governance.ai_system import (current_config_version,
+                                      latest_envelope,
+                                      list_snapshots,
+                                      rebuild_configuration_snapshot_view,
+                                      take_configuration_snapshot)
 from src.web._review_stages import review_specs
 from src.web._signoff_subject import AI_SYSTEM_SUBJECT
 from src.web._helpers import (collection_field_specs, context_from_request,
@@ -151,6 +158,52 @@ def risk_rating(ai_system_id: str):
     if record is None:
         return jsonify({"error": "AI System not found"}), 404
     return jsonify(compute_risk_rating(record["data"] or {}, as_of=date.today().isoformat()))
+
+
+@ai_system_bp.get("/<ai_system_id>/snapshots")
+def configuration_snapshots(ai_system_id: str):
+    """Every configuration this system has run under, oldest first, with what moved.
+
+    The diff travels with each snapshot rather than being a second call: "what changed
+    at version 4" is the only question anybody asks of a version list, and making it a
+    separate request means a screen that shows the list without it.
+    """
+    if get_ai_system(ai_system_id) is None:
+        return jsonify({"error": "AI System not found"}), 404
+    snapshots = list_snapshots(ai_system_id)
+    out = []
+    for index, row in enumerate(snapshots):
+        previous = snapshots[index - 1]["data"] if index else None
+        out.append({**row["data"],
+                    "changed": diff_snapshots(previous, row["data"]) if previous else []})
+    return jsonify({"snapshots": out})
+
+
+@ai_system_bp.post("/<ai_system_id>/snapshots")
+def take_snapshot(ai_system_id: str):
+    """Record the configuration as it stands now, as a new immutable version."""
+    body = json_body()
+    dispatch("take_configuration_snapshot", take_configuration_snapshot,
+             context=context_from_request(body), ai_system_id=ai_system_id)
+    rebuild_configuration_snapshot_view()
+    return jsonify({"snapshots": [r["data"] for r in list_snapshots(ai_system_id)]}), 201
+
+
+@ai_system_bp.get("/<ai_system_id>/envelope")
+def variability_envelope(ai_system_id: str):
+    """The measured variability envelope, read against the configuration in force now.
+
+    Staleness is resolved here rather than on the screen: an envelope measured under a
+    configuration that has since moved describes a system that no longer exists, and a
+    console deciding that for itself would decide it differently from the report.
+    """
+    if get_ai_system(ai_system_id) is None:
+        return jsonify({"error": "AI System not found"}), 404
+    envelope = latest_envelope(ai_system_id)
+    if envelope is None:
+        return jsonify({"envelope": None})
+    return jsonify({"envelope": envelope_status(
+        envelope, current_config_version(ai_system_id))})
 
 
 @ai_system_bp.get("/<ai_system_id>/regimes")

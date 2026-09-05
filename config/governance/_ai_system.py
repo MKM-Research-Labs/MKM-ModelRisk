@@ -85,8 +85,6 @@ from config.governance._signoff_collections import SIGNOFF_COLLECTION_SPECS
 
 AI_SYSTEM_ID_PREFIX = "AIS"
 
-AI_REVIEW_QUESTIONS_COLLECTION = "ai_review_questions"
-AGENT_TOOLS_COLLECTION = "agent_tools"
 
 AI_SYSTEM_FIELD_SPECS = {
     # --- Organisation. Same names as a model's; ``division`` is what the criteria
@@ -132,6 +130,21 @@ AI_SYSTEM_FIELD_SPECS = {
     "markets": {"label": "Markets served", "type": "multichoice",
                 "options": DEFAULT_MARKETS, "reference": MARKETS_LIST,
                 "group": "Exposure"},
+    # The two parameters that change what the system DOES without changing what it
+    # is. A pinned model with different sampling parameters is a different system in
+    # every way a reviewer cares about, and neither was recorded — so a configuration
+    # snapshot taken before these existed could not have said why two runs differed.
+    #
+    # Free text rather than typed: sampling parameters differ by provider (temperature
+    # and top_p on one, a reasoning-effort setting on another), and a fixed schema of
+    # ours would be wrong for the next model released.
+    "sampling_params": {"label": "Sampling parameters", "type": "textarea",
+                        "group": "The AI system"},
+    # The order of precedence between system prompt, developer instruction, retrieved
+    # content and user input. What an injection attack attacks, and the thing a
+    # reviewer needs in order to say whether the attack would work.
+    "instruction_hierarchy": {"label": "Instruction hierarchy", "type": "textarea",
+                              "group": "The AI system"},
     # --- Exposure ---
     "data_egress": {"label": "Data sent for inference", "type": "choice",
                     "options": DATA_EGRESS_CLASSES, "group": "Exposure"},
@@ -221,53 +234,9 @@ AI_SYSTEM_FIELD_SPECS = {
 # on it. ``deployment_pattern`` earns its place here because it decides which of the
 # agentic risks apply at all, and a record whose pattern is unknown cannot be triaged.
 AI_SYSTEM_REGISTER_FIELDS = ("name", "division", "owner", "use_case", "deployment_pattern")
-
-AI_SYSTEM_COLLECTION_SPECS = {
-    # Shared, unchanged, and named identically to a model's -- what the
-    # ``identification`` and ``treatment`` probes read.
-    "assumptions": COLLECTION_SPECS["assumptions"],
-    "limitations": COLLECTION_SPECS["limitations"],
-    "model_weaknesses": COLLECTION_SPECS["model_weaknesses"],
-    "remediation_steps": COLLECTION_SPECS["remediation_steps"],
-    "data_sources": COLLECTION_SPECS["data_sources"],
-    # Same collection, same name, on all three record types: "who could this
-    # disadvantage" is the same question of a model, an ML Application and an AI
-    # System, and three shapes would make the estate-wide answer unobtainable.
-    FAIRNESS_COLLECTION: COLLECTION_SPECS[FAIRNESS_COLLECTION],
-    # What testing actually returned. Same collection on all three record types,
-    # because "has this been measured, and what did it say" is one question.
-    EVALUATIONS_COLLECTION: COLLECTION_SPECS[EVALUATIONS_COLLECTION],
-    # The measured position on an output field, period by period. Same collection on
-    # all three record types: "has this drifted, and did what it predicted happen" is
-    # one question whatever produced the number, which is the whole reason the measures
-    # library is shared.
-    MONITORING_COLLECTION: COLLECTION_SPECS[MONITORING_COLLECTION],
-    "change_history": COLLECTION_SPECS["change_history"],
-    "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
-    "actions": COLLECTION_SPECS["actions"],
-    # One entry per tool or API the system may invoke. A collection rather than a
-    # textarea because the agentic controls are asked tool by tool: AIR-PREV-018 is
-    # about the authority of each one, and "what can this system reach" has to be a
-    # query rather than a paragraph somebody has to read.
-    AGENT_TOOLS_COLLECTION: {
-        "label": "Tools and APIs", "id_prefix": "TOOL",
-        "fields": [
-            {"key": "name", "label": "Tool", "type": "textarea", "required": True},
-            {"key": "purpose", "label": "What it is for", "type": "textarea"},
-            {"key": "authority", "label": "What it may do", "type": "textarea"},
-            {"key": "approval", "label": "Human approval required", "type": "choice",
-             "options": ("Always", "Above a threshold", "Never")},
-        ],
-    },
-    # Its own questionnaire, same shape as a model's validation questions, seeded
-    # from its own admin list and held under its own name.
-    AI_REVIEW_QUESTIONS_COLLECTION: COLLECTION_SPECS["validation_questions"],
-    # Borrowed machinery, not reimplemented: the same challenge thread and sign-off
-    # queue every other record uses, so an AI System takes the same trip through the
-    # committee and evidences the same clauses.
-    **REVIEW_COLLECTION_SPECS,
-    **SIGNOFF_COLLECTION_SPECS,
-}
+from config.governance._ai_system_collections import (  # noqa: E402
+    AGENT_TOOLS_COLLECTION, AI_REVIEW_QUESTIONS_COLLECTION,
+    AI_SYSTEM_COLLECTION_SPECS)
 
 AI_SYSTEM_EDITABLE_FIELDS = tuple(AI_SYSTEM_FIELD_SPECS.keys())
 AI_SYSTEM_FIELD_CHOICES = {
@@ -279,3 +248,24 @@ __all__ = ["AI_SYSTEM_ID_PREFIX", "AI_SYSTEM_FIELD_SPECS", "AI_SYSTEM_COLLECTION
            "AI_SYSTEM_REGISTER_FIELDS", "AI_SYSTEM_EDITABLE_FIELDS",
            "AI_SYSTEM_FIELD_CHOICES", "AI_REVIEW_QUESTIONS_COLLECTION",
            "AGENT_TOOLS_COLLECTION", "AI_SYSTEM_QUESTION_LIST"]
+
+
+# --- What a configuration snapshot captures -----------------------------------
+# The fields whose values, taken together, are what produced the system's behaviour on
+# a given day. Named here rather than inferred, because "what counts as the
+# configuration" is a governance judgement an institution may disagree with — and
+# because a snapshot that quietly widened would make two snapshots incomparable.
+#
+# The test is reproducibility: if changing a field could make the same input give a
+# different answer, it belongs. That takes in the model and how it is pinned, the
+# parameters it is sampled with, what it is told and in what order, what grounds it,
+# and what stands between it and its consumer. It leaves out the record's governance
+# half — owner, tier, review dates — which describe how the system is GOVERNED rather
+# than how it behaves, and which change for reasons that have nothing to do with it.
+CONFIGURATION_FIELDS = (
+    "foundation_model", "provider", "pinned_version", "version_policy",
+    "hosting", "deployment_pattern", "sampling_params", "instruction_hierarchy",
+    "grounding", "guardrails", "human_oversight", "output_variability",
+)
+
+__all__ = list(__all__) + ["CONFIGURATION_FIELDS"]

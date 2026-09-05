@@ -35,6 +35,15 @@ from src.governance import collections as coll
 EVENT_REGISTERED = "AISystemRegistered"
 EVENT_FIELD_EDITED = "AISystemFieldEdited"
 EVENT_RETIRED = "AISystemRetired"
+# A configuration snapshot is APPENDED and never amended: there is no edit or
+# remove command for one, and the fold only ever grows the list. That is the whole
+# of its immutability — a snapshot somebody could correct afterwards would not be
+# evidence of what the configuration was.
+EVENT_SNAPSHOT_TAKEN = "ConfigurationSnapshotTaken"
+# Appended like a snapshot and for the same reason: an envelope is the record of
+# what was measured on a day, under a configuration. A later one does not correct
+# it, it succeeds it.
+EVENT_ENVELOPE_RECORDED = "VariabilityEnvelopeRecorded"
 
 
 @dataclass(frozen=True)
@@ -45,6 +54,10 @@ class AISystemState:
     retired: bool = False
     fields: dict[str, Any] = field(default_factory=dict)
     collections: dict[str, tuple] = field(default_factory=dict)
+    # Oldest first, so ``config_version`` is the position in this tuple and the latest
+    # snapshot is simply the last one.
+    snapshots: tuple = ()
+    envelopes: tuple = ()
 
 
 def initial_state() -> AISystemState:
@@ -56,6 +69,8 @@ def record_data(state: AISystemState) -> dict[str, Any]:
     data = dict(state.fields)
     for collection, items in state.collections.items():
         data[collection] = list(items)
+    data["configuration_snapshots"] = [dict(s) for s in state.snapshots]
+    data["variability_envelopes"] = [dict(e) for e in state.envelopes]
     return data
 
 
@@ -68,6 +83,10 @@ def apply(state: AISystemState, event_type: str,
         updated = dict(state.fields)
         updated[payload["field"]] = payload["value"]
         return replace(state, fields=updated)
+    if event_type == EVENT_SNAPSHOT_TAKEN:
+        return replace(state, snapshots=state.snapshots + (dict(payload),))
+    if event_type == EVENT_ENVELOPE_RECORDED:
+        return replace(state, envelopes=state.envelopes + (dict(payload),))
     if event_type == EVENT_RETIRED:
         # ``retired`` is the fact; the lifecycle stage is the institution's own
         # vocabulary and is not overwritten with a word we chose.
@@ -79,4 +98,5 @@ def apply(state: AISystemState, event_type: str,
 
 
 __all__ = ["AISystemState", "initial_state", "record_data", "apply",
-           "EVENT_REGISTERED", "EVENT_FIELD_EDITED", "EVENT_RETIRED"]
+           "EVENT_REGISTERED", "EVENT_FIELD_EDITED", "EVENT_RETIRED",
+           "EVENT_SNAPSHOT_TAKEN", "EVENT_ENVELOPE_RECORDED"]

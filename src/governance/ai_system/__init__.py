@@ -27,10 +27,20 @@ from src.governance.ai_system.commands import (
     AGGREGATE_TYPE,
     add_collection_item,
     register_ai_system,
+    record_variability_envelope,
+    take_configuration_snapshot,
     remove_collection_item,
     retire_ai_system,
     update_ai_system_field,
     update_collection_item,
+)
+from src.governance.ai_system.snapshots import (
+    get_snapshot,
+    list_snapshots,
+    current_config_version,
+    latest_envelope,
+    rebuild_configuration_snapshot_view,
+    rebuild_variability_envelope_view,
 )
 from src.governance.ai_system.projection import (
     get_ai_system,
@@ -41,5 +51,9 @@ from src.governance.ai_system.projection import (
 __all__ = [
     "AGGREGATE_TYPE", "add_collection_item", "get_ai_system", "list_ai_systems",
     "rebuild_ai_system_view", "register_ai_system", "remove_collection_item",
-    "retire_ai_system", "update_ai_system_field", "update_collection_item",
+    "current_config_version", "get_snapshot", "latest_envelope",
+    "list_snapshots", "rebuild_configuration_snapshot_view",
+    "rebuild_variability_envelope_view", "record_variability_envelope",
+    "retire_ai_system", "take_configuration_snapshot",
+    "update_ai_system_field", "update_collection_item",
 ]

@@ -174,6 +174,21 @@ ASSESSMENT_COLLECTION_SPECS = {
         {"key": "dataset", "label": "Evaluated against", "type": "textarea"},
         {"key": "metric", "label": "Metric", "type": "textarea"},
         {"key": "result", "label": "What it returned", "type": "textarea"},
+        # Which judge scored it, as that judge's own record rather than as prose.
+        #
+        # A judge is a model. It goes through the same onboarding, classification and
+        # committee approval as anything else that produces a number somebody relies
+        # on, and a change to it — a version bump, a re-prompted rubric, a swapped
+        # provider — is a Measurement-class change that invalidates the scores it
+        # produced. None of that is possible while the judge is a sentence in a
+        # ``result`` field: naming its record makes the dependency a lineage edge, so a
+        # judge change surfaces on every record it feeds instead of having to be
+        # discovered.
+        #
+        # Not required, and not restricted to LLM-as-a-judge rows: a held-out score has
+        # no judge, and a human review's "judge" is a person.
+        {"key": "judge_ai_system_id", "label": "Judge (AI System)", "type": "text",
+         "reference": "ai_system_inventory"},
         {"key": "passed", "label": "Verdict", "type": "choice",
          "options": VALID_EVALUATION_VERDICTS},
         {"key": "performed_on", "label": "Performed on", "type": "date",

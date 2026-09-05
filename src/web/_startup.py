@@ -72,6 +72,10 @@ _REBUILDERS: tuple[tuple[str, str, str], ...] = (
      "rebuild_ml_application_view"),
     ("ai_systems", "src.governance.ai_system.projection", "rebuild_ai_system_view"),
     ("changes", "src.governance.change.projection", "rebuild_change_view"),
+    ("configuration_snapshots", "src.governance.ai_system.snapshots",
+     "rebuild_configuration_snapshot_view"),
+    ("variability_envelopes", "src.governance.ai_system.snapshots",
+     "rebuild_variability_envelope_view"),
 )
 
 

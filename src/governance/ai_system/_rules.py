@@ -34,13 +34,16 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
+                                          CONFIGURATION_FIELDS,
                                           AI_SYSTEM_EDITABLE_FIELDS,
                                           AI_SYSTEM_FIELD_CHOICES,
                                           AI_SYSTEM_FIELD_SPECS,
                                           AI_SYSTEM_REGISTER_FIELDS)
 from src.governance import collections as coll
 from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REGISTERED,
-                                             EVENT_RETIRED, AISystemState)
+                                             EVENT_RETIRED,
+                                             EVENT_ENVELOPE_RECORDED,
+                                             EVENT_SNAPSHOT_TAKEN, AISystemState)
 from src.governance.errors import DomainError
 from src.governance.risk_policy import get_risk_policy
 
@@ -141,3 +144,68 @@ def decide_remove_item(
     _require_editable(state)
     return coll.decide_remove(state.collections, AI_SYSTEM_COLLECTION_SPECS,
                               collection=collection, item_id=item_id)
+
+
+def decide_take_snapshot(
+    state: AISystemState, *, taken_at: str
+) -> tuple[str, dict[str, Any]]:
+    """Record the configuration as it stands, as a numbered, immutable version.
+
+    Takes the values from the RECORD rather than from the caller. A snapshot the caller
+    supplied the contents of would be a claim about the configuration; this is a reading
+    of it, and the two differ exactly when it matters.
+
+    An unchanged configuration is still refused a new version. Two identical snapshots
+    a month apart say the configuration did not move, which the absence of a snapshot
+    says just as well and without inviting "which of these two is current".
+    """
+    _require_editable(state)
+    values = {field: state.fields.get(field) for field in CONFIGURATION_FIELDS}
+    if state.snapshots and state.snapshots[-1].get("values") == values:
+        raise DomainError("the configuration has not changed since the last snapshot")
+    return EVENT_SNAPSHOT_TAKEN, {
+        "config_version": len(state.snapshots) + 1,
+        "values": values,
+        "taken_at": taken_at,
+    }
+
+
+def diff_snapshots(before: dict[str, Any], after: dict[str, Any]) -> list[dict[str, Any]]:
+    """What moved between two snapshots, field by field.
+
+    Pure, and over the SNAPSHOTS rather than over the record: comparing a snapshot with
+    the record's current values would answer a different question ("has it moved since")
+    and the two get confused precisely when somebody is trying to explain a change.
+    """
+    old, new = before.get("values") or {}, after.get("values") or {}
+    return [{"field": field, "before": old.get(field), "after": new.get(field)}
+            for field in sorted(set(old) | set(new))
+            if old.get(field) != new.get(field)]
+
+
+def decide_record_envelope(
+    state: AISystemState, *, scores, measured_at: str, note: str = "",
+) -> tuple[str, dict[str, Any]]:
+    """Record what N runs under the current configuration showed.
+
+    Refuses where the runs do not support an envelope, rather than recording a narrow
+    one — see ``compute_envelope``. The refusal is a DomainError because recording an
+    unsupported envelope is not a lesser reading, it is a wrong one.
+
+    Bound to the configuration in force, which is the latest snapshot. A system with no
+    snapshot cannot have an envelope: there would be nothing to say what it was measured
+    under, and the envelope would outlive any change silently.
+    """
+    from config.governance._ai_baseline import ENVELOPE_OK
+    from src.governance.ai_system.envelope import compute_envelope
+
+    _require_editable(state)
+    if not state.snapshots:
+        raise DomainError("take a configuration snapshot first: an envelope has to say "
+                          "which configuration it was measured under")
+    config_version = state.snapshots[-1].get("config_version")
+    envelope = compute_envelope(scores, config_version=config_version)
+    if envelope["status"] != ENVELOPE_OK:
+        raise DomainError(envelope["detail"])
+    return EVENT_ENVELOPE_RECORDED, {**envelope, "measured_at": measured_at,
+                                     "note": note}

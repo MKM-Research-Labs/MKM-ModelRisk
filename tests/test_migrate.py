@@ -58,6 +58,8 @@ def test_migration_files_are_ordered():
         "0012_attention_history.sql",
         "0013_ai_system_view.sql",
         "0014_change_view.sql",
+        "0015_configuration_snapshot_view.sql",
+        "0016_variability_envelope_view.sql",
     ]
 
 
@@ -79,6 +81,8 @@ def test_run_migrations_applies_then_skips():
         "0012_attention_history",
         "0013_ai_system_view",
         "0014_change_view",
+        "0015_configuration_snapshot_view",
+        "0016_variability_envelope_view",
     ]
     # Re-running is a no-op: every version already recorded.
     assert run_migrations() == []

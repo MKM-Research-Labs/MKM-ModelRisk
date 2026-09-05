@@ -63,7 +63,20 @@ def _eval(kind="Held-out performance", **extra):
 
 def test_an_evaluation_records_what_came_back_not_just_that_it_ran():
     fields = {f["key"] for f in COLLECTION_SPECS[EVALUATIONS_COLLECTION]["fields"]}
-    assert {"kind", "dataset", "metric", "result", "passed", "performed_on"} == fields
+    assert {"kind", "dataset", "metric", "result", "passed", "performed_on",
+            # Which judge scored it, where one did. A judge is a model governed like
+            # any other, and naming its record rather than describing it in prose is
+            # what makes a judge change surface on every score it produced.
+            "judge_ai_system_id"} == fields
+
+
+def test_the_judge_is_named_as_a_record_and_is_not_required():
+    """A held-out score has no judge and a human review's judge is a person, so the
+    field is optional — but where there IS a judge it is a record, not a sentence."""
+    judge = next(f for f in COLLECTION_SPECS[EVALUATIONS_COLLECTION]["fields"]
+                 if f["key"] == "judge_ai_system_id")
+    assert judge["reference"] == "ai_system_inventory"
+    assert not judge.get("required")
 
 
 def test_the_result_is_prose_not_a_number():

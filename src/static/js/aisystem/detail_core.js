@@ -30,7 +30,11 @@
 // two. Tools comes next and only where the system has any -- a tab offering an empty
 // list to a summariser is noise on every record that is not agentic.
 const AISystemDetail = RecordDetail.attach({
+  // Hand-curated, so a field added in config does NOT appear here on its own. The two
+  // sampling fields sit with the model pin because they are the same kind of fact: what
+  // the system was configured with, as opposed to how it is governed.
   _LEFT: ["foundation_model", "provider", "pinned_version", "version_policy",
+          "sampling_params", "instruction_hierarchy",
           "hosting", "deployment_pattern", "use_case"],
   _RIGHT: ["division", "line_of_business", "owner", "peer_reviewer", "tier",
            "materiality", "complexity", "rag_rating", "lifecycle_stage"],
@@ -162,6 +166,82 @@ const AISystemDetail = RecordDetail.attach({
     }
   },
 
+  // The configuration history, with what moved at each version. Fetched rather than
+  // read off the record: the record carries the CURRENT values, and the whole point of
+  // the history is the gap between those and what was written down.
+  async _loadSnapshots() {
+    const box = document.getElementById("ais-snapshots");
+    if (!box) return;
+    const btn = document.getElementById("ais-snapshot");
+    if (btn) {
+      btn.onclick = () => App.amend(
+        "Take a configuration snapshot of " + this.recordId() + ".", "POST",
+        "/api/ai-systems/" + encodeURIComponent(this.recordId()) + "/snapshots", {},
+        () => this.refresh());
+    }
+    try {
+      const body = await App.get("/api/ai-systems/" +
+        encodeURIComponent(this.recordId()) + "/snapshots");
+      if (!body.snapshots.length) {
+        box.className = "empty";
+        box.textContent = "No snapshot taken. The configuration is whatever the fields " +
+          "above say today, with nothing recording what it was before.";
+        return;
+      }
+      box.className = "";
+      box.innerHTML = body.snapshots.slice().reverse().map((s) => {
+        const moved = (s.changed || []).length
+          ? (s.changed || []).map((c) => "<code>" + esc(c.field) + "</code> " +
+              esc(String(c.before == null || c.before === "" ? "—" : c.before)) +
+              " &rarr; " + esc(String(c.after == null || c.after === "" ? "—" : c.after))
+            ).join("<br>")
+          : '<span class="muted">first snapshot</span>';
+        return '<div class="inforow"><div class="k">v' + esc(s.config_version) +
+          '<div class="muted" style="font-size:var(--size-xs)">' +
+          esc(String(s.taken_at || "").replace("T", " ").slice(0, 16)) +
+          "</div></div><div class=\"v\">" + moved + "</div></div>";
+      }).join("");
+    } catch (e) {
+      box.className = "empty";
+      box.textContent = e.message;
+    }
+  },
+
+  // The envelope, read against the configuration in force now. Staleness comes from
+  // the server: a console deciding it here would decide it differently from the report.
+  async _loadEnvelope() {
+    const box = document.getElementById("ais-envelope");
+    if (!box) return;
+    try {
+      const body = await App.get("/api/ai-systems/" +
+        encodeURIComponent(this.recordId()) + "/envelope");
+      const e = body.envelope;
+      if (!e) {
+        box.className = "empty";
+        box.textContent = "No envelope measured. How much this system's output varies " +
+          "under a fixed configuration is unrecorded.";
+        return;
+      }
+      box.className = "";
+      const limits = e.limits
+        ? Object.keys(e.limits).sort((a, b) => a - b)
+            .map((p) => "p" + esc(p) + " " + Math.round(e.limits[p] * 10000) / 10000)
+            .join(" &ndash; ")
+        : "&mdash;";
+      // Stale and refused are both findings, not gaps, and are coloured as such.
+      const tone = e.status === "ok" ? "green" : "amber";
+      box.innerHTML = '<div class="inforow"><div class="k">Envelope</div><div class="v">' +
+        limits + ' <span class="badge" style="background:' + Theme.value(tone) + '">' +
+        esc(e.status) + "</span>" +
+        '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-2)">' +
+        esc(e.runs) + " runs, configuration v" + esc(e.config_version) +
+        (e.detail ? " &mdash; " + esc(e.detail) : "") + "</div></div></div>";
+    } catch (err) {
+      box.className = "empty";
+      box.textContent = err.message;
+    }
+  },
+
   _renderContent() {
     const d = this._record.data || {};
     const box = document.getElementById("ais-content");
@@ -173,9 +253,26 @@ const AISystemDetail = RecordDetail.attach({
         this._lead("The model, who provides it, and whether it can change under you. " +
                    "A version with no policy behind it is an accident rather than a control.") +
         this.fieldRows(this._LEFT) +
+        '<div class="section-header" style="margin-top:var(--space-8)">Configuration history</div>' +
+        this._lead("Each version of the configuration this system has run under. A " +
+                   "snapshot cannot be edited once taken &mdash; that is what makes it " +
+                   "evidence of what the system was, rather than a note about it.") +
+        '<div id="ais-snapshots" class="empty">Loading&hellip;</div>' +
+        (this._record.retired ? "" :
+          '<button class="btn small" id="ais-snapshot" style="margin-top:var(--space-4)">' +
+          "Take a snapshot&hellip;</button>") +
+        '<div class="section-header" style="margin-top:var(--space-8)">Variability envelope</div>' +
+        this._lead("How much the output moves under a pinned configuration. Measured " +
+                   "over repeated runs, and bound to the configuration it was measured " +
+                   "under &mdash; when that moves, the envelope describes a system " +
+                   "that no longer exists.") +
+        '<div id="ais-envelope" class="empty">Loading&hellip;</div>' +
         '<div class="section-header" style="margin-top:var(--space-8)">Testing</div>' +
         this.fieldRows(this._TESTING);
-      this._bindEdits(); return;
+      this._bindEdits();
+      this._loadSnapshots();
+      this._loadEnvelope();
+      return;
     }
     if (this._tab === "exposure") {
       box.innerHTML = '<div class="section-header">Regulatory regimes</div>' +
