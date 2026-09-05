@@ -43,6 +43,8 @@ from config.governance import (
     FRAMEWORK_NOTES,
 )
 from src.governance.completeness.framework import coverage, tally
+from src.governance.completeness.scope import (population_by_record_type,
+                                               scope_statement)
 from src.governance.latex import _para_table, _section, _subsection
 
 TITLE = "Framework coverage"
@@ -97,6 +99,35 @@ def _not_evidenced(clauses: list[dict]) -> str:
     return _subsection("Not evidenced", intro + table)
 
 
+def _scope(models: list[dict]) -> str:
+    """What the coverage figures were counted over, and what sits outside them.
+
+    Printed FIRST, before any clause table. A clause met by 90% of the estate says
+    nothing until somebody says what the estate is — and "out of scope" read without
+    what is governed elsewhere looks like "ungoverned", which is the misreading this
+    paragraph exists to prevent.
+    """
+    statement = scope_statement()
+    counted = population_by_record_type(models)
+    in_scope = _para_table(
+        ["Record type", "Counted", "Why it is in scope"],
+        [[row["label"], str(counted.get(row["key"], 0)), row["because"]]
+         for row in statement["in_scope"]],
+        [0.18, 0.10, 0.72], caption="In model risk management scope")
+    outside = _para_table(
+        ["", "Governed how", "Why it is not counted here"],
+        [[row["label"], "By the firm, elsewhere", row["because"]]
+         for row in statement["governed_elsewhere"]]
+        + [[row["label"], "Not the firm's to validate", row["because"]]
+           for row in statement["not_the_firms"]],
+        [0.18, 0.20, 0.62], caption="Governed outside this report")
+    lead = ("The clause figures below are counted over every record in scope, of all "
+            "three types. The record type is the filter: there is no separate "
+            "classification field, because two answers to what a record is would "
+            "differ the first time somebody edited one.\n\n")
+    return _subsection("Scope", lead + in_scope + "\n" + outside)
+
+
 def framework_section(rows: list[dict], models: list[dict], as_of: str,
                       ratified=(), evidence=()) -> str:
     """The coverage section, or nothing at all when no framework is configured.
@@ -106,7 +137,7 @@ def framework_section(rows: list[dict], models: list[dict], as_of: str,
     if not FRAMEWORK_COVERAGE:
         return ""
     clauses = coverage(rows, models, as_of, ratified, evidence)
-    body = [_headline(clauses)]
+    body = [_scope(models), _headline(clauses)]
     body.extend(_framework_table(framework, clauses)
                 for framework, _rows in FRAMEWORK_COVERAGE)
     body.append(_not_evidenced(clauses))
