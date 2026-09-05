@@ -43,6 +43,7 @@ from src.governance import collections as coll
 from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REGISTERED,
                                              EVENT_RETIRED,
                                              EVENT_ENVELOPE_RECORDED,
+                                             EVENT_THRESHOLD_SET,
                                              EVENT_SNAPSHOT_TAKEN, AISystemState)
 from src.governance.errors import DomainError
 from src.governance.risk_policy import get_risk_policy
@@ -209,3 +210,34 @@ def decide_record_envelope(
         raise DomainError(envelope["detail"])
     return EVENT_ENVELOPE_RECORDED, {**envelope, "measured_at": measured_at,
                                      "note": note}
+
+
+def decide_set_threshold(
+    state: AISystemState, *, property_name: str, threshold, fallback: str,
+    rationale: str = "", set_at: str,
+) -> tuple[str, dict[str, Any]]:
+    """Set the bar for ONE property, leaving the other three exactly where they were.
+
+    One property per act, deliberately. The four are set by different arguments — a
+    customer-facing system may warrant a tighter robustness bar than its predictability
+    bar depending on where the exposure sits — and an interface that took all four at
+    once would invite them to be moved together, which is the thing the spec is
+    explicit about not wanting.
+    """
+    from config.governance._ai_triggers import FALLBACK_STATES, is_property
+
+    _require_editable(state)
+    if not is_property(property_name):
+        raise DomainError(f"not a trigger property: {property_name}")
+    try:
+        value = float(threshold)
+    except (TypeError, ValueError):
+        raise DomainError("a threshold must be a number")
+    if not 0 <= value <= 1:
+        raise DomainError("a threshold is a proportion between 0 and 1")
+    if fallback not in FALLBACK_STATES:
+        raise DomainError(f"fallback must be one of: {', '.join(FALLBACK_STATES)}")
+    return EVENT_THRESHOLD_SET, {
+        "property": property_name, "threshold": value, "fallback": fallback,
+        "rationale": rationale, "set_at": set_at,
+    }

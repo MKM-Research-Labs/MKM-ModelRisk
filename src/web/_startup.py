@@ -76,6 +76,8 @@ _REBUILDERS: tuple[tuple[str, str, str], ...] = (
      "rebuild_configuration_snapshot_view"),
     ("variability_envelopes", "src.governance.ai_system.snapshots",
      "rebuild_variability_envelope_view"),
+    ("failure_modes", "src.governance.ai_system.registers",
+     "rebuild_failure_mode_register_view"),
 )
 
 

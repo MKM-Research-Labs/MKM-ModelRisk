@@ -44,6 +44,11 @@ EVENT_SNAPSHOT_TAKEN = "ConfigurationSnapshotTaken"
 # what was measured on a day, under a configuration. A later one does not correct
 # it, it succeeds it.
 EVENT_ENVELOPE_RECORDED = "VariabilityEnvelopeRecorded"
+# One event per PROPERTY, never a set of four. Setting a threshold must move that
+# threshold and no other — an event carrying all four would make "we tightened
+# robustness" indistinguishable from "we restated the other three", and the four
+# are set by different arguments at different times.
+EVENT_THRESHOLD_SET = "TriggerThresholdSet"
 
 
 @dataclass(frozen=True)
@@ -58,6 +63,9 @@ class AISystemState:
     # snapshot is simply the last one.
     snapshots: tuple = ()
     envelopes: tuple = ()
+    # property -> the threshold currently in force, folded last-write-wins so the
+    # history stays in the log while the state is what applies now.
+    thresholds: dict = field(default_factory=dict)
 
 
 def initial_state() -> AISystemState:
@@ -71,6 +79,7 @@ def record_data(state: AISystemState) -> dict[str, Any]:
         data[collection] = list(items)
     data["configuration_snapshots"] = [dict(s) for s in state.snapshots]
     data["variability_envelopes"] = [dict(e) for e in state.envelopes]
+    data["trigger_thresholds"] = {k: dict(v) for k, v in state.thresholds.items()}
     return data
 
 
@@ -87,6 +96,10 @@ def apply(state: AISystemState, event_type: str,
         return replace(state, snapshots=state.snapshots + (dict(payload),))
     if event_type == EVENT_ENVELOPE_RECORDED:
         return replace(state, envelopes=state.envelopes + (dict(payload),))
+    if event_type == EVENT_THRESHOLD_SET:
+        updated = dict(state.thresholds)
+        updated[payload["property"]] = dict(payload)
+        return replace(state, thresholds=updated)
     if event_type == EVENT_RETIRED:
         # ``retired`` is the fact; the lifecycle stage is the institution's own
         # vocabulary and is not overwritten with a word we chose.
@@ -99,4 +112,5 @@ def apply(state: AISystemState, event_type: str,
 
 __all__ = ["AISystemState", "initial_state", "record_data", "apply",
            "EVENT_REGISTERED", "EVENT_FIELD_EDITED", "EVENT_RETIRED",
-           "EVENT_SNAPSHOT_TAKEN", "EVENT_ENVELOPE_RECORDED"]
+           "EVENT_SNAPSHOT_TAKEN", "EVENT_ENVELOPE_RECORDED",
+           "EVENT_THRESHOLD_SET"]

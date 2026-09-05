@@ -150,6 +150,8 @@ def _clean_event_log():
             cur.execute("DELETE FROM change_view")
             cur.execute("DELETE FROM configuration_snapshot_view")
             cur.execute("DELETE FROM variability_envelope_view")
+            cur.execute("DELETE FROM failure_mode_register_view")
+            cur.execute("DELETE FROM standing_risk_register_view")
             # Observations, not projections — but per-test state all the same. Left
             # behind, one test's finding history ages another test's findings and
             # the dashboard's verdict starts depending on test order.

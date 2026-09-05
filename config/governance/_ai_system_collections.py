@@ -30,6 +30,8 @@ Re-exported from ``_ai_system`` so every existing import goes on working.
 from __future__ import annotations
 
 from config.governance._ai import AI_SYSTEM_QUESTION_LIST
+from config.governance._ai_failure_modes import (FAILURE_MODE_COLLECTION,
+                                                 FAILURE_MODE_SPEC)
 from config.governance._assessments import MONITORING_COLLECTION
 from config.governance._collections import (COLLECTION_SPECS, EVALUATIONS_COLLECTION,
                                             FAIRNESS_COLLECTION)
@@ -59,6 +61,11 @@ AI_SYSTEM_COLLECTION_SPECS = {
     # one question whatever produced the number, which is the whole reason the measures
     # library is shared.
     MONITORING_COLLECTION: COLLECTION_SPECS[MONITORING_COLLECTION],
+    # How this system fails, what detects it, and where it falls back to.
+    # AI Systems only: the agentic security cluster it exists to hold —
+    # tool chain manipulation, MCP server compromise, state poisoning —
+    # are exposures of generative and agentic systems specifically.
+    FAILURE_MODE_COLLECTION: FAILURE_MODE_SPEC[FAILURE_MODE_COLLECTION],
     "change_history": COLLECTION_SPECS["change_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],

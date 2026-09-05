@@ -30,6 +30,7 @@ from config.governance._ai_system import (AI_REVIEW_QUESTIONS_COLLECTION,
 from src.database import Event, append_event, read_stream
 from src.governance.ai_system._rules import (decide_add_item, decide_edit_field,
                                              decide_record_envelope,
+                                             decide_set_threshold,
                                              decide_take_snapshot,
                                              decide_register, decide_remove_item,
                                              decide_retire, decide_update_item)
@@ -170,4 +171,18 @@ def record_variability_envelope(*, ai_system_id: str, scores, actor: str,
     state, version = _load(ai_system_id, config)
     decision = decide_record_envelope(state, scores=scores, measured_at=stamped,
                                       note=note)
+    return _record(ai_system_id, decision, version, actor, reason, config)
+
+
+def set_trigger_threshold(*, ai_system_id: str, property_name: str, threshold,
+                          fallback: str, rationale: str = "", actor: str,
+                          reason: str = "", set_at: str | None = None,
+                          config=None) -> Event:
+    """Set the bar for one property, and what happens when it is breached."""
+    from datetime import datetime, timezone
+    stamped = set_at or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    state, version = _load(ai_system_id, config)
+    decision = decide_set_threshold(state, property_name=property_name,
+                                    threshold=threshold, fallback=fallback,
+                                    rationale=rationale, set_at=stamped)
     return _record(ai_system_id, decision, version, actor, reason, config)
