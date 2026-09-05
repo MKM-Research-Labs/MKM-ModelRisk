@@ -17,6 +17,20 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+// What the institution decided, as the server resolved it.
+//
+// Two registries loaded once at startup — the theme's colour tokens and the risk-policy
+// registry — plus the two primitive formatters everything else builds on.
+//
+// Nothing here names a colour: a badge asks for a token and the served stylesheet
+// resolves it, so recolouring the console is a config change and never a JavaScript
+// one. main.js waits on load() before the first render, so the maps are populated by
+// the time anything is drawn. If the fetch fails the console still renders — every
+// badge falls back to whatever its caller does with a null colour, which is the same
+// dash an unrated record has always shown.
+//
+// How a record's state is turned into a badge is badges.js; documents are
+// doc_links.js. Both load after this file and depend on the registries here.
 
 // Which token a status is drawn in, from config/theme.py via /api/theme. Nothing here
 // names a colour: a badge asks for the token and the served stylesheet resolves it, so
@@ -179,250 +193,6 @@ const Policy = {
     return ((p.grid || {})[band.name] || {})[materiality + "|" + complexity] || null;
   },
 };
-
-// Display a scalar value, or an em dash when empty.
-// What a stored value is shown as. A status vocabulary separates the two — the
-// record holds "Production" while the division may call that stage something else
-// — so anything displaying a field's value asks its spec first.
-// The undecided owner ratification on a record, if there is one. Mirrors
-// _owner_ratification.pending_owner_request on the server: the newest owner
-// request decides, and only while it is still queued or on an agenda.
-function pendingOwnerRatification(data) {
-  const requests = ((data || {}).signoff_requests || []).filter((r) => r.kind === "owner");
-  const latest = requests[requests.length - 1];
-  if (!latest) return null;
-  return (latest.status === "Pending" || latest.status === "Attached") ? latest : null;
-}
-
-function optionLabel(spec, value) {
-  const shown = spec && spec.option_labels;
-  if (!shown || value === null || value === undefined || value === "") return fieldDisplay(value);
-  return fieldDisplay(shown[value] || value);
-}
-
-function fieldDisplay(value) {
-  if (value === null || value === undefined || value === "") return '<span class="muted">—</span>';
-  // A multi-value field (a person's roles) reads as a list, not as "a,b,c".
-  if (Array.isArray(value)) {
-    return value.length
-      ? value.map((v) => '<span class="pill">' + esc(v) + "</span>").join(" ")
-      : '<span class="muted">—</span>';
-  }
-  return esc(value);
-}
-
-// RAG rating as a coloured dot + label; colour from the division's policy.
-function ragBadge(rating, division) {
-  const color = Policy.ratingColour(rating, division) || Theme.colour("rag", rating);
-  if (!color) return '<span class="muted">—</span>';
-  return '<span class="ragdot"><span class="dot" style="background:' + color +
-    '"></span><span style="color:' + color + '">' + esc(rating) + "</span></span>";
-}
-
-// Sort key for a rating (lower = higher risk), from the division's policy order.
-function ragOrder(rating, division) {
-  const order = Policy.ratingOrder(rating, division);
-  return order !== null ? order : (RAG_ORDER[rating] !== undefined ? RAG_ORDER[rating] : 99);
-}
-
-// Mission-Criticality as a coloured pill showing the division's band NAME (was "Tier N");
-// colour and name come from the division's Mission-Criticality band for that tier score.
-function tierBadge(tier, division) {
-  // An unrated record shows a dash, never a band name. Policy.mcBand falls back to the
-  // first band for a non-numeric tier, so without this guard a record nobody has rated
-  // renders as "Critical" in red -- a rating no one gave, on a risk register.
-  if (tier === null || tier === undefined || tier === "") return '<span class="muted">—</span>';
-  const band = Policy.mcBand(tier, division);
-  const color = (band && band.colour) || Theme.colour("mission_criticality", tier);
-  const label = (band && band.name) || TIER_DESCRIPTORS[tier] || ("Tier " + tier);
-  if (!color) return '<span class="muted">—</span>';
-  return '<span class="badge" style="background:' + color + '">' + esc(label) + "</span>";
-}
-
-// MRC meeting status as a coloured pill.
-function statusBadge(status) {
-  const color = Theme.colour("meeting_status", status);
-  if (!color) return fieldDisplay(status);
-  return '<span class="badge" style="background:' + color + '">' + esc(status) + "</span>";
-}
-
-// Fallback descriptors (before the policy loads); live labels are the division's
-// Mission-Criticality band names.
-const TIER_DESCRIPTORS = { 1: "Mission critical", 2: "Important", 3: "Not important" };
-
-// The descriptor shown next to the Mission-Criticality pill: the band's admin-defined
-// explanation. Empty when the band carries none (the pill already names it).
-function tierFullLabel(tier, division) {
-  if (tier === null || tier === undefined || tier === "") return "—";
-  const band = Policy.mcBand(tier, division);
-  if (band && band.explanation) return band.explanation;
-  const d = (band && band.name) || TIER_DESCRIPTORS[tier];
-  return d ? "Tier " + tier + " - " + d : "";
-}
-
-// Validation-question status badge.
-function vqBadge(status) {
-  const color = Theme.colour("validation_question", status);
-  return '<span class="badge" style="background:' + color + '">' + esc(status || "—") + "</span>";
-}
-
-// A model is "Due Soon" when its next review falls within this many days.
-const DUE_SOON_DAYS = 30;
-
-// Derive a model's review status from its next-review date (vs today):
-// Overdue (past), Due Soon (within DUE_SOON_DAYS), On Track (later), or Not
-// Scheduled (no/invalid date).
-function reviewStatus(nextDate) {
-  if (!nextDate) return "Not Scheduled";
-  const due = new Date(nextDate + "T00:00:00");
-  if (isNaN(due.getTime())) return "Not Scheduled";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((due - today) / 86400000);
-  if (days < 0) return "Overdue";
-  if (days <= DUE_SOON_DAYS) return "Due Soon";
-  return "On Track";
-}
-
-// Sort order for the RAG column (lower sorts first): highest-risk first.
-const RAG_ORDER = { Red: 0, Amber: 1, Green: 2 };
-
-// The latest MRC sign-off outcome as a sortable string ("" when none).
-function mrcOutcome(data) {
-  const hist = (data && data.signoff_history) || [];
-  return hist.length ? (hist[hist.length - 1].outcome || "Approved") : "";
-}
-
-// A subject's CURRENT MRC state — the one thing the status column, the summary tile and
-// the Risk tab must all agree on. It mirrors the risk engine (model_inventory/risk.py):
-// an active request supersedes any earlier decision; a Rejected or Revoked latest decision
-// is not a sign-off; and an approval granted before the division ratified its current
-// categorisation is stale, because it was made against categories that no longer exist.
-// A sign-off covers one cell, so it stops covering the subject once the owner moves it to
-// another — "Rating moved" is approved-but-not-for-where-it-now-sits.
-// Returns "Pending" | "Rejected" | "Revoked" | "Re-classify" | "Rating moved" |
-// "Not placed" | "Approved" | "".
-function mrcState(data, division) {
-  const reqs = (data && data.signoff_requests) || [];
-  if (reqs.some((r) => r.status === "Pending" || r.status === "Attached")) return "Pending";
-  const hist = (data && data.signoff_history) || [];
-  const latest = hist.length ? hist[hist.length - 1] : null;
-  if (!latest) return "";
-  const outcome = latest.outcome || "Approved";
-  if (outcome === "Rejected" || outcome === "Revoked") return outcome;
-  const div = division === undefined ? data.division : division;
-  const ratified = (Policy.state(div) || {}).approved_at;
-  if (ratified && latest.date && latest.date < ratified) return "Re-classify";
-  const rag = Policy.gridRating(data.tier, data.materiality, data.complexity, div);
-  if (!rag) return "Not placed";
-  if (latest.to_rating !== rag) return "Rating moved";
-  return "Approved";
-}
-
-// Version-lifecycle badge (W4d): where a model version sits in its development arc.
-function lifecycleBadge(lifecycle) {
-  if (!lifecycle) return "";
-  const color = Theme.colour("lifecycle", lifecycle);
-  return ' <span class="badge" style="background:' + color + '">' + esc(lifecycle) + "</span>";
-}
-
-// MRC status for a list row: the latest sign-off outcome (green, or red if
-// rejected), or a dash when the MRC has not yet ruled. The detail view also
-// surfaces pending requests; the list keeps to the decided outcome.
-function mrcStatusBadge(data) {
-  const state = mrcState(data);
-  if (!state) return '<span class="muted">—</span>';
-  // Each non-approved state says, on hover, what the Risk tab says at length: the approval
-  // is in the history but does not cover the subject as it now stands.
-  const hist = (data && data.signoff_history) || [];
-  const approvedRating = (hist.length ? hist[hist.length - 1].to_rating : "") || "—";
-  const hints = {
-    "Re-classify": "Signed off under an older categorisation — re-confirm the " +
-      "classification and request sign-off again.",
-    "Rating moved": "The MRC approved " + approvedRating + "; the heatmap now says " +
-      (Policy.gridRating(data.tier, data.materiality, data.complexity, data.division) || "—") +
-      ". Request sign-off for the rating it now carries.",
-    "Not placed": Policy.dimensionName("materiality", data.division) + " or " +
-      Policy.dimensionName("complexity", data.division).toLowerCase() +
-      " is unset, so this is not on the heatmap and there is no rating to sign off.",
-  };
-  const title = hints[state] ? ' title="' + esc(hints[state]) + '"' : "";
-  return '<span style="color:' + Theme.colour("mrc_state", state) +
-    ';font-weight:600"' + title + ">" + esc(state) + "</span>";
-}
-
-// Every uploaded document is stored, but the console lists each one once and only
-// where a reader can do something with it. Defaults mirror config/files.py;
-// configure() makes the server's configuration authoritative once specs load.
-const DocLinks = {
-  _hidden: ["tex"],
-  _inline: ["pdf", "png", "jpg", "jpeg", "txt"],
-
-  configure(specs) {
-    if (!specs) return;
-    if (specs.hidden_doc_extensions) this._hidden = specs.hidden_doc_extensions;
-    if (specs.inline_view_extensions) this._inline = specs.inline_view_extensions;
-  },
-
-  _ext(name) {
-    const parts = String(name || "").split(".");
-    return parts.length > 1 ? parts.pop().toLowerCase() : "";
-  },
-
-  // The documents of one category that the console shows. A hidden extension (the
-  // LaTeX source filed beside its PDF) stays stored and can still be replaced by
-  // re-uploading it — it is simply not listed as a second row saying the same thing.
-  visible(docs, category) {
-    const self = this;
-    return (docs || []).filter((d) =>
-      d.category === category && self._hidden.indexOf(self._ext(d.original_name)) < 0);
-  },
-
-  // How many documents a panel actually lists, for its tab badge — counting the
-  // stored total instead would promise rows the tab does not show.
-  countIn(docs, categories) {
-    const self = this;
-    return (categories || []).reduce((total, c) => total + self.visible(docs, c).length, 0);
-  },
-
-  // "View" opens the document in a new tab, for the formats a browser renders;
-  // anything else is download-only.
-  actions(base, id, doc) {
-    const url = base + esc(id) + "/documents/" + esc(doc.item_id) + "/download";
-    const view = this._inline.indexOf(this._ext(doc.original_name)) < 0 ? "" :
-      '<a href="' + url + '?inline=1" target="_blank" rel="noopener">View</a> ';
-    return view + '<a href="' + url + '">Download</a>';
-  },
-};
-
-// Mirrors config CLOSED_REMEDIATION_STATUS.
-const CLOSED_REMEDIATION_STATUS = "Closed";
-
-// How many remediation steps are still outstanding. The tab badge answers "how much
-// is left to do?", not "how many were ever raised", so a closed step stops counting.
-// The tab itself still lists every step — closing one is history, not deletion.
-function openRemediationCount(steps) {
-  return (steps || []).filter((s) => s.status !== CLOSED_REMEDIATION_STATUS).length;
-}
-
-// Mirrors config CLOSED_ACTION_STATUS and REQUESTED_CLOSURE_ACTION_STATUS.
-const CLOSED_ACTION_STATUS = "Closed";
-const REQUESTED_CLOSURE_ACTION_STATUS = "Closure requested";
-
-// The MRC actions still owed on a model. An action closed at a later meeting stops
-// counting as outstanding, but stays on the meeting that agreed it — the committee's
-// record is the meeting, and this view only answers "what is still owed?".
-// A requested closure is still outstanding: the owner has asked, and until the
-// committee ratifies it the obligation stands.
-function outstandingActions(actions) {
-  return (actions || []).filter((a) => a.status !== CLOSED_ACTION_STATUS);
-}
-
-// Those an owner has asked the committee to close. Listed beside the outstanding ones
-// at the meeting, because ratifying them is the decision the committee actually takes.
-function closureRequestedActions(actions) {
-  return (actions || []).filter((a) => a.status === REQUESTED_CLOSURE_ACTION_STATUS);
-}
 
 // Human-readable file size.
 function fmtSize(bytes) {
