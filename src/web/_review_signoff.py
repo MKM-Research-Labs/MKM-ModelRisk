@@ -38,6 +38,8 @@ from src.governance.model_inventory.review_report import render_review_report_pd
 from src.governance.mrc_settings import get_settings
 from src.web._helpers import context_from_request, json_body
 from src.web._review_stages import approvals, stamped_now
+from src.governance.assessments import (open_failed_evaluations,
+                                        open_fairness_findings)
 from src.web._review_thread import open_challenges
 
 REVIEW_SIGNOFFS = "review_signoffs"
@@ -58,6 +60,26 @@ def signoff_blockers(data: dict, approvals_by_stage: dict, stages: tuple) -> lis
         blockers.append(
             str(len(open_ones)) + " open challenge" + ("" if len(open_ones) == 1 else "s")
             + " (" + ", ".join(c["item_id"] for c in open_ones) + ")")
+    # A measured disparity blocks for the same reason an open challenge does: the
+    # reviewer has to answer it in writing — by assessing that attribute again and
+    # recording what changed — rather than signing past it in silence. Naming the
+    # attributes rather than the row ids, because "Age band" is what the conversation
+    # will be about.
+    unfair = open_fairness_findings(data)
+    if unfair:
+        blockers.append(
+            str(len(unfair)) + " unanswered fairness finding"
+            + ("" if len(unfair) == 1 else "s") + " ("
+            + ", ".join(str(row.get("attribute") or row.get("item_id")) for row in unfair)
+            + ")")
+    # A failed evaluation blocks on the same reasoning: it is answered by running that
+    # kind of evaluation again and recording what changed, not by signing past it.
+    failed = open_failed_evaluations(data)
+    if failed:
+        blockers.append(
+            str(len(failed)) + " failed evaluation" + ("" if len(failed) == 1 else "s")
+            + " (" + ", ".join(str(row.get("kind") or row.get("item_id"))
+                               for row in failed) + ")")
     return blockers
 
 

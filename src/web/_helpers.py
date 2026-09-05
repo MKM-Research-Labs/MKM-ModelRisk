@@ -163,6 +163,14 @@ def resolve_field(field: dict, options_by_list: dict | None = None,
     # agenda escalation back-pointers) in tables and add forms.
     if field.get("hidden"):
         resolved["hidden"] = True
+    # Layout the config decides rather than the console: a field that shares the
+    # previous column and sits beneath it, and a date that starts at today. Both are
+    # opt-in per field — a due date must not default to today — and both are dropped
+    # unless carried here, because this rebuilds the field rather than copying it.
+    if field.get("stacked"):
+        resolved["stacked"] = True
+    if field.get("default_today"):
+        resolved["default_today"] = True
     # What each option MEANS, where the config defines it (a person's roles). An
     # administrator granting a role should be able to see what they are granting, so the
     # explanation travels with the option rather than living only in the config file.

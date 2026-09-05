@@ -76,6 +76,21 @@ textarea { width: 100%; resize: vertical; }
 .btn.small { padding: 3px 9px; font-size: var(--size-xs); }
 table { width: 100%; border-collapse: collapse; font-size: var(--size-sm); }
 th, td { text-align: left; padding: var(--space-4) var(--space-5); border-bottom: 1px solid var(--line-soft); }
+/* Registers hold prose, and their tables size columns by content (table-layout:
+   fixed), so a long word has to break rather than push a column past its share. */
+td { overflow-wrap: anywhere; }
+/* Prose inside a register row: a fixed-height box that scrolls, so one long finding
+   cannot stretch its row past every other and make the table unscannable. */
+.cellbox { max-height: 6rem; overflow-y: auto; white-space: pre-wrap; }
+td.rowact { white-space: nowrap; }
+/* A register's table keeps a workable minimum width and its wrapper scrolls, rather
+   than collapsing its selects and date inputs to a sliver on a narrow pane. */
+.table-scroll { overflow-x: auto; }
+.table-scroll > table { min-width: 52rem; }
+/* A field stacked under another in the same column: its own small label, so a value
+   sharing a column still says what it is. */
+.stacked { margin-top: var(--space-3); }
+.stacked-label { display: block; color: var(--muted); font-size: var(--size-xxs); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: var(--space-1); }
 th { color: var(--muted); font-size: var(--size-xxs); text-transform: uppercase; letter-spacing: 0.4px; background: var(--raised); border-bottom: 2px solid var(--line); }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: var(--accent-wash); }
@@ -307,5 +322,8 @@ tr.mandatory > td:first-child,
    textarea does not drag its neighbours out of alignment; the action sits on its own
    full-width line so it never floats between two fields. */
 .add-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space-4) var(--space-5); align-items: start; margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--line); }
-.add-form textarea { min-height: 4.5rem; }
+/* One box size for the whole form. A select or a date input is naturally an inch
+   shorter than a textarea, which left a row of boxes at three different heights
+   looking like an accident rather than a form. */
+.add-form textarea, .add-form select, .add-form input { min-height: 4.5rem; }
 .add-form-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; }

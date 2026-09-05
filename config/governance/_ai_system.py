@@ -237,7 +237,7 @@ AI_SYSTEM_COLLECTION_SPECS = {
     AGENT_TOOLS_COLLECTION: {
         "label": "Tools and APIs", "id_prefix": "TOOL",
         "fields": [
-            {"key": "name", "label": "Tool", "type": "text", "required": True},
+            {"key": "name", "label": "Tool", "type": "textarea", "required": True},
             {"key": "purpose", "label": "What it is for", "type": "textarea"},
             {"key": "authority", "label": "What it may do", "type": "textarea"},
             {"key": "approval", "label": "Human approval required", "type": "choice",

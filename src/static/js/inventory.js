@@ -64,7 +64,16 @@ function inputControl(id, spec, division) {
     return '<select id="' + id + '" multiple style="min-width:180px" size="' +
       Math.min((spec.options || []).length, 6) + '">' + opts + "</select>";
   }
-  if (spec.type === "date") return '<input id="' + id + '" type="date">';
+  if (spec.type === "date") {
+    // "When was this done" defaults to today, because it is nearly always today and a
+    // blank date is how a register ends up full of undateable rows. Opt-in per field:
+    // a due date or an expected completion must NOT default to today.
+    // Local date, not toISOString(), which is UTC and lands on yesterday all evening
+    // in the western hemisphere and on tomorrow in the east.
+    const today = spec.default_today
+      ? ' value="' + new Date().toLocaleDateString("en-CA") + '"' : "";
+    return '<input id="' + id + '" type="date"' + today + ">";
+  }
   if (spec.type === "textarea") {
     return '<textarea id="' + id + '" rows="4" style="width:100%;resize:vertical"></textarea>';
   }

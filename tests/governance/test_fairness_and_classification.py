@@ -82,10 +82,25 @@ def test_all_three_record_types_carry_the_same_fairness_collection():
 
 
 def test_an_assessment_names_the_attribute_and_what_it_showed():
-    """Not a pass/fail flag. "No disparity above the threshold" and "not measured"
-    are different answers and a boolean collapses them."""
+    """``finding`` is not a pass/fail flag. "No disparity above the threshold" and "not
+    measured" are different answers and a boolean collapses them.
+
+    That was originally kept by having no verdict at all, which left the register unable
+    to say whether what it found was acceptable — findings and no conclusions, which
+    nothing downstream could act on. The verdict is now carried SEPARATELY, exactly as
+    an evaluation carries ``passed`` beside its prose ``result``: the prose says what
+    was seen, the verdict says what was concluded, and neither stands in for the other.
+    Blank remains a legitimate answer and means no verdict was reached.
+    """
     fields = {f["key"] for f in COLLECTION_SPECS[FAIRNESS_COLLECTION]["fields"]}
-    assert {"attribute", "how_assessed", "metric", "finding", "assessed_on"} == fields
+    assert {"attribute", "how_assessed", "metric", "finding", "verdict",
+            "assessed_on"} == fields
+    finding = next(f for f in COLLECTION_SPECS[FAIRNESS_COLLECTION]["fields"]
+                   if f["key"] == "finding")
+    assert finding["type"] == "textarea", "what was seen stays prose"
+    verdict = next(f for f in COLLECTION_SPECS[FAIRNESS_COLLECTION]["fields"]
+                   if f["key"] == "verdict")
+    assert not verdict.get("required"), "no verdict reached is a legitimate answer"
     attribute = next(f for f in COLLECTION_SPECS[FAIRNESS_COLLECTION]["fields"]
                      if f["key"] == "attribute")
     assert attribute.get("required")

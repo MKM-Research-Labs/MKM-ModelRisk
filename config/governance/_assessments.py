@@ -48,6 +48,30 @@ VALID_EVALUATION_KINDS = ("Held-out performance", "Benchmark against a baseline"
 # would make somebody invent it.
 VALID_EVALUATION_VERDICTS = ("Passed", "Passed with caveats", "Failed", "Inconclusive")
 
+# The verdict that stands in the way of a review sign-off, on the same reasoning as
+# the fairness register's: a failed evaluation is answered by running it again and
+# saying what changed, not by signing past it. "Passed with caveats" does not block --
+# the caveats are what the record of challenge is for -- and "Inconclusive" does not
+# either, for the reason a fairness assessment's does not.
+ADVERSE_EVALUATION_VERDICT = "Failed"
+
+# The reviewer's reading of what a fairness measurement showed. Separate from
+# ``finding``, which stays prose, for exactly the reason ``evaluations`` separates
+# ``passed`` from ``result``: "no disparity above the threshold" and "not measured" are
+# different answers and a boolean collapses them -- but a register with no verdict at
+# all cannot be acted on either, and this one had none. Blank is allowed and means no
+# verdict was reached, which is what every row recorded before this existed carries.
+VALID_FAIRNESS_VERDICTS = ("No disparity found", "Within tolerance",
+                           "Disparity found", "Inconclusive")
+
+# The verdict that stands in the way of a review sign-off. One value, not a severity
+# scale: the question the gate asks is "does a measured disparity stand unanswered",
+# and grading it would only invite the grade to be argued down. "Inconclusive" is
+# deliberately NOT here -- it says nobody knows yet, which is a reason to keep
+# measuring rather than a finding to remediate, and blocking on it would train people
+# to avoid the word.
+ADVERSE_FAIRNESS_VERDICT = "Disparity found"
+
 FAIRNESS_COLLECTION = "fairness_assessments"
 EVALUATIONS_COLLECTION = "evaluations"
 
@@ -65,14 +89,24 @@ ASSESSMENT_COLLECTION_SPECS = {
     # vocabulary can make it an admin list without this shape changing.
     #
     # ``finding`` is deliberately not a pass/fail. "No disparity above the threshold"
-    # and "not measured" are different answers, and a boolean collapses them.
+    # and "not measured" are different answers, and a boolean collapses them. The
+    # verdict is carried separately, as it is on an evaluation -- prose for what was
+    # seen, a stated conclusion about it, and neither standing in for the other. A
+    # register with findings and no conclusions is a notepad: nothing downstream can
+    # act on a paragraph, so nothing did.
     FAIRNESS_COLLECTION: {"label": "Fairness assessment", "id_prefix": "FAIR", "fields": [
-        {"key": "attribute", "label": "Attribute or group", "type": "text",
+        {"key": "attribute", "label": "Attribute or group", "type": "textarea",
          "required": True},
         {"key": "how_assessed", "label": "How it was assessed", "type": "textarea"},
-        {"key": "metric", "label": "Metric", "type": "text"},
+        {"key": "metric", "label": "Metric", "type": "textarea"},
         {"key": "finding", "label": "What it showed", "type": "textarea"},
-        {"key": "assessed_on", "label": "Assessed on", "type": "date"},
+        {"key": "verdict", "label": "Verdict", "type": "choice",
+         "options": VALID_FAIRNESS_VERDICTS},
+        # Stacked under the verdict rather than given a column of its own: a date is
+        # narrow and a verdict is not, and the two read together anyway — "within
+        # tolerance, as at August".
+        {"key": "assessed_on", "label": "Assessed on", "type": "date", "stacked": True,
+         "default_today": True},
     ]},
     # One row per evaluation run: what was tested, against what, what came back.
     #
@@ -93,11 +127,12 @@ ASSESSMENT_COLLECTION_SPECS = {
     EVALUATIONS_COLLECTION: {"label": "Evaluation", "id_prefix": "EVAL", "fields": [
         {"key": "kind", "label": "Kind", "type": "choice", "options": VALID_EVALUATION_KINDS,
          "required": True},
-        {"key": "dataset", "label": "Evaluated against", "type": "text"},
-        {"key": "metric", "label": "Metric", "type": "text"},
+        {"key": "dataset", "label": "Evaluated against", "type": "textarea"},
+        {"key": "metric", "label": "Metric", "type": "textarea"},
         {"key": "result", "label": "What it returned", "type": "textarea"},
         {"key": "passed", "label": "Verdict", "type": "choice",
          "options": VALID_EVALUATION_VERDICTS},
-        {"key": "performed_on", "label": "Performed on", "type": "date"},
+        {"key": "performed_on", "label": "Performed on", "type": "date",
+         "stacked": True, "default_today": True},
     ]},
 }
