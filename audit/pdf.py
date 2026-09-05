@@ -64,12 +64,14 @@ def _summary_table(report: dict) -> str:
     cov = report.get("coverage") or {}
     cov_result = (f"{cov['line_rate'] * 100:.1f}% achieved (gate {COVERAGE_MINIMUM}%)"
                   if cov.get("available") else "enforced via pyproject")
-    oversize = report["large_source_files"] + report["large_test_files"]
+    oversize = (report["large_source_files"] + report["large_test_files"]
+                + report["large_web_files"])
     return _table(
         ["Rule", "Requirement", "Result"],
         [
             ["R1", "Parameters live only in the config package", _result(report["hardcoding"])],
-            ["R2", "No file over the size limit (300 source / 400 test lines)", _result(oversize)],
+            ["R2", "No file over the size limit (300 source and web / 400 test lines)",
+             _result(oversize)],
             ["R3", "At least " + str(COVERAGE_MINIMUM) + "% test coverage, verified each stage",
              cov_result],
             ["R4", "No functions or logic in __init__.py", _result(report["init_files"])],

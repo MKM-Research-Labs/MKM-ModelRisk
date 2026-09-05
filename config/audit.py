@@ -164,9 +164,16 @@ INIT_INVENTORY_DIRS = ("config", "src", "scripts", "audit", "packages")
 REPO_SCAN_DIRS = ("config", "src", "scripts", "docs", "audit", "packages",
                   "modelrisk")
 
-# Web assets (JS/CSS) are audited for over-length separately from Python: they
-# share the source line limit but are reported, not gated, so a long vendored or
-# generated bundle never fails the Python size gate.
+# Web assets (JS/CSS) are audited for over-length separately from Python, and share
+# the source line limit. They were reported rather than gated so that a long vendored
+# or generated bundle could never fail the size gate — but this console has no bundle:
+# all 83 assets are hand-written first-party source, and node_modules is excluded
+# above. The exemption was protecting against something that is not here, while
+# thirteen hand-written files sat over the limit.
+#
+# Gated since 2026-09-05, from a backlog of zero. If a vendored or minified asset is
+# ever added, exclude it deliberately — a build directory in EXCLUDE_DIRS, say —
+# rather than standing the whole rule down again.
 WEB_EXTENSIONS = (".js", ".css")
 
 # Coding rule R6 — data-store access. The one package allowed to hold SQL, ORM

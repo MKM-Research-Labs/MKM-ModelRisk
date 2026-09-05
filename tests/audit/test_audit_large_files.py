@@ -39,6 +39,14 @@ def test_source_tree_within_limit():
     assert large_source_files() == []
 
 
+def test_web_assets_within_limit():
+    # Coding rule R2, gated for .js/.css since 2026-09-05 — the same 300 lines the
+    # Python source is held to. It was reported rather than gated so that a vendored
+    # or minified bundle could never fail the build; this console has no bundle, and
+    # the exemption instead let thirteen hand-written files sit over the limit.
+    assert large_web_files() == []
+
+
 def test_test_suite_stays_within_limit():
     # Coding rule R2 gate for test files (<= 400 lines).
     assert large_test_files() == []

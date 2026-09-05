@@ -31,13 +31,30 @@ reviewed by hand.
 
 ## R2 — No file longer than 300 lines
 
-**Rule.** No non-test source file exceeds 300 lines. Split into a package of focused
+**Rule.** No non-test source file exceeds 300 lines — Python **and** the console's
+`.js`/`.css`. Test files carry a higher limit of 400. Split into a package of focused
 modules when it grows past it; a package's `__init__.py` re-exports only (see R4).
 
-**Why.** Small files are readable, testable, reviewable; they force clear seams.
+**Why.** Small files are readable, testable, reviewable; they force clear seams. The
+limit is a prompt to ask what the file is about, not an instruction to cut at line 300:
+a file over the limit is usually two subjects that were never one, and splitting it
+anywhere else just moves the problem. `helpers.js` was the served configuration, every
+badge, and the document list — related only by having been put in the same place.
 
-**Verified by.** Ad hoc: `find src config -name '*.py' | xargs wc -l | awk '$1>300'`.
-To be folded into the structural audit (Phase 0).
+**Verified by.** `python -m audit` — gated, in three sections (source, test, web). Read
+the final `PASS: 0 gated finding(s)` line, not the exit code of the shell that ran it.
+
+Web assets were reported rather than gated until 2026-09-05, so that a vendored or
+minified bundle could never fail the build. This console has no bundle — every asset is
+hand-written — so the exemption protected nothing while thirteen files sat over the
+limit. If a vendored asset is ever added, exclude it deliberately rather than standing
+the rule down again.
+
+**Splitting mechanically?** Prove the content survived: every non-comment line of the
+original appearing exactly once across the results, with only the wrapper lines new. Two
+scripted splits during the 2026-09-05 sweep silently dropped content — one assigned onto
+the wrong object, one read `get NODE_KINDS()` as a member named "get" — and both were
+caught by that comparison rather than by reading the diff.
 
 ---
 

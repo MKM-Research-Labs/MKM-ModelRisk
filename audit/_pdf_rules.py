@@ -84,7 +84,7 @@ def _large_files_body(report: dict) -> str:
                           ["File", "Lines"], lambda f: [f["path"], f["lines"]])
         + _findings_section("R2 — Large test files (>400 lines)", report["large_test_files"],
                             ["File", "Lines"], lambda f: [f["path"], f["lines"]])
-        + _findings_section("R2 — Large web files (>300 lines, reported)", report["large_web_files"],
+        + _findings_section("R2 — Large web files (>300 lines)", report["large_web_files"],
                             ["File", "Lines"], lambda f: [f["path"], f["lines"]])
     )
 

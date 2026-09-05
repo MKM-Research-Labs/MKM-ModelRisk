@@ -193,10 +193,16 @@ Both lists are pure vocabulary, and nothing downstream can be shaped until they 
   ships with this.
 - Admin tab wiring — hand-curated, not spec-driven.
 
-**Line budgets after phase 1.** `config/governance/__init__.py` now sits at **exactly 300**,
-which is the R2 gate: the next name added to it trips the audit, so it wants splitting before
-anything else re-exports through it. `_reference.py` is at 298. `reference.js` went to 315 —
-reported, not gated, and mid-pack among the existing web files.
+**Line budgets after phase 1.** `config/governance/__init__.py` sat at **exactly 300**,
+which is the R2 gate: the next name added to it would trip the audit, so it wanted splitting
+before anything else re-exported through it. `_reference.py` was at 298. `reference.js` went
+to 315 — reported, not gated, and mid-pack among the existing web files.
+
+*Superseded 2026-09-05.* All three came down in the tidy-up that followed: the two config
+modules are at 298 and 286, and `reference.js` is at 242 (its vocabularies and registers now
+in `reference_lists.js`). **Web assets gate now**, so the last sentence above no longer
+describes the rule — a `.js` or `.css` file over 300 fails the audit exactly as a `.py` file
+does.
 
 ### Phase 2 — The ML Application record
 

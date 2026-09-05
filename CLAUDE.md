@@ -191,11 +191,12 @@ Check what a change actually is before reverting it.
 Full text in `docs/rules/coding_rules.md`.
 
 - **R1** — parameters live in `config/`, never hardcoded in `src/`.
-- **R2** — no file over 300 lines (source gated; web files reported). The scan
-  covers `config src scripts docs audit packages modelrisk` — the last three were
-  added 2026-09-05, when the audit turned out never to have measured its own tree.
-  **The reported web list is currently empty** (2026-09-05), which makes it as useful
-  a signal as the gate: any entry is new.
+- **R2** — no file over 300 lines, **gated for Python and for `.js`/`.css` alike**
+  (tests gated separately at 400). The scan covers
+  `config src scripts docs audit packages modelrisk` — the last three were added
+  2026-09-05, when the audit turned out never to have measured its own tree. Web
+  assets started gating the same day, from a backlog of zero; they had been reported
+  only so a vendored bundle could not fail the build, and this console has no bundle.
 - **R6** — **zero tolerance**: no SQL, driver import or connection outside `src/database/`.
   Use the named helpers (`append_event`, `read_stream`, `read_view`, …).
 - **R9** — test against a restored backup, never the live database (§1).

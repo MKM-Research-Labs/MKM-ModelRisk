@@ -173,9 +173,9 @@ def main(argv=None) -> int:
                             lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     total += _print_section("R10 undefined design tokens", report["undefined_tokens"],
                             lambda f: f"{f['path']}:{f['line']}  {f['snippet']}")
+    total += _print_section("R2 large web files (>300)", report["large_web_files"],
+                            lambda f: f"{f['lines']:>4}  {f['path']}")
     # Reported (non-gating) sections — visibility only, not counted in ``total``.
-    _print_section("R2 large web files (>300, reported)", report["large_web_files"],
-                   lambda f: f"{f['lines']:>4}  {f['path']}")
     _print_section("R6 data access outside src/database (reported)", report["data_access"],
                    lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     _print_section("R6 path definitions outside config (reported)", report["path_definitions"],
