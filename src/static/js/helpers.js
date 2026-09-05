@@ -36,6 +36,8 @@ const Theme = {
       this._tokens = theme.tokens || {};
       this._status = theme.status_colours || {};
       this._defaults = theme.status_defaults || {};
+      // The graph's drawing vocabulary travels with the colours it draws with.
+      this._lineage = theme.lineage_nodes || {};
     } catch (e) { /* the stylesheet still carries the token values */ }
   },
   // A token's literal value. Needed where the colour is manipulated rather than just

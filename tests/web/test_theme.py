@@ -185,7 +185,8 @@ def test_the_domains_without_a_default_are_the_ones_that_must_show_a_dash():
     # the word itself, uncoloured. That is the ``validation_question`` case, not the
     # unrated-tier case.
     assert set(STATUS_COLOUR_DEFAULTS) == {"validation_question", "mrc_state", "lifecycle",
-                                           "product_status", "change_class"}
+                                           "product_status", "change_class",
+                                           "lineage_node"}
     assert {"rag", "mission_criticality", "meeting_status",
             "review_thread"}.isdisjoint(STATUS_COLOUR_DEFAULTS)
 
@@ -213,6 +214,9 @@ def test_the_status_mapping_covers_every_value_the_console_had_a_colour_for():
         # Configured here from the start, like "attention" — the four change tiers
         # never lived as a colour map in the JavaScript.
         "change_class": 4,
+        # Five lineage node kinds: the three the institution governs and the two it
+        # depends on but does not own.
+        "lineage_node": 5,
     }
 
 

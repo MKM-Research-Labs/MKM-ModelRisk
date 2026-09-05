@@ -30,6 +30,27 @@
 const BOX_W = 130, BOX_H = 42, COL_GAP = 34, ROW_GAP = 52, PAD = 20;
 
 const Chain = {
+  // What a lineage node IS. The vocabulary is config (config/governance/_lineage.py)
+  // and travels with the node; an estate chain built from the inventory declares
+  // nothing and every node in it is a model, which is what it was before kinds
+  // existed.
+  nodeKind(n) {
+    const declared = String((n || {}).kind || "").trim().toUpperCase();
+    return Chain.NODE_KINDS.indexOf(declared) >= 0 ? declared : "MODEL";
+  },
+
+  // Whether this kind is a record the platform holds. A foundation model and an MCP
+  // server are dependencies the firm cannot review, so there is nothing to open.
+  isGoverned(kind) { return Chain.EXTERNAL_KINDS.indexOf(kind) < 0; },
+
+  // Served with the theme (/api/theme), not written here: a kind list compiled into
+  // this file is a second definition of config's, and it drifts the first time a kind
+  // is added. The fallbacks cover a theme payload that has not loaded yet, and say
+  // only "everything is a model", which is what this screen drew before kinds existed.
+  _vocab() { return (Theme._lineage || {}); },
+  get NODE_KINDS() { return Chain._vocab().kinds || ["MODEL"]; },
+  get EXTERNAL_KINDS() { return Chain._vocab().external || []; },
+
   _tab: "chain",
   // Models pulled onto the canvas from the tray but not yet wired to anything.
   // View state only — nothing is recorded until an edge is declared, and a model
@@ -303,6 +324,16 @@ const Chain = {
       const p = pos[n.model_id];
       let fill = Theme.value("accent-soft"), stroke = Theme.value("accent");
       if (!hasDownstream[n.model_id]) { fill = Theme.value("teal-bg"); stroke = Theme.value("teal"); }
+      // A node the institution does not own — a foundation model somebody else
+      // versions, an MCP server outside the firm — is drawn in its own colour and
+      // outlined rather than filled. What a chain diagram is FOR is showing where the
+      // firm's perimeter ends, and a supply chain drawn all one colour does not.
+      // Colour from the theme only (R10); a model keeps exactly the styling it had.
+      const kind = Chain.nodeKind(n);
+      if (kind !== "MODEL") {
+        stroke = Theme.colour("lineage_node", kind) || stroke;
+        fill = Chain.isGoverned(kind) ? Theme.value("panel") : Theme.value("sunken");
+      }
       // A staged model is on the canvas but in no chain yet — drawn hollow so it
       // never reads as a declaration that has already been made.
       if (this._staged[n.model_id]) { fill = Theme.value("panel"); stroke = Theme.value("indigo"); }
@@ -315,7 +346,7 @@ const Chain = {
         "another model to declare a feed</title>" +
         '<rect x="' + p.x + '" y="' + p.y + '" width="' + BOX_W + '" height="' + BOX_H +
         '" rx="7" fill="' + fill + '" stroke="' + stroke + '" stroke-width="1.5"' +
-        (n.retired ? ' stroke-dasharray="4 3"' : "") + "/>" +
+        (n.retired || !Chain.isGoverned(kind) ? ' stroke-dasharray="4 3"' : "") + "/>" +
         '<text x="' + (p.x + BOX_W / 2) + '" y="' + (p.y + 17) +
         '" text-anchor="middle" font-size="11" font-weight="700" fill="' + Theme.value("node-ink") + '">' + esc(n.model_id) + "</text>" +
         '<text x="' + (p.x + BOX_W / 2) + '" y="' + (p.y + 31) +

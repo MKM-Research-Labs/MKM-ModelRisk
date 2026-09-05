@@ -2,40 +2,94 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://modelrisk.mkm/contracts/ingest/v1/model_chain.schema.json",
   "title": "Model chain (v1)",
-  "description": "The 'string of pearls' model-dependency graph, pushed on its own. It is the same shape as the model_chain object carried inside model_inventory, extracted so a producer can push the chain independently. Only structural keys are required; producer-added fields are allowed. Graph integrity (links resolve, no self-loop, acyclic) is enforced server-side, not by this schema.",
+  "description": "The 'string of pearls' dependency graph, pushed on its own. It is the same shape as the model_chain object carried inside model_inventory, extracted so a producer can push the chain independently. Only structural keys are required; producer-added fields are allowed. Nodes are optional and describe what each id IS - a model, an ML Application, an AI System, a foundation model or an MCP server; an id with no node entry is a model, which is what every chain pushed before nodes existed is. Graph integrity (links resolve, no self-loop, acyclic) and the node kinds are enforced server-side, not by this schema.",
   "type": "object",
-  "required": ["links"],
+  "required": [
+    "links"
+  ],
   "additionalProperties": true,
   "properties": {
-    "description": { "type": "string" },
+    "description": {
+      "type": "string"
+    },
     "links": {
       "type": "array",
-      "items": { "$ref": "#/$defs/link" }
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    },
+    "nodes": {
+      "description": "What each id in the graph is. Optional: an id with no entry is a model.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      }
     }
   },
   "$defs": {
     "link": {
       "description": "A directed dependency: model 'from' hands data off to model 'to'.",
       "type": "object",
-      "required": ["from", "to"],
+      "required": [
+        "from",
+        "to"
+      ],
       "additionalProperties": true,
       "properties": {
-        "from": { "type": "string", "minLength": 1 },
-        "to": { "type": "string", "minLength": 1 },
-        "data_handoff": { "type": "string" },
-        "granularity": { "type": "string" },
-        "compatibility": { "type": "string" },
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1
+        },
+        "data_handoff": {
+          "type": "string"
+        },
+        "granularity": {
+          "type": "string"
+        },
+        "compatibility": {
+          "type": "string"
+        },
         "fields": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": true,
             "properties": {
-              "name": { "type": "string" },
-              "type": { "type": "string" },
-              "description": { "type": "string" }
+              "name": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              }
             }
           }
+        }
+      }
+    },
+    "node": {
+      "description": "One node in the graph. 'kind' is validated server-side against the node-kind vocabulary; an unknown kind is refused rather than silently treated as a model.",
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
         }
       }
     }

@@ -30,6 +30,8 @@ from __future__ import annotations
 
 from flask import Blueprint, jsonify
 
+from config.governance._lineage import (EXTERNAL_NODE_KINDS, NODE_KIND_LABELS,
+                                        NODE_KINDS)
 from config.theme import STATUS_COLOUR_DEFAULTS, STATUS_COLOUR_TOKENS, THEME
 
 theme_bp = Blueprint("theme", __name__)
@@ -41,4 +43,12 @@ def get_theme():
         "tokens": THEME,
         "status_colours": STATUS_COLOUR_TOKENS,
         "status_defaults": STATUS_COLOUR_DEFAULTS,
+        # The graph's drawing vocabulary, served beside the colours it draws with. A
+        # node kind list compiled into chain.js is a second definition of config's,
+        # and it drifts the first time a kind is added.
+        "lineage_nodes": {
+            "kinds": list(NODE_KINDS),
+            "external": list(EXTERNAL_NODE_KINDS),
+            "labels": dict(NODE_KIND_LABELS),
+        },
     })

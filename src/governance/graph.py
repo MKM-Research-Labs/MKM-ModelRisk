@@ -56,6 +56,52 @@ def has_cycle(edges: Iterable[Edge]) -> bool:
     return seen != len(nodes)
 
 
+def find_cycle(edges: Iterable[Edge]) -> list[Any]:
+    """One cycle, as the path around it, or ``[]`` where the graph is acyclic.
+
+    ``has_cycle`` answers whether; this answers WHICH, because "the model chain has a
+    cycle" sends somebody to read the whole graph by hand. The path returned is one
+    cycle and not necessarily the only one — fixing it and re-running is the workflow,
+    and listing every cycle in a graph that has several is not more useful than naming
+    the first.
+
+    Iterative depth-first, with an explicit stack. A chain deep enough to matter is
+    deep enough to exhaust the interpreter's, and a monitoring tool that dies with a
+    RecursionError on the pathological input it exists to detect is no use at all.
+    """
+    edge_list = [(a, b) for a, b in edges]
+    out: dict[Any, list[Any]] = {}
+    for a, b in edge_list:
+        out.setdefault(a, []).append(b)
+        out.setdefault(b, [])
+
+    UNVISITED, ON_STACK, DONE = 0, 1, 2
+    state = {node: UNVISITED for node in out}
+    for start in out:
+        if state[start] != UNVISITED:
+            continue
+        # Each frame is (node, iterator position); ``path`` is the route to it.
+        stack: list[tuple[Any, int]] = [(start, 0)]
+        path: list[Any] = [start]
+        state[start] = ON_STACK
+        while stack:
+            node, index = stack[-1]
+            if index < len(out[node]):
+                stack[-1] = (node, index + 1)
+                nxt = out[node][index]
+                if state[nxt] == ON_STACK:
+                    return path[path.index(nxt):] + [nxt]
+                if state[nxt] == UNVISITED:
+                    state[nxt] = ON_STACK
+                    stack.append((nxt, 0))
+                    path.append(nxt)
+            else:
+                state[node] = DONE
+                stack.pop()
+                path.pop()
+    return []
+
+
 def self_loops(edges: Iterable[Edge]) -> list[Edge]:
     """Return the edges whose endpoints are identical (a model depends on itself)."""
     return [(a, b) for a, b in edges if a == b]

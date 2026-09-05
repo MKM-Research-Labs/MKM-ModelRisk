@@ -35,7 +35,8 @@ from jsonschema import Draft202012Validator
 
 from config.ingest import INGEST_ARTIFACTS
 from config.paths import CONTRACTS_V1_DIR
-from src.governance.graph import has_cycle, self_loops
+from config.governance._lineage import NODE_KINDS
+from src.governance.graph import find_cycle, self_loops
 
 _ENVELOPE_SCHEMA = "envelope.schema.json"
 
@@ -103,10 +104,30 @@ def _check_model_chain(payload: dict[str, Any]) -> list[str]:
     'string of pearls' loops back on itself, which cannot be a real pipeline).
     """
     edges = [(l.get("from"), l.get("to")) for l in payload.get("links", [])]
-    errors = [f"link {a} -> {b}: a model cannot depend on itself"
+    errors = [f"link {a} -> {b}: a node cannot depend on itself"
               for a, b in self_loops(edges)]
-    if has_cycle(edges):
-        errors.append("the model chain has a cycle — the dependency graph must be acyclic")
+    # A declared kind nobody recognises is refused rather than defaulted. An undeclared
+    # kind IS defaulted — every chain pushed before nodes existed is a graph of models —
+    # but a typo silently becoming a model is how a foundation model disappears into the
+    # estate as something the firm believes it governs.
+    for node in payload.get("nodes", []) or []:
+        declared = str(node.get("kind") or "").strip()
+        if declared and declared.upper() not in NODE_KINDS:
+            errors.append(
+                f"node {node.get('id')}: unknown kind {declared!r} — "
+                f"one of: {', '.join(NODE_KINDS)}")
+    known = {str(n.get("id")) for n in (payload.get("nodes") or []) if n.get("id")}
+    if known:
+        for a, b in edges:
+            for end in (a, b):
+                if end is not None and str(end) not in known:
+                    errors.append(f"link endpoint {end} is not among the declared nodes")
+    # Name the cycle. "The chain has a cycle" sends somebody to read the whole graph
+    # by hand; the path is what they would have been looking for.
+    cycle = find_cycle(edges)
+    if cycle:
+        errors.append("the model chain has a cycle — the dependency graph must be "
+                      "acyclic: " + " -> ".join(str(n) for n in cycle))
     return errors
 
 

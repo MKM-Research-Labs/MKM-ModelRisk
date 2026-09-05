@@ -260,6 +260,13 @@ STATUS_COLOUR_TOKENS = {
     # register where every row looks urgent is one nobody scans.
     "change_class": {"Administrative": "grey", "Bounded": "accent",
                      "Measurement": "amber", "Material": "red"},
+    # Lineage node kinds. The three the institution governs take the platform's own
+    # colours; the two it does not — a foundation model somebody else versions, an MCP
+    # server outside the firm — take the warning shades, because what a chain diagram
+    # is FOR is showing where the firm's perimeter ends.
+    "lineage_node": {"MODEL": "accent", "ML_APPLICATION": "blue-grey",
+                     "AI_SYSTEM": "violet", "FOUNDATION_MODEL": "amber",
+                     "MCP_SERVER": "red"},
 }
 
 # What an unrecognised value is drawn in, per domain. A domain absent from here has no
@@ -268,6 +275,9 @@ STATUS_COLOUR_TOKENS = {
 STATUS_COLOUR_DEFAULTS = {
     # An unclassified change has no tier yet, and grey says so without asserting one.
     "change_class": "grey",
+    # A node kind nothing recognises is drawn as one the platform does not govern,
+    # which is the safer of the two readings.
+    "lineage_node": "grey",
     "validation_question": "grey",
     "mrc_state": "grey",
     "lifecycle": "grey",
