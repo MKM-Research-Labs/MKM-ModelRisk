@@ -57,6 +57,7 @@ issue -- the mapping is the judgement here, the numbering is not.
 from __future__ import annotations
 
 from config.governance._finos import FINOS_COVERAGE, FINOS_NOTES
+from config.governance._sr117 import SR_11_7_COVERAGE, SR_11_7_NOTES
 
 # ---------------------------------------------------------------------------
 # Outcome vocabulary.
@@ -271,12 +272,15 @@ FRAMEWORK_COVERAGE = (
     (COSO_ERM, COSO_ERM_PRINCIPLES),
     (BCBS_239, BCBS_239_PRINCIPLES),
     *FINOS_COVERAGE,
+    # SR 11-7 enters as a second DATA SET, not a second engine: its clauses name the
+    # same probes every other framework's do, so both report through one code path.
+    *SR_11_7_COVERAGE,
 )
 
 # What a framework's table needs said before its rows, where the shared basis
 # paragraph is not enough on its own. Keyed by framework name; a framework with
 # nothing to add simply does not appear.
-FRAMEWORK_NOTES = dict(FINOS_NOTES)
+FRAMEWORK_NOTES = {**FINOS_NOTES, **SR_11_7_NOTES}
 
 # What the coverage section says it is and is not. Held here with the table it
 # qualifies, because an adopter who re-points the table must re-word this with it.

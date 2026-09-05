@@ -226,7 +226,7 @@ def _measured(probe: str, estate: dict, note: str, ref: str = "") -> dict:
 
 
 def coverage(rows: list[dict], models: list[dict], as_of: str,
-             ratified=(), evidence=()) -> list[dict]:
+             ratified=(), evidence=(), framework: str | None = None) -> list[dict]:
     """Every clause of every configured framework, with its evidence.
 
     ``rows`` are the audited records (models and products), ``models`` the
@@ -244,11 +244,17 @@ def coverage(rows: list[dict], models: list[dict], as_of: str,
     estate = {"rows": rows, "models": models, "as_of": as_of,
               "ratified": set(ratified), "evidence": list(evidence)}
     out = []
-    for framework, clauses in FRAMEWORK_COVERAGE:
+    for name, clauses in FRAMEWORK_COVERAGE:
+        # Narrowing to one framework runs the SAME probes over the SAME estate and
+        # simply reports fewer rows. It is a filter, never a second reading — a
+        # framework whose coverage depended on being asked for alone would be a
+        # framework nobody could reconcile against the others.
+        if framework is not None and name != framework:
+            continue
         for ref, title, probe, note in clauses:
             result = ({"state": DECLARED[probe], "met": 0, "total": 0, "evidence": note}
                       if probe in DECLARED else _measured(probe, estate, note, ref))
-            out.append({"framework": framework, "ref": ref, "title": title,
+            out.append({"framework": name, "ref": ref, "title": title,
                         "probe": probe, **result})
     return out
 
