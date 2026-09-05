@@ -142,30 +142,6 @@ const MeetingDetail = {
     return "";
   },
 
-  _info(d) {
-    // mrc + org tier and chair are derived from the MRC binding, so they stay
-    // read-only — they change by re-binding the meeting, not by typing here.
-    // Date, time and location are the meeting's own logistics and do move: rooms
-    // change and meetings get postponed, and a governance record that cannot
-    // record that is a record people keep somewhere else. Status is the lifecycle
-    // control (Scheduled → Completed). Every one of these goes through the same
-    // confirm-to-amend path, so a rescheduling is on the audit trail.
-    const readOnly = (label, key) => '<span class="datechip" id="minfo-' + key + '">' +
-      '<span class="muted">' + label + ':</span> <b>' + fieldDisplay(d[key]) + "</b></span>";
-    // A closed meeting is a finished record: the domain refuses to amend it, so
-    // the console withdraws the edit affordance rather than offering an action
-    // that can only fail.
-    const closed = this._meeting.status === CLOSED_MEETING_STATUS;
-    const editable = (label, key) => closed ? readOnly(label, key) :
-      '<span class="datechip" id="minfo-' + key + '"><span class="muted">' +
-      label + ':</span> <b>' + fieldDisplay(d[key]) + "</b> " +
-      '<span class="edit-btn" data-minfo="' + key + '">edit</span></span>';
-    return '<div class="dh-dates">' + readOnly("MRC", "mrc") + readOnly("Division", "division") +
-      readOnly("Line of Business", "line_of_business") + readOnly("Chair", "chair") + "</div>" +
-      '<div class="dh-dates">' + editable("Date", "date") + editable("Time", "time") +
-      editable("Location", "location") + editable("Status", "status") + "</div>";
-  },
-
   _tabbar(d) {
     // The agenda badge counts only what the tab shows — sign-off items render in
     // the Signoff tab, so they don't inflate the agenda count.
@@ -253,49 +229,5 @@ const MeetingDetail = {
       App.toast("Risk categorisation " + (action === "approve" ? "approved and live" : "rejected"), "ok");
       this.show(this._id, this._tab);   // reload so the AOB item reflects the new state
     } catch (e) { App.toast(e.message || "failed", "error"); }
-  },
-
-  _bindInfo(d) {
-    const self = this;
-    document.getElementById("mt-back").onclick = function () {
-      document.getElementById("mt-detail").innerHTML = ""; MRC.loadMeetings();
-    };
-    document.getElementById("mt-pdf").onclick = function () {
-      window.open("/api/meetings/" + self._id + "/pack.pdf", "_blank");
-    };
-    const closeBtn = document.getElementById("mt-close");
-    if (closeBtn && !closeBtn.disabled) {
-      closeBtn.onclick = function () {
-        App.amend("Close " + self._id + " — this generates and files the minutes.",
-          "POST", "/api/meetings/" + self._id + "/close", {},
-          () => self.show(self._id, self._tab));
-      };
-    }
-    document.querySelectorAll("[data-minfo]").forEach(function (btn) {
-      const key = btn.getAttribute("data-minfo");
-      btn.onclick = function () { self._editField(key, d[key]); };
-    });
-  },
-
-  _editField(key, current) {
-    const f = MRC.specFieldByKey(key);
-    const chip = document.getElementById("minfo-" + key);
-    chip.innerHTML = inputControl("mf-input", f) +
-      '<button class="btn small primary" id="mf-save">Save</button>' +
-      '<button class="btn small" id="mf-cancel">Cancel</button>';
-    const input = document.getElementById("mf-input");
-    if (current !== null && current !== undefined) input.value = current;
-    document.getElementById("mf-cancel").onclick = () => this.show(this._id, this._tab);
-    document.getElementById("mf-save").onclick = () => {
-      // A required field cannot be emptied — clearing the title would leave the
-      // meeting headed by its bare id in every list, pack and minute.
-      if (f.required && !input.value.trim()) {
-        App.toast(f.label + " cannot be empty", "error");
-        return;
-      }
-      App.amend("Set " + f.label + ' = "' + input.value + '" on ' + this._id + ".", "POST",
-        "/api/meetings/" + this._id + "/field", { field: key, value: input.value.trim() },
-        () => { this.show(this._id, this._tab); MRC.loadMeetings(); });
-    };
   },
 };
