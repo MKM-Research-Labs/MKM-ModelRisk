@@ -69,11 +69,32 @@ Object.assign(Detail, {
   // A missing committee is flagged in red — sign-off can't be routed without one.
   _mrcRow() {
     const m = this._mrc || {};
+    // A committee covers this record's org location but none is senior enough for
+    // where the rules send it. That is a gap in the committee structure, not a
+    // misfiled record, and saying "no committee covers this" would send somebody to
+    // recreate the committee they already have.
+    if (m.blocked) {
+      return '<div class="inforow"><div class="k">MRC</div>' +
+        '<div class="v" style="color:var(--amber)">&#9888; This needs a ' +
+        esc(m.required_level || "") + "-level committee. " +
+        esc((m.instead_of || {}).name || "The covering committee") +
+        " covers it but is " + esc((m.instead_of_level || "").toLowerCase()) +
+        "-level.<div class=\"muted\" style=\"font-size:var(--size-xs);margin-top:var(--space-2)\">" +
+        esc(m.because || "") + "</div></div></div>";
+    }
     if (m.mrc) {
       const c = m.mrc;
+      // As on every other record type: where the routing rules took this above the
+      // committee that merely covers its org location, say so and say why.
+      const why = m.escalated
+        ? '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-2)">' +
+          "Escalated from " + esc((m.instead_of || {}).name || "") + " &mdash; " +
+          esc(m.because || "") + "</div>"
+        : "";
       return '<div class="inforow"><div class="k">MRC</div><div class="v">' +
         esc(c.name || c.value) + ' <span class="pill">' + esc(c.value) + "</span> " +
-        '<span class="muted" style="font-size:var(--size-xs)">' + esc(m.level || "") + "-level</span></div></div>";
+        '<span class="muted" style="font-size:var(--size-xs)">' + esc(m.level || "") +
+        "-level</span>" + why + "</div></div>";
     }
     const d = this._model.data || {};
     const org = [d.division, d.line_of_business].filter(Boolean).join(" / ") || "no division / line of business set";

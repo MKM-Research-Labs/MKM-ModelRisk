@@ -66,6 +66,17 @@ def json_body() -> dict[str, Any]:
     return request.get_json(silent=True) or {}
 
 
+def resolve_mrc_for_record(record_type: str, data: dict[str, Any]) -> dict[str, Any]:
+    """The committee responsible for a record, and why it is that one.
+
+    Where ``resolve_mrc_for_org`` answers only "what covers this org location", this
+    also applies the routing rules — so an agentic AI System or a mission-critical model
+    reports the committee it must actually reach, with the reason travelling alongside.
+    """
+    from src.governance.mrc import route  # lazy: avoids an import cycle
+    return route(record_type, data or {}, get_reference_lists())
+
+
 def resolve_mrc_for_org(division: str | None, line_of_business: str | None) -> dict[str, Any]:
     """The MRC committee responsible for a given org location, as a JSON block.
 

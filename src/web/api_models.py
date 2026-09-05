@@ -56,7 +56,7 @@ from src.web._helpers import (collection_field_specs, grouped_field_specs,
     request_actor,
     resolve_field,
     document_specs,
-    resolve_mrc_for_org,
+    resolve_mrc_for_record,
     send_document,
 )
 
@@ -87,7 +87,7 @@ def model_mrc(model_id: str):
     if model is None:
         return jsonify({"error": "model not found"}), 404
     data = model["data"] or {}
-    return jsonify(resolve_mrc_for_org(data.get("division"), data.get("line_of_business")))
+    return jsonify(resolve_mrc_for_record("model", data))
 
 
 @models_bp.post("/<model_id>/documents")

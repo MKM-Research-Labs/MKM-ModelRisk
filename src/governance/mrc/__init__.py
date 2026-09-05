@@ -34,11 +34,14 @@ from src.governance.mrc.projection import (
     get_meeting_enriched,
     list_meetings,
     list_meetings_enriched,
+    committee_at_levels,
     matching_mrc,
     meeting_items_for_model,
     outstanding_actions_for_committee,
     rebuild_meeting_view,
 )
+
+from src.governance.mrc.routing import route
 
 __all__ = [
     "AGGREGATE_TYPE",
@@ -54,7 +57,9 @@ __all__ = [
     "get_meeting_enriched",
     "list_meetings",
     "list_meetings_enriched",
+    "committee_at_levels",
     "matching_mrc",
+    "route",
     "meeting_items_for_model",
     "outstanding_actions_for_committee",
     "rebuild_meeting_view",

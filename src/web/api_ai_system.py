@@ -43,7 +43,7 @@ from src.web._review_stages import review_specs
 from src.web._signoff_subject import AI_SYSTEM_SUBJECT
 from src.web._helpers import (collection_field_specs, context_from_request,
                               document_specs, grouped_field_specs, json_body,
-                              reference_options, resolve_mrc_for_org)
+                              reference_options, resolve_mrc_for_record)
 
 ai_system_bp = Blueprint("ai_system", __name__, url_prefix="/api/ai-systems")
 
@@ -160,4 +160,4 @@ def responsible_mrc(ai_system_id: str):
     if record is None:
         return jsonify({"error": "AI System not found"}), 404
     data = record["data"] or {}
-    return jsonify(resolve_mrc_for_org(data.get("division"), data.get("line_of_business")))
+    return jsonify(resolve_mrc_for_record("ai_system", data))

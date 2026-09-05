@@ -188,26 +188,30 @@ def matching_mrc(
     committees are never matched. Returns ``(committee, level)`` or
     ``(None, None)`` when nothing covers it.
     """
+    return committee_at_levels(("Line of Business", "Division", "Company"),
+                               division, line_of_business, refs)
+
+
+def committee_at_levels(
+    levels, division: str | None, line_of_business: str | None, refs: dict[str, list],
+) -> tuple[dict[str, Any] | None, str | None]:
+    """The first active committee covering this org location at one of ``levels``.
+
+    ``levels`` is tried in order, so passing them most-specific-first gives the closest
+    committee and a shortened list gives the closest one that is SENIOR enough — which
+    is what the routing rules need when a record must be escalated. Written once here
+    rather than beside the rules, so "which committee covers this" has one answer.
+    """
     active = [m for m in refs.get("mrc") or [] if m.get("archived") != "true"]
-    if line_of_business:
-        lob = next(
-            (m for m in active
-             if m.get("level") == "Line of Business" and m.get("scope_value") == line_of_business),
-            None,
-        )
-        if lob:
-            return lob, "Line of Business"
-    if division:
-        div = next(
-            (m for m in active
-             if m.get("level") == "Division" and m.get("scope_value") == division),
-            None,
-        )
-        if div:
-            return div, "Division"
-    company = next((m for m in active if m.get("level") == "Company"), None)
-    if company:
-        return company, "Company"
+    scope = {"Line of Business": line_of_business, "Division": division, "Company": None}
+    for level in levels:
+        wanted = scope.get(level)
+        if level != "Company" and not wanted:
+            continue
+        found = next((m for m in active if m.get("level") == level
+                      and (level == "Company" or m.get("scope_value") == wanted)), None)
+        if found:
+            return found, level
     return None, None
 
 

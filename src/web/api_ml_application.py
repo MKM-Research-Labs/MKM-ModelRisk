@@ -42,7 +42,7 @@ from src.web._ml_scope import scoped, scoped_list
 from src.web._review_stages import review_specs
 from src.web._signoff_subject import ML_APPLICATION_SUBJECT
 from src.web._helpers import (collection_field_specs, context_from_request,
-                              resolve_mrc_for_org,
+                              resolve_mrc_for_record,
                               document_specs, grouped_field_specs, json_body,
                               reference_options, resolve_field)
 
@@ -212,4 +212,4 @@ def responsible_mrc(ml_application_id: str):
     if record is None:
         return jsonify({"error": "ML Application not found"}), 404
     data = record["data"] or {}
-    return jsonify(resolve_mrc_for_org(data.get("division"), data.get("line_of_business")))
+    return jsonify(resolve_mrc_for_record("ml_application", data))
