@@ -1,0 +1,70 @@
+/* Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE. */
+/* The graph canvas: the model chain and the neighbourhood editor.
+
+   Everything here styles an SVG a reader can act on rather than a document they
+   read -- nodes that open a record, edges that jump to their handoff row, the
+   rubber line that follows the pointer while a declaration is being made, and the
+   whole canvas as a drop target. That is why it is separate from app.css, which
+   styles cards, tables and forms.
+
+   Loads after app.css; every var(--...) here resolves against the served theme. */
+
+/* Model Chain ("string of pearls") */
+.chain-canvas { border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-6); background: var(--panel); }
+.chain-swatch { display: inline-block; width: 13px; height: 13px; border-radius: var(--radius-sm); border: 1.5px solid; vertical-align: -2px; margin-right: var(--space-2); }
+/* Graph nodes open their model, so they carry the same affordance as a link. */
+.chain-node { cursor: pointer; }
+.chain-node rect { transition: stroke-width 0.1s ease, filter 0.1s ease; }
+.chain-node:hover rect { stroke-width: 3; filter: brightness(0.97); }
+.chain-node:hover text { text-decoration: underline; }
+/* Edges are clickable: they jump to their row in the Handoffs table. The wide
+   invisible hit-line makes the thin arrow comfortable to click. */
+.chain-edge { cursor: pointer; }
+.chain-edge-hit { stroke: transparent; stroke-width: 12; }
+.chain-edge-line { stroke: var(--slate); stroke-width: 1.5; transition: stroke 0.1s ease, stroke-width 0.1s ease; }
+.chain-edge:hover .chain-edge-line { stroke: var(--accent); stroke-width: 2.5; }
+/* The neighbourhood canvas is also where declarations are made (see
+   inventory/neighbourhood_edit.js). Bands and handles stay invisible at rest, so
+   the picture is unchanged until a drag starts. */
+.nbhd-tray { border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-5) var(--space-6); margin-bottom: var(--space-5); background: var(--tray-bg); }
+.nbhd-tray-head { display: flex; align-items: center; gap: var(--space-5); margin-bottom: var(--space-4); }
+.nbhd-filter { margin-left: auto; padding: 3px var(--space-4); border: 1px solid var(--line); border-radius: 5px; font-size: var(--size-sm); width: 160px; }
+.nbhd-tray-row { display: flex; align-items: flex-start; gap: var(--space-5); margin-top: var(--space-3); }
+.nbhd-tray-label { font-size: var(--size-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); width: 92px; flex: none; padding-top: var(--space-2); }
+.nbhd-chips { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.nbhd-chip { display: inline-block; padding: 3px 9px; border-radius: var(--radius-pill); font-size: 11.5px; font-weight: 600; cursor: grab; border: 1.5px solid; user-select: none; touch-action: none; }
+.nbhd-chip:active { cursor: grabbing; }
+.nbhd-chip-model { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+.nbhd-chip-source { background: var(--warn-bg-alt); border-color: var(--warn-line); color: var(--warn-ink); }
+.nbhd-ghost { position: fixed; z-index: 9999; pointer-events: none; padding: 3px 9px; border-radius: var(--radius-pill); font-size: 11.5px; font-weight: 600; background: var(--accent-soft); border: 1.5px solid var(--accent); color: var(--accent-ink); box-shadow: var(--shadow-ghost); }
+.nbhd-band { display: none; }
+.nbhd-canvas.nbhd-drop .nbhd-band { display: block; }
+.nbhd-band rect { fill: var(--indigo-bg); fill-opacity: 0.82; stroke: var(--indigo); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.nbhd-band text { fill: var(--indigo-ink); font-weight: 600; }
+.nbhd-band.drop-over rect { fill-opacity: 0.95; stroke-width: 2.5; }
+.graph-handle { fill: var(--panel); stroke: var(--accent); stroke-width: 1.5; opacity: 0; cursor: crosshair; touch-action: none; }
+.nbhd-node:hover .graph-handle, .chain-node:hover .graph-handle,
+.graph-wiring .graph-handle { opacity: 1; }
+.wire-target rect { stroke-width: 3.5; filter: brightness(0.96); }
+/* The rubber line ends under the pointer, so it would otherwise win the
+   hit-test against the very node the wire is being dropped on. */
+.graph-rubber { pointer-events: none; }
+/* Staging a model onto the estate chain: the whole canvas is the drop target. */
+.chain-canvas.chain-staging { border-style: dashed; border-color: var(--indigo); }
+.chain-canvas.chain-staging.drop-over { background: var(--indigo-wash); border-width: 2px; }
+/* Arrows carry the handoff, so they are clickable like the chain's. */
+.nbhd-edge { cursor: pointer; }
+.nbhd-hit { stroke: transparent; stroke-width: 14; }
+/* Drawn over the arrows, so the label carries a white halo to stay readable. */
+.nbhd-edge-label { fill: var(--muted); paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
+.nbhd-edge:hover .nbhd-edge-label { fill: var(--accent); font-weight: 600; }
+/* On the whole-estate chain many edges converge on the same few nodes and their
+   midpoints collide, so there the label is a hover reveal rather than always on.
+   A model's own canvas holds a handful of edges and keeps them permanently. */
+.chain-edge .nbhd-edge-label { opacity: 0; transition: opacity 0.1s ease; }
+.chain-edge:hover .nbhd-edge-label { opacity: 1; fill: var(--accent); font-weight: 600; }
+.chain-list { display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-4); }
+.chain-item { display: flex; align-items: baseline; gap: var(--space-6); padding: var(--space-5) var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-lg); cursor: pointer; background: var(--panel); }
+.chain-item:hover { border-color: var(--accent); background: var(--accent-wash); }
+.chain-item-id { font-weight: 700; color: var(--text); }
+.chain-item-name { color: var(--muted); font-size: var(--size-md); }
