@@ -74,6 +74,12 @@ ADVERSE_FAIRNESS_VERDICT = "Disparity found"
 
 FAIRNESS_COLLECTION = "fairness_assessments"
 EVALUATIONS_COLLECTION = "evaluations"
+MONITORING_COLLECTION = "monitoring_observations"
+
+# What a monitored field is, which decides how a backtest of it is scored. The measures
+# library dispatches on this and refuses anything else, because reporting AUC for a
+# depth-damage curve is how a monitoring pack stops being read.
+VALID_MONITORED_FIELD_TYPES = ("classification", "regression")
 
 ASSESSMENT_COLLECTION_SPECS = {
     # Who could be disadvantaged by this record's output, and what was actually
@@ -107,6 +113,44 @@ ASSESSMENT_COLLECTION_SPECS = {
         # tolerance, as at August".
         {"key": "assessed_on", "label": "Assessed on", "type": "date", "stacked": True,
          "default_today": True},
+    ]},
+    # One period's observation of one output field: the distribution then and now, and
+    # what was predicted against what happened. The row the statistical measures are
+    # computed FROM.
+    #
+    # This is the intake the measures library had been built without. The library landed
+    # in Phase 0.2 with hand-checked arithmetic and no data anywhere in the platform to
+    # run it over -- no field, no collection and no ingest contract carried a
+    # distribution, a prediction or a realised outcome -- so every measure it could
+    # compute was unreachable. Wiring it to nothing would have produced a monitoring
+    # section that said "not evidenced" for ever and looked like a finding.
+    #
+    # **Bucket counts, not raw series.** A monitoring pack carries a distribution as ten
+    # bucket counts, and a backtest as a summary; storing the underlying rows on a
+    # governance record would be holding the firm's book, which this platform
+    # deliberately does not do. The fields are comma-separated numbers because that is
+    # what somebody transcribes from a monitoring pack, and because a governance record
+    # is read by people.
+    #
+    # Free text on the bucket LABELS for the same reason ``attribute`` is free text on a
+    # fairness row: what a firm bands its scores into is its own decision.
+    MONITORING_COLLECTION: {"label": "Monitoring observation", "id_prefix": "OBS",
+                            "fields": [
+        {"key": "field", "label": "Output field", "type": "text", "required": True},
+        {"key": "field_type", "label": "Field type", "type": "choice",
+         "options": VALID_MONITORED_FIELD_TYPES},
+        {"key": "buckets", "label": "Bucket labels (comma-separated)", "type": "text"},
+        {"key": "baseline_counts", "label": "Baseline counts (comma-separated)",
+         "type": "text"},
+        {"key": "current_counts", "label": "Current counts (comma-separated)",
+         "type": "text"},
+        {"key": "predicted", "label": "Predicted values (comma-separated)",
+         "type": "textarea"},
+        {"key": "realised", "label": "Realised values (comma-separated)",
+         "type": "textarea"},
+        {"key": "observed_on", "label": "Observed on", "type": "date", "stacked": True,
+         "default_today": True},
+        {"key": "note", "label": "Note", "type": "textarea"},
     ]},
     # One row per evaluation run: what was tested, against what, what came back.
     #

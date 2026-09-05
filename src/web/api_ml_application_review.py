@@ -29,6 +29,7 @@ this attaches to.
 from __future__ import annotations
 
 from src.web._review_stages import register_review_stage_routes
+from src.web._monitoring_position import register_monitoring_route
 from src.web._review_signoff import register_review_signoff_routes
 from src.web._review_thread import register_review_note_route
 from src.web._signoff_subject import ML_APPLICATION_SUBJECT
@@ -37,3 +38,4 @@ from src.web.api_ml_application import ml_application_bp
 register_review_stage_routes(ml_application_bp, ML_APPLICATION_SUBJECT)
 register_review_note_route(ml_application_bp, ML_APPLICATION_SUBJECT)
 register_review_signoff_routes(ml_application_bp, ML_APPLICATION_SUBJECT)
+register_monitoring_route(ml_application_bp, ML_APPLICATION_SUBJECT)

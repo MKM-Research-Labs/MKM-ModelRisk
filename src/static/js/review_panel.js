@@ -114,6 +114,41 @@ const ReviewPanelContract = {
   _rvQuestions(d) { return d[this._rvQuestionsKey()] || []; },
   _rvQuestionsLead() { return ""; },
 
+  // What the statistics say about this record. A measure that could not be computed
+  // prints WHY: an absent stability index and an index of zero are different claims,
+  // and a monitoring pack that cannot tell them apart is worse than one reporting
+  // nothing.
+  async _loadMeasured() {
+    const box = this._rvEl("measured");
+    if (!box) return;
+    try {
+      const position = await App.get(this._rvApi() + this._rvId() + "/monitoring");
+      if (!position.results.length) {
+        box.className = "empty";
+        box.textContent = position.why;
+        return;
+      }
+      const rows = position.results.map((r) => {
+        const value = r.value === null ? "&mdash;"
+          : String(Math.round(r.value * 10000) / 10000);
+        const basis = typeof r.detail === "string" ? r.detail
+          : (r.status === "ok" ? "" : r.status);
+        return "<tr><td>" + esc(r.field || "") + "</td><td>" + esc(r.measure) +
+          "</td><td>" + value + "</td><td>" +
+          (r.rag ? '<span class="badge" style="background:' +
+            (Theme.colour("rag", r.rag) || Theme.value("grey")) + '">' + esc(r.rag) +
+            "</span>" : "&mdash;") + "</td><td>" + esc(basis) + "</td></tr>";
+      }).join("");
+      box.className = "";
+      box.innerHTML = '<table style="table-layout:fixed;width:100%"><thead><tr>' +
+        "<th>Field</th><th>Measure</th><th>Value</th><th>Rating</th><th>Basis</th>" +
+        "</tr></thead><tbody>" + rows + "</tbody></table>";
+    } catch (e) {
+      box.className = "empty";
+      box.textContent = e.message;
+    }
+  },
+
   _rvBindOwnerAnswers() {
     if (this._rvRetired()) return;
     const self = this;
@@ -240,12 +275,19 @@ const ReviewPanel = {
       return;
     }
     if (this._reviewStage === "monitoring") {
-      box.innerHTML = '<div class="section-header">Monitoring approach</div>' +
+      // The measured position is fetched and rendered above the approach: what the
+      // statistics say comes before what somebody said they would do about it. Fetched
+      // rather than computed here — the measures are one implementation with
+      // hand-checked arithmetic, and a second in JavaScript would be a second answer.
+      box.innerHTML = '<div class="section-header">Measured position</div>' +
+        '<div id="' + this._rvPfx() + 'measured" class="empty">Loading&hellip;</div>' +
+        '<div class="section-header" style="margin-top:var(--space-8)">Monitoring approach</div>' +
         '<p class="muted" style="font-size:var(--size-sm)">How this model will be watched once it is in ' +
         "use, in your own words &mdash; what would be looked at, how often, and what would " +
         "prompt a second look.</p>" + this._rvRow("monitoring_approach", d) +
         this._thread("monitoring", d) + this._stageApproval("monitoring", d);
       this._rvBindEdits();
+      this._loadMeasured();
       this._bindThread("monitoring");
       this._bindStageApproval("monitoring");
       return;

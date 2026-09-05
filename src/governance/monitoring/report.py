@@ -37,7 +37,8 @@ from config.governance import (
     NO_PRODUCTION_STATEMENT,
     NO_SOURCE_STATEMENT,
 )
-from src.governance.latex import (_para_table, _section, _subsection, front_matter,
+from src.governance.monitoring.measured import measured_position
+from src.governance.latex import (_esc, _para_table, _section, _subsection, front_matter,
                                   history_page, logo_asset, preamble)
 from src.governance.model_inventory._report_model import items
 from src.governance.monitoring.portfolio import catchments, source_present, summary
@@ -123,6 +124,37 @@ def _limitations(data: dict) -> str:
         [0.08, 0.30, 0.10, 0.29, 0.23], caption="Limitations of use"))
 
 
+def _measured(data: dict) -> str:
+    """The measured position: what the statistics say, or what is missing and why.
+
+    Reported BEFORE the recorded weaknesses, because a number that has moved is what a
+    committee should meet first — the standing weaknesses are the context for it.
+
+    A record with no observation reads as one absence, not as four failed measures. It
+    is a different finding, and printing it as four would look like four problems where
+    there is one: nobody has recorded the data.
+    """
+    position = measured_position(data)
+    if not position["results"]:
+        return _subsection("Measured position", _esc(position["why"]) + "\n\n")
+    rows = []
+    for result in position["results"]:
+        value = ("--" if result["value"] is None
+                 else f"{result['value']:.4f}".rstrip("0").rstrip("."))
+        detail = result.get("detail")
+        says = (detail if isinstance(detail, str)
+                else result["status"] if result["status"] != "ok" else "")
+        rows.append([result.get("field", ""), result["measure"], value,
+                     result["rag"] or "--", says])
+    table = _para_table(["Field", "Measure", "Value", "Rating", "Basis"], rows,
+                        [0.20, 0.16, 0.12, 0.12, 0.40],
+                        caption="Measured monitoring position")
+    lead = ("Computed from the observations recorded against this record. A measure "
+            "that could not be computed states why rather than reporting a zero: an "
+            "absent stability index and an index of zero are different claims.\n\n")
+    return _subsection("Measured position", lead + table)
+
+
 def build_monitoring_tex(model: dict, settings: dict, as_of: str, *,
                          logo: bool = False, found=None,
                          configured: bool | None = None) -> str:
@@ -140,7 +172,7 @@ def build_monitoring_tex(model: dict, settings: dict, as_of: str, *,
         + _basis(model)
         + _activity(found, configured)
         + _section("Monitoring position",
-                   _weaknesses(data) + _limitations(data))
+                   _measured(data) + _weaknesses(data) + _limitations(data))
         + "\\end{document}\n"
     )
 

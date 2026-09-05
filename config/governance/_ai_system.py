@@ -71,7 +71,8 @@ from config.governance._ai import (AI_SYSTEM_QUESTION_LIST, DATA_EGRESS_CLASSES,
                                    FOUNDATION_MODEL_LIST, HOSTING_MODES,
                                    HUMAN_OVERSIGHT_MODES, VERSION_POLICIES)
 from config.governance._collections import (COLLECTION_SPECS, EVALUATIONS_COLLECTION,
-                                            FAIRNESS_COLLECTION)
+                                            FAIRNESS_COLLECTION,
+                                            MONITORING_COLLECTION)
 from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY,
                                           VALID_LIFECYCLE_STAGES, VALID_MATERIALITY,
                                           VALID_RAG_RATINGS, VALID_REVIEW_FREQUENCIES,
@@ -227,6 +228,11 @@ AI_SYSTEM_COLLECTION_SPECS = {
     # What testing actually returned. Same collection on all three record types,
     # because "has this been measured, and what did it say" is one question.
     EVALUATIONS_COLLECTION: COLLECTION_SPECS[EVALUATIONS_COLLECTION],
+    # The measured position on an output field, period by period. Same collection on
+    # all three record types: "has this drifted, and did what it predicted happen" is
+    # one question whatever produced the number, which is the whole reason the measures
+    # library is shared.
+    MONITORING_COLLECTION: COLLECTION_SPECS[MONITORING_COLLECTION],
     "change_history": COLLECTION_SPECS["change_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],

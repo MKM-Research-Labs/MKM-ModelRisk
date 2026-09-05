@@ -20,6 +20,7 @@
 """Structured-collection field specs on a model (coding rule R1)."""
 from config.governance._assessments import (  # noqa: F401 (re-export)
     ASSESSMENT_COLLECTION_SPECS, EVALUATIONS_COLLECTION, FAIRNESS_COLLECTION,
+    MONITORING_COLLECTION,
     VALID_EVALUATION_KINDS, VALID_EVALUATION_VERDICTS)
 from config.governance._inventory import VALID_RAG_RATINGS
 from config.governance._signoff_collections import (  # noqa: F401 (re-export)
@@ -182,15 +183,6 @@ COLLECTION_SPECS = {
         {"key": "reviewed_by", "label": "Reviewed by", "type": "text", "hidden": True},
         {"key": "reviewed_at", "label": "Reviewed at", "type": "text", "hidden": True},
     ]},
-    "version_history": {"label": "Versions", "id_prefix": "V", "fields": [
-        {"key": "version", "label": "Version", "type": "text", "required": True},
-        {"key": "date", "label": "Date", "type": "date"},
-        {"key": "description", "label": "Description", "type": "text"},
-        {"key": "author", "label": "Author", "type": "text"},
-        {"key": "ref_document", "label": "Reference document", "type": "text"},
-        {"key": "lifecycle", "label": "Lifecycle", "type": "choice",
-         "options": VALID_VERSION_LIFECYCLE, "reference": VERSION_LIFECYCLE_LIST},
-    ]},
     "remediation_steps": {"label": "Remediation", "id_prefix": "RM", "fields": [
         {"key": "description", "label": "Description", "type": "text", "required": True},
         {"key": "owner", "label": "Owner", "type": "text", "reference": "people"},
@@ -199,13 +191,6 @@ COLLECTION_SPECS = {
         {"key": "due_date", "label": "Due date", "type": "date"},
         {"key": "status", "label": "Status", "type": "choice", "options": VALID_REMEDIATION_STATUS,
          "reference": REMEDIATION_STATUS_LIST},
-    ]},
-    "change_history": {"label": "Change history", "id_prefix": "CH", "fields": [
-        {"key": "version", "label": "Version", "type": "text", "required": True},
-        {"key": "date", "label": "Date", "type": "date"},
-        {"key": "author", "label": "Author", "type": "text"},
-        {"key": "change_type", "label": "Type", "type": "text"},
-        {"key": "description", "label": "Description", "type": "text"},
     ]},
     "dependencies": {"label": "Model dependencies", "id_prefix": "DEP", "fields": [
         {"key": "direction", "label": "Direction", "type": "choice",
@@ -291,3 +276,7 @@ COLLECTION_SPECS = {
 # table every record type reads. They live in their own module (see _assessments) but
 # there is no second place to look them up.
 COLLECTION_SPECS.update(ASSESSMENT_COLLECTION_SPECS)
+# The record's own history — versions and changes — merged the same way.
+from config.governance._history_collections import (  # noqa: E402
+    HISTORY_COLLECTION_SPECS)
+COLLECTION_SPECS.update(HISTORY_COLLECTION_SPECS)

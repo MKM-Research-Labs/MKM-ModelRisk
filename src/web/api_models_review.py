@@ -29,6 +29,7 @@ from __future__ import annotations
 from src.web._review_stages import (REVIEW_PROGRESS, approvals, cycles,
                                     register_review_stage_routes, stage_by_key,
                                     stamped_now)
+from src.web._monitoring_position import register_monitoring_route
 from src.web._signoff_subject import MODEL_SUBJECT
 from src.web.api_models import models_bp
 
@@ -42,6 +43,7 @@ _STAGE_BY_KEY = stage_by_key(MODEL_SUBJECT)
 _stamped_now = stamped_now
 
 register_review_stage_routes(models_bp, MODEL_SUBJECT)
+register_monitoring_route(models_bp, MODEL_SUBJECT)
 
 __all__ = ["REVIEW_PROGRESS", "VALIDATION_QUESTIONS", "approvals", "cycles",
            "stage_by_key", "stamped_now"]

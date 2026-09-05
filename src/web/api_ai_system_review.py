@@ -29,6 +29,7 @@ this attaches to.
 from __future__ import annotations
 
 from src.web._review_stages import register_review_stage_routes
+from src.web._monitoring_position import register_monitoring_route
 from src.web._review_signoff import register_review_signoff_routes
 from src.web._review_thread import register_review_note_route
 from src.web._signoff_subject import AI_SYSTEM_SUBJECT
@@ -37,3 +38,4 @@ from src.web.api_ai_system import ai_system_bp
 register_review_stage_routes(ai_system_bp, AI_SYSTEM_SUBJECT)
 register_review_note_route(ai_system_bp, AI_SYSTEM_SUBJECT)
 register_review_signoff_routes(ai_system_bp, AI_SYSTEM_SUBJECT)
+register_monitoring_route(ai_system_bp, AI_SYSTEM_SUBJECT)
