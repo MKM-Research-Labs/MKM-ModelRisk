@@ -64,6 +64,7 @@ What this record deliberately does NOT carry:
 """
 from __future__ import annotations
 
+from config.governance._ai_regimes import DEFAULT_MARKETS, MARKETS_LIST
 from config.governance._review import REVIEW_FIELD_SPECS
 
 from config.governance._ai import (AI_SYSTEM_QUESTION_LIST, DATA_EGRESS_CLASSES,
@@ -123,6 +124,14 @@ AI_SYSTEM_FIELD_SPECS = {
                 "group": "The AI system"},
     "deployment_pattern": {"label": "Deployment pattern", "type": "choice",
                            "options": DEPLOYMENT_PATTERNS, "group": "The AI system"},
+    # Where the system is placed on the market or used, which is what regulatory
+    # regimes turn on — and deliberately not where the team sits: a London desk serving
+    # EU customers is in scope of the EU AI Act, and a field asking for the firm's
+    # domicile would have said otherwise. Multi-valued, because a system usually serves
+    # more than one.
+    "markets": {"label": "Markets served", "type": "multichoice",
+                "options": DEFAULT_MARKETS, "reference": MARKETS_LIST,
+                "group": "Exposure"},
     # --- Exposure ---
     "data_egress": {"label": "Data sent for inference", "type": "choice",
                     "options": DATA_EGRESS_CLASSES, "group": "Exposure"},

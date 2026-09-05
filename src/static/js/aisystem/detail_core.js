@@ -137,6 +137,31 @@ const AISystemDetail = RecordDetail.attach({
       text + "</p>";
   },
 
+  // Which regimes bite, and why. Resolved server-side: applicability is config the
+  // institution can extend, and a copy of the rules in the console would answer
+  // differently the moment somebody added a regime.
+  async _loadRegimes() {
+    const box = document.getElementById("ais-regimes");
+    if (!box) return;
+    try {
+      const body = await App.get("/api/ai-systems/" +
+        encodeURIComponent(this.recordId()) + "/regimes");
+      if (!body.regimes.length) {
+        box.className = "empty";
+        box.textContent = "No regime applies on the markets recorded for this system.";
+        return;
+      }
+      box.className = "";
+      box.innerHTML = body.regimes.map((r) =>
+        '<div class="inforow"><div class="k">' + esc(r.name) + '</div><div class="v">' +
+        esc(r.because) + '<span class="muted" style="font-size:var(--size-xs)"> &middot; ' +
+        r.clauses + " obligations</span></div></div>").join("");
+    } catch (e) {
+      box.className = "empty";
+      box.textContent = e.message;
+    }
+  },
+
   _renderContent() {
     const d = this._record.data || {};
     const box = document.getElementById("ais-content");
@@ -153,12 +178,19 @@ const AISystemDetail = RecordDetail.attach({
       this._bindEdits(); return;
     }
     if (this._tab === "exposure") {
-      box.innerHTML = '<div class="section-header">What leaves the firm</div>' +
+      box.innerHTML = '<div class="section-header">Regulatory regimes</div>' +
+        '<p class="muted" style="font-size:var(--size-sm)">Derived from where this ' +
+        "system is used and what it does &mdash; not ticked. Change the markets it " +
+        "serves and this changes with them.</p>" +
+        '<div id="ais-regimes" class="empty">Loading&hellip;</div>' +
+        '<div class="section-header" style="margin-top:var(--space-8)">What leaves the firm</div>' +
         this._lead("What is sent for inference, what in the contract permits it, and " +
                    "which regulatory class the system falls into. &ldquo;Not assessed&rdquo; " +
                    "is the absence of the assessment, not a class.") +
         this.fieldRows(this._EXPOSURE);
-      this._bindEdits(); return;
+      this._bindEdits();
+      this._loadRegimes();
+      return;
     }
     if (this._tab === "controls") {
       box.innerHTML = '<div class="section-header">What stands in the way</div>' +

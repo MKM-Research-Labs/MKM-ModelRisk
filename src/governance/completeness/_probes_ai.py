@@ -45,6 +45,7 @@ which is why it is written down here rather than left to be inferred.
 """
 from __future__ import annotations
 
+from config.governance._ai import UNASSESSED_EU_CLASS
 from config.governance._ai import DEPLOYMENT_PATTERNS
 from config.governance._collections import EVALUATIONS_COLLECTION
 from src.governance.completeness._gaps import _recorded
@@ -108,6 +109,17 @@ AI_PROBES = {
                         and _any_entries(d, EVALUATIONS_COLLECTION)),
     # AIR-OP-017
     "ai_explainability": _ai(lambda d: _filled(d, "explainability_approach")),
+    # EU AI Act Art. 14 / NIST 2.7. Distinct from ``ai_agency``, which asks what an
+    # agentic system MAY DO: this asks who is watching whatever it does, and applies to
+    # a direct-prompting summariser exactly as much as to a tool-using agent.
+    "ai_oversight": _ai(lambda d: _filled(d, "human_oversight")),
+    # EU AI Act Art. 6. The class AND the reasoning: "High risk (Annex III)" with no
+    # rationale records a conclusion nobody can challenge, and Art. 6 is the article a
+    # supervisor is most likely to ask the firm to justify. "Not assessed" is the
+    # absence of the assessment rather than a class, so it does not count.
+    "ai_regulatory_class": _ai(
+        lambda d: _filled(d, "eu_ai_act_class", "eu_ai_act_rationale")
+        and str(d.get("eu_ai_act_class") or "") != UNASSESSED_EU_CLASS),
     # AIR-OP-007: who supplies it and how it is reached. A system whose provider is
     # unrecorded has no availability story that could be assessed.
     "ai_provider": _ai(lambda d: _filled(d, "provider", "hosting")),

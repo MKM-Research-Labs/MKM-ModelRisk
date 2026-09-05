@@ -51,6 +51,8 @@ cleared -- on a record type whose whole point is knowing what is actually runnin
 """
 from __future__ import annotations
 
+from config.governance._ai_regimes import MARKETS_LIST
+
 FOUNDATION_MODEL_LIST = "foundation_model"
 AI_SYSTEM_QUESTION_LIST = "ai_system_questions"
 
@@ -84,7 +86,11 @@ VERSION_POLICIES = ("Pinned to a named version", "Pinned, reviewed on a cycle",
 # 26 and 72) and a deployer has to know which class it is in before it can know which
 # obligations apply. "Not assessed" is the honest default and is not a class -- it is
 # the absence of the assessment, which is itself the finding.
-EU_AI_ACT_CLASSES = ("Not assessed", "Minimal risk", "Limited risk",
+# The honest default, named so nothing has to compare against the literal: a probe
+# that counted "Not assessed" as a classification would report the absence of the
+# assessment as the assessment.
+UNASSESSED_EU_CLASS = "Not assessed"
+EU_AI_ACT_CLASSES = (UNASSESSED_EU_CLASS, "Minimal risk", "Limited risk",
                      "High risk (Annex III)", "Prohibited")
 
 # The questionnaire seeded on a fresh install, and the reason this record type earns
@@ -136,9 +142,18 @@ AI_REFERENCE_SPECS = {
     ]},
 }
 
-AI_REFERENCE_LISTS = (FOUNDATION_MODEL_LIST, AI_SYSTEM_QUESTION_LIST)
+# Where systems are placed on the market or used. An admin list because which markets
+# an institution serves is a fact about that institution, and a fixed list of ours would
+# be wrong for a firm operating somewhere we did not think of.
+MARKET_LIST_SPEC = {MARKETS_LIST: {"label": "Market", "id_prefix": "MK",
+                                   "display": "value", "fields": [
+    {"key": "value", "label": "Market", "type": "text", "required": True},
+]}}
+AI_REFERENCE_SPECS.update(MARKET_LIST_SPEC)
 
-__all__ = ["FOUNDATION_MODEL_LIST", "AI_SYSTEM_QUESTION_LIST", "AI_SYSTEM_QUESTIONS",
+AI_REFERENCE_LISTS = (FOUNDATION_MODEL_LIST, AI_SYSTEM_QUESTION_LIST, MARKETS_LIST)
+
+__all__ = ["UNASSESSED_EU_CLASS", "FOUNDATION_MODEL_LIST", "AI_SYSTEM_QUESTION_LIST", "AI_SYSTEM_QUESTIONS",
            "AI_REFERENCE_SPECS", "AI_REFERENCE_LISTS", "HOSTING_MODES",
            "DEPLOYMENT_PATTERNS", "DATA_EGRESS_CLASSES", "HUMAN_OVERSIGHT_MODES",
            "VERSION_POLICIES", "EU_AI_ACT_CLASSES"]

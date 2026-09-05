@@ -39,6 +39,7 @@ from src.governance.ai_system import (add_collection_item, get_ai_system,
                                       retire_ai_system, update_ai_system_field,
                                       update_collection_item)
 from src.governance.model_inventory.risk import compute_risk_rating
+from config.governance._ai_regimes import regimes_for
 from src.web._review_stages import review_specs
 from src.web._signoff_subject import AI_SYSTEM_SUBJECT
 from src.web._helpers import (collection_field_specs, context_from_request,
@@ -150,6 +151,20 @@ def risk_rating(ai_system_id: str):
     if record is None:
         return jsonify({"error": "AI System not found"}), 404
     return jsonify(compute_risk_rating(record["data"] or {}, as_of=date.today().isoformat()))
+
+
+@ai_system_bp.get("/<ai_system_id>/regimes")
+def applicable_regimes(ai_system_id: str):
+    """Which regulatory regimes apply to this system, and why each one does.
+
+    Derived from the record — where it is used and what it does — rather than ticked.
+    "Which regimes apply" has a right answer given those facts, and a checkbox somebody
+    ticked is an assertion nobody can check.
+    """
+    record = get_ai_system(ai_system_id)
+    if record is None:
+        return jsonify({"error": "AI System not found"}), 404
+    return jsonify({"regimes": regimes_for(record.get("data") or {})})
 
 
 @ai_system_bp.get("/<ai_system_id>/mrc")
