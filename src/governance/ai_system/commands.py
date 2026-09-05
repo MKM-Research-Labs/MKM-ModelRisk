@@ -30,6 +30,7 @@ from config.governance._ai_system import (AI_REVIEW_QUESTIONS_COLLECTION,
 from src.database import Event, append_event, read_stream
 from src.governance.ai_system._rules import (decide_add_item, decide_edit_field,
                                              decide_record_envelope,
+                                             decide_seal_manifest,
                                              decide_set_threshold,
                                              decide_take_snapshot,
                                              decide_register, decide_remove_item,
@@ -185,4 +186,16 @@ def set_trigger_threshold(*, ai_system_id: str, property_name: str, threshold,
     decision = decide_set_threshold(state, property_name=property_name,
                                     threshold=threshold, fallback=fallback,
                                     rationale=rationale, set_at=stamped)
+    return _record(ai_system_id, decision, version, actor, reason, config)
+
+
+def seal_release_manifest(*, ai_system_id: str, release: str, change_class: str,
+                          actor: str, reason: str = "", note: str = "",
+                          sealed_at: str | None = None, config=None) -> Event:
+    """Seal an immutable record of what this release contained."""
+    from datetime import datetime, timezone
+    stamped = sealed_at or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    state, version = _load(ai_system_id, config)
+    decision = decide_seal_manifest(state, release=release, change_class=change_class,
+                                    sealed_at=stamped, note=note)
     return _record(ai_system_id, decision, version, actor, reason, config)

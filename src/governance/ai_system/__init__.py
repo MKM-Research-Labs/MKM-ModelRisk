@@ -28,6 +28,7 @@ from src.governance.ai_system.commands import (
     add_collection_item,
     register_ai_system,
     record_variability_envelope,
+    seal_release_manifest,
     set_trigger_threshold,
     take_configuration_snapshot,
     remove_collection_item,
@@ -39,6 +40,8 @@ from src.governance.ai_system.registers import (
     all_failure_modes,
     failure_modes_for_risk,
     rebuild_failure_mode_register_view,
+    rebuild_standing_risk_register_view,
+    standing_risks,
 )
 from src.governance.ai_system.snapshots import (
     get_snapshot,
@@ -59,9 +62,10 @@ __all__ = [
     "rebuild_ai_system_view", "register_ai_system", "remove_collection_item",
     "all_failure_modes", "current_config_version", "failure_modes_for_risk",
     "get_snapshot", "latest_envelope", "rebuild_failure_mode_register_view",
+    "rebuild_standing_risk_register_view", "standing_risks",
     "list_snapshots", "rebuild_configuration_snapshot_view",
     "rebuild_variability_envelope_view", "record_variability_envelope",
-    "set_trigger_threshold",
+    "seal_release_manifest", "set_trigger_threshold",
     "retire_ai_system", "take_configuration_snapshot",
     "update_ai_system_field", "update_collection_item",
 ]

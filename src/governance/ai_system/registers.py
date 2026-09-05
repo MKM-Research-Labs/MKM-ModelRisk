@@ -33,12 +33,15 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance._ai_failure_modes import FAILURE_MODE_COLLECTION
+from config.governance._standing_risks import STANDING_RISKS
 from src.database import read_all, read_view, replace_view
 from src.governance.ai_system._state import apply, initial_state, record_data
 from src.governance.ai_system.commands import AGGREGATE_TYPE
 
 _VIEW = "failure_mode_register_view"
 _COLUMNS = ("entry_id", "ai_system_id", "finos_risk", "data")
+_STANDING_VIEW = "standing_risk_register_view"
+_STANDING_COLUMNS = ("risk_id", "data")
 
 
 def rebuild_failure_mode_register_view(config=None) -> int:
@@ -74,4 +77,26 @@ def all_failure_modes(config=None) -> list[dict[str, Any]]:
 
 
 __all__ = ["all_failure_modes", "failure_modes_for_risk",
-           "rebuild_failure_mode_register_view"]
+           "rebuild_failure_mode_register_view",
+           "rebuild_standing_risk_register_view", "standing_risks"]
+
+
+def rebuild_standing_risk_register_view(config=None) -> int:
+    """Lay the standing register down from config; return the entry count.
+
+    Not projected from events, because it is not the estate's — it is the firm's list
+    of what it carries whatever it has registered. Rebuilt from config so the view and
+    the config cannot drift, and written identically in every deployment: an entry
+    muted in one instance would be a risk somebody had been told does not apply to
+    them.
+    """
+    rows = [(ref, {"finos_risk": ref, "title": title, "why_standing": why})
+            for ref, title, why in STANDING_RISKS]
+    return replace_view(_STANDING_VIEW, _STANDING_COLUMNS, rows, config=config)
+
+
+def standing_risks(config=None) -> list[dict[str, Any]]:
+    """The register, in the order config states it."""
+    rows = read_view(_STANDING_VIEW, _STANDING_COLUMNS, config=config)
+    order = {ref: i for i, (ref, _, _) in enumerate(STANDING_RISKS)}
+    return sorted(rows, key=lambda r: order.get(r["risk_id"], len(order)))

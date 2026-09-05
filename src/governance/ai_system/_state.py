@@ -49,6 +49,10 @@ EVENT_ENVELOPE_RECORDED = "VariabilityEnvelopeRecorded"
 # robustness" indistinguishable from "we restated the other three", and the four
 # are set by different arguments at different times.
 EVENT_THRESHOLD_SET = "TriggerThresholdSet"
+# Sealed, not saved. A manifest is the statement of what was released, and the
+# only thing that makes it worth anything is that it cannot be adjusted after
+# somebody asks what was in the release.
+EVENT_MANIFEST_SEALED = "ReleaseManifestSealed"
 
 
 @dataclass(frozen=True)
@@ -66,6 +70,7 @@ class AISystemState:
     # property -> the threshold currently in force, folded last-write-wins so the
     # history stays in the log while the state is what applies now.
     thresholds: dict = field(default_factory=dict)
+    manifests: tuple = ()
 
 
 def initial_state() -> AISystemState:
@@ -80,6 +85,7 @@ def record_data(state: AISystemState) -> dict[str, Any]:
     data["configuration_snapshots"] = [dict(s) for s in state.snapshots]
     data["variability_envelopes"] = [dict(e) for e in state.envelopes]
     data["trigger_thresholds"] = {k: dict(v) for k, v in state.thresholds.items()}
+    data["release_manifests"] = [dict(m) for m in state.manifests]
     return data
 
 
@@ -100,6 +106,8 @@ def apply(state: AISystemState, event_type: str,
         updated = dict(state.thresholds)
         updated[payload["property"]] = dict(payload)
         return replace(state, thresholds=updated)
+    if event_type == EVENT_MANIFEST_SEALED:
+        return replace(state, manifests=state.manifests + (dict(payload),))
     if event_type == EVENT_RETIRED:
         # ``retired`` is the fact; the lifecycle stage is the institution's own
         # vocabulary and is not overwritten with a word we chose.
@@ -113,4 +121,4 @@ def apply(state: AISystemState, event_type: str,
 __all__ = ["AISystemState", "initial_state", "record_data", "apply",
            "EVENT_REGISTERED", "EVENT_FIELD_EDITED", "EVENT_RETIRED",
            "EVENT_SNAPSHOT_TAKEN", "EVENT_ENVELOPE_RECORDED",
-           "EVENT_THRESHOLD_SET"]
+           "EVENT_THRESHOLD_SET", "EVENT_MANIFEST_SEALED"]
