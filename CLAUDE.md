@@ -75,7 +75,7 @@ pytest tests/e2e -m e2e
 **not** a pass — that exit code is the shell's. Always read the final line:
 `PASS: 0 gated finding(s)` or `FINDINGS: N gated finding(s)`.
 
-**Known-red at HEAD: nothing. `pytest` is green (verified 2026-08-26 on `main`).**
+**Known-red at HEAD: nothing. `pytest` is green (verified 2026-09-05 on `main`).**
 
 The list was one test — `tests/audit/test_audit_large_files.py::test_source_tree_within_limit`
 — and it is now passing, because the two files it named were split. Do not add an
@@ -103,14 +103,29 @@ you run it:
 - Killing a run leaves `tests/e2e/_runserver.py` orphaned (parent PID 1). It serves
   stale JS on a port nothing points at. Check for strays before blaming a change.
 
-The audit's own gate reads **`PASS: 0 gated finding(s)`**, verified 2026-08-26 on
+The audit's own gate reads **`PASS: 0 gated finding(s)`**, verified 2026-09-05 on
 `main`. **Any finding you see is yours.** That is a stronger position than the baseline
 this file carried for months, and it is worth keeping: with a zero gate a regression is
 unmistakable, where a gate of 2 meant reading the list every time to see whether the
 number had moved for your reason or somebody else's.
 
-The last two entries went in the same week, and both split along a seam the code already
-had rather than at a line count:
+On 2026-09-05 the whole reported web backlog went the same way — thirteen files, none
+of them left over 300, and each split by asking what the file was about rather than
+where line 300 fell. `mlapp/detail_core.js` (708) became five: the record, its tabs, the
+Training tab, one row of a train, and what the division's policy asks for. `helpers.js`
+(442) became three, because "helpers" was three subjects that were never one — the
+served configuration, every badge, and the document list.
+
+Two of those splits were made by a script, and the script had two bugs. Both were caught
+by comparing the old file's lines against the new files' rather than by reading the
+diff: one assigned members onto `Inventory` when the object was `InventoryList`, and one
+read `get NODE_KINDS()` as a member named "get", silently dropping a line when a second
+getter overwrote it. **If you split a file mechanically, prove the content survived** —
+every non-comment line of the original appearing exactly once across the results, with
+only the wrapper lines new. The screens looked fine until they didn't.
+
+The last two entries before that went in the same week, and both split along a seam the
+code already had rather than at a line count:
 
 - `src/governance/client/pack.py` (384) → 228, with `_pack_sources.py` (what the pack
   covers — shared, because `pack_manifest` previews without compiling and is only honest
@@ -176,7 +191,11 @@ Check what a change actually is before reverting it.
 Full text in `docs/rules/coding_rules.md`.
 
 - **R1** — parameters live in `config/`, never hardcoded in `src/`.
-- **R2** — no file over 300 lines (source gated; web files reported).
+- **R2** — no file over 300 lines (source gated; web files reported). The scan
+  covers `config src scripts docs audit packages modelrisk` — the last three were
+  added 2026-09-05, when the audit turned out never to have measured its own tree.
+  **The reported web list is currently empty** (2026-09-05), which makes it as useful
+  a signal as the gate: any entry is new.
 - **R6** — **zero tolerance**: no SQL, driver import or connection outside `src/database/`.
   Use the named helpers (`append_event`, `read_stream`, `read_view`, …).
 - **R9** — test against a restored backup, never the live database (§1).
