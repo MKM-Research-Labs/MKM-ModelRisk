@@ -123,7 +123,7 @@ MAX_SOURCE_FILE_LINES = 300
 MAX_TEST_FILE_LINES = 400
 
 # Directories scanned for source-code audits, and the source-of-truth for params.
-SOURCE_DIRS = ("config", "src", "scripts", "app")
+SOURCE_DIRS = ("config", "src", "scripts")
 CONFIG_DIR = "config"
 
 # --- Coding rule R10: where a colour may be written down -------------------------
@@ -141,14 +141,28 @@ STYLING_GATED_SUFFIXES = (".css", ".html", ".js")
 # Package trees scanned for the R4 ``__init__.py`` inventory. Broader than
 # SOURCE_DIRS so the inventory lists every first-party package initialiser —
 # including the audit suite and the bundled packages/ — not just the app source.
-INIT_INVENTORY_DIRS = ("config", "src", "scripts", "app", "audit", "packages")
+INIT_INVENTORY_DIRS = ("config", "src", "scripts", "audit", "packages")
+
+# All three directory lists above and below also carried "app" — a directory that
+# has never existed in this repository, in any commit. It scanned nothing, which
+# is indistinguishable from scanning something clean, and it made the lists look
+# maintained. Removed 2026-09-05; a test now asserts every entry names a real
+# directory (tests/audit/test_audit_scan_roots.py).
 
 # Coding rule R2 — the "split rule". The modularisation scan is repo-wide: it
 # covers all non-test first-party code (root-level files like model.py plus these
 # sub-trees), not just SOURCE_DIRS, so the docs/ generators and web assets are
 # held to the same size limit. Tests are excluded — they carry their own,
 # higher limit and their own scan (large_test_files).
-REPO_SCAN_DIRS = ("config", "src", "scripts", "app", "docs")
+#
+# "Repo-wide" was not true of this list until 2026-09-05: audit/, packages/ and
+# modelrisk/ were absent, so the audit suite was the one tree its own rules did
+# not reach — and audit/pdf.py had grown to 312 lines unreported. The tool that
+# measures the codebase is part of the codebase. INIT_INVENTORY_DIRS below had
+# the wider list all along, which is how the omission stayed invisible: the two
+# constants sat adjacent and disagreed.
+REPO_SCAN_DIRS = ("config", "src", "scripts", "docs", "audit", "packages",
+                  "modelrisk")
 
 # Web assets (JS/CSS) are audited for over-length separately from Python: they
 # share the source line limit but are reported, not gated, so a long vendored or
