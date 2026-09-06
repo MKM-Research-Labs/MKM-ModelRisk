@@ -46,6 +46,13 @@ const MeetingDetail = {
     this._meetingProducts = await App.get("/api/meetings/" + meetingId + "/products");
     this._inventory = await App.get("/api/models");
     this._products = await App.get("/api/products");
+    // ML Applications and AI Systems are presented to the committee on the same terms.
+    this._meetingMlApplications =
+      await App.get("/api/meetings/" + meetingId + "/ml-applications");
+    this._meetingAiSystems =
+      await App.get("/api/meetings/" + meetingId + "/ai-systems");
+    this._mlApplications = await App.get("/api/ml-applications");
+    this._aiSystems = await App.get("/api/ai-systems");
     this._people = (await App.get("/api/reference")).data.people || [];
     // Prior closed meetings (same MRC) with saved minutes — offered on the
     // previous-minutes sign-off item.

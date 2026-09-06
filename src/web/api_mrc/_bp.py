@@ -23,6 +23,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify
 
 from config.governance import MEETING_FIELD_SPECS, MRC_COLLECTION_SPECS
+from config.governance._mrc_collections import MEETING_SCOPE
 from src.web._helpers import reference_options, resolve_field
 
 mrc_bp = Blueprint("mrc", __name__, url_prefix="/api/meetings")
@@ -50,4 +51,12 @@ def collection_spec_list() -> list[dict]:
 @mrc_bp.get("/fields")
 def field_specs():
     """The meeting scalar + collection field specs (populates the console)."""
-    return jsonify({"fields": field_spec_list(), "collections": collection_spec_list()})
+    return jsonify({
+        "fields": field_spec_list(),
+        "collections": collection_spec_list(),
+        # What a meeting can put in scope for analysis, served rather than restated in
+        # JavaScript. The console used to carry its own copy of this for models and
+        # products, which is how a record type could be added to the estate and not to
+        # the meeting screen — the endpoints existed and nothing offered them.
+        "scope": [{"kind": kind, **cfg} for kind, cfg in MEETING_SCOPE.items()],
+    })

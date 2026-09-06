@@ -50,12 +50,17 @@ Object.assign(MeetingDetail, {
       "tabled here, with the committee's compatibility decision.</p>" + rows;
   },
 
+  // One sub-tab per record type the meeting can put in scope, from the served table,
+  // plus Handoffs. Hard-coding the list is what left ML Applications and AI Systems
+  // off a screen whose endpoints already existed.
   _analysisSubtabs(kind) {
     const btn = (k, label) => '<button class="dtab' + (k === kind ? " active" : "") +
       '" data-atab="' + k + '">' + label + "</button>";
+    const plural = { model: "Models", product: "Products",
+                     ml_application: "ML Applications", ai_system: "AI Systems" };
+    const tabs = this._scopeKinds().map((s) => btn(s.kind, plural[s.kind] || s.noun));
     return '<div class="dtabs" style="margin-bottom:var(--space-4)">' +
-      btn("model", "Models") + btn("product", "Products") +
-      btn("handoff", "Handoffs") + "</div>";
+      tabs.join("") + btn("handoff", "Handoffs") + "</div>";
   },
 
   // One review block per in-scope item: the MRC's confirmation to proceed with a
@@ -63,8 +68,8 @@ Object.assign(MeetingDetail, {
   _analysisReview(cfg) {
     const inScope = cfg.inScope;
     if (!inScope.length) {
-      return '<div class="muted" style="font-size:var(--size-sm);margin-top:var(--space-4)">Add ' + cfg.label.toLowerCase() +
-        "s to scope above to record their analysis outcome and remediation.</div>";
+      return '<div class="muted" style="font-size:var(--size-sm);margin-top:var(--space-4)">Add ' + cfg.plural +
+        " to scope above to record their analysis outcome and remediation.</div>";
     }
     const byId = {};
     cfg.inventory.forEach((m) => { byId[m[cfg.idKey]] = (m.data || {}).remediation_steps || []; });

@@ -870,6 +870,45 @@ triggers — over all three record types.
 
 ---
 
+## 11c. The fourth trigger — analysis at the committee (2026-09-06)
+
+The last of the four sign-off triggers to be made equal. A meeting could put **models**
+and **products** in scope for analysis; an ML Application or an AI System could be
+rated, reviewed and signed off but never actually put in front of the committee that
+governs it.
+
+Three hand-written copies of the same endpoints existed and had already drifted: a
+model's tabled paper was filed onto the model's own Docs tab and a product's was not,
+and the two batch-set endpoints lived in different modules. Adding two more copies
+would have made four. So the endpoints are now generated from one table.
+
+- `MEETING_SCOPE` in `config/governance/_mrc_collections.py` — one entry per governed
+  record type: collection, id key, URL segment, which field holds the name, and how
+  the type reads in a sentence (singular and plural).
+- `src/web/api_mrc/_scope.py` — the endpoints, written once: set the scope (diffed to
+  events), join it to the register, table the paper, download it, detach it.
+- The four modules that used to hold the logic are now one registration each.
+  `set_models_in_scope` left `collections.py`, which drops 123 → 91.
+
+`GET /api/meetings/fields` serves the table, and the console builds its Analysis
+sub-tabs and its wording from it rather than from a second copy. That is what had let
+a record type exist in the estate and not on the meeting screen.
+
+**Filing the paper on the record now happens for ML Applications and AI Systems too**,
+which only models had. A Product has no document scope in this design, so its paper
+stays with the meeting exactly as before — unchanged behaviour, not a decision taken
+here.
+
+Verified in the browser: the Analysis tab shows Models · Products · ML Applications ·
+AI Systems · Handoffs; an AI System was put in scope through the picker and the
+committee's outcome, note and basis-to-proceed recorded and read back.
+
+**A wording bug this surfaced.** Seven places built the plural by lowercasing the
+label — correct for "models" and "products", and "ai systems" for an AI System. The
+served table carries both forms and the console uses them verbatim.
+
+---
+
 ## 12. Open decision
 
 **FINOS taxonomy refresh cadence** — manual quarterly review, live query via the FINOS AIGF

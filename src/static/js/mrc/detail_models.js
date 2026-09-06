@@ -33,17 +33,34 @@ Object.assign(MeetingDetail, {
   },
 
   // Everything that differs between a model scope pane and a product one.
+  // Read from the served scope table (GET /api/meetings/fields), never restated
+  // here. The console used to carry its own copy for models and products, which is
+  // how ML Applications and AI Systems could be governed by a committee that had no
+  // way to put them in front of itself: the record types existed, and the screen did
+  // not know about them.
+  _scopeKinds() { return (this._specs || {}).scope || []; },
+
   _scopeCfg(kind) {
-    if (kind === "product") {
-      return { kind: "product", idKey: "product_id", collection: "products_in_scope",
-        inventory: this._products || [], inScope: this._meetingProducts || [],
-        base: "products", label: "Product", nameKey: "product", showAllKey: "_showAllProducts",
-        setKey: "product_ids" };
-    }
-    return { kind: "model", idKey: "model_id", collection: "models_in_scope",
-      inventory: this._inventory || [], inScope: this._models || [],
-      base: "models", label: "Model", nameKey: "name", showAllKey: "_showAll",
-      setKey: "model_ids" };
+    const served = this._scopeKinds().find((s) => s.kind === kind)
+      || this._scopeKinds()[0] || {};
+    // Where this screen keeps the two lists each kind needs: everything of that type,
+    // and the rows already in scope at this meeting.
+    const store = {
+      model: { inventory: "_inventory", inScope: "_models", showAll: "_showAll" },
+      product: { inventory: "_products", inScope: "_meetingProducts",
+                 showAll: "_showAllProducts" },
+      ml_application: { inventory: "_mlApplications", inScope: "_meetingMlApplications",
+                        showAll: "_showAllMlApplications" },
+      ai_system: { inventory: "_aiSystems", inScope: "_meetingAiSystems",
+                   showAll: "_showAllAiSystems" },
+    }[served.kind] || {};
+    return {
+      kind: served.kind, idKey: served.id_key, collection: served.collection,
+      base: served.url, label: served.noun, plural: served.plural,
+      nameKey: served.name_field,
+      inventory: this[store.inventory] || [], inScope: this[store.inScope] || [],
+      showAllKey: store.showAll, setKey: served.id_key + "s",
+    };
   },
 
   _candidates(cfg) {
@@ -59,7 +76,7 @@ Object.assign(MeetingDetail, {
         '<div class="section-header" style="margin-top:var(--space-9)">Analysis</div>' +
         this._analysisSubtabs("handoff") + this._handoffAnalysis();
     }
-    const cfg = this._scopeCfg(this._analysisKind === "product" ? "product" : "model");
+    const cfg = this._scopeCfg(this._analysisKind || "model");
     // First pass has no document list yet; fetch it, then re-render once. The
     // picker shows a placeholder in the meantime rather than an empty dropdown.
     if (this._reviewableDocs === undefined || this._reviewableDocsKind !== cfg.kind) {
@@ -70,8 +87,8 @@ Object.assign(MeetingDetail, {
     return this._approvalsSection() +
       '<div class="section-header" style="margin-top:var(--space-9)">Analysis</div>' +
       this._analysisSubtabs(cfg.kind) +
-      '<p class="muted" style="font-size:var(--size-sm)">Choose the ' + cfg.label.toLowerCase() +
-      "s in scope, then record the confirmation to proceed and any follow-on actions.</p>" +
+      '<p class="muted" style="font-size:var(--size-sm)">Choose the ' + cfg.plural +
+      " in scope, then record the confirmation to proceed and any follow-on actions.</p>" +
       this._scopeTable(cfg) + this._analysisReview(cfg);
   },
 
@@ -91,9 +108,10 @@ Object.assign(MeetingDetail, {
   _bindModels() {
     const self = this;
     this._bindSignoffs();
-    const cfg = this._scopeCfg(this._analysisKind === "product" ? "product" : "model");
+    const cfg = this._scopeCfg(this._analysisKind || "model");
     const reload = () => self.show(self._id, "models_in_scope");
-    // Analysis sub-tab switch (Models | Products) — re-render from cached data.
+    // Analysis sub-tab switch — one tab per record type the meeting can scope,
+    // re-rendered from cached data.
     // Scope picker disclosure, its search filter, and the review accordion.
     // The tabled paper is a reference to a document the model holds.
     document.querySelectorAll("[data-analysis-ref]").forEach(function (sel) {
@@ -213,7 +231,7 @@ Object.assign(MeetingDetail, {
       const visible = new Set(self._candidates(cfg).map((m) => m[cfg.idKey]));
       cfg.inScope.forEach(function (m) { if (!visible.has(m[cfg.idKey])) selected.push(m[cfg.idKey]); });
       const body = {}; body[cfg.setKey] = selected;
-      App.amend("Set " + selected.length + " " + cfg.label.toLowerCase() + "s in scope.", "POST",
+      App.amend("Set " + selected.length + " " + cfg.plural + " in scope.", "POST",
         "/api/meetings/" + self._id + "/collections/" + cfg.collection + "/set", body, reload);
     };
   },

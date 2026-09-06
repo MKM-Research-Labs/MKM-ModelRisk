@@ -36,12 +36,12 @@ Object.assign(MeetingDetail, {
     if (this._agendaLocked()) {
       return '<div class="muted" style="font-size:var(--size-sm);margin-bottom:var(--space-4)">Agenda ' +
         "locked for distribution — scope is settled. " + cfg.inScope.length + " " +
-        cfg.label.toLowerCase() + (cfg.inScope.length === 1 ? "" : "s") + " in scope.</div>";
+        (cfg.inScope.length === 1 ? cfg.label : cfg.plural) + " in scope.</div>";
     }
     const open = this._scopeOpen(cfg.kind);
     const toggle = '<button class="btn small" data-scope-toggle="' + cfg.kind + '">' +
-      (open ? "&minus; Hide" : "+ Add") + " " + cfg.label.toLowerCase() +
-      "s to scope</button> " +
+      (open ? "&minus; Hide" : "+ Add") + " " + cfg.plural +
+      " to scope</button> " +
       '<span class="muted" style="font-size:var(--size-sm)">' + cfg.inScope.length + " in scope.</span>";
     if (!open) return '<div style="margin-bottom:var(--space-5)">' + toggle + "</div>";
     return '<div style="margin-bottom:var(--space-5)">' + toggle + "</div>" + this._scopePanel(cfg);
@@ -53,14 +53,17 @@ Object.assign(MeetingDetail, {
     const candidates = this._candidates(cfg);
     const mrc = (this._meeting.data || {}).mrc;
     const mrcNote = mrc ? " for MRC <b>" + esc(mrc) + "</b>" : "";
-    const lc = cfg.label.toLowerCase();
+    // Singular and plural both come from the served scope table. They used to be
+    // built by lowercasing the label and adding an "s", which reads correctly for
+    // models and products and gives "ai systems" for an AI System.
+    const many = cfg.plural, one = cfg.label;
     const banner = filter
-      ? '<div class="muted" style="margin-bottom:var(--space-3)">Showing ' + lc + "s the MRC oversees" +
+      ? '<div class="muted" style="margin-bottom:var(--space-3)">Showing ' + many + " the MRC oversees" +
         mrcNote + " — " + esc(filter.key) + " <b>" + esc(filter.value) + "</b>. " +
         '<label style="margin-left:var(--space-4)"><input type="checkbox" data-show-all="' + cfg.kind + '"' +
         (this[cfg.showAllKey] ? " checked" : "") + "> Show all</label></div>"
       : '<div class="muted" style="margin-bottom:var(--space-3)">Company-wide MRC' + mrcNote +
-        " — every " + lc + " is a candidate.</div>";
+        " — every " + one + " is a candidate.</div>";
     const docBy = {}, presBy = {};
     cfg.inScope.forEach((r) => {
       if (r.analysis_item_id) docBy[r[cfg.idKey]] = r.analysis_item_id;
@@ -75,13 +78,13 @@ Object.assign(MeetingDetail, {
         "</td><td>" + tierBadge(d.tier, d.division) + "</td><td>" + ragBadge(d.rag_rating, d.division) +
         "</td><td>" + this._presenterCell(id, inS, presBy) +
         "</td><td>" + this._analysisCell(cfg, id, inS, docBy) + "</td></tr>";
-    }).join("") : '<tr><td colspan="7" class="empty">No ' + lc + "s match this scope.</td></tr>";
+    }).join("") : '<tr><td colspan="7" class="empty">No ' + many + " match this scope.</td></tr>";
     // Search + a capped scroll box: with a few hundred models on the inventory a
     // flat list is unusable, and typing beats scanning rows by eye.
     const rowPx = 34, headPx = 38;
     return banner +
-      '<input id="scope-search-' + cfg.kind + '" placeholder="Search ' + esc(lc) +
-      's by id or name&hellip;" style="width:100%;margin-bottom:var(--space-3)">' +
+      '<input id="scope-search-' + cfg.kind + '" placeholder="Search ' + esc(many) +
+      ' by id or name&hellip;" style="width:100%;margin-bottom:var(--space-3)">' +
       '<div class="scope-scroll" style="max-height:' + (this._SCOPE_ROWS * rowPx + headPx) +
       'px;overflow:auto;border:1px solid var(--line);border-radius:var(--radius-md)">' +
       "<table><thead><tr><th></th><th>" + cfg.label + " ID</th><th>Name</th><th>Tier</th><th>RAG</th>" +
@@ -110,7 +113,7 @@ Object.assign(MeetingDetail, {
     if (docs === undefined) return '<span class="muted" style="font-size:var(--size-xs)">&hellip;</span>';
     if (!docs.length) {
       return '<span class="muted" style="font-size:var(--size-xs)">no analysis on the ' +
-        esc(cfg.label.toLowerCase()) + "</span>";
+        esc(cfg.label) + "</span>";
     }
     const chosen = byId[id] || "";
     const opts = ['<option value="">&mdash; none tabled &mdash;</option>'].concat(

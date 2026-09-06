@@ -174,6 +174,43 @@ MRC_COLLECTION_SPECS = {
         {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
         {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
     ]},
+
+    # ML Applications in scope for analysis. An ML Application's analysis is presented
+    # to the committee exactly as a model's is: same outcome vocabulary, same tabled
+    # paper, same basis to proceed. It had none of this until 2026-09-06, so an ML
+    # Application could be governed but never actually discussed at a meeting.
+    "ml_applications_in_scope": {"label": "ML Applications", "id_prefix": "MLS", "fields": [
+        {"key": "ml_application_id", "label": "ML Application", "type": "text", "required": True},
+        {"key": "presenter", "label": "Presenter", "type": "text", "reference": "people"},
+        {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
+         "options": VALID_ANALYSIS_STATUS},
+        {"key": "analysis_note", "label": "Analysis note", "type": "text"},
+        # What the committee is letting the presenter proceed on the basis of —
+        # the conditions/scope of the confirmation to proceed, in the presenter's
+        # own terms. Recorded alongside the outcome, distinct from the discussion.
+        {"key": "proceed_basis", "label": "Basis to proceed", "type": "text"},
+        {"key": "analysis_item_id", "label": "Tabled paper", "type": "text", "hidden": True},
+        {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
+        {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
+    ]},
+
+    # AI Systems in scope for analysis, on the same footing. Governance of AI is the
+    # governance of a model: the same triggers reach the same committee, and being
+    # presented for analysis is one of them.
+    "ai_systems_in_scope": {"label": "AI Systems", "id_prefix": "AIS", "fields": [
+        {"key": "ai_system_id", "label": "AI System", "type": "text", "required": True},
+        {"key": "presenter", "label": "Presenter", "type": "text", "reference": "people"},
+        {"key": "analysis_status", "label": "Analysis outcome", "type": "choice",
+         "options": VALID_ANALYSIS_STATUS},
+        {"key": "analysis_note", "label": "Analysis note", "type": "text"},
+        # What the committee is letting the presenter proceed on the basis of —
+        # the conditions/scope of the confirmation to proceed, in the presenter's
+        # own terms. Recorded alongside the outcome, distinct from the discussion.
+        {"key": "proceed_basis", "label": "Basis to proceed", "type": "text"},
+        {"key": "analysis_item_id", "label": "Tabled paper", "type": "text", "hidden": True},
+        {"key": "analysis_filename", "label": "Analysis file", "type": "text", "hidden": True},
+        {"key": "analysis_original_name", "label": "Analysis name", "type": "text", "hidden": True},
+    ]},
     "decisions": {"label": "Decisions", "id_prefix": "D", "fields": [
         {"key": "description", "label": "Decision", "type": "text", "required": True},
         {"key": "date", "label": "Date", "type": "date"},
@@ -194,3 +231,35 @@ MRC_COLLECTION_SPECS = {
         {"key": "updates", "label": "Updates", "type": "text", "hidden": True},
     ]},
 }
+
+
+# What a meeting can put in scope for analysis, one entry per governed record type.
+#
+# Analysis is one of the sign-off triggers, and the triggers are the same for a model,
+# an ML Application, an AI System and a Product — so this table has an entry for each
+# rather than the endpoints being written out per type. Three copies of the same
+# routes had already drifted before it existed: models filed the tabled paper onto the
+# record and products did not, and the two batch-set endpoints lived in different
+# files.
+#
+# ``name_field`` is the only genuine difference between them: a Product keeps its name
+# under ``product`` and everything else under ``name``.
+MEETING_SCOPE = {
+    "model": {"collection": "models_in_scope", "id_key": "model_id",
+              "url": "models", "name_field": "name",
+              "noun": "model", "plural": "models"},
+    "product": {"collection": "products_in_scope", "id_key": "product_id",
+                "url": "products", "name_field": "product",
+                "noun": "product", "plural": "products"},
+    "ml_application": {"collection": "ml_applications_in_scope",
+                       "id_key": "ml_application_id", "url": "ml-applications",
+                       "name_field": "name",
+                       "noun": "ML Application", "plural": "ML Applications"},
+    "ai_system": {"collection": "ai_systems_in_scope", "id_key": "ai_system_id",
+                  "url": "ai-systems", "name_field": "name",
+                  "noun": "AI System", "plural": "AI Systems"},
+}
+
+# The in-scope collections, for callers that only need the names.
+MEETING_SCOPE_COLLECTIONS = tuple(cfg["collection"] for cfg in MEETING_SCOPE.values())
+
