@@ -217,9 +217,14 @@ def _check_model_inventory(payload: dict[str, Any]) -> list[str]:
 
     errors.extend(f"link {a} -> {b}: a model cannot depend on itself"
                   for a, b in self_loops(edges))
-    if has_cycle(edges):
-        errors.append(
-            "the model chain has a cycle — the dependency graph must be acyclic")
+    # Name the cycle, as the standalone model-chain checker above does. This was
+    # written against ``has_cycle`` before that existed; a bare "there is a cycle"
+    # sends somebody to read the whole graph by hand, and the path is the thing they
+    # were looking for.
+    cycle = find_cycle(edges)
+    if cycle:
+        errors.append("the model chain has a cycle — the dependency graph must be "
+                      "acyclic: " + " -> ".join(str(n) for n in cycle))
     return errors
 
 
