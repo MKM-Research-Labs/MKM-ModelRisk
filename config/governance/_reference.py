@@ -134,6 +134,13 @@ from config.governance._reference_defaults import (DEFAULT_DATA_SOURCES,  # noqa
 # lines of business; Company sees the whole inventory. Approvals can be escalated up
 # this hierarchy manually (never automatic).
 VALID_MRC_LEVELS = ("Company", "Division", "Line of Business")
+
+# The same levels in the order a record is matched against them: most specific first,
+# so the committee found is the CLOSEST one covering the record's org location. A
+# record assigned to a line of business goes to that committee where one exists, and to
+# its division's otherwise. The order is the policy, so it is stated here rather than
+# being a reversed() call somewhere in src.
+MRC_LEVELS_CLOSEST_FIRST = ("Line of Business", "Division", "Company")
 VALID_MRC_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 
 # The org hierarchy cascades: a Division is just a name; a Line of Business belongs to a

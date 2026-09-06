@@ -50,6 +50,7 @@ from src.governance.ai_system import (current_config_version,
                                       take_configuration_snapshot)
 from src.web._review_stages import review_specs
 from src.web._signoff_subject import AI_SYSTEM_SUBJECT
+from src.web._owner_ratification import set_record_field
 from src.web._helpers import (collection_field_specs, context_from_request,
                               document_specs, grouped_field_specs, json_body,
                               reference_options, resolve_mrc_for_record)
@@ -109,10 +110,11 @@ def register():
 @ai_system_bp.post("/<ai_system_id>/field")
 def update_field(ai_system_id: str):
     body = json_body()
-    dispatch("update_ai_system_field", update_ai_system_field,
-             context=context_from_request(body), ai_system_id=ai_system_id,
-             field=body.get("field"), value=body.get("value"))
-    rebuild_ai_system_view()
+    # Through set_record_field, not dispatch: a change of owner is the committee's to
+    # ratify on this record type exactly as it is on a model. Writing the field
+    # directly here is how that trigger came to be missing for months.
+    set_record_field(context_from_request(body), AI_SYSTEM_SUBJECT, ai_system_id,
+                     field=body.get("field"), value=body.get("value"))
     return jsonify(get_ai_system(ai_system_id))
 
 

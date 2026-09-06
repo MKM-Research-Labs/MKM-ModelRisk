@@ -17,20 +17,25 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Committee routing: how far up a record has to go, and why.
+"""Committee routing: which committee governs a record, and why.
 
-The rule these tests exist to hold is that routing gained INPUTS and not a second
-committee track. An escalated AI System goes to the institution's own company
-committee, not to an "AI committee" beside it — a parallel track is how AI governance
-ends up somewhere the model risk function does not read.
+**Every record is managed at the MRC it is assigned to.** A model, an ML Application
+and an AI System are each assigned to a division and a line of business, and the most
+specific committee covering that org location signs the record off. The MRC is the
+firm's risk committee and is itself the escalation point — there is nothing above it
+for routing to reach.
+
+These tests exist because that was briefly not true. An escalation ladder added on
+2026-09-05 raised mission-critical and agentic records to a company committee that this
+firm does not have and was never meant to need. It blocked two live tier-1 models,
+MKM-GH-001 and MKM-PR-001, which had routed to the PhysicalRisk Division MRC for
+months: a rule invented for a new record type reached back and changed how existing
+models were governed. Removed 2026-09-06.
 """
 from __future__ import annotations
 
-import pytest
-
 from config.governance import VALID_MRC_LEVELS
-from config.governance import _mrc_routing as routing_config
-from config.governance._mrc_routing import LEVEL_ORDER, ROUTING_INPUTS, at_least
+from config.governance._reference import MRC_LEVELS_CLOSEST_FIRST
 from src.governance.mrc import route
 from src.web._signoff_subject import SUBJECTS
 
@@ -42,168 +47,98 @@ _REFS = {"mrc": [
     {"value": "MRC-CO", "level": "Company", "scope_value": "", "name": "Company MRC"},
 ]}
 _ORG = {"division": "PhysicalRisk", "line_of_business": "PRS Platform"}
+_KINDS = ("model", "ml_application", "ai_system")
 
 
 def _route(record_type, **fields):
     return route(record_type, {**_ORG, "tier": "3", **fields}, _REFS)
 
 
-# --- One case per record type, and the case the plan singles out --------------
+# --- The closest committee covering where the record sits ---------------------
 
-@pytest.mark.parametrize("record_type,fields,expected_level,expected_rule", [
-    # Ordinary records of each type still go to the closest committee that covers them.
-    ("model", {}, "Line of Business", "default"),
-    ("ml_application", {}, "Line of Business", "default"),
-    # An AI System does not: the estate is new and a line of business has nothing to
-    # compare one against.
-    ("ai_system", {"deployment_pattern": "Direct prompting"}, "Division", "ai_by_default"),
-    # The case the plan singles out: agentic routes differently from direct prompting.
-    ("ai_system", {"deployment_pattern": "Agentic (tool-using)"}, "Company", "agentic_ai"),
-    ("ai_system", {"deployment_pattern": "Multi-agent"}, "Company", "agentic_ai"),
-    # Rules that read a field every record type carries apply to every record type.
-    ("model", {"tier": "1"}, "Company", "mission_critical"),
-    ("ml_application", {"tier": "1"}, "Company", "mission_critical"),
-    ("ai_system", {"tier": "1", "deployment_pattern": "Direct prompting"},
-     "Company", "mission_critical"),
-    ("model", {"materiality": "High"}, "Division", "high_materiality"),
-    ("ml_application", {"materiality": "High"}, "Division", "high_materiality"),
-    # Regulatory class outranks everything below it.
-    ("ai_system", {"eu_ai_act_class": "High risk (Annex III)",
-                   "deployment_pattern": "Direct prompting"}, "Company", "high_risk_ai"),
-    ("ai_system", {"eu_ai_act_class": "Prohibited",
-                   "deployment_pattern": "Direct prompting"}, "Company", "prohibited_ai"),
-])
-def test_routing_by_record_type_and_attributes(record_type, fields, expected_level,
-                                               expected_rule):
-    outcome = _route(record_type, **fields)
-    assert outcome["level"] == expected_level
-    assert outcome["rule"] == expected_rule
+def test_every_record_type_routes_to_the_closest_covering_committee():
+    """Same org location, same committee — whatever the record is."""
+    for kind in _KINDS:
+        outcome = _route(kind)
+        assert outcome["mrc"]["value"] == "MRC-LOB"
+        assert outcome["level"] == "Line of Business"
+        assert outcome["blocked"] is False
 
 
-def test_an_escalated_record_says_what_it_would_otherwise_have_gone_to():
-    """A record escalated past its own committee without a stated cause is one somebody
-    quietly routes back. "Because it is agentic" is an argument a committee can reject;
-    a silent escalation is only a surprise."""
-    outcome = _route("ai_system", deployment_pattern="Agentic (tool-using)")
-    assert outcome["escalated"] is True
-    assert outcome["mrc"]["name"] == "Company MRC"
-    assert outcome["instead_of"]["name"] == "PRS Platform MRC"
-    assert "act" in outcome["because"]
+def test_a_record_with_no_line_of_business_committee_falls_back_to_its_division():
+    """"Closest" is a fallback, not a requirement: a record whose line of business has
+    no committee is governed by its division's."""
+    refs = {"mrc": [m for m in _REFS["mrc"] if m["value"] != "MRC-LOB"]}
+    outcome = route("ai_system", {**_ORG, "tier": "3"}, refs)
+    assert outcome["mrc"]["value"] == "MRC-DIV"
+    assert outcome["level"] == "Division"
 
 
-def test_an_unescalated_record_is_not_reported_as_one():
-    outcome = _route("model")
-    assert outcome["escalated"] is False
-    assert outcome["instead_of"] is None
+def test_no_attribute_of_a_record_changes_which_committee_governs_it():
+    """Tier, materiality, deployment pattern and regulatory class describe how serious
+    a record is and what it does. None of them decides WHERE it is governed — that is
+    the org location, and only the org location.
+
+    Written as one test over every combination that used to escalate, so the ladder
+    cannot come back one rule at a time.
+    """
+    base = _route("model")["mrc"]["value"]
+    for kind in _KINDS:
+        for fields in ({"tier": "1"}, {"tier": 1}, {"materiality": "High"},
+                       {"deployment_pattern": "Agentic (tool-using)"},
+                       {"deployment_pattern": "Multi-agent"},
+                       {"eu_ai_act_class": "High risk (Annex III)"},
+                       {"eu_ai_act_class": "Prohibited"}):
+            outcome = _route(kind, **fields)
+            assert outcome["mrc"]["value"] == base, f"{kind} with {fields} routed away"
+            assert outcome["blocked"] is False
 
 
-# --- No second track ----------------------------------------------------------
+def test_the_reason_travels_with_the_answer():
+    """A screen has to be able to say why this committee, not merely which."""
+    assert "division" in _route("model")["because"]
+
+
+# --- Nothing covers it ---------------------------------------------------------
+
+def test_a_record_no_committee_covers_routes_nowhere_rather_than_anywhere():
+    outcome = route("model", {"division": "Nowhere", "line_of_business": "Nothing"},
+                    {"mrc": []})
+    assert outcome["mrc"] is None
+    assert outcome["level"] is None
+    assert outcome["blocked"] is True
+
+
+def test_blocked_means_nothing_covers_it_and_nothing_else():
+    """The one remaining cause. It used to also mean "a committee covers this but is
+    not senior enough", which was a state only the escalation ladder could produce."""
+    covered = _route("ai_system", deployment_pattern="Agentic (tool-using)")
+    assert covered["blocked"] is False
+
+
+# --- No second track ------------------------------------------------------------
 
 def test_subjects_still_enumerates_five():
-    """Routing gained inputs, not a track. A sixth subject would be an AI committee
-    sitting beside the model risk one."""
+    """A sixth subject would be an AI committee sitting beside the model risk one."""
     assert len(SUBJECTS) == 5
     assert {s.kind for s in SUBJECTS} == {"model", "product", "handoff",
                                           "ml_application", "ai_system"}
 
 
 def test_every_route_lands_on_a_committee_the_institution_defined():
-    """The rules raise a level within the existing hierarchy; they cannot invent a
-    committee. Every outcome is one of the three in the fixture."""
+    """Routing resolves to a committee the institution actually created in Admin; it
+    cannot invent one."""
     defined = {m["value"] for m in _REFS["mrc"]}
-    for record_type in ("model", "ml_application", "ai_system"):
+    for kind in _KINDS:
         for tier in ("1", "2", "3"):
-            outcome = _route(record_type, tier=tier,
-                             deployment_pattern="Agentic (tool-using)")
-            assert outcome["mrc"]["value"] in defined
+            assert _route(kind, tier=tier)["mrc"]["value"] in defined
 
 
-def test_the_levels_a_rule_may_require_are_the_ones_admin_offers():
-    """A rule requiring a level no committee can be created at would never match."""
-    assert set(LEVEL_ORDER) == set(VALID_MRC_LEVELS)
+def test_the_levels_searched_are_the_ones_admin_offers():
+    """A level no committee can be created at would never match."""
+    assert set(MRC_LEVELS_CLOSEST_FIRST) == set(VALID_MRC_LEVELS)
 
 
-def test_escalation_prefers_the_closest_committee_that_is_senior_enough():
-    assert at_least("Division") == ("Division", "Company")
-    assert at_least(None) == LEVEL_ORDER
-    # Required at Division, and a division committee exists, so it is not taken to the
-    # company one as well.
-    assert _route("ai_system", deployment_pattern="Direct prompting")["level"] == "Division"
-
-
-def test_a_rule_that_escalates_into_a_vacuum_says_so_rather_than_reading_as_uncovered():
-    """A firm with no company committee and an agentic system has a gap in its
-    committee STRUCTURE, not a record filed in the wrong division. Reporting it as "no
-    committee covers this" sends somebody to recreate the committee they already have.
-    """
-    only_division = {"mrc": [{"value": "MRC-DIV", "level": "Division",
-                              "scope_value": "PhysicalRisk",
-                              "name": "PhysicalRisk Division MRC"}]}
-    outcome = route("ai_system",
-                    {**_ORG, "tier": "3", "deployment_pattern": "Agentic (tool-using)"},
-                    only_division)
-    assert outcome["mrc"] is None
-    assert outcome["blocked"] is True
-    assert outcome["escalated"] is False, "nothing took it, so nothing escalated it"
-    assert outcome["required_level"] == "Company"
-    assert outcome["instead_of"]["name"] == "PhysicalRisk Division MRC"
-
-
-def test_a_record_with_no_covering_committee_is_not_reported_as_blocked():
-    """Nothing covers its org location at all — the original message, and a different
-    problem from a structure with no senior committee."""
-    outcome = route("model", {"division": "Nowhere", "line_of_business": "Nothing"},
-                    {"mrc": []})
-    assert outcome["blocked"] is False and outcome["instead_of"] is None
-
-
-def test_a_record_with_no_covering_committee_routes_nowhere_rather_than_anywhere():
-    outcome = route("model", {"division": "Nowhere", "line_of_business": "Nothing"},
-                    {"mrc": []})
-    assert outcome["mrc"] is None and outcome["level"] is None
-
-
-# --- The R1 proof -------------------------------------------------------------
-
-def test_routing_changes_from_config_alone(monkeypatch):
-    """Rewrite the rules and routing moves, with no change under src/.
-
-    This is the whole claim: an institution that wants its agentic systems handled by
-    the division, or its Tier 2 records escalated, edits one table. If this test needs
-    a source change to pass, the rules have stopped being data.
-    """
-    before = _route("ai_system", deployment_pattern="Agentic (tool-using)")
-    assert before["level"] == "Company"
-
-    monkeypatch.setattr(routing_config, "ROUTING_RULES", (
-        {"name": "agentic_stays_local", "when": {"record_type": ("ai_system",)},
-         "level": "Line of Business", "because": "this firm handles them locally"},
-        {"name": "default", "when": {}, "level": None, "because": "as before"},
-    ))
-
-    after = _route("ai_system", deployment_pattern="Agentic (tool-using)")
-    assert after["level"] == "Line of Business"
-    assert after["rule"] == "agentic_stays_local"
-    assert after["because"] == "this firm handles them locally"
-
-
-def test_first_match_wins_so_the_order_is_the_policy(monkeypatch):
-    """Ordered, and read top to bottom. Reordering the table changes the estate."""
-    monkeypatch.setattr(routing_config, "ROUTING_RULES", (
-        {"name": "first", "when": {"record_type": ("model",)}, "level": "Company",
-         "because": "first"},
-        {"name": "second", "when": {"record_type": ("model",)}, "level": "Division",
-         "because": "second"},
-        {"name": "default", "when": {}, "level": None, "because": "default"},
-    ))
-    assert _route("model")["rule"] == "first"
-
-
-def test_every_rule_tests_only_fields_a_record_could_carry():
-    """A condition naming a field nothing holds is a rule that never fires, and it
-    would sit in the table looking like policy."""
-    for rule in routing_config.ROUTING_RULES:
-        for field in (rule.get("when") or {}):
-            assert field in ROUTING_INPUTS, f"{rule['name']} tests unknown field {field}"
-        assert rule["because"].strip(), f"{rule['name']} gives no reason"
-        assert rule["level"] is None or rule["level"] in LEVEL_ORDER
+def test_the_search_order_is_most_specific_first():
+    """The order is the policy: it is what makes "closest" mean closest."""
+    assert MRC_LEVELS_CLOSEST_FIRST == ("Line of Business", "Division", "Company")

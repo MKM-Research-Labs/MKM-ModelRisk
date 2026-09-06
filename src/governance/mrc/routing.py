@@ -19,68 +19,51 @@
 # SOFTWARE.
 """Which committee a record routes to, and the reason it routes there.
 
-Two questions, answered in order. The rules in ``config/governance/_mrc_routing.py``
-say how far up the committee hierarchy this record must go; the org matching in
-``projection`` says which committee at that level covers where it sits. Neither knows
-about the other, and neither can invent a committee: everything here resolves to a
-committee the institution has actually defined in Admin.
+**Every record is managed at the MRC it is assigned to.** A model, an ML Application
+and an AI System are each assigned to a division and a line of business, and the most
+specific committee covering that org location signs it off. There is no escalation and
+no company-level committee to reach: where the record sits IS the answer, for all three
+record types alike.
 
-The REASON travels with the answer. A record escalated past its own division's
-committee without a stated cause is one somebody will quietly route back, and "because
-it is agentic" is an argument a committee can accept or reject — where a silent
-escalation is only a surprise.
+An escalation ladder briefly lived here — added 2026-09-05, removed 2026-09-06. It
+raised mission-critical and agentic records to a company committee, which nobody had
+asked for and which this firm's structure does not have. It blocked two live tier-1
+models that had routed to their division committee for months, because a rule invented
+for a new record type reached back and changed how existing models were governed. If an
+institution ever does want a record to go somewhere other than its own committee, that
+is a governance decision for the firm to state — not one inferred from a record's
+attributes.
+
+The REASON still travels with the answer, because a screen has to say why this
+committee and not another, and "nothing covers this org location" has to read
+differently from "no committee exists at all".
 """
 from __future__ import annotations
 
 from typing import Any
 
-from config.governance._mrc_routing import at_least, rule_for
+from config.governance._reference import MRC_LEVELS_CLOSEST_FIRST
 from src.governance.mrc.projection import committee_at_levels
 
 
 def route(record_type: str, data: dict[str, Any], refs: dict[str, list]) -> dict[str, Any]:
-    """The committee this record must be signed off by, and why.
+    """The committee this record is signed off by, and why.
 
-    Returns the committee, the level it was taken at, the rule that decided, and — where
-    the record was escalated above the closest committee that covers it — what it would
-    otherwise have gone to. That last field is what lets a screen say "this went to the
-    Company MRC rather than the PhysicalRisk Division MRC, because it is agentic".
+    ``record_type`` is accepted and deliberately unused: the three governed record
+    types route identically, and a signature that took one would invite a caller to
+    believe otherwise.
     """
-    division = data.get("division")
-    line_of_business = data.get("line_of_business")
-    rule = rule_for({**data, "record_type": record_type})
-
     committee, level = committee_at_levels(
-        at_least(rule["level"]), division, line_of_business, refs)
-    closest, closest_level = committee_at_levels(
-        at_least(None), division, line_of_business, refs)
-
-    # Three outcomes, and they must not be confused on a screen.
-    #
-    #   routed      a committee took it, possibly the closest one
-    #   escalated   a committee took it, above the closest one that covers its org
-    #   blocked     a committee covers its org, but NONE is senior enough
-    #
-    # The third is new with these rules and is the one that reads wrongly if lumped in
-    # with "nothing covers this". A firm with no company committee and an agentic
-    # system has a gap in its committee structure, not a record filed in the wrong
-    # division, and telling it to "set one up under Admin" without saying WHICH level
-    # sends somebody to create a duplicate of the committee it already has.
-    escalated = committee is not None and closest is not None and closest_level != level
-    blocked = committee is None and closest is not None
+        MRC_LEVELS_CLOSEST_FIRST, data.get("division"), data.get("line_of_business"), refs)
     return {
         "mrc": committee,
         "level": level,
-        "rule": rule["name"],
-        "because": rule["because"],
-        "required_level": rule["level"],
-        "escalated": escalated,
-        "blocked": blocked,
-        # The committee that covers the org location, wherever that differs from the one
-        # the record actually routed to — so a caller can say "rather than X", or
-        # "X covers it but is not senior enough", without comparing committees itself.
-        "instead_of": closest if (escalated or blocked) else None,
-        "instead_of_level": closest_level if (escalated or blocked) else None,
+        "because": ("The most specific committee covering this record's division and "
+                    "line of business."),
+        # Nothing covers this record's org location. Not an escalation problem: either
+        # the record is filed under a division nobody has a committee for, or the
+        # committee has been archived.
+        "blocked": committee is None,
     }
 
 

@@ -831,6 +831,45 @@ it. That is 0.3's `blocked` state doing its job.
 
 ---
 
+## 11b. Correction — the escalation ladder should never have existed (2026-09-06)
+
+Phase 0.3 shipped `config/governance/_mrc_routing.py`, a table of rules raising
+mission-critical, agentic and high-EU-AI-Act-class records to a **Company** committee.
+It is deleted, and this section records why so that nothing rebuilds it.
+
+**Nobody asked for it.** The spec does not call for it and neither did the user. It was
+reasoned up from first principles during Phase 0.3, given a persuasive docstring, and
+survived on the strength of the prose rather than on anyone agreeing with the policy.
+
+**It changed how existing models were governed.** The `mission_critical` rule tested
+`tier`, a field every record type carries — so it was never AI-specific. Two live
+tier-1 models, MKM-GH-001 and MKM-PR-001, had routed to the PhysicalRisk Division MRC
+for months and became **blocked**: no company committee exists, so nothing could sign
+them off at all. A rule invented for a new record type reached back and broke the
+governance of the old one.
+
+**The rule it violated is the one this module exists to honour.** Governance of AI is
+the same as governance of ML and models: the same sign-off triggers — the risk rating,
+the review, ownership, one-off analysis — reaching the same committee. Every record is
+assigned to a division and a line of business and is managed at the MRC it is assigned
+to. The MRC *is* the firm's risk committee and is itself the escalation point; there is
+nothing above it for routing to reach.
+
+`route()` remains, and answers only "which committee covers this record's org location,
+and why". `blocked` now has one meaning — nothing covers it — where it previously also
+meant "a committee covers this but is not senior enough", a state only the ladder could
+produce.
+
+**A second asymmetry was found while fixing this and is also closed.** A change of
+model owner was raised to the committee for ratification; a change of ML Application or
+AI System owner went to nobody, because `_owner_ratification.py` was written against
+`MODEL_SUBJECT` alone. It is now written against `Subject`, so all three raise the same
+ratification and a record type added later inherits it.
+`tests/web/test_governed_equally.py` asserts both halves — same committee, same
+triggers — over all three record types.
+
+---
+
 ## 12. Open decision
 
 **FINOS taxonomy refresh cadence** — manual quarterly review, live query via the FINOS AIGF

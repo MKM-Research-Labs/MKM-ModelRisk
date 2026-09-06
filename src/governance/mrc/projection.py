@@ -198,9 +198,9 @@ def committee_at_levels(
     """The first active committee covering this org location at one of ``levels``.
 
     ``levels`` is tried in order, so passing them most-specific-first gives the closest
-    committee and a shortened list gives the closest one that is SENIOR enough — which
-    is what the routing rules need when a record must be escalated. Written once here
-    rather than beside the rules, so "which committee covers this" has one answer.
+    committee covering the record — a line of business one where it exists, its
+    division's otherwise. That is the whole of routing: every record is governed by the
+    committee it is assigned to.
     """
     active = [m for m in refs.get("mrc") or [] if m.get("archived") != "true"]
     scope = {"Line of Business": line_of_business, "Division": division, "Company": None}

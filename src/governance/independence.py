@@ -58,10 +58,15 @@ def validate_independence(field: str, value: Any, held: dict[str, Any],
     """
     if ENFORCE_REVIEWER_INDEPENDENCE == "never" or field not in INDEPENDENT_OF:
         return
-    counterpart = held.get(INDEPENDENT_OF[field])
+    other_field = INDEPENDENT_OF[field]
+    counterpart = held.get(other_field)
     if same_person(value, counterpart):
+        # Name the role on the OTHER side, not "owner" both ways round. Setting the
+        # owner to the reviewer's name used to be refused with "must not be the
+        # record's own owner", which is true of nothing and reads as a bug.
+        role = "reviewer" if other_field == "peer_reviewer" else "owner"
         raise DomainError(
-            f"{field} must not be the {noun}'s own owner: a review by the owner is "
+            f"{field} must not be the {noun}'s own {role}: a review by the owner is "
             f"not an independent one. Name somebody other than {counterpart}.")
 
 

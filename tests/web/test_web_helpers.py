@@ -26,9 +26,12 @@ will eventually not check — the guard is the point, so it is worth a test.
 """
 from __future__ import annotations
 
+import pytest
+
 from src.command import CommandContext
 from src.identity import Principal
 from src.web._ml_scope import scoped
+from src.web._signoff_subject import SUBJECTS
 from src.web._owner_ratification import pending_owner_request, raise_owner_ratification
 from src.web._signoff_routing import _meeting_is_open, _newest
 
@@ -43,10 +46,16 @@ def test_a_record_that_is_not_there_is_not_decorated_with_a_review_scope():
     assert scoped(None) is None
 
 
-def test_no_ratification_is_raised_for_a_model_nobody_registered():
+@pytest.mark.parametrize("subject", [s for s in SUBJECTS if s.kind in
+                                     ("model", "ml_application", "ai_system")],
+                         ids=lambda s: s.kind)
+def test_no_ratification_is_raised_for_a_record_nobody_registered(subject):
     """This runs off the back of an ordinary field edit, so a change that cannot be
-    routed must not fail the edit that was actually asked for."""
-    assert raise_owner_ratification(_ctx(), "NOPE", from_owner="ana",
+    routed must not fail the edit that was actually asked for.
+
+    Over every record type: the ratification is raised for all three since 2026-09-06,
+    so the quiet-return has to hold for all three too."""
+    assert raise_owner_ratification(_ctx(), subject, "NOPE", from_owner="ana",
                                     to_owner="bo") is None
 
 

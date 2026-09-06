@@ -41,6 +41,7 @@ from src.governance.reference import get_reference_lists
 from src.web._ml_scope import scoped, scoped_list
 from src.web._review_stages import review_specs
 from src.web._signoff_subject import ML_APPLICATION_SUBJECT
+from src.web._owner_ratification import set_record_field
 from src.web._helpers import (collection_field_specs, context_from_request,
                               resolve_mrc_for_record,
                               document_specs, grouped_field_specs, json_body,
@@ -143,10 +144,11 @@ def register():
 @ml_application_bp.post("/<ml_application_id>/field")
 def update_field(ml_application_id: str):
     body = json_body()
-    dispatch("update_ml_application_field", update_ml_application_field,
-             context=context_from_request(body), ml_application_id=ml_application_id,
-             field=body.get("field"), value=body.get("value"))
-    rebuild_ml_application_view()
+    # Through set_record_field, not dispatch: a change of owner is the committee's to
+    # ratify on this record type exactly as it is on a model. Writing the field
+    # directly here is how that trigger came to be missing for months.
+    set_record_field(context_from_request(body), ML_APPLICATION_SUBJECT, ml_application_id,
+                     field=body.get("field"), value=body.get("value"))
     return jsonify(scoped(get_ml_application(ml_application_id)))
 
 
