@@ -131,11 +131,104 @@ def _check_model_chain(payload: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _chain_edges(payload: dict[str, Any]) -> list[tuple[str, str]]:
+    """The chain's directed edges, from wherever this artifact carries them.
+
+    A standalone ``model-chain`` payload has ``links`` at the top level; a
+    ``model-inventory`` carries the same structure nested under ``model_chain``.
+    """
+    links = payload.get("links")
+    if links is None:
+        links = payload.get("model_chain", {}).get("links", [])
+    return [(link.get("from"), link.get("to")) for link in links]
+
+
+def _check_model_inventory(payload: dict[str, Any]) -> list[str]:
+    """Agreement between the chain's edges and each model's own dependency lists.
+
+    An inventory states its pipeline twice: once as ``model_chain.links``, a list of
+    directed edges, and once per model as ``upstream_models`` / ``downstream_models``.
+    Neither is derived from the other — both are maintained by hand — so they drift,
+    and nothing in a JSON Schema can see it: each half is individually well-formed.
+
+    The drift is not cosmetic. The two halves answer different questions in the
+    interface — the chain diagram is drawn from the edges, while "what breaks if this
+    model changes" is answered from the per-model lists — so an inventory that
+    disagrees with itself gives two different answers to the same governance question
+    depending on which screen you are looking at.
+
+    Checked in three parts:
+
+    * every edge endpoint names a model the inventory actually declares, because an
+      edge to an unknown model draws a node the inventory cannot describe;
+    * every edge appears in both models' lists, and every list entry has an edge;
+    * the graph is sound — no self-dependency, no cycle — the same rules the
+      standalone chain artifact is already held to, which an inventory's embedded
+      chain was not.
+
+    This is the generalised form of PhysicalRisk's full-audit §4.7 scan, which reports
+    36 such inconsistencies in the inventory this platform is designed to ingest.
+    Reporting them after the fact is weaker than refusing them at the boundary: once
+    ingested they are an event in the log, and the log does not rewrite.
+    """
+    # The schema requires ``models`` to be an array of objects with a model_id, and
+    # structural validation has already run by the time this is called, so there is no
+    # shape to defend against here.
+    models = payload.get("models", [])
+    declared = {m.get("model_id") for m in models if m.get("model_id")}
+    edges = _chain_edges(payload)
+    errors: list[str] = []
+
+    for source, target in edges:
+        for endpoint in (source, target):
+            if endpoint and endpoint not in declared:
+                errors.append(
+                    f"model_chain link {source} -> {target}: "
+                    f"'{endpoint}' is not a model in this inventory")
+
+    # The edges as the per-model lists would express them, and vice versa.
+    from_edges_down: dict[str, set[str]] = {}
+    from_edges_up: dict[str, set[str]] = {}
+    for source, target in edges:
+        from_edges_down.setdefault(source, set()).add(target)
+        from_edges_up.setdefault(target, set()).add(source)
+
+    for model in models:
+        model_id = model.get("model_id")
+        if not model_id:
+            continue
+        for field, by_edge in (("downstream_models", from_edges_down),
+                               ("upstream_models", from_edges_up)):
+            stated = set(model.get(field) or ())
+            implied = by_edge.get(model_id, set())
+            for missing in sorted(implied - stated):
+                errors.append(
+                    f"{model_id}: the chain has an edge implying "
+                    f"{field} contains '{missing}', but it does not")
+            # A list entry naming a model this payload does not declare is a forward
+            # reference to one ingested separately — inventories arrive in parts, and
+            # the bundled example is itself a three-model slice whose last model points
+            # onward. Only a reference to a model that IS here can be checked against
+            # the chain, and only then is its absence from the links a disagreement.
+            for extra in sorted((stated & declared) - implied):
+                errors.append(
+                    f"{model_id}: {field} lists '{extra}', which is in this inventory "
+                    f"but has no matching link in the chain")
+
+    errors.extend(f"link {a} -> {b}: a model cannot depend on itself"
+                  for a, b in self_loops(edges))
+    if has_cycle(edges):
+        errors.append(
+            "the model chain has a cycle — the dependency graph must be acyclic")
+    return errors
+
+
 # artifact -> cross-reference checker. field-lineage (pipeline_step resolves to a
 # known step) is added with that artifact's ingestion.
 _CROSS_REFS: dict[str, Callable[[dict[str, Any]], list[str]]] = {
     "data-lineage": _check_data_lineage,
     "model-chain": _check_model_chain,
+    "model-inventory": _check_model_inventory,
 }
 
 

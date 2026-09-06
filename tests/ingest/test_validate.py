@@ -95,3 +95,124 @@ def test_model_chain_cycle_is_rejected():
 def test_model_chain_self_loop_is_rejected():
     with pytest.raises(SchemaValidationError):
         validate_payload("model-chain", {"links": [{"from": "A", "to": "A"}]})
+
+
+# ---------------------------------------------------------------------------
+# model-inventory: the chain's edges must agree with each model's own lists
+# ---------------------------------------------------------------------------
+#
+# An inventory states its pipeline twice — once as model_chain.links, once per model
+# as upstream_models/downstream_models — and neither is derived from the other. A
+# JSON Schema cannot see the disagreement, because each half is well-formed on its
+# own. PhysicalRisk's full-audit §4.7 reports 36 such inconsistencies in the very
+# inventory this platform is built to ingest; the point of checking here is that a
+# rejection at the boundary is stronger than a report after the fact, since an
+# ingested payload is an event and the log does not rewrite.
+
+def _inventory(models: list[dict], links: list[dict]) -> dict:
+    """An inventory payload, with the schema-required fields filled in.
+
+    ``name`` is required on every model and carries no meaning for these tests, so it
+    is derived rather than stated at each call site — the subject here is the chain.
+    """
+    return {
+        "models": [{"name": f"Model {m['model_id']}", **m} for m in models],
+        "model_chain": {"links": links},
+    }
+
+
+def test_model_inventory_consistent_chain_passes():
+    validate_payload("model-inventory", _inventory(
+        models=[{"model_id": "A", "downstream_models": ["B"]},
+                {"model_id": "B", "upstream_models": ["A"]}],
+        links=[{"from": "A", "to": "B"}]))
+
+
+def test_model_inventory_missing_downstream_entry_is_rejected():
+    """The chain says A feeds B, but A does not admit to having a downstream."""
+    with pytest.raises(SchemaValidationError) as exc:
+        validate_payload("model-inventory", _inventory(
+            models=[{"model_id": "A"},
+                    {"model_id": "B", "upstream_models": ["A"]}],
+            links=[{"from": "A", "to": "B"}]))
+    assert any("downstream_models" in e for e in exc.value.errors)
+
+
+def test_model_inventory_missing_upstream_entry_is_rejected():
+    with pytest.raises(SchemaValidationError) as exc:
+        validate_payload("model-inventory", _inventory(
+            models=[{"model_id": "A", "downstream_models": ["B"]},
+                    {"model_id": "B"}],
+            links=[{"from": "A", "to": "B"}]))
+    assert any("upstream_models" in e for e in exc.value.errors)
+
+
+def test_model_inventory_orphan_list_entry_is_rejected():
+    """B claims A upstream, but the chain has no such edge — the other direction.
+
+    Both models are in this payload, so the chain is the whole truth about them and
+    its silence is a disagreement.
+    """
+    with pytest.raises(SchemaValidationError) as exc:
+        validate_payload("model-inventory", _inventory(
+            models=[{"model_id": "A"}, {"model_id": "B", "upstream_models": ["A"]}],
+            links=[]))
+    assert any("no matching link" in e for e in exc.value.errors)
+
+
+def test_model_inventory_forward_reference_is_accepted():
+    """A dependency on a model ingested separately is not drift.
+
+    Inventories arrive in parts — the contract's own example is a three-model slice
+    whose last model names a downstream that is not in the slice. Rejecting that would
+    make incremental ingest impossible, and would have rejected the bundled example.
+    """
+    validate_payload("model-inventory", _inventory(
+        models=[{"model_id": "A", "downstream_models": ["ELSEWHERE"]}],
+        links=[]))
+
+
+def test_model_inventory_link_to_unknown_model_is_rejected():
+    """An edge to a model the inventory does not declare draws an undescribable node."""
+    with pytest.raises(SchemaValidationError) as exc:
+        validate_payload("model-inventory", _inventory(
+            models=[{"model_id": "A", "downstream_models": ["Z"]}],
+            links=[{"from": "A", "to": "Z"}]))
+    assert any("not a model in this inventory" in e for e in exc.value.errors)
+
+
+def test_model_inventory_cycle_is_rejected():
+    """The embedded chain is held to the same graph rules as the standalone one.
+
+    It was not before: the cycle and self-loop checks were registered for the
+    model-chain artifact only, so the identical structure inside an inventory went
+    unchecked.
+    """
+    with pytest.raises(SchemaValidationError) as exc:
+        validate_payload("model-inventory", _inventory(
+            models=[{"model_id": "A", "downstream_models": ["B"],
+                     "upstream_models": ["B"]},
+                    {"model_id": "B", "downstream_models": ["A"],
+                     "upstream_models": ["A"]}],
+            links=[{"from": "A", "to": "B"}, {"from": "B", "to": "A"}]))
+    assert any("cycle" in e for e in exc.value.errors)
+
+
+def test_model_inventory_self_dependency_is_rejected():
+    with pytest.raises(SchemaValidationError) as exc:
+        validate_payload("model-inventory", _inventory(
+            models=[{"model_id": "A", "downstream_models": ["A"],
+                     "upstream_models": ["A"]}],
+            links=[{"from": "A", "to": "A"}]))
+    assert any("cannot depend on itself" in e for e in exc.value.errors)
+
+
+def test_model_inventory_without_a_chain_is_accepted():
+    """An inventory need not declare a chain at all; absence is not disagreement."""
+    validate_payload("model-inventory",
+                     {"models": [{"model_id": "A", "name": "Model A"}]})
+
+
+def test_model_inventory_with_an_empty_chain_is_accepted():
+    validate_payload("model-inventory", _inventory(models=[{"model_id": "A"}],
+                                                   links=[]))
