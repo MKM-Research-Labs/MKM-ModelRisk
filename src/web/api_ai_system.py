@@ -39,6 +39,8 @@ from src.governance.ai_system import (add_collection_item, get_ai_system,
                                       update_ai_system_field, update_collection_item)
 from src.governance.model_inventory.risk import compute_risk_rating
 from config.governance._ai_regimes import regimes_for
+from config.governance._ai_triggers import FALLBACK_STATES, TRIGGER_PROPERTIES
+from config.governance._change import CHANGE_CLASSES
 from src.governance.ai_system._rules import diff_snapshots
 from src.governance.ai_system.envelope import envelope_status
 from src.governance.ai_system import (current_config_version,
@@ -69,6 +71,12 @@ def field_specs():
         "collections": collection_field_specs(AI_SYSTEM_COLLECTION_SPECS),
         **document_specs(),
         **review_specs(AI_SYSTEM_SUBJECT),
+        # The vocabularies the operate controls offer. Served for the same reason as
+        # everything above: a console holding its own copy offers an adopter's renamed
+        # fallback under the old name, or a property the command then refuses.
+        "trigger_properties": list(TRIGGER_PROPERTIES),
+        "fallback_states": list(FALLBACK_STATES),
+        "change_classes": list(CHANGE_CLASSES),
     })
 
 

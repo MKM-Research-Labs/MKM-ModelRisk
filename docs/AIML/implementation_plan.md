@@ -776,6 +776,61 @@ migration in Phase 3.
 
 ---
 
+## 11a. Completion — what "finished" turned out to mean (2026-09-06)
+
+Phases 0–6 were built by 2026-09-05. Closing the module meant auditing this plan
+against the tree rather than against memory: of the 51 tests named in `Verify`
+sections, 40 existed under their planned names. The other 11 split three ways.
+
+**Covered under a better name** — no work needed, the plan's name was simply not the
+one used: `test_crossing_a_band_changes_rag` is
+`test_crossing_a_band_changes_the_rating`; the 1.5 trigger-migration pair became
+`tests/governance/test_ml_change_adoption.py`, which also records that 1.5's premise
+was false (there were no legacy triggers to migrate — 24 of 25 `change_type` rows
+were blank); `test_no_threshold_literals_in_src` is the audit's R1 check, which the
+plan explicitly allowed.
+
+**Superseded by a decision made during the build.**
+`test_label_follows_the_questionnaire` wanted a record with eleven questions to read
+"The eleven questions". It does not, deliberately: "The nine questions" names SR
+26-2's nine specifically, so the label is a term of art per record type
+(`REVIEW_QUESTION_STAGE_LABELS`) rather than a count. The config said so and now a
+test asserts it.
+
+**Genuinely missing, and now built.**
+
+- **The review had never been walked end to end for the two new record types.**
+  `tests/web/test_review_across_record_types.py` walks all seven stages to a signed
+  review for a model, an ML Application and an AI System, parameterised rather than
+  copied — three copies of a stage list is the drift the test exists to catch. It
+  also mechanises "the sequence does not fork" by reading the reviewable types off
+  `Subject`, so a fourth record type is covered on the day it is added.
+- **Reviewer independence applied to models alone.** An ML Application or an AI
+  System could be registered with its owner named as its own reviewer and nothing
+  refused it — while the completeness audit reported exactly that arrangement as a
+  finding on all three. The audit was right and the write path was not. The rule now
+  lives in `src/governance/independence.py` and all three use it.
+- **Three capabilities were reachable by nothing.** `record_variability_envelope`,
+  `set_trigger_threshold` and `seal_release_manifest` were built in Phases 3–5,
+  tested at the domain level, and had no route, no ingest endpoint and no button.
+  The envelope panel could only ever read "not measured", which is the most
+  flattering reading of the least evidence and precisely what the envelope exists to
+  prevent. `src/web/api_ai_system_operate.py` exposes them; the AI System screen
+  gained a baseline-run control, a Triggers table (listing every property, including
+  those with no bar set — that is the gap worth seeing) and a Releases table.
+
+**Verified end to end** against a restored scratch copy on 5017, driving the real
+HTTP API: register both record types, refuse the owner as their own reviewer, take a
+snapshot, refuse an envelope from too few runs and accept one from 24, refuse a
+threshold on `tone`, set one on `correctness`, refuse a nameless release and seal
+`2026.09.1`, agree all seven review stages on both records, sign both off, and route
+both to the committee. The AI System's routing comes back **blocked** rather than
+routed — it is agentic, so it escalates above the Division committee the estate has,
+and the screen says so instead of quietly routing it to a committee that cannot take
+it. That is 0.3's `blocked` state doing its job.
+
+---
+
 ## 12. Open decision
 
 **FINOS taxonomy refresh cadence** — manual quarterly review, live query via the FINOS AIGF

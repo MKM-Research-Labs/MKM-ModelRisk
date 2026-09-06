@@ -166,11 +166,13 @@ const AISystemDetail = RecordDetail.attach({
                    "under &mdash; when that moves, the envelope describes a system " +
                    "that no longer exists.") +
         '<div id="ais-envelope" class="empty">Loading&hellip;</div>' +
+        this._envelopeControls() +
         '<div class="section-header" style="margin-top:var(--space-8)">Testing</div>' +
         this.fieldRows(this._TESTING);
       this._bindEdits();
       this._loadSnapshots();
       this._loadEnvelope();
+      this._bindEnvelopeControls();
       return;
     }
     if (this._tab === "exposure") {
@@ -192,8 +194,13 @@ const AISystemDetail = RecordDetail.attach({
       box.innerHTML = '<div class="section-header">What stands in the way</div>' +
         this._lead("Where the human is, what filters the input and output, how the " +
                    "answer is grounded, and how you would know it had stopped working.") +
-        this.fieldRows(this._CONTROLS);
-      this._bindEdits(); return;
+        this.fieldRows(this._CONTROLS) +
+        '<div class="section-header" style="margin-top:var(--space-8)">Triggers</div>' +
+        this._lead("The bar each property is judged against, and what happens when it " +
+                   "breaks. A property with no bar set is listed too: that is the gap " +
+                   "worth seeing.") +
+        this._triggersPanel(d);
+      this._bindEdits(); this._bindTriggers(); return;
     }
     if (this._tab === "risk") {
       box.innerHTML = '<div class="section-header">Risk assessment</div>' +
@@ -225,9 +232,15 @@ const AISystemDetail = RecordDetail.attach({
       return;
     }
     if (this._tab === "changes") {
-      box.innerHTML = '<div id="ais-changes"></div>';
+      box.innerHTML = '<div id="ais-changes"></div>' +
+        '<div class="section-header" style="margin-top:var(--space-8)">Releases</div>' +
+        this._lead("What each release contained, sealed at the time. Sealed, not " +
+                   "saved &mdash; a manifest that could be edited afterwards would be " +
+                   "a note about the release rather than a record of it.") +
+        this._releasesPanel(d);
       Changes.render("ai_system", this.recordId(), "ais-changes",
                      this._record.retired);
+      this._bindReleases();
       return;
     }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }

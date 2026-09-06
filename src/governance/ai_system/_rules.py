@@ -45,6 +45,7 @@ from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REACTIVAT
                                              EVENT_REGISTERED, EVENT_RETIRED,
                                              AISystemState)
 from src.governance.errors import DomainError
+from src.governance.independence import validate_independence
 from src.governance.risk_policy import get_risk_policy
 
 # Risk fields whose allowed values come from the record's DIVISION policy.
@@ -95,6 +96,7 @@ def decide_register(
         if field not in AI_SYSTEM_FIELD_SPECS:
             raise DomainError(f"unknown field: {field}")
         _validate_field(field, value, division)
+        validate_independence(field, value, fields, "AI System")
     # No lifecycle default, for the reason a model and an ML Application set none:
     # the stages are an admin-managed vocabulary and there is no word this code could
     # put here that is certainly in the institution's list.
@@ -111,6 +113,7 @@ def decide_edit_field(
         raise DomainError(f"field not editable: {field}")
     division = value if field == "division" else state.fields.get("division")
     _validate_field(field, value, division)
+    validate_independence(field, value, state.fields, "AI System")
     return EVENT_FIELD_EDITED, {"field": field, "value": value}
 
 

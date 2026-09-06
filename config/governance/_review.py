@@ -257,3 +257,11 @@ REVIEW_FIELD_SPECS = {
         "options": ("Yes", "No"), "group": "Review",
     },
 }
+
+
+# Segregation of duties: the two fields the reviewer-independence rule holds apart,
+# each named against the other so a write to either is checked from the same table.
+# Enforcement is on/off via ENFORCE_REVIEWER_INDEPENDENCE in config/permissions.py;
+# this says WHICH fields the rule is about, which is a governance decision rather
+# than a deployment one.
+INDEPENDENT_OF = {"peer_reviewer": "owner", "owner": "peer_reviewer"}

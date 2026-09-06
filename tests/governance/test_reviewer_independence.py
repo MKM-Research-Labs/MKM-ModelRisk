@@ -122,7 +122,10 @@ def test_a_record_already_in_breach_stays_editable_everywhere_else():
 
 
 def test_the_rule_can_be_stood_down_for_a_migration(monkeypatch):
-    monkeypatch.setattr("src.governance.model_inventory._rules."
+    # Patched on src.governance.independence, which is where the rule lives since it
+    # stopped being a model-only one. One switch stands it down for every record type,
+    # which is the point of there being one implementation.
+    monkeypatch.setattr("src.governance.independence."
                         "ENFORCE_REVIEWER_INDEPENDENCE", "never")
     _event, payload = decide_update_field(_state(owner="Dana Cole"),
                                           field="peer_reviewer", value="Dana Cole")

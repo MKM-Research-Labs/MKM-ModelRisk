@@ -34,10 +34,9 @@ from config.governance import (
     FIELD_CHOICES,
     SIGNOFF_COLLECTIONS,
 )
-from config.permissions import ENFORCE_REVIEWER_INDEPENDENCE
 from src.governance import collections as coll
 from src.governance.errors import DomainError
-from src.identity import same_person
+from src.governance.independence import validate_independence
 from src.governance.model_inventory._state import (
     EVENT_FIELD_UPDATED,
     EVENT_REACTIVATED,
@@ -79,31 +78,6 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
             raise DomainError(f"{field} must be one of: {allowed}")
 
 
-# The two fields the segregation-of-duties rule holds apart, each named against the
-# other so a write to either is checked from the same table.
-_INDEPENDENT_OF = {"peer_reviewer": "owner", "owner": "peer_reviewer"}
-
-
-def _validate_independence(field: str, value: Any, held: dict[str, Any]) -> None:
-    """Refuse a write that would make a model's reviewer its own owner.
-
-    Checked on both fields rather than only on ``peer_reviewer``: a model with a
-    distinct reviewer can be put in breach just as easily by moving the ownership
-    onto them, and a rule enforced on one side of a pair is not enforced.
-
-    Only the write that creates the breach is refused. A record already in breach
-    stays editable in every other respect -- the audit reports it, and locking the
-    record would leave the owner unable to correct anything else about it.
-    """
-    if ENFORCE_REVIEWER_INDEPENDENCE == "never" or field not in _INDEPENDENT_OF:
-        return
-    counterpart = held.get(_INDEPENDENT_OF[field])
-    if same_person(value, counterpart):
-        raise DomainError(
-            f"{field} must not be the model's own owner: a review by the owner is "
-            f"not an independent one. Name somebody other than {counterpart}.")
-
-
 def decide_register(
     state: ModelState, *, model_id: str, name: str, fields: dict[str, Any],
 ) -> tuple[str, dict[str, Any]]:
@@ -118,7 +92,7 @@ def decide_register(
         if field not in EDITABLE_FIELDS:
             raise DomainError(f"unknown field: {field}")
         _validate_field(field, value, division)
-        _validate_independence(field, value, fields)
+        validate_independence(field, value, fields, "model")
     payload: dict[str, Any] = {"model_id": model_id, "name": name}
     payload.update(fields)
     return EVENT_REGISTERED, payload
@@ -137,7 +111,7 @@ def decide_update_field(
     # use the model's current division.
     division = value if field == "division" else state.fields.get("division")
     _validate_field(field, value, division)
-    _validate_independence(field, value, state.fields)
+    validate_independence(field, value, state.fields, "model")
     # Capture the prior value so the audit trail can show old -> new. Older
     # events predate this and simply have no "from" (rendered as blank).
     return EVENT_FIELD_UPDATED, {

@@ -37,6 +37,7 @@ from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
                                SIGNOFF_COLLECTIONS)
 from src.governance import collections as coll
 from src.governance.errors import DomainError
+from src.governance.independence import validate_independence
 from src.governance.ml_application._state import (EVENT_FIELD_EDITED, EVENT_REACTIVATED,
                                                   EVENT_REGISTERED, EVENT_RETIRED,
                                                   MLApplicationState)
@@ -90,6 +91,7 @@ def decide_register(
         if field not in ML_APPLICATION_FIELD_SPECS:
             raise DomainError(f"unknown field: {field}")
         _validate_field(field, value, division)
+        validate_independence(field, value, fields, "ML Application")
     # No lifecycle default. The stages are an admin-managed vocabulary the institution
     # sets (Admin > Vocabulary), so there is no word this code could put here that is
     # certainly in their list -- a model sets none at registration for the same reason.
@@ -106,6 +108,7 @@ def decide_edit_field(
         raise DomainError(f"field not editable: {field}")
     division = value if field == "division" else state.fields.get("division")
     _validate_field(field, value, division)
+    validate_independence(field, value, state.fields, "ML Application")
     return EVENT_FIELD_EDITED, {"field": field, "value": value}
 
 
