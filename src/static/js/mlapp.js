@@ -61,12 +61,19 @@ const MLApps = {
   openRegister() {
     const idField = '<div class="field"><label for="mreg-ml_application_id">' +
       'ML Application ID *</label><input id="mreg-ml_application_id" placeholder="MLA-0001"></div>';
-    const body = this._specs.register.map((k) => {
+    // Required fields carry the star; the optional ones (Line of Business) do not, so
+    // the form never implies an obligation the domain does not enforce.
+    const field = (k, required) => {
       const f = this.fieldSpec(k);
-      return '<div class="field"><label for="mreg-' + k + '">' + esc(f.label) + " *</label>" +
-        inputControl("mreg-" + k, f) + "</div>";
-    }).join("");
+      return '<div class="field"><label for="mreg-' + k + '">' + esc(f.label) +
+        (required ? " *" : "") + "</label>" + inputControl("mreg-" + k, f) + "</div>";
+    };
+    const body = this._specs.register.map((k) => field(k, true)).join("") +
+      (this._specs.register_optional || []).map((k) => field(k, false)).join("");
     document.getElementById("mlapp-reg-body").innerHTML = idField + body;
+    // Naming a line of business is what lets a Line of Business-level committee pick
+    // this record up; without one it can only ever route to its division's.
+    bindLineOfBusinessPicker("mreg", this._ref);
     document.getElementById("mlapp-register-overlay").classList.remove("hidden");
     document.getElementById("mreg-ml_application_id").focus();
   },
@@ -78,7 +85,10 @@ const MLApps = {
   submitRegister() {
     const id = val("mreg-ml_application_id");
     const fields = {};
-    this._specs.register.forEach((k) => { const v = val("mreg-" + k); if (v !== "") fields[k] = v; });
+    // The optional fields are collected the same way and simply not checked below:
+    // blank is a real answer for a record governed at division level.
+    this._specs.register.concat(this._specs.register_optional || [])
+      .forEach((k) => { const v = val("mreg-" + k); if (v !== "") fields[k] = v; });
     const missing = [id ? null : "ML Application ID"]
       .concat(this._specs.register.filter((k) => !fields[k]).map((k) => this.fieldSpec(k).label))
       .filter(Boolean);

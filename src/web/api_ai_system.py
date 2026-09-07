@@ -31,7 +31,8 @@ from flask import Blueprint, jsonify, request
 
 from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
                                           AI_SYSTEM_FIELD_SPECS,
-                                          AI_SYSTEM_REGISTER_FIELDS)
+                                          AI_SYSTEM_REGISTER_FIELDS,
+                                          AI_SYSTEM_REGISTER_OPTIONAL)
 from src.command import dispatch
 from src.governance.ai_system import (add_collection_item, get_ai_system,
                                       list_ai_systems, rebuild_ai_system_view,
@@ -69,6 +70,10 @@ def field_specs():
     return jsonify({
         "groups": grouped_field_specs(AI_SYSTEM_FIELD_SPECS, reference_options()),
         "register": list(AI_SYSTEM_REGISTER_FIELDS),
+        # Shown at registration but not demanded. The console marks only the
+        # required set with a star, so a form cannot imply an obligation the
+        # domain does not enforce.
+        "register_optional": list(AI_SYSTEM_REGISTER_OPTIONAL),
         "collections": collection_field_specs(AI_SYSTEM_COLLECTION_SPECS),
         **document_specs(),
         **review_specs(AI_SYSTEM_SUBJECT),

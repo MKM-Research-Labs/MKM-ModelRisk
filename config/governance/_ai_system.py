@@ -240,6 +240,18 @@ AI_SYSTEM_FIELD_SPECS = {
 # on it. ``deployment_pattern`` earns its place here because it decides which of the
 # agentic risks apply at all, and a record whose pattern is unknown cannot be triaged.
 AI_SYSTEM_REGISTER_FIELDS = ("name", "division", "owner", "use_case", "deployment_pattern")
+
+# Shown on the register form but NOT required, which is the distinction
+# ``AI_SYSTEM_REGISTER_FIELDS`` alone could not make: for this record type that tuple is the
+# MANDATORY set -- ``decide_register`` refuses a registration missing any of it.
+#
+# Line of Business is the field that forced the split. Without it a record can only
+# ever route to its DIVISION's committee, because ``committee_at_levels`` skips the
+# Line of Business level when the record names none; a model has carried it since the
+# beginning and these two did not. It cannot be mandatory, though: a division may have
+# no lines of business defined, and a record genuinely governed at division level has
+# no honest answer to give.
+AI_SYSTEM_REGISTER_OPTIONAL = ("line_of_business",)
 from config.governance._ai_system_collections import (  # noqa: E402
     AGENT_TOOLS_COLLECTION, AI_REVIEW_QUESTIONS_COLLECTION,
     AI_SYSTEM_COLLECTION_SPECS)
@@ -251,7 +263,7 @@ AI_SYSTEM_FIELD_CHOICES = {
 }
 
 __all__ = ["AI_SYSTEM_ID_PREFIX", "AI_SYSTEM_FIELD_SPECS", "AI_SYSTEM_COLLECTION_SPECS",
-           "AI_SYSTEM_REGISTER_FIELDS", "AI_SYSTEM_EDITABLE_FIELDS",
+           "AI_SYSTEM_REGISTER_FIELDS", "AI_SYSTEM_REGISTER_OPTIONAL", "AI_SYSTEM_EDITABLE_FIELDS",
            "AI_SYSTEM_FIELD_CHOICES", "AI_REVIEW_QUESTIONS_COLLECTION",
            "AGENT_TOOLS_COLLECTION", "AI_SYSTEM_QUESTION_LIST"]
 

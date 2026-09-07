@@ -26,6 +26,7 @@ from flask import Blueprint, jsonify, request
 
 from config.governance import (ESTIMATOR_LIST, ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS, ML_APPLICATION_REGISTER_FIELDS,
+                               ML_APPLICATION_REGISTER_OPTIONAL,
                                TRAINING_FIELD_SPECS, TRAINING_RUNS_COLLECTION,
                                TRAINING_SECTIONS)
 from config.governance._ml_training import TRAINING_ARTEFACTS
@@ -75,6 +76,10 @@ def field_specs():
     return jsonify({
         "groups": grouped_field_specs(ML_APPLICATION_FIELD_SPECS, reference_options()),
         "register": list(ML_APPLICATION_REGISTER_FIELDS),
+        # Shown at registration but not demanded. The console marks only the
+        # required set with a star, so a form cannot imply an obligation the
+        # domain does not enforce.
+        "register_optional": list(ML_APPLICATION_REGISTER_OPTIONAL),
         "collections": collection_field_specs(ML_APPLICATION_COLLECTION_SPECS),
         "versions_by_estimator": _versions_by_estimator(),
         # The Training tab's structure, from the one place it is declared. The form

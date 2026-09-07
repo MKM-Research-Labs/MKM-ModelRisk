@@ -64,12 +64,19 @@ const AISystems = {
   openRegister() {
     const idField = '<div class="field"><label for="areg-ai_system_id">' +
       'AI System ID *</label><input id="areg-ai_system_id" placeholder="AIS-0001"></div>';
-    const body = this._specs.register.map((k) => {
+    // Required fields carry the star; the optional ones (Line of Business) do not, so
+    // the form never implies an obligation the domain does not enforce.
+    const field = (k, required) => {
       const f = this.fieldSpec(k);
-      return '<div class="field"><label for="areg-' + k + '">' + esc(f.label) + " *</label>" +
-        inputControl("areg-" + k, f) + "</div>";
-    }).join("");
+      return '<div class="field"><label for="areg-' + k + '">' + esc(f.label) +
+        (required ? " *" : "") + "</label>" + inputControl("areg-" + k, f) + "</div>";
+    };
+    const body = this._specs.register.map((k) => field(k, true)).join("") +
+      (this._specs.register_optional || []).map((k) => field(k, false)).join("");
     document.getElementById("ais-reg-body").innerHTML = idField + body;
+    // Naming a line of business is what lets a Line of Business-level committee pick
+    // this record up; without one it can only ever route to its division's.
+    bindLineOfBusinessPicker("areg", this._ref);
     document.getElementById("ais-register-overlay").classList.remove("hidden");
     document.getElementById("areg-ai_system_id").focus();
   },
@@ -81,7 +88,10 @@ const AISystems = {
   submitRegister() {
     const id = val("areg-ai_system_id");
     const fields = {};
-    this._specs.register.forEach((k) => { const v = val("areg-" + k); if (v !== "") fields[k] = v; });
+    // The optional fields are collected the same way and simply not checked below:
+    // blank is a real answer for a record governed at division level.
+    this._specs.register.concat(this._specs.register_optional || [])
+      .forEach((k) => { const v = val("areg-" + k); if (v !== "") fields[k] = v; });
     const missing = [id ? null : "AI System ID"]
       .concat(this._specs.register.filter((k) => !fields[k]).map((k) => this.fieldSpec(k).label))
       .filter(Boolean);

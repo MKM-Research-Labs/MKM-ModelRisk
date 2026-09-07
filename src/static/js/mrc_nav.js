@@ -209,3 +209,29 @@ const MrcNav = {
     }
   },
 };
+
+// The Line of Business picker on a register form, filtered to the division chosen
+// beside it and refilled whenever that changes.
+//
+// Unfiltered, the field would offer every line of business in the institution, and a
+// record filed under another division's line would route to THAT division's committee —
+// the opposite of what naming one is for. Lines of business belong to a division
+// (`line_of_business` carries it), so the pair has to be chosen together.
+//
+// Shared because both register forms need it and neither is the natural owner; the
+// third caller should not have to discover this twice.
+function bindLineOfBusinessPicker(prefix, ref) {
+  const division = document.getElementById(prefix + "-division");
+  const lob = document.getElementById(prefix + "-line_of_business");
+  if (!division || !lob) return;
+  const fill = () => {
+    const options = MrcNav.lobsForDivision(division.value, ref).map((l) => l.value);
+    // Blank first and selected: a division with no lines of business, or a record
+    // governed at division level, has no answer to give and must not be made to
+    // invent one.
+    lob.innerHTML = '<option value=""></option>' +
+      options.map((o) => '<option value="' + esc(o) + '">' + esc(o) + "</option>").join("");
+  };
+  fill();
+  division.onchange = fill;
+}

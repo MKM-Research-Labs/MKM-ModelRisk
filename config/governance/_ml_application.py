@@ -214,6 +214,18 @@ ML_APPLICATION_FIELD_SPECS = {
 # finding, which is where that gap belongs.
 ML_APPLICATION_REGISTER_FIELDS = ("name", "division", "owner", "estimator", "use_case")
 
+# Shown on the register form but NOT required, which is the distinction
+# ``ML_APPLICATION_REGISTER_FIELDS`` alone could not make: for this record type that tuple is the
+# MANDATORY set -- ``decide_register`` refuses a registration missing any of it.
+#
+# Line of Business is the field that forced the split. Without it a record can only
+# ever route to its DIVISION's committee, because ``committee_at_levels`` skips the
+# Line of Business level when the record names none; a model has carried it since the
+# beginning and these two did not. It cannot be mandatory, though: a division may have
+# no lines of business defined, and a record genuinely governed at division level has
+# no honest answer to give.
+ML_APPLICATION_REGISTER_OPTIONAL = ("line_of_business",)
+
 ML_APPLICATION_COLLECTION_SPECS = {
     # Shared, unchanged, and named identically to a model's -- this is what the
     # ``identification`` and ``treatment`` probes read.
