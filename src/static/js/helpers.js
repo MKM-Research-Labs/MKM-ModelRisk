@@ -221,6 +221,13 @@ function fmtTimestamp(iso) {
 const Groups = {
   _divisions: {},
   _states: {},
+  // Re-read whenever a screen that uses the groups is entered, and the moment a
+  // committee ratifies a change -- NOT once at startup. A list loaded at page open
+  // goes stale as soon as an administrator adds a group and its MRC signs it off, and
+  // the console stays open across exactly that: the picker kept offering the old list
+  // and the register kept grouping by it, with nothing on screen to say why. The
+  // registers re-fetch their field specs for the same reason ("Always re-fetch so
+  // admin changes to the reference menus show up promptly", Inventory.specs).
   async load() {
     try {
       const reg = await App.get("/api/functional-groups");

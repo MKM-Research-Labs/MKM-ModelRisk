@@ -149,6 +149,7 @@ const MLApps = {
 
   async loadList() {
     const nav = await MrcNav.load();
+    await Groups.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     // Retired records are out of the estate and out of every figure, exactly as a

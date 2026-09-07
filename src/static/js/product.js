@@ -171,6 +171,7 @@ const Product = {
 
   async loadList() {
     const nav = await MrcNav.load();
+    await Groups.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     const all = await App.get("/api/products");

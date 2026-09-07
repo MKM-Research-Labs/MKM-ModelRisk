@@ -115,6 +115,9 @@ Object.assign(MeetingDetail, {
     try {
       await App.send("POST", "/api/" + api + "/" + encodeURIComponent(division) + "/" +
         action, { meeting_id: this._id, confirmed: true });
+      // What the committee has just made live is what every picker and every grouped
+      // list must now offer, including on this page.
+      await Groups.load();
       App.toast(noun + (action === "approve" ? " approved and live" : " rejected"), "ok");
       this.show(this._id, this._tab);   // reload so the AOB item reflects the new state
     } catch (e) { App.toast(e.message || "failed", "error"); }

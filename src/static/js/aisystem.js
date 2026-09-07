@@ -159,6 +159,7 @@ const AISystems = {
 
   async loadList() {
     const nav = await MrcNav.load();
+    await Groups.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     // Hibernated records are fetched only when the Lifecycle filter asks for them —
