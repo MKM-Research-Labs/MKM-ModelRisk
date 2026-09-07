@@ -27,7 +27,10 @@ something.
 from __future__ import annotations
 
 from config.governance import REVIEW_STAGES
-from config.governance._assessments import ADVERSE_FAIRNESS_VERDICT
+from config.governance._ai_system_collections import AI_SYSTEM_COLLECTION_SPECS
+from config.governance._assessments import (ADVERSE_EVALUATION_VERDICT,
+                                             ADVERSE_FAIRNESS_VERDICT,
+                                             EVALUATIONS_COLLECTION)
 from tests.web.conftest import HEADERS
 
 _AI = {"name": "Claims triage agent", "division": "Risk", "owner": "David K Kelly",
@@ -110,3 +113,58 @@ def test_an_assessment_with_no_verdict_does_not_block(client):
                                  "finding": "Looked at it; nothing conclusive."},
                       "confirmed": True}, headers=HEADERS)
     assert _blockers(client) == []
+
+
+# --- The evaluations half of the same gate ------------------------------------
+#
+# Fairness findings were tested here and failed evaluations were not, though they
+# block on identical reasoning: an evaluation whose most recent run failed is
+# answered by running that kind again and recording what changed, not by signing
+# past it.
+
+# The kinds are an adopter-renameable vocabulary, so they are read rather than typed:
+# a test asserting "Red team" breaks on an institution that words its own list.
+_KINDS = [f["options"] for f in AI_SYSTEM_COLLECTION_SPECS[EVALUATIONS_COLLECTION]["fields"]
+          if f["key"] == "kind"][0]
+_RED_TEAM, _OTHER_KIND = _KINDS[2], _KINDS[0]
+
+
+def _add_evaluation(client, kind, passed):
+    return client.post(
+        "/api/ai-systems/AIS-0001/collections/evaluations",
+        json={"fields": {"kind": kind, "passed": passed}, "confirmed": True},
+        headers=HEADERS)
+
+
+def test_a_failed_evaluation_blocks_the_sign_off(client):
+    _register(client)
+    _agree_every_stage(client)
+    _add_evaluation(client, _RED_TEAM, ADVERSE_EVALUATION_VERDICT)
+    blockers = _blockers(client)
+    assert any("failed evaluation" in b for b in blockers), blockers
+    # The blocker names the kind, so the reviewer knows which exercise to re-run
+    # rather than being told a count and left to hunt.
+    assert any(_RED_TEAM in b for b in blockers), blockers
+    assert _sign_off(client).status_code >= 400
+
+
+def test_running_that_kind_again_and_passing_answers_it(client):
+    """Keyed by KIND, not by row: "does this thing pass its red team" is the question,
+    not "did run 14 pass". A failed red team answered by a later passing one is
+    answered."""
+    _register(client)
+    _agree_every_stage(client)
+    _add_evaluation(client, _RED_TEAM, ADVERSE_EVALUATION_VERDICT)
+    _add_evaluation(client, _RED_TEAM, "Passed")
+    assert not any("failed evaluation" in b for b in _blockers(client))
+    assert _sign_off(client).status_code in (200, 201)
+
+
+def test_a_failure_of_another_kind_still_blocks(client):
+    """Passing one exercise does not answer a different one."""
+    _register(client)
+    _agree_every_stage(client)
+    _add_evaluation(client, _RED_TEAM, ADVERSE_EVALUATION_VERDICT)
+    _add_evaluation(client, _OTHER_KIND, "Passed")
+    assert any("failed evaluation" in b for b in _blockers(client))
+

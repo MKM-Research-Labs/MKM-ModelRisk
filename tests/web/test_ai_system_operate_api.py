@@ -30,6 +30,8 @@ makes actually reach a caller, and that what is recorded comes back on the recor
 """
 from __future__ import annotations
 
+import pytest
+
 from config.governance._ai_baseline import (ENVELOPE_OK, ENVELOPE_STALE,
                                             MIN_ENVELOPE_RUNS)
 from config.governance._ai_triggers import FALLBACK_STATES, TRIGGER_PROPERTIES
@@ -219,3 +221,68 @@ def test_a_governance_edit_does_not_stale_an_envelope(client):
                 headers=HEADERS)
     read = client.get(f"/api/ai-systems/{_ID}/envelope", headers=HEADERS).get_json()
     assert read["envelope"]["status"] == ENVELOPE_OK
+
+
+# --- Reading it back: the endpoints the detail screen actually calls ----------
+#
+# These three had no test at all. They are pure reads, which is exactly why they were
+# skipped — and why the screen's "Loading…" would have stayed on screen if any of them
+# broke, with a green suite either way.
+
+def test_the_snapshot_list_is_empty_before_one_is_taken(client):
+    _register(client)
+    body = client.get(f"/api/ai-systems/{_ID}/snapshots", headers=HEADERS).get_json()
+    assert body["snapshots"] == []
+
+
+def test_each_snapshot_carries_what_changed_since_the_one_before(client):
+    """The diff travels with the list rather than being a second call: "what changed at
+    version 4" is the only question anybody asks of a version list."""
+    _ready(client)                      # registered, first snapshot taken
+    client.post(f"/api/ai-systems/{_ID}/field",
+                json={"field": "guardrails", "value": "Output filter added.",
+                      "confirmed": True}, headers=HEADERS)
+    client.post(f"/api/ai-systems/{_ID}/snapshots", json={"confirmed": True},
+                headers=HEADERS)
+    snapshots = client.get(f"/api/ai-systems/{_ID}/snapshots",
+                           headers=HEADERS).get_json()["snapshots"]
+    assert len(snapshots) == 2
+    # The first has nothing to be compared against; the second names the field that moved.
+    assert snapshots[0]["changed"] == []
+    assert "guardrails" in str(snapshots[1]["changed"])
+
+
+def test_an_ai_system_with_no_envelope_reads_as_none_rather_than_erroring(client):
+    _register(client)
+    body = client.get(f"/api/ai-systems/{_ID}/envelope", headers=HEADERS).get_json()
+    assert body["envelope"] is None
+
+
+def test_the_regimes_that_apply_are_derived_from_the_record(client):
+    """Not ticked. "Which regimes apply" has a right answer given what the system does
+    and where it is used, and a checkbox somebody ticked is an assertion nobody can
+    check."""
+    _register(client)
+    body = client.get(f"/api/ai-systems/{_ID}/regimes", headers=HEADERS).get_json()
+    assert isinstance(body["regimes"], list)
+
+
+@pytest.mark.parametrize("path", ["snapshots", "envelope", "regimes"])
+def test_reading_anything_about_a_system_that_does_not_exist_is_404(client, path):
+    res = client.get(f"/api/ai-systems/AIS-NOPE/{path}", headers=HEADERS)
+    assert res.status_code == 404
+    assert "not found" in res.get_json()["error"]
+
+
+@pytest.mark.parametrize("path,body", [
+    ("thresholds", {"property_name": "correctness", "threshold": 0.9,
+                    "fallback": FALLBACK_STATES[0]}),
+    ("release-manifest", {"release": "2026.09.1", "change_class": "Bounded"}),
+])
+def test_recording_against_a_system_that_does_not_exist_is_404(client, path, body):
+    """The guard on each write path, not just the read ones. Dispatching a command for
+    a record that is not there would fail deeper, with a worse message."""
+    res = client.post(f"/api/ai-systems/AIS-NOPE/{path}",
+                      json={**body, "confirmed": True}, headers=HEADERS)
+    assert res.status_code == 404
+

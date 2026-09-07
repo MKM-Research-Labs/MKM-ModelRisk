@@ -43,7 +43,15 @@ VALID_COMPLEXITY = ("Low", "Medium", "High")
 # other way round.
 LIFECYCLE_STAGE_LIST = "lifecycle_stage"
 VALIDATION_STATUS_LIST = "validation_status"
-VALID_LIFECYCLE_STAGES = ("Development", "Validation", "Production", "Retired")
+# "Pre Development" is where a model sits once it is proposed but not yet started --
+# a submitted bid, an approved business case awaiting kickoff. It is first because the
+# tuple is read in order and the order is what every dropdown offers.
+#
+# Note this tuple is the VALIDATION list as well as the seed for the admin reference
+# list. Adding a stage to the reference list alone changes what the dropdown shows but
+# not what the command will accept, and the write is then refused by _validate_field.
+VALID_LIFECYCLE_STAGES = ("Pre Development", "Development", "Validation",
+                          "Production", "Retired")
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 TIER_MIN = 1
 TIER_MAX = 3

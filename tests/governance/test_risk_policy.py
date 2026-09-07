@@ -192,3 +192,24 @@ def test_seed_division_signoff_is_not_stale():
     result = compute_risk_rating(_model("SeedOnlyDiv", "2020-01-01"), as_of="2026-08-05")
     assert result["needs_reclassification"] is False
     assert result["signed_off"] is True
+
+
+# --- The date a ratification was recorded -------------------------------------
+
+def test_recorded_date_reads_a_day_from_whatever_the_store_holds():
+    """Kept as a date, not a timestamp, because the question it answers is "was this
+    record signed off under the current policy or an older one?" — a question about
+    days. The event store hands back a datetime on one path and an ISO string on
+    another, so both have to arrive at the same day."""
+    from datetime import datetime
+    from src.governance.ratified_policy import recorded_date
+    assert recorded_date(datetime(2026, 9, 7, 14, 30)) == "2026-09-07"
+    assert recorded_date("2026-09-07T14:30:00+00:00") == "2026-09-07"
+
+
+def test_recorded_date_of_nothing_is_nothing():
+    """An event with no timestamp is not dated to today: "we do not know when" and
+    "it happened now" are different answers, and only one of them is true."""
+    from src.governance.ratified_policy import recorded_date
+    assert recorded_date(None) is None
+

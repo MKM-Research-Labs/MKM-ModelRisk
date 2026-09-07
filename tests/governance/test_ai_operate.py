@@ -36,6 +36,7 @@ import pytest
 from config.governance._ai import DEPLOYMENT_PATTERNS
 from config.governance._ai_ace import (ACE_ANCHORS, ACE_DIMENSIONS,
                                        ACE_SCALE, ACE_THRESHOLDS,
+                                       below_threshold,
                                        below_threshold)
 from config.governance._ai_failure_modes import (FAILURE_MODE_COLLECTION,
                                                  FORBIDDEN_FAILURE_MODE_FIELDS)
@@ -252,3 +253,23 @@ def test_an_unscored_dimension_is_not_reported_as_a_failure():
     """Not scored and scored badly are different findings."""
     assert below_threshold({"safety": 5}) == []
     assert below_threshold({}) == []
+
+
+def test_a_score_that_is_not_a_number_is_skipped_not_counted_as_failing():
+    """A dimension nobody scored, or scored "n/a", is a missing judgement — not a
+    judgement of zero. Counting it as failing would report a system as below its bar
+    on the strength of an absent number, which is the flattering error's opposite and
+    just as wrong."""
+    dimension = next(iter(ACE_THRESHOLDS))
+    assert below_threshold({dimension: "n/a"}) == []
+    assert below_threshold({dimension: None}) == []
+
+
+def test_a_dimension_below_its_bar_is_named_and_the_others_are_not():
+    """Per dimension, never averaged: a mean of the four would let a strong tone score
+    pay for a weak safety one, which is the trade the thresholds exist to prevent."""
+    bars = dict(ACE_THRESHOLDS)
+    low, high = list(bars)[0], list(bars)[1]
+    failing = below_threshold({low: bars[low] - 1, high: bars[high]})
+    assert failing == [low]
+

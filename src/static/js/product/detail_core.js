@@ -84,9 +84,15 @@ const ProductDetail = {
   },
 
   // Return to the list without a full refetch (the list is kept current on edits).
+  //
+  // Both lookups are guarded, not just the listview: this also runs when the Products
+  // tab is opened, including the very first time, when the panel has not been rendered
+  // and neither element exists yet. Throwing there aborted the render that was about
+  // to create them and the tab came up blank.
   close() {
     this._tab = "overview";
-    document.getElementById("product-detail").innerHTML = "";
+    const detail = document.getElementById("product-detail");
+    if (detail) detail.innerHTML = "";
     const listview = document.getElementById("product-listview");
     if (listview) listview.style.display = "";
   },

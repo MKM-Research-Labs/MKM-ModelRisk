@@ -29,6 +29,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
+                                          AI_SYSTEM_FIELD_SPECS)
 from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS,
     COLLECTION_SPECS,
@@ -42,8 +44,8 @@ from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
 from src.files import upload_path
 from src.governance.completeness._rules import audit_entity
 from src.governance.documents import (GOVERNANCE_ARTEFACTS_AGGREGATE,
-                                      list_documents, ml_application_scope,
-                                      model_scope)
+                                      ai_system_scope, list_documents,
+                                      ml_application_scope, model_scope)
 from src.governance.model_inventory.projection import list_models
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.ai_system.projection import list_ai_systems
@@ -54,6 +56,7 @@ from src.governance.risk_policy import load as load_policy
 MODEL_KIND = "Model"
 PRODUCT_KIND = "Product"
 ML_APPLICATION_KIND = "ML Application"
+AI_SYSTEM_KIND = "AI System"
 
 
 def product_scope(product_id: str) -> str:
@@ -91,8 +94,8 @@ def _audit(kind, entity_id, name, data, field_specs, collection_specs, scope, as
 
 
 def scan(as_of: str, config=None, model_ids=None, product_ids=None,
-         ml_application_ids=None) -> list[dict[str, Any]]:
-    """Audit every model, product and ML Application, worst completeness first.
+         ml_application_ids=None, ai_system_ids=None) -> list[dict[str, Any]]:
+    """Audit every model, product, ML Application and AI System, worst first.
 
     Products follow the models so that a reader working down the register meets
     the model gaps before the product gaps that inherit from them.
@@ -106,6 +109,7 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
     want_models = None if model_ids is None else set(model_ids)
     want_products = None if product_ids is None else set(product_ids)
     want_ml = None if ml_application_ids is None else set(ml_application_ids)
+    want_ai = None if ai_system_ids is None else set(ai_system_ids)
     rows = []
     for model in list_models(config=config):
         if want_models is not None and model["model_id"] not in want_models:
@@ -138,6 +142,20 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
             ML_APPLICATION_KIND, record["ml_application_id"], data.get("name"), data,
             ML_APPLICATION_FIELD_SPECS, ML_APPLICATION_COLLECTION_SPECS,
             ml_application_scope(record["ml_application_id"]), as_of))
+    # AI Systems, on the same terms again. They were absent until 2026-09-07, which
+    # meant an AI System had no completeness findings at all -- no gaps, no score, no
+    # row in the register -- while ``coverage_population`` below already counted it in
+    # the framework table. That is two populations in one report with nothing to tell
+    # them apart, which is the failure ``render_completeness_pdf`` warns about in its
+    # own docstring.
+    for record in list_ai_systems(config=config):
+        if want_ai is not None and record["ai_system_id"] not in want_ai:
+            continue
+        data = record.get("data") or {}
+        rows.append(_audit(
+            AI_SYSTEM_KIND, record["ai_system_id"], data.get("name"), data,
+            AI_SYSTEM_FIELD_SPECS, AI_SYSTEM_COLLECTION_SPECS,
+            ai_system_scope(record["ai_system_id"]), as_of))
     rows.sort(key=lambda r: (r["completeness"], r["entity_id"]))
     return rows
 

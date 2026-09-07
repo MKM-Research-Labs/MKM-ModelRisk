@@ -216,3 +216,22 @@ def test_model_inventory_without_a_chain_is_accepted():
 def test_model_inventory_with_an_empty_chain_is_accepted():
     validate_payload("model-inventory", _inventory(models=[{"model_id": "A"}],
                                                    links=[]))
+
+
+def test_the_cross_reference_check_tolerates_a_model_row_with_no_id():
+    """Called directly, because the schema will not let such a payload through.
+
+    ``model_id`` is schema-required, so ``validate_payload`` rejects an id-less row
+    before the cross-reference check ever sees it. The check guards against it anyway
+    — there is nothing to match such a row on, so it is skipped rather than crashing
+    the whole validation — and the guard is worth keeping precisely because it does
+    not depend on the schema staying as it is. Testing it here says so.
+    """
+    from src.ingest._validate import _check_model_inventory
+    errors = _check_model_inventory({
+        "models": [{"model_id": "A", "downstream_models": ["B"]},
+                   {"name": "a row that never got an id"},
+                   {"model_id": "B", "upstream_models": ["A"]}],
+        "model_chain": {"links": [{"from": "A", "to": "B"}]},
+    })
+    assert errors == []

@@ -44,8 +44,23 @@ _AUDIT_COVERAGE_XML = AUDIT_OUTPUT_DIR / COVERAGE_XML_NAME
 
 
 def default_coverage_path() -> Path:
-    """The coverage.xml the audit should read: audit-dir copy if present, else root."""
-    return _AUDIT_COVERAGE_XML if _AUDIT_COVERAGE_XML.exists() else COVERAGE_XML
+    """The coverage.xml the audit should read: whichever of the two is NEWER.
+
+    It used to prefer the audit-dir copy unconditionally, which is silent staleness:
+    a developer who runs ``coverage xml`` at the repo root gets a fresh report at the
+    root and an R3 line quoting the audit tab's last refresh. On 2026-09-07 that was
+    three days and a whole module out of date -- 9,311 lines against the tree's
+    10,689 -- and nothing on the page said so. The comment above SUITE_TIMEOUT_SECONDS
+    in config/audit.py describes the same failure arriving by a different route.
+
+    Newest wins, so either way of producing the report is honoured and the answer is
+    the most recent measurement of the tree rather than whichever file a rule
+    preferred.
+    """
+    present = [p for p in (_AUDIT_COVERAGE_XML, COVERAGE_XML) if p.exists()]
+    if not present:
+        return COVERAGE_XML
+    return max(present, key=lambda p: p.stat().st_mtime)
 
 
 def _package_rows(root: ET.Element) -> list[dict]:

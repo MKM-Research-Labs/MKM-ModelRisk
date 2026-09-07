@@ -30,7 +30,9 @@ from __future__ import annotations
 import pytest
 
 from src.governance.errors import DomainError
-from src.governance.ml_application import (register_ml_application,
+from src.governance.ml_application import (add_collection_item,
+                                           reactivate_ml_application,
+                                           register_ml_application,
                                            retire_ml_application,
                                            update_ml_application_field)
 from src.governance.ml_application._state import (EVENT_REGISTERED, apply,
@@ -134,3 +136,41 @@ def test_the_shipped_questionnaire_stands_in_when_the_register_cannot_be_read(
     monkeypatch.setattr("src.governance.reference.get_reference_lists", _unavailable)
     questions = _ml_questions(None)
     assert questions and all(q["question"] for q in questions)
+
+
+# --- Coming back, and what stays writable while hibernated --------------------
+#
+# The same three guards the AI System carries (tests/governance/test_ai_system_edges.py).
+# They were untested here, which is the asymmetry these suites exist to prevent: a rule
+# enforced on one record type and unchecked on another is a rule with a hole in it.
+
+def test_reactivating_something_never_registered_is_refused():
+    with pytest.raises(DomainError, match="does not exist"):
+        reactivate_ml_application(ml_application_id="MLA-NOPE", actor="admin")
+
+
+def test_reactivating_a_live_ml_application_is_refused():
+    """Not a no-op: "reactivate" on a record already in the estate means somebody has
+    misread its state, and answering OK would confirm the misreading."""
+    _register()
+    with pytest.raises(DomainError, match="is not retired"):
+        reactivate_ml_application(ml_application_id="MLA-0001", actor="admin")
+
+
+def test_a_retired_ml_application_comes_back():
+    _register()
+    retire_ml_application(ml_application_id="MLA-0001", actor="admin")
+    reactivate_ml_application(ml_application_id="MLA-0001", actor="admin")
+    # And can be retired again — the guard is on state, not on having been retired once.
+    retire_ml_application(ml_application_id="MLA-0001", actor="admin")
+
+
+def test_filing_a_signoff_item_against_nothing_is_refused():
+    """Sign-off collections stay writable on a hibernated record — the committee has to
+    be able to record the decision that hibernated it, and the request to bring it back.
+    So they skip the editable guard and check existence on their own, which is a second
+    check needing its own test."""
+    with pytest.raises(DomainError, match="does not exist"):
+        add_collection_item(ml_application_id="MLA-NOPE", collection="signoff_requests",
+                            fields={"kind": "owner"}, actor="admin")
+

@@ -31,7 +31,8 @@ from src.governance.reference import (add_option, ensure_default_ml_training_voc
                                       ensure_default_model_types,
                                       ensure_default_reference_lists,
                                       get_reference_lists, model_type_roles,
-                                      remove_option, update_option)
+                                      move_option, remove_option,
+                                      update_option)
 
 
 def test_update_option_edits_fields():
@@ -153,3 +154,53 @@ def test_what_a_model_type_means_to_a_product_is_read_not_inferred():
                actor="admin")
     assert model_type_roles() == {"Curve Model": "Market Data",
                                   "Pricing Engine": "Neither"}
+
+
+# --- Reordering a list --------------------------------------------------------
+#
+# Order is meaningful: the review questionnaire is asked in the order it is listed,
+# and that is the order every dropdown offers. The move path had no test of its
+# refusals, so nothing checked that an impossible move said so rather than silently
+# doing nothing.
+
+def _two_divisions():
+    add_option(list_name="division", fields={"value": "Markets"}, actor="admin")
+    add_option(list_name="division", fields={"value": "Retail"}, actor="admin")
+    return [o["item_id"] for o in get_reference_lists()["division"]]
+
+
+def test_an_option_moves_up_the_list():
+    first, second = _two_divisions()
+    move_option(list_name="division", item_id=second, direction="up", actor="admin")
+    assert [o["item_id"] for o in get_reference_lists()["division"]] == [second, first]
+
+
+def test_moving_an_item_that_is_not_in_the_list_is_refused():
+    _two_divisions()
+    with pytest.raises(DomainError, match="unknown item"):
+        move_option(list_name="division", item_id="DV-999", direction="up",
+                    actor="admin")
+
+
+def test_moving_the_first_item_up_says_it_is_already_first():
+    """Refused with the reason rather than silently doing nothing — a reorder that
+    appears to work and does not is how a questionnaire ends up in an order nobody
+    chose."""
+    first, _second = _two_divisions()
+    with pytest.raises(DomainError, match="already first"):
+        move_option(list_name="division", item_id=first, direction="up", actor="admin")
+
+
+def test_moving_the_last_item_down_says_it_is_already_last():
+    _first, second = _two_divisions()
+    with pytest.raises(DomainError, match="already last"):
+        move_option(list_name="division", item_id=second, direction="down",
+                    actor="admin")
+
+
+def test_a_direction_that_is_not_up_or_down_is_refused():
+    first, _second = _two_divisions()
+    with pytest.raises(DomainError, match="direction must be one of"):
+        move_option(list_name="division", item_id=first, direction="sideways",
+                    actor="admin")
+

@@ -63,6 +63,12 @@ const Nav = {
     } else {
       MrcNav.hide();
     }
+    // A tab lands on its list. The panels are cached so switching is instant, and
+    // that cache used to include an open detail: opening an AI System, leaving the
+    // tab and coming back showed that one record with its list hidden underneath and
+    // no list in sight. Screens with a detail view say how to get back to the list;
+    // the rest define nothing and are unaffected.
+    if (TABS[name] && TABS[name].onShow) TABS[name].onShow();
     if (this._dirty.has(name)) {
       this._dirty.delete(name);
       try {

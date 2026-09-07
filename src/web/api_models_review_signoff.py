@@ -25,18 +25,12 @@ exported.
 """
 from __future__ import annotations
 
-from src.web._review_signoff import (REVIEW_SIGNOFFS, register_review_signoff_routes,
-                                     signoff_blockers as _blockers_for)
+from src.web._review_signoff import (REVIEW_SIGNOFFS,
+                                     register_review_signoff_routes)
 from src.web._signoff_subject import MODEL_SUBJECT
 from src.web.api_models import models_bp
 
 
-def signoff_blockers(data: dict, approvals_by_stage: dict) -> list[str]:
-    """A model's sign-off blockers. The stage list is implied by the record type,
-    so callers that already hold a model's data need not restate it."""
-    return _blockers_for(data, approvals_by_stage, MODEL_SUBJECT.review_stages())
-
-
 register_review_signoff_routes(models_bp, MODEL_SUBJECT)
 
-__all__ = ["REVIEW_SIGNOFFS", "signoff_blockers"]
+__all__ = ["REVIEW_SIGNOFFS"]

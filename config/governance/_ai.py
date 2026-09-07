@@ -63,8 +63,16 @@ HOSTING_MODES = ("Third-party hosted API", "Private cloud deployment",
 # What the system is, architecturally. AIR-OP-014, AIR-OP-028 and the whole agentic
 # half of the Security catalogue only bite on particular values here, which is why it
 # is a field and not prose: "is anything in the estate agentic" has to be a query.
+# The first five describe generative systems, which is what the register was built
+# for. The sixth is here because not every governed AI system is one: a physics-informed
+# or otherwise scientific model — a Bayesian estimator with a learned component, say —
+# has an architecture the other five actively misdescribe, and asserting "Fine-tuned"
+# of it would put a false fact on the record to satisfy a required field. It is a
+# value the agentic controls do not match, which is the correct outcome rather than an
+# omission: AGENTIC_PATTERNS is a membership test, so nothing keyed on it misfires.
 DEPLOYMENT_PATTERNS = ("Direct prompting", "Retrieval-augmented (RAG)",
-                       "Fine-tuned", "Agentic (tool-using)", "Multi-agent")
+                       "Fine-tuned", "Agentic (tool-using)", "Multi-agent",
+                       "Physics-informed / scientific ML")
 
 # What the firm sends for inference. Ordered by how much it would matter if it
 # leaked, so a reader can see at a glance which end of the list a record sits at.
