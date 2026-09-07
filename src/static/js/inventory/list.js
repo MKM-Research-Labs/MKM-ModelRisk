@@ -37,6 +37,13 @@ const InventoryList = {
   _cfg: {
     idKey: "model_id", summaryId: "m-summary", listId: "m-list",
     filtersId: "m-filters", tableId: "m-table", p: "mf-", noun: "models",
+    // Which field carries the record's stage, because the registers do not agree: a
+    // model moves through a lifecycle, a Product is Active or Suspended. The filter and
+    // the column both read the vocabulary of whichever this names.
+    statusField: "lifecycle_stage",
+    // What that filter calls itself. Spelled out rather than derived from the field
+    // label, because "All lifecycle stage" and "All status" both read wrong.
+    statusFilterLabel: "All lifecycle",
     // Lead with the functional groups rather than one long list — the whole point of
     // the field. Unset on a register with no groups and it draws exactly as before.
     groupBy: "functional_group",
@@ -79,7 +86,8 @@ const InventoryList = {
       cell: (m) => mrcStatusBadge(m.d) },
     { key: "lifecycle", label: "Lifecycle", sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || m.d.status || "").toLowerCase(),
       cell: function (m) { return m.retired ? '<span class="pill">retired</span>'
-        : optionLabel(InventoryList._cfg.spec("lifecycle_stage"), m.d.lifecycle_stage || m.d.status); } },
+        : optionLabel(InventoryList._cfg.spec(InventoryList._cfg.statusField),
+                      m.d.lifecycle_stage || m.d.status); } },
   ],
 
   mount(models, onRow) {
