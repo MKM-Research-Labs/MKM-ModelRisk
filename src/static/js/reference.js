@@ -44,6 +44,10 @@ const Reference = {
     ["feature", "Feature"],
     // The per-division risk policy: dimensions, ratings and the generated grids.
     ["risk", "Risk"],
+    // How a division carves its estate up by function -- what a record is FOR, as
+    // against Model Type above, which is what it IS. MRC-ratified like the two
+    // policies, so it sits with them rather than among the flat lists.
+    ["functional_groups", "Functional Groups"],
     // The questionnaire every review works through. Its own tab rather than a row
     // among the reference lists: it is the institution's own standard, and the
     // review workflow is built around it.
@@ -107,6 +111,12 @@ const Reference = {
     // The risk policy is per-division structured config, not a flat reference list.
     if (this._tab === "risk") {
       await RiskEditor.render(container);
+      return;
+    }
+    // Likewise the functional groups: a per-division, MRC-ratified list rather than
+    // an admin-managed one, so it does not come from /api/reference at all.
+    if (this._tab === "functional_groups") {
+      await FunctionalGroupsEditor.render(container);
       return;
     }
     // Likewise the ML review policy: per-division, MRC-ratified, and about the other

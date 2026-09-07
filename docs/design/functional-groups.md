@@ -223,7 +223,7 @@ onto it in the same change (R8: 25 clones back to 24, none of them in the new co
 
 ---
 
-### F2 — Admin → Functional Groups
+### F2 — Admin → Functional Groups — **BUILT**
 
 **Goal.** An administrator can draft a division's list and see that it is waiting
 on the MRC.
@@ -246,11 +246,22 @@ on the MRC.
 - **d.** A `<script>` tag in `src/templates/index.html`. **A new script tag needs a
   server restart** — Jinja caches `index.html` with `debug=False` (CLAUDE.md §4).
 
-**Verify.** In the running app on 5016 against a restored scratch database: add
-three groups to a division, confirm the banner reads *draft*, reload and confirm
-they survived, confirm the live list is still empty.
+**Verify.** In the running app on 5016 against a restored scratch database.
 
-**Done when** the tab drafts a list and the state badge says `draft`.
+**Done 2026-09-07**, verified against the real PhysicalRisk estate: added Storm
+Generation / Flood Simulation / Instrument Pricer, ids minted server-side
+(FG-001..003), banner *draft*; approved through the API; filed the live model
+MKM-BRF-001 under FG-001; reload showed **Approved**, "1 record" beside that group
+and its Remove withheld; reordering moved a group without disturbing its id; and
+renaming FG-001 to "Storm & Surge Generation" put the change in the **draft** with
+the live list unchanged and the model **still filed as FG-001** — the store-the-id
+design demonstrated on a real record rather than argued for.
+
+**What it also turned up.** The app had **no `:disabled` styling at all**. The
+withheld Remove was genuinely inert and looked identical to a live button, which
+reads as a broken screen rather than as a guard — and the gap was never this
+screen's: the identity dialog's Confirm and the report generators disable buttons
+the same way. One shared rule in `app.css` covers all of them.
 
 ---
 
