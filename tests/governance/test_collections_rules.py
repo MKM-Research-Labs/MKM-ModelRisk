@@ -167,3 +167,37 @@ def test_next_item_id_follows_the_highest_number_not_the_count():
     assert next_item_id(items, "AS") == "AS-004"
     # An id that carries no number cannot claim one, and must not stop the scan.
     assert next_item_id(({"item_id": "legacy"},) + items, "AS") == "AS-004"
+
+
+# --- Replaying a move the command layer would never have written ---------------
+#
+# ``decide_move`` refuses an unknown item and an out-of-range swap, so a well-formed
+# stream cannot contain either. The FOLD still has to survive both, because it replays
+# whatever the log holds: a move recorded before the item was removed, or a stream
+# written by an older version of these rules. A fold that raised would make the whole
+# aggregate unreadable — the record would vanish from the console rather than show one
+# collection in a stale order.
+
+def test_replaying_a_move_of_an_item_that_is_no_longer_there_changes_nothing():
+    from src.governance.collections import EVENT_ITEM_MOVED, fold
+    before = {"assumptions": ({"item_id": "A-001"}, {"item_id": "A-002"})}
+    after = fold(before, EVENT_ITEM_MOVED,
+                 {"collection": "assumptions", "item_id": "A-999", "direction": "up"})
+    assert after["assumptions"] == before["assumptions"]
+
+
+def test_replaying_a_move_off_the_end_of_the_list_changes_nothing():
+    from src.governance.collections import EVENT_ITEM_MOVED, fold
+    before = {"assumptions": ({"item_id": "A-001"}, {"item_id": "A-002"})}
+    after = fold(before, EVENT_ITEM_MOVED,
+                 {"collection": "assumptions", "item_id": "A-001", "direction": "up"})
+    assert after["assumptions"] == before["assumptions"]
+
+
+def test_replaying_a_legitimate_move_reorders_the_collection():
+    from src.governance.collections import EVENT_ITEM_MOVED, fold
+    before = {"assumptions": ({"item_id": "A-001"}, {"item_id": "A-002"})}
+    after = fold(before, EVENT_ITEM_MOVED,
+                 {"collection": "assumptions", "item_id": "A-002", "direction": "up"})
+    assert [i["item_id"] for i in after["assumptions"]] == ["A-002", "A-001"]
+

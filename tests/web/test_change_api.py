@@ -127,6 +127,16 @@ def test_a_missing_change_404s(client):
     assert client.get("/api/changes/CHG-404").status_code == 404
 
 
+def test_one_change_reads_back_by_id(client):
+    """The 404 was tested and the success beside it was not, which is the more
+    common shape of an untested branch: the failure is interesting, so somebody
+    writes it, and the path everything actually uses goes unchecked."""
+    _register_ai_system(client)
+    change_id = _propose(client).get_json()["change_id"]
+    body = client.get(f"/api/changes/{change_id}", headers=HEADERS).get_json()
+    assert body["change_id"] == change_id
+
+
 def test_a_domain_refusal_is_a_400(client):
     _register_ai_system(client)
     change_id = _propose(client).get_json()["change_id"]

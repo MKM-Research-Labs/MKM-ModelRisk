@@ -93,10 +93,6 @@ def _spec(specs: dict, collection: str) -> dict:
     return spec
 
 
-def _has_item(collections: dict, collection: str, item_id: str) -> bool:
-    return any(it["item_id"] == item_id for it in collections.get(collection, ()))
-
-
 def _find_item(collections: dict, collection: str, item_id: str) -> dict | None:
     return next((it for it in collections.get(collection, ()) if it["item_id"] == item_id), None)
 

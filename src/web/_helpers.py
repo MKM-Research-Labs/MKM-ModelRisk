@@ -69,24 +69,15 @@ def json_body() -> dict[str, Any]:
 def resolve_mrc_for_record(record_type: str, data: dict[str, Any]) -> dict[str, Any]:
     """The committee responsible for a record, and why it is that one.
 
-    Where ``resolve_mrc_for_org`` answers only "what covers this org location", this
-    also applies the routing rules — so an agentic AI System or a mission-critical model
-    reports the committee it must actually reach, with the reason travelling alongside.
+    Every record is managed at the MRC it is assigned to, so this is the most specific
+    committee covering its division and line of business, with the reason travelling
+    alongside for the screen to show. ``resolve_mrc_for_org``, which answered the same
+    question from a bare org location, was removed on 2026-09-07: nothing had called it
+    since the routing was unified, and an uncalled second answer to "which committee"
+    is how the two come to disagree.
     """
     from src.governance.mrc import route  # lazy: avoids an import cycle
     return route(record_type, data or {}, get_reference_lists())
-
-
-def resolve_mrc_for_org(division: str | None, line_of_business: str | None) -> dict[str, Any]:
-    """The MRC committee responsible for a given org location, as a JSON block.
-
-    Returns ``{"mrc": <committee or None>, "level": <match level or None>}`` —
-    the shared shape used by the model and product overviews and by the sign-off
-    router to decide where a request goes.
-    """
-    from src.governance.mrc import matching_mrc  # lazy: avoids an import cycle
-    mrc, level = matching_mrc(division, line_of_business, get_reference_lists())
-    return {"mrc": mrc, "level": level}
 
 
 def reference_options() -> dict[str, list]:

@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from config.governance import (EXEMPT_COLLECTIONS, EXEMPT_DOC_CATEGORIES,
                                EXEMPT_FIELDS, REVIEW_STAGES)
+from src.governance.completeness.report_sections import _review_programme
 from src.governance.completeness.review_programme import model_state, programme
 
 
@@ -93,3 +94,38 @@ def test_open_challenges_are_surfaced_across_the_estate():
     ])
     assert model_state(model)["open_challenges"] == 1
     assert programme([model])["open_challenges"] == 1
+
+
+# --- The section as it reaches the page ---------------------------------------
+
+def test_the_section_is_omitted_entirely_when_there_are_no_models():
+    """No inventory, no programme. An empty table under a heading reads as "nothing is
+    under review", which is a different claim from "there is nothing to review"."""
+    assert _review_programme([]) == ""
+
+
+def test_a_programme_with_nothing_started_says_so_in_words():
+    """Counted, not tabulated: the reader already has the inventory."""
+    rendered = _review_programme([_model("M1")])
+    assert "No review has been started yet" in rendered
+    assert "Review programme" in rendered
+
+
+def test_a_review_under_way_appears_as_a_row_with_its_reviewer_and_progress():
+    """The table was never rendered by a test — only the empty case was, so the branch
+    that actually draws a reader's rows went unchecked."""
+    model = _model("M1", peer_reviewer="Priya Anand", review_trigger="New version",
+                   review_progress=[{"stage": "documents"}, {"stage": "questions"}])
+    rendered = _review_programme([model])
+    assert "No review has been started yet" not in rendered
+    for expected in ("M1", "Priya Anand", "New version", "Reviews under way"):
+        assert expected in rendered, expected
+
+
+def test_a_row_with_nothing_recorded_shows_a_dash_rather_than_a_blank():
+    """An empty cell reads as a rendering fault; a dash reads as "not recorded", which
+    is what it is."""
+    model = _model("M1", review_progress=[{"stage": "documents"}])
+    rendered = _review_programme([model])
+    assert "\u2014" in rendered or "—" in rendered
+

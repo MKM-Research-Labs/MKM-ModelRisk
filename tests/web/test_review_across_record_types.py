@@ -257,3 +257,34 @@ def test_the_monitoring_route_names_the_record_type_it_could_not_find(client, ki
     subject = next(s for s in SUBJECTS if s.kind == kind)
     assert subject.noun in res.get_json()["error"]
 
+
+def test_a_caller_with_no_record_type_gets_the_platform_default_wording():
+    """``review_stages_for`` is called from places that hold no record type — a report
+    header, a vocabulary listing. It answers with the model's wording rather than
+    raising, because "the stages" is a fair question without a record in hand, and the
+    model's is the platform's default vocabulary.
+    """
+    assert review_stages_for("not_a_record_type") == REVIEW_STAGES
+    assert review_stages_for("") == REVIEW_STAGES
+
+
+@pytest.mark.parametrize("kind", _KINDS)
+def test_a_record_type_with_no_questionnaire_is_refused_rather_than_crashing(
+        client, kind, monkeypatch):
+    """A guard against a record type added carelessly.
+
+    All three reviewable types have a questionnaire, so this cannot fire today — which
+    is exactly why it is worth having and worth testing. A fourth added to
+    REVIEW_SUBJECTS without an entry in REVIEW_QUESTION_COLLECTIONS would otherwise
+    reach ``update_item`` with a collection of ``None`` and fail somewhere deeper, with
+    a message about the store rather than about the missing questionnaire.
+    """
+    cfg = _SUBJECTS[kind]
+    _register(client, kind)
+    monkeypatch.delitem(REVIEW_QUESTION_COLLECTIONS, kind)
+    res = client.post(f"{cfg['api']}/{cfg['id']}/review/question-verdict",
+                      json={"item_id": "Q-001", "verdict": "Accepted",
+                            "confirmed": True}, headers=HEADERS)
+    assert res.status_code == 400
+    assert "no review questionnaire" in res.get_json()["error"]
+

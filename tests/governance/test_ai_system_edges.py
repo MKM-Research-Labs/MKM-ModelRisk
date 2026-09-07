@@ -35,6 +35,7 @@ from src.governance.ai_system import (get_snapshot, latest_envelope,
                                       reactivate_ai_system, register_ai_system,
                                       retire_ai_system)
 from src.governance.ai_system.commands import (add_collection_item,
+                                                take_configuration_snapshot,
                                                 seal_release_manifest,
                                                 set_trigger_threshold,
                                                 update_ai_system_field)
@@ -183,3 +184,13 @@ def test_a_score_that_is_not_a_number_is_skipped_rather_than_fatal():
     # what the minimum-runs refusal is judged against, so the drop is visible.
     envelope = compute_envelope([0.1, "n/a", 0.5, None, 0.9], config_version=1)
     assert envelope["runs"] == 3
+
+
+def test_snapshotting_something_that_was_never_registered_is_refused():
+    """``_rules_baseline`` carries its own copy of the editable guard — deliberately
+    not imported from ``_rules``, because a circular import between two halves of one
+    aggregate's rules is the worse problem. Two copies means two things to test: the
+    web layer 404s before dispatching, so only a domain-level call reaches this one."""
+    with pytest.raises(DomainError, match="does not exist"):
+        take_configuration_snapshot(ai_system_id="AIS-NOPE", actor="admin")
+
