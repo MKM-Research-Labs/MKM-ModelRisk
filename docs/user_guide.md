@@ -27,16 +27,17 @@ needs a person; a meeting needs a committee). For installation, see the
 10. [Validation questions](#10-validation-questions)
 11. [The Model Chain and handoffs](#11-the-model-chain-and-handoffs)
 12. [Build Products](#12-build-products)
-13. [Request MRC sign-off](#13-request-mrc-sign-off)
-14. [Run an MRC meeting](#14-run-an-mrc-meeting)
-15. [Meeting lifecycle: finalise, close, succession](#15-meeting-lifecycle-finalise-close-succession)
-16. [Actions and decisions that link to models](#16-actions-and-decisions-that-link-to-models)
-17. [Clients and client packs](#17-clients-and-client-packs)
-18. [Documents and Audit Reports](#18-documents-and-audit-reports)
-19. [How everything links](#19-how-everything-links)
-20. [The audit trail](#20-the-audit-trail)
-21. [The Dashboard — do I need to respond?](#21-the-dashboard--do-i-need-to-respond)
-22. [Feeding your ERM](#22-feeding-your-erm)
+13. [ML Applications and AI Systems](#13-ml-applications-and-ai-systems)
+14. [Request MRC sign-off](#14-request-mrc-sign-off)
+15. [Run an MRC meeting](#15-run-an-mrc-meeting)
+16. [Meeting lifecycle: finalise, close, succession](#16-meeting-lifecycle-finalise-close-succession)
+17. [Actions and decisions that link to models](#17-actions-and-decisions-that-link-to-models)
+18. [Clients and client packs](#18-clients-and-client-packs)
+19. [Documents and Audit Reports](#19-documents-and-audit-reports)
+20. [How everything links](#20-how-everything-links)
+21. [The audit trail](#21-the-audit-trail)
+22. [The Dashboard — do I need to respond?](#22-the-dashboard--do-i-need-to-respond)
+23. [Feeding your ERM](#23-feeding-your-erm)
 
 Appendix A. [Governance components, artefacts and workflows](#appendix-a--governance-components-artefacts-and-workflows) — a reference inventory for policy drafting and regulatory submissions.
 
@@ -103,7 +104,7 @@ Chain**, **Products**, **ML Apps**, **Clients**, **Audit Trail**, **Documents**,
 
 You land on **Dashboard**, which answers one question — *does any of this need a
 response from me?* On a fresh install it has nothing to report; it becomes useful
-once there are models on the register, so it is described last, in section 21.
+once there are models on the register, so it is described last, in section 22.
 
 Click **Admin**. Its sub-tabs are **Company**, **Division**, **Line of Business**,
 **MRC**, **Calc Agent**, **Data Source**, **People**, **Model Type**, **Vendor**,
@@ -275,7 +276,7 @@ already bound to it, while removing it from pickers and future matching.
 | **Model Owner** | yes | Dropdown from People |
 
 Because Division / Line of Business come from the header scope, set that scope
-correctly *before* registering — it is what links the model to its MRC (section 19).
+correctly *before* registering — it is what links the model to its MRC (section 20).
 A model registered at Company scope can only match a Company-level committee.
 
 On registration the platform automatically seeds the **nine SR 26-2 validation
@@ -311,7 +312,7 @@ Audit.**
   Status (Open / In Progress / Closed)) with the **Supporting documents** panel that
   files the evidence closing them. The heading carries the open-step count.
 - **MRC linkage** — the meeting decisions and actions tagged to this model
-  (section 16), read-only here.
+  (section 17), read-only here.
 - **Docs** — item-specific documents on per-category sub-tabs (**Core Documentation ·
   Sensitivity · Analysis · Testing · Monitoring · History**), plus **Model Risk
   Document (PDF)** and **Client pack (ZIP)** generation for this model. The
@@ -319,7 +320,7 @@ Audit.**
   and the **Unit tests**, **Integration tests** and **Benchmark tests** results into
   their panels. (The old Yes/No flags are gone; the record is the attached evidence.)
 - **Danger** — **Request retire…** (hibernate) or **Request reactivate…**. Both go
-  to the responsible committee as a sign-off item to ratify (section 13); they are
+  to the responsible committee as a sign-off item to ratify (section 14); they are
   not immediate.
 - **Audit** — this model's own change history.
 
@@ -365,7 +366,7 @@ sign-off…** control), or a prompt to request one — and a **Sign-off history*
 > validation *coverage*, not a risk score.) A rolling **operational-events** count
 > is shown on **products** only, not on models.
 
-To raise the rating for approval, use **Request MRC sign-off…** (section 13).
+To raise the rating for approval, use **Request MRC sign-off…** (section 14).
 
 ---
 
@@ -410,7 +411,7 @@ handoff carries:
   then **Add mapping**;
 - an MRC **compatibility sign-off** — *Not yet submitted*, *Pending MRC sign-off*,
   or *approved* — raised with **Request MRC sign-off…** and ratified as a `handoff`
-  sign-off in a meeting (section 14).
+  sign-off in a meeting (section 15).
 
 A **Handover document** can be downloaded for the edge.
 
@@ -466,7 +467,98 @@ committee's meeting decision, surfaced in the **MRC status** row.
 
 ---
 
-## 13. Request MRC sign-off
+## 13. ML Applications and AI Systems
+
+Two more record types, governed exactly as a model is. Same risk rating, same
+seven-stage review, same committee, same four sign-off triggers — the rating, the
+review, a change of owner, and being presented for analysis. What differs is what
+each record *is*, never how it is governed.
+
+**Register one** from **ML Apps → + Register ML Application** or **AI Systems →
++ Register AI System**. The forms are deliberately short: a record is created before
+most of it is known, and a form demanding the whole narrative up front gets
+placeholders. What is still missing afterwards is a completeness finding, which is
+where that gap belongs and where somebody acts on it.
+
+An **ML Application** is the *use* of an off-the-shelf estimator — you fitted
+somebody else's gradient boosting regressor to your problem, and the governable
+thing is the application. Its **Training** tab holds the most recent fit in six
+sections, in the order a fit is actually performed: the split comes before the
+preprocessing it constrains, so a scaler fitted on the full dataset is visible above
+the metric it inflates. The **Trains** tab is the sequence of fits; there is no
+version number, because the record of change *is* that sequence.
+
+An **AI System** is built on a third-party foundation model, and carries four things
+no model record can express.
+
+### Configuration snapshots — The AI system tab
+
+Each version of the configuration the system has run under. **Take a snapshot…**
+records it; a snapshot cannot be edited once taken, which is what makes it evidence
+of what the system *was* rather than a note about it.
+
+A snapshot covers the twelve fields that decide reproducibility — the foundation
+model and its pinned version, hosting, sampling parameters, the instruction
+hierarchy, grounding, guardrails, human oversight. It deliberately excludes the
+governance half (owner, tier, review dates): those change for reasons that have
+nothing to do with how the system behaves, and an envelope that went stale every
+time somebody was reassigned would be ignored within a week.
+
+### The variability envelope — The AI system tab
+
+A generative system gives different answers to the same input. The governance
+question is not whether it is deterministic but *how much it moves*, and whether
+that is within what was accepted.
+
+Enter the scores from repeated runs of the same input, comma separated, and
+**Record a baseline…**. The scores go up raw and the envelope is computed from them
+— a caller that handed over a finished range would have already decided the question
+the measurement exists to ask.
+
+Two refusals are the point of the feature, not obstacles to it:
+
+- **Fewer than twenty runs is refused**, not narrowed. Three runs that happen to
+  agree produce a tight range that reads like a well-behaved system, and that is the
+  most flattering reading of the least evidence.
+- **An envelope needs a snapshot first.** One with no configuration behind it is a
+  number nobody can reproduce.
+
+An envelope measured under a configuration that has since moved is marked **stale**
+rather than deleted. It is the record of what was measured; stale is a finding, and a
+missing envelope is a gap, and the two must not read alike.
+
+### Trigger thresholds — Controls tab
+
+The bar each property is judged against, and what happens when it breaks. Four
+properties — correctness, consistency, robustness, predictability — each listed
+whether or not a bar is set, because **a property with no threshold is the gap worth
+seeing**; a table showing only what was configured would hide exactly that.
+
+**Set a threshold…** asks for the property, the bar, and the fallback: what the
+system does when the bar is missed, from *continue and note* through to *suspend the
+system*. The fallback is required, not optional — a threshold with no stated
+consequence is a number on a screen.
+
+Setting one threshold moves that threshold and no other, so "we tightened
+correctness" stays distinguishable from "we restated all four".
+
+### Release manifests — Changes tab
+
+What each release contained, sealed at the time and classified against the same
+four-tier change engine every record type uses: **Administrative**, **Bounded**,
+**Measurement**, **Material**. Sealed, not saved — a manifest that could be edited
+afterwards would be a note about the release rather than a record of it, and a second
+seal under the same name is refused for that reason.
+
+### Which regimes apply — Exposure tab
+
+Derived from where the system is used and what it does, never ticked. "Which regimes
+apply" has a right answer given those facts, and a checkbox somebody ticked is an
+assertion nobody can check. Change the markets it serves and this changes with them.
+
+---
+
+## 14. Request MRC sign-off
 
 Sign-off is how a committee ratifies a decision. Sign-off items come in four
 **kinds**: **rag** (approve a RAG rating), **retire** and **reactivate**
@@ -499,7 +591,7 @@ picker) is also available to queue an item directly.
 
 ---
 
-## 14. Run an MRC meeting
+## 15. Run an MRC meeting
 
 **MRC tab.** Pick a committee. Its cards show **MRC** (name · level · scope),
 **Chair**, **Frequency**, and a Terms-of-Reference download when one is uploaded,
@@ -550,8 +642,10 @@ Two sections, each with **Models / Products / Handoffs** sub-tabs:
     request and item **Rejected**.
   - *Escalation to another committee exists in the model and the API, but there is
     no button for it in the current UI.*
-- **Analysis.** A scope picker of inventory models / products / handoffs
-  **in scope** for the meeting, **pre-filtered to the committee's remit**. Tick
+- **Analysis.** A scope picker of inventory models / products / **ML Applications** /
+  **AI Systems** / handoffs **in scope** for the meeting, **pre-filtered to the
+  committee's remit**. One sub-tab per record type: being presented for analysis is a
+  sign-off trigger, and the triggers are the same for all of them. Tick
   subjects and **Save selection…**. For each, record an **Outcome** (*Pending* or
   *Reviewed — agreed to proceed*), a **Discussion note**, and any **Follow-on
   remediation** (Remediation, Owner, Due date). In-scope subjects' open remediation
@@ -561,7 +655,7 @@ Two sections, each with **Models / Products / Handoffs** sub-tabs:
 
 Add actions (bulk-add supported): **Action** (required), **Owner**, **Target
 date**, **Status** (`Open / Closed`), and an optional **Model** link. Actions
-tagged to a model surface on that model's **MRC linkage** tab (section 16).
+tagged to a model surface on that model's **MRC linkage** tab (section 17).
 
 ### Minutes
 
@@ -572,7 +666,7 @@ so most of the record assembles itself.
 
 ---
 
-## 15. Meeting lifecycle: finalise, close, succession
+## 16. Meeting lifecycle: finalise, close, succession
 
 - **Finalise for distribution.** From the Agenda tab, **Finalise agenda for
   distribution…** locks the agenda and offers **↓ Distribution pack (ZIP)** — the
@@ -597,7 +691,7 @@ so most of the record assembles itself.
 
 ---
 
-## 16. Actions and decisions that link to models
+## 17. Actions and decisions that link to models
 
 Meeting **actions** (and, in the data model, decisions) carry an optional **Model**
 field. When you tag one to a model it **automatically surfaces on that model's
@@ -610,7 +704,7 @@ up under that model automatically — no double entry.
 
 ---
 
-## 17. Clients and client packs
+## 18. Clients and client packs
 
 The **Clients** tab treats the client as the point of aggregation: one relationship
 record, linked to the specific models and products that client relies on, and one
@@ -643,7 +737,7 @@ the moment of packing, a pack never carries a stale write-up.
 
 ---
 
-## 18. Documents and Audit Reports
+## 19. Documents and Audit Reports
 
 **Documents.** A governance-wide library independent of any single model. Upload a
 file with an optional description; the table lists Name, Description, Date Added and
@@ -672,11 +766,11 @@ Each report card offers **View** / **Download** / **Open**. Files are written un
 `uploads/audit/`.
 
 > The per-meeting **Meeting Pack** is generated from the meeting itself
-> (section 15), not from this tab.
+> (section 16), not from this tab.
 
 ---
 
-## 19. How everything links
+## 20. How everything links
 
 The whole point is that nothing floats free. The chain, top to bottom:
 
@@ -726,7 +820,7 @@ The whole point is that nothing floats free. The chain, top to bottom:
 
 ---
 
-## 20. The audit trail
+## 21. The audit trail
 
 Because every change is an append-only event, you get a complete, tamper-evident
 history for free:
@@ -742,7 +836,7 @@ cleared from the application.
 
 ---
 
-## 21. The Dashboard — do I need to respond?
+## 22. The Dashboard — do I need to respond?
 
 This is the tab you land on, and it exists to answer one question in about four
 seconds. Everything on it earns its place by helping answer that question;
@@ -858,7 +952,7 @@ the row rather than having to reconcile it.
 
 ---
 
-## 22. Feeding your ERM
+## 23. Feeding your ERM
 
 Model risk rarely stops at this platform. Where a firm runs enterprise risk
 management, model risk usually feeds two places in it: the **operational risk**

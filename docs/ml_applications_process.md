@@ -868,6 +868,25 @@ agenda, the signoff tab and the MRC linkage history exactly as the others do. If
 committee covers the record's division, the request is refused with an instruction to
 configure one — not silently queued.
 
+### The four triggers, and they are the same four
+
+A rating is one of them. The complete set that reaches the committee is the same for
+an ML Application as for a model:
+
+| Trigger | What the committee decides |
+|---|---|
+| **Risk rating** | The proposed RAG; the stored rating does not move until it approves. |
+| **The review** | The reviewer signs off the seven-stage review and files the report the committee receives. |
+| **A change of owner** | Who owns the record is who answers for it, so the appointment is ratified. The new owner takes the record straight away — it cannot sit ownerless — and the request carries both names, so the committee ratifies a *change* rather than a fact it cannot check. |
+| **Presentation for analysis** | The record is put in scope at a meeting, and the committee records an outcome, a discussion note and the basis on which it is content for work to proceed. |
+
+The last two only became true of ML Applications on **2026-09-06**. Until then a
+change of ML Application owner went to nobody while a change of model owner was
+ratified, and a meeting could put models and products in scope for analysis but not
+ML Applications — so the record could be governed but never actually discussed. Both
+were differences nobody had chosen; neither survived the question "is this governed
+the same way a model is?".
+
 ---
 
 ## 10. The other registers on the record

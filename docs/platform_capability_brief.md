@@ -311,6 +311,47 @@ no model record can answer:
 Its questionnaire is again its own, written against the AI risk catalogue —
 provenance, grounding, oversight, egress, agent authority.
 
+Beyond those fields, an AI System keeps **four running records** that a model has no
+equivalent of, because a model does not change underneath you and does not answer
+differently to the same question twice.
+
+**Configuration snapshots.** Each version of the configuration the system has run
+under, immutable once taken — which is what makes a snapshot evidence of what the
+system *was* rather than a note about it. It covers the twelve fields that decide
+reproducibility, and deliberately excludes the governance half: an owner or a review
+date changes for reasons that have nothing to do with how the system behaves.
+
+**The variability envelope.** A generative system answers the same input differently
+each time; the governance question is how much it moves and whether that was
+accepted. Scores from repeated runs go in raw and the envelope is computed from them
+— a caller handing over a finished range has already decided the question the
+measurement exists to ask. Two refusals are the substance of the control rather than
+friction around it: **fewer than twenty runs is refused rather than narrowed**,
+because a tight range from three agreeing runs is the most flattering reading of the
+least evidence; and an envelope needs a snapshot behind it, because one with no
+configuration attached is a number nobody can reproduce. An envelope whose
+configuration has since moved is marked **stale**, never deleted — stale is a
+finding, a missing envelope is a gap, and the two must not read alike.
+
+**Trigger thresholds.** The bar each of four properties is judged against —
+correctness, consistency, robustness, predictability — and the fallback when it
+breaks, from *continue and note* to *suspend the system*. The fallback is required:
+a threshold with no stated consequence is a number on a screen. Every property is
+listed whether or not a bar is set, because a property with no threshold is the gap
+worth seeing, and a table of only what was configured would hide precisely that. One
+event per property, so "we tightened correctness" stays distinguishable from "we
+restated all four".
+
+**Release manifests.** What each release contained, sealed at the time and classified
+against the same four-tier change engine the whole estate uses (Administrative,
+Bounded, Measurement, Material). Sealed, not saved: a second seal under the same name
+is refused, because a manifest that could be revised afterwards is a note about the
+release rather than a record of it.
+
+Which **regulatory regimes** apply is derived from where the system is used and what
+it does, never ticked. That question has a right answer given those facts, and a
+checkbox somebody ticked is an assertion nobody can check.
+
 **6.3 Product** — a live pricing or booking configuration: the point where the estate
 meets the business. A product binds one **Calculating Agent** (the pricing platform —
 an internal library, a third-party engine) and an **open-ended list of components**.
@@ -1111,8 +1152,10 @@ an examiner will find it.**
   (§12.2), and locking the record would leave its owner unable to correct anything
   else about it. The rule can be stood down for an institution mid-migration whose
   estate cannot yet satisfy it, with the breaches still reported throughout.
-  Write-enforcement currently covers **models only**; the audit raises the same finding
-  against ML Applications, but nothing yet refuses the write there.
+  Write-enforcement covers **every record type a review can be signed off on** — a
+  model, an ML Application and an AI System alike. It covered models alone until
+  2026-09-06, while the audit raised the same finding against all three: the audit was
+  right and the write path was not.
 
 **18.2 What does not exist. [NOT BUILT]**
 
