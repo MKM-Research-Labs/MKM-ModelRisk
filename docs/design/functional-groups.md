@@ -478,7 +478,7 @@ No test would have caught that — only the screen.
 
 ---
 
-### F7 — Assigning the estate
+### F7 — Assigning the estate — **BUILT** (awaiting your mapping)
 
 **Goal.** Existing records acquire groups.
 
@@ -494,10 +494,32 @@ No test would have caught that — only the screen.
   than guessing. It cannot start until the divisions have ratified their lists, so
   this phase genuinely follows F3 rather than merely being scheduled after it.
 
-**Verify.** Dry run reports the full estate as unmapped; a mapping file places the
-ones it names and reports the rest; a second `--apply` is a no-op.
+**Verify.** `tests/test_backfill_functional_groups.py` (14), plus a rehearsal
+against the restored scratch database.
 
-**Done when** the Ungrouped bucket holds only records nobody has placed yet.
+**Built 2026-09-07.** `scripts/backfill_functional_groups.py` takes a two-column
+CSV of `record_id,group` and does exactly that, covering all four registers.
+`group` is the group's NAME as its division ratified it — matched
+case-insensitively — or its id, for anyone reading them off the Admin screen.
+Resolution is per the RECORD's division, so a name only another division uses
+cannot reach across.
+
+Every mapping row comes back with a verdict, including the ones it will not touch,
+because a backfill whose refusals you cannot read is one you have to run to
+understand: `file`, `already`, `filed-elsewhere`, `no-such-group`, `no-groups`,
+`unknown`, `refused`. Dry by default; `--apply` writes; `--refile` is what moves a
+record somebody already filed elsewhere, and it has to be asked for — the decision
+made on the screen outranks the mapping.
+
+Rehearsed on scratch: filed three, skipped the one already filed elsewhere, was a
+no-op on re-run, and `--refile` then moved it. The group counts came back changed
+through the API, which is the check that matters — it proves the read models were
+rebuilt and not just the event log written.
+
+**Still awaiting the mapping**, which is the one thing that cannot be derived. The
+rehearsal also showed why the format takes names: a mapping row saying "Storm
+Generation" correctly failed after the committee had ratified the group as "Storm &
+Surge Generation".
 
 ## 6. Two holes worth knowing about
 
