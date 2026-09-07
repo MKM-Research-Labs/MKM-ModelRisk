@@ -61,6 +61,11 @@ const Product = {
     return found;
   },
 
+  // Returning to this tab lands on the list, not on whichever record was
+  // last opened. The panel is cached between visits, so without this the
+  // detail stays on screen with the list hidden underneath it.
+  onShow() { ProductDetail.close(); },
+
   async render() {
     await this.specs();
     // List and detail are siblings; opening a Product hides the list view (master-detail).

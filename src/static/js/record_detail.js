@@ -89,9 +89,22 @@ const RecordDetail = {
       this._render();
     },
 
+    // Back to the list, without telling the screen to reload. Separate from
+    // ``close`` because returning to a TAB is not the same act as closing a record:
+    // one is navigation and the other is the user finishing with something, and only
+    // the second should refetch.
+    // Null-safe: this runs on every visit to the tab, including the first, when the
+    // panel has not been rendered yet and neither element exists. Throwing there
+    // aborted the render that was about to create them, and the tab came up blank.
+    resetToList() {
+      const detail = document.getElementById(this._cfg.detailEl);
+      if (detail) detail.innerHTML = "";
+      const list = document.getElementById(this._cfg.listEl);
+      if (list) list.style.display = "";
+    },
+
     close() {
-      document.getElementById(this._cfg.detailEl).innerHTML = "";
-      document.getElementById(this._cfg.listEl).style.display = "";
+      this.resetToList();
       this._cfg.onClose();
     },
 
