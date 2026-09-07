@@ -139,34 +139,56 @@ def test_registration_is_refused_against_the_divisions_list_too():
 
 
 # --- A group does not travel with a record to another division -------------------
+#
+# Run against every register for the same reason the cases above are: the guard is one
+# call in four `decide_*` functions, and three of them being right is exactly the shape
+# of failure that leaves one register enforcing something the others do not.
 
-def test_moving_a_filed_record_to_another_division_is_refused():
+def _move(kind):
+    return {
+        "model": lambda: update_model_field(model_id="M1", field="division",
+                                            value=OTHER, actor="admin"),
+        "product": lambda: update_product_field(product_id="P1", field="division",
+                                                value=OTHER, actor="admin"),
+        "ml_application": lambda: update_ml_application_field(
+            ml_application_id="MLA1", field="division", value=OTHER, actor="admin"),
+        "ai_system": lambda: update_ai_system_field(ai_system_id="AIS1",
+                                                    field="division", value=OTHER,
+                                                    actor="admin"),
+    }[kind]
+
+
+MOVES = pytest.mark.parametrize("make, kind", [
+    (_model, "model"), (_product, "product"),
+    (_ml_application, "ml_application"), (_ai_system, "ai_system"),
+], ids=["model", "product", "ml_application", "ai_system"])
+
+
+@MOVES
+def test_moving_a_filed_record_to_another_division_is_refused(make, kind):
     """Ids are per division, so FG-001 in PhysicalRisk and FG-001 in Analytics are
     different groups. Carrying one across would not dangle -- it would silently
     re-file the record under a group nobody chose, which is worse."""
     _ratify([{"name": "Storm Generation"}], DIV)
     _ratify([{"name": "Instrument Pricer"}], OTHER)
-    update = _model(DIV)
-    update("FG-001")
+    make(DIV)("FG-001")
     with pytest.raises(DomainError, match="clear the functional group"):
-        update_model_field(model_id="M1", field="division", value=OTHER, actor="admin")
+        _move(kind)()
 
 
-def test_clearing_the_group_first_lets_the_record_move():
+@MOVES
+def test_clearing_the_group_first_lets_the_record_move(make, kind):
     _ratify([{"name": "Storm Generation"}], DIV)
     _ratify([{"name": "Instrument Pricer"}], OTHER)
-    update = _model(DIV)
+    update = make(DIV)
     update("FG-001")
     update("")
-    event = update_model_field(model_id="M1", field="division", value=OTHER,
-                               actor="admin")
-    assert event.payload["value"] == OTHER
+    assert _move(kind)().payload["value"] == OTHER
 
 
-def test_an_ungrouped_record_moves_division_exactly_as_before():
+@MOVES
+def test_an_ungrouped_record_moves_division_exactly_as_before(make, kind):
     """The guard must not make a division change harder for the whole estate, none
     of which carries a group yet."""
-    _model(DIV)
-    event = update_model_field(model_id="M1", field="division", value=OTHER,
-                               actor="admin")
-    assert event.payload["value"] == OTHER
+    make(DIV)
+    assert _move(kind)().payload["value"] == OTHER
