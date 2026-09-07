@@ -437,7 +437,7 @@ things.
 
 ---
 
-### F6 — The other three registers
+### F6 — The other three registers — **BUILT**
 
 **Goal.** ML Applications, AI Systems and Products group the same way.
 
@@ -454,10 +454,27 @@ things.
 - **c.** Then Products sets `groupBy` like the rest.
 
 **Verify.** `tests/web/test_product_api.py` unchanged and green — the migration is
-client-side only. Then all four screens in the app side by side, confirming they
-look the same, which has been the standing requirement for these registers.
+client-side only. Then all four screens in the app.
 
-**Done when** no register renders its own `<table>` markup.
+**Done 2026-09-07.** Products is on `createRecordList`: tiles, filters, sorting and
+functional-group headings for the first time. It keeps its own columns (Identifier
+and Components are facts no model has) and its own status counts through
+`extraTiles`, where they belong — Active/Proposed/Suspended mean nothing on a
+model. **No register renders its own `<table>` markup any more.** (a and c landed
+with F5, which set `groupBy` on all three engine registers at once.)
+
+**One thing the migration needed.** The shared filter assumed every register has a
+`lifecycle_stage`; a Product is Active or Suspended and has none, so it would have
+been offered a model's stages and matched no record. The field the filter reads is
+now `_cfg.statusField`, with `_cfg.statusFilterLabel` beside it — spelled out
+rather than derived, because "All lifecycle stage" and "All status" both read
+wrong. Products offers Proposed / Active / Suspended / Retired under "All
+statuses"; the other three are unchanged under "All lifecycle".
+
+**And one regression it caused, found by looking.** Adding Criticality and Risk
+Rating narrowed the Status column until "Proposed" broke across two lines inside
+its pill and read as damage. `productStatusBadge` now sets `white-space: nowrap`.
+No test would have caught that — only the screen.
 
 ---
 
