@@ -40,7 +40,7 @@ ones follow it exactly rather than inventing a shape:
 
 `__init__.py` re-exports only (R4). No SQL or driver import outside `src/database/` (R6).
 
-**Database changes are enumerated in §13** — which migration each step needs, which need
+**Database changes are enumerated in §12** — which migration each step needs, which need
 none, the new event types, and the backfills. Read it before starting any step that stores
 something new.
 
@@ -135,7 +135,7 @@ f. `src/web/api_change.py` (new) — propose, classify, list-for-subject. Regist
 g. Surface the open changes on each record's detail screen (`inventory/detail_core.js`,
    `mlapp/detail_core.js`, `aisystem/detail_core.js`).
 h. **DB.** `src/database/migrations/0014_change_view.sql` creating `change_view` on the
-   standard shape (§13.3), plus an entry in `_REBUILDERS` (`src/web/_startup.py:62`) so the
+   standard shape (§12.3), plus an entry in `_REBUILDERS` (`src/web/_startup.py:62`) so the
    view reconciles at startup. The three new event types go on the existing event store —
    no DDL for those.
 
@@ -488,7 +488,7 @@ d. Add the script tags to `src/templates/index.html`. **Restart `dev_app.sh` aft
 e. **DB: no migration.** Review state is collections on the record, not a view. Add
    `REVIEW_COLLECTION_SPECS` to `ML_APPLICATION_COLLECTION_SPECS` and
    `AI_SYSTEM_COLLECTION_SPECS`; `review_notes` and `review_signoffs` stay in
-   `APPEND_ONLY_COLLECTIONS`, because a challenge thread is evidence (§13.5).
+   `APPEND_ONLY_COLLECTIONS`, because a challenge thread is evidence (§12.5).
 
 **Verify.**
 - `test_ai_system_completes_all_seven_stages`, and the same for ML Application.
@@ -533,9 +533,12 @@ b. Update the consumers: `src/web/api_models_review.py`,
 
 ## 7. Phase 2 — AI Systems configuration schema and regime map
 
-**Blocked** on the one open decision (§10). It determines how the configuration layer is
-built, not merely how it is maintained, so take it first. Everything in Phases 0, 1 and 1R
-proceeds without it.
+**Shipped.** This was written as blocked on a decision about how the FINOS taxonomy would
+be refreshed — manual, live query, or hybrid. It was never taken, and the phase was built
+and shipped without it: the regime map is configuration like any other, edited when the
+legislation changes, which is the same way every other vocabulary in the platform is
+maintained. The decision was withdrawn on 2026-09-07 rather than left open, because an
+open decision nobody is waiting on reads as work outstanding.
 
 ### 2.1 Regime map as data
 
@@ -580,7 +583,7 @@ d. Show the snapshot history on the AI System detail screen.
 e. **DB.** Migration `0015_configuration_snapshot_view.sql`; new event
    `ConfigurationSnapshotTaken`; register the projection in `_REBUILDERS`. Backfill one
    snapshot per existing AI System from its current values, then
-   `rebuild_ai_system_view()` (§13.8).
+   `rebuild_ai_system_view()` (§12.8).
 
 **Shape.**
 
@@ -909,23 +912,12 @@ served table carries both forms and the console uses them verbatim.
 
 ---
 
-## 12. Open decision
-
-**FINOS taxonomy refresh cadence** — manual quarterly review, live query via the FINOS AIGF
-MCP Server, or a hybrid. No default assumed. It decides how the configuration layer is built,
-so it blocks Phase 2 rather than merely shaping its maintenance. Phases 0, 1 and 1R proceed
-without it.
-
----
-
----
-
-## 13. Database changes
+## 12. Database changes
 
 Explicit, because two thirds of the steps store something new and only some of them need
 DDL.
 
-### 13.1 Two kinds of change, and only one needs a migration
+### 12.1 Two kinds of change, and only one needs a migration
 
 **A new aggregate or event type needs no migration.** The event store
 (`0001_event_store.sql`) is generic — aggregate type, aggregate id, event type, JSONB
@@ -934,7 +926,7 @@ payload. A new aggregate adds rows, never columns.
 **A new read model needs exactly one numbered migration.** Views are tables, created by
 DDL and populated by a projection.
 
-### 13.2 Migration mechanics
+### 12.2 Migration mechanics
 
 - Files live in `src/database/migrations/` as `NNNN_name.sql`, applied in **sorted filename
   order** by `run_migrations()` (`src/database/_migrate.py:79`) and recorded in
@@ -947,7 +939,7 @@ DDL and populated by a projection.
   `DatabaseConfig` by `render()`, not a literal role name.
 - **Highest applied today: `0013_ai_system_view.sql`.** New work starts at 0014.
 
-### 13.3 The view table shape
+### 12.3 The view table shape
 
 Follow `0007_model_chain_view.sql`:
 
@@ -966,7 +958,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON <name>_view TO {{app_user}};
 A view is a projection, not a source of truth: the app role may freely mutate it because the
 authoritative history is the event log, and the whole table can be dropped and rebuilt.
 
-### 13.4 Migrations this plan needs
+### 12.4 Migrations this plan needs
 
 | # | File | Creates | Step |
 |---|---|---|---|
@@ -979,7 +971,7 @@ Numbers are allocated in the order the steps land. If two land out of order, ren
 merging — `_migrate.py` sorts by filename, and a gap is harmless but a duplicate number is
 not.
 
-### 13.5 Steps that need no migration at all
+### 12.5 Steps that need no migration at all
 
 - **Phase 1R (the whole review generalisation).** Review state is not a view. `review_notes`
   and `review_signoffs` are collections on the record aggregate, declared in
@@ -991,11 +983,11 @@ not.
   collections too.
 - **0.3 routing, 0.5 criteria, 2.1 regimes.** Configuration only.
 
-### 13.6 Registering a new projection
+### 12.6 Registering a new projection
 
 A new read model is three things, and the third is the one that gets forgotten:
 
-1. the migration (§13.4),
+1. the migration (§12.4),
 2. `rebuild_<x>_view()` in the aggregate's `projection.py`,
 3. **an entry in `_REBUILDERS` in `src/web/_startup.py:62`** — the table of every
    read-model rebuild, so the view reconciles at startup.
@@ -1008,7 +1000,7 @@ A new read model is three things, and the third is the one that gets forgotten:
 > the list rather than the list against itself, which is what stops the next one being
 > forgotten. Step 1.5's backfill depended on that view being current.
 
-### 13.7 New event types
+### 12.7 New event types
 
 Convention is `<Aggregate><Verb>` in PascalCase — `ModelRegistered`, `AISystemRetired`,
 `ModelFieldUpdated`.
@@ -1027,7 +1019,7 @@ through a committee, so name it once and add it to the projection's `apply()` in
 commit. An event the projection does not handle is silently dropped from the read model
 while remaining in the log — which reads as data loss and is not.
 
-### 13.8 Backfills
+### 12.8 Backfills
 
 | Step | Backfill | Then rebuild |
 |---|---|---|
@@ -1039,7 +1031,7 @@ Every backfill goes through domain commands, never SQL (R6), and is rehearsed ag
 restored scratch DB on 5016 before anything else (R9). A backfill driven from a bare script
 leaves the read models stale, so the rebuild is part of the step, not a follow-up.
 
-### 13.9 Safety
+### 12.9 Safety
 
 | | |
 |---|---|
