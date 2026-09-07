@@ -28,7 +28,8 @@
 // validation_date (Governance) are governed, audit-scored fields; each renders from
 // the config specs via _row. They had been dropped from these lists, which left them
 // uneditable while the audit still expected them.
-const OVERVIEW_LEFT = ["division", "line_of_business", "repo_location", "codebase", "type", "vendor",
+const OVERVIEW_LEFT = ["division", "line_of_business", "functional_group",
+  "repo_location", "codebase", "type", "vendor",
   "short_name", "methodology", "methodology_rationale", "source_module"];
 // The owner's risk assessment (what places the model on the heatmap) lives on the Risk
 // tab, next to the grid it drives — not the Overview. Only the headline rag_rating (owner

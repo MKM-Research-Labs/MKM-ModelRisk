@@ -210,3 +210,41 @@ function fmtTimestamp(iso) {
   if (!s) return "—";
   return s.slice(0, 16).replace("T", " ");
 }
+
+// The functional-group registry: every division's ratified groups, loaded once at
+// startup beside the risk policy and resolved per record's division.
+//
+// A record stores a group's ID and screens show its NAME, so this is what stands
+// between the two. There is no seed and no fallback: a division whose MRC has ratified
+// nothing has no groups, and a record there can be filed under none — which is the
+// honest state, not a gap to paper over with a default.
+const Groups = {
+  _divisions: {},
+  _states: {},
+  async load() {
+    try {
+      const reg = await App.get("/api/functional-groups");
+      this._divisions = reg.divisions || {};
+      this._states = reg.states || {};
+    } catch (e) { /* no groups; every record shows as unfiled */ }
+  },
+  // A division's groups in the order its committee arranged them — the order is part of
+  // what was ratified, so nothing re-sorts it.
+  forDivision(division) { return (division && this._divisions[division]) || []; },
+  // ``{value: id, label: name}`` for a picker: the record stores the id, the owner
+  // picks by the name.
+  options(division) {
+    return this.forDivision(division).map((g) => ({ value: g.id, label: g.name || g.id }));
+  },
+  // What to show for a stored id. An id the division no longer defines resolves to the
+  // id itself rather than to a blank: a record filed under a group that has since gone
+  // should read as needing attention, not as never having been filed.
+  nameFor(id, division) {
+    if (!id) return "";
+    const found = this.forDivision(division).find((g) => g.id === id);
+    return found ? (found.name || found.id) : id;
+  },
+  // Whether the division's groups are the ones its MRC signed off, or a draft is
+  // outstanding — the same notice the risk policy carries, for the same reason.
+  state(division) { return (division && this._states[division]) || null; },
+};

@@ -74,6 +74,13 @@ const DetailShell = {
     if ((key === "materiality" || key === "complexity") && d[key]) {
       return bandDisplay(spec, d[key], d.division);
     }
+    // A group is shown by the NAME its division ratified, never by the stored id:
+    // "FG-002" tells a reader nothing. An id the division no longer defines falls back
+    // to the id itself, so a record left behind by a re-cut reads as needing attention
+    // rather than as never having been filed.
+    if (key === "functional_group" && d[key]) {
+      return esc(Groups.nameFor(d[key], d.division));
+    }
     if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
       return '<span class="code">' + esc(d.mrc_signoff_meeting) + "</span>";
     }

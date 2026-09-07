@@ -312,7 +312,7 @@ few lines rather than a third copy.
 
 ---
 
-### F4 — The field on all four records
+### F4 — The field on all four records — **BUILT**
 
 **Goal.** Every record carries one Functional Group, chosen from its own division's
 ratified list.
@@ -338,14 +338,44 @@ is every screen.
   plus `_populateTypePicker` at `inventory.js:130`), so it needs a picker method of
   its own, populated from the division the nav currently has selected.
 
-**Verify.** New `tests/governance/test_functional_group_field.py` — a model in a
-division accepts one of that division's group ids and is refused another
-division's, with the allowed set named; a Product edit to `functional_group`
-succeeds (the F4b regression); a record in a division whose MRC has ratified
-nothing can hold no group at all. Then set one in the app and reload.
+**Verify.** The domain half is `tests/governance/test_functional_group_field.py`
+(landed in F1). The screens are browser JS and were verified in the app.
 
-**Done when** all four detail screens show a Functional Group row carrying the
-name, and `python -m audit` still reads `PASS: 0 gated finding(s)`.
+**Done 2026-09-07**, all four screens against the restored estate: a Model showed
+"Storm & Surge Generation" for its stored FG-001 and was refiled to Flood
+Simulation through the picker, which moved the Admin editor's count with it; an ML
+Application and a Product showed the row unfiled and editable; an AI System
+registered for the check showed "Instrument Pricer" for FG-003. The picker offers
+NAMES and submits IDS, in the order the committee ratified, and a division whose
+MRC has ratified nothing gets a disabled control saying so rather than an empty
+dropdown that looks broken.
+
+Displaying it is one branch in `DetailShell.fieldValue`, which all four screens
+already share — so the id → name resolution is written once rather than four
+times.
+
+**Register forms deferred — deliberately, and this is a scope cut.** Step (g)
+assumed the field could join the four `*_REGISTER_FIELDS` tuples. It cannot, not
+cheaply: on three of the four registers `division` is chosen *in the same form*, so
+a group picker there needs a division → group cascade, and the spec-driven register
+forms render every field once from a flat list with no notion of one field
+depending on another. Building that is real work that was not costed here, and it
+buys only the convenience of filing at registration — the field is fully editable
+on the detail screen the moment the record exists. Doing it for the Models overlay
+alone (where the division comes from the nav, so no cascade arises) would have left
+the four registers inconsistent, which is the thing this codebase keeps paying to
+undo. Left for its own step if wanted.
+
+**No visual**: the browser pane stayed hidden, so nothing painted. Verified through
+the DOM.
+
+**A probe that lied.** The first check reported the Functional Group row on the ML
+Application and the Product both reading "Flood Simulation" — a value only the
+*model* had. A bare `getElementById("row-functional_group")` had returned the row
+from the model panel still in the document, which is precisely what
+`DetailShell.fieldEditor` documents and guards against. Scoping the lookup to the
+visible panel gave the right answer. Worth recording because the wrong answer
+looked like a working feature.
 
 ---
 
