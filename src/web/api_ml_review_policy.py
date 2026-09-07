@@ -35,6 +35,8 @@ from src.governance.ml_review_policy import (approve_ml_review_policy, catalogue
                                              load, propose_ml_review_policy,
                                              reject_ml_review_policy, resolved_policy)
 from src.web._helpers import context_from_request, json_body, reference_options
+from src.web._ratified_policy_api import (register_ratification_routes,
+                                          registry_payload)
 
 ml_review_policy_bp = Blueprint("ml_review_policy", __name__)
 
@@ -63,13 +65,7 @@ def _detail(division: str) -> dict:
 @ml_review_policy_bp.get("/api/ml-review-policy")
 def ml_review_policy_registry():
     """Every division's lifecycle state, so the tab can show where each one stands."""
-    divisions = reference_options().get("division") or []
-    states = {division: load(division) for division in divisions}
-    return jsonify({
-        "divisions": {d: s["live"] for d, s in states.items()},
-        "states": {d: {"state": s["state"], "approved_at": s["approved_at"]}
-                   for d, s in states.items()},
-    })
+    return jsonify(registry_payload(load))
 
 
 @ml_review_policy_bp.get("/api/ml-review-policy/<division>")
@@ -92,21 +88,8 @@ def propose_policy_route(division: str):
     return jsonify(_detail(division))
 
 
-@ml_review_policy_bp.post("/api/ml-review-policy/<division>/approve")
-def approve_policy_route(division: str):
-    """Ratify the pending draft at the division's MRC: it becomes the live policy."""
-    body = json_body()
-    dispatch("approve_ml_review_policy", approve_ml_review_policy,
-             context=context_from_request(body),
-             division=division, meeting_id=body.get("meeting_id"))
-    return jsonify(_detail(division))
-
-
-@ml_review_policy_bp.post("/api/ml-review-policy/<division>/reject")
-def reject_policy_route(division: str):
-    """Decline the pending draft. The live policy is unchanged."""
-    body = json_body()
-    dispatch("reject_ml_review_policy", reject_ml_review_policy,
-             context=context_from_request(body),
-             division=division, meeting_id=body.get("meeting_id"))
-    return jsonify(_detail(division))
+register_ratification_routes(
+    ml_review_policy_bp, "/api/ml-review-policy",
+    approve_command="approve_ml_review_policy", approve=approve_ml_review_policy,
+    reject_command="reject_ml_review_policy", reject=reject_ml_review_policy,
+    detail=_detail)

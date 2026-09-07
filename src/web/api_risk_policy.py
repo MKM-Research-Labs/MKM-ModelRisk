@@ -42,6 +42,8 @@ from src.governance.risk_policy import (
 )
 from src.governance.risk_policy.document import render_policy_document_pdf
 from src.web._helpers import context_from_request, json_body, reference_options, request_actor
+from src.web._ratified_policy_api import (register_ratification_routes,
+                                          registry_payload)
 
 risk_policy_bp = Blueprint("risk_policy", __name__)
 _DOCUMENT_SCOPE = "risk_policy"
@@ -49,20 +51,12 @@ _DOCUMENT_SCOPE = "risk_policy"
 
 @risk_policy_bp.get("/api/risk-policy")
 def risk_policy_registry():
-    """The seed policy + every division's live policy, keyed by division name.
+    """The firm-wide seed alongside every division's live policy and its state.
 
-    ``states`` carries each division's lifecycle alongside it, so a model's Risk tab can
-    say which policy its bands come from — and that a newer draft is with the MRC. Without
-    it, an admin edit that is still a draft simply looks like it never arrived.
+    The seed is what a division that has ratified nothing runs on, so the console
+    needs it in the same call to resolve a model's bands at all.
     """
-    divisions = reference_options().get("division") or []
-    states = {division: load(division) for division in divisions}
-    return jsonify({
-        "seed": default_policy(),
-        "divisions": {division: state["live"] for division, state in states.items()},
-        "states": {division: {"state": state["state"], "approved_at": state["approved_at"]}
-                   for division, state in states.items()},
-    })
+    return jsonify(registry_payload(load, seed=default_policy()))
 
 
 def _detail(division: str) -> dict:
@@ -88,23 +82,11 @@ def propose_risk_policy(division: str):
     return jsonify(_detail(division))
 
 
-@risk_policy_bp.post("/api/risk-policy/<division>/approve")
-def approve_risk_policy(division: str):
-    """Ratify the division's pending draft — its MRC has signed it off, so it becomes the
-    live policy. Called from the division's MRC meeting, which it records for the audit."""
-    body = json_body()
-    dispatch("approve_risk_policy", approve_policy, context=context_from_request(body),
-             division=division, meeting_id=body.get("meeting_id"))
-    return jsonify(_detail(division))
-
-
-@risk_policy_bp.post("/api/risk-policy/<division>/reject")
-def reject_risk_policy(division: str):
-    """Decline the division's pending draft at its MRC. The live policy is unchanged."""
-    body = json_body()
-    dispatch("reject_risk_policy", reject_policy, context=context_from_request(body),
-             division=division, meeting_id=body.get("meeting_id"))
-    return jsonify(_detail(division))
+register_ratification_routes(
+    risk_policy_bp, "/api/risk-policy",
+    approve_command="approve_risk_policy", approve=approve_policy,
+    reject_command="reject_risk_policy", reject=reject_policy,
+    detail=_detail)
 
 
 @risk_policy_bp.get("/api/risk-policy/<division>/categorisation.pdf")

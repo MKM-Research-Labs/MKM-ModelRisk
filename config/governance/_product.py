@@ -74,6 +74,12 @@ PRODUCT_FIELD_SPECS = {
     # responsible MRC committee (matching_mrc on division / line of business).
     "division": {"label": "Division", "type": "text", "group": "Organisation", "reference": "division"},
     "line_of_business": {"label": "Line of Business", "type": "text", "group": "Organisation", "reference": "line_of_business"},
+    # What the record is FOR, as this division's MRC has carved its estate up --
+    # a different question from ``type``, which is what it IS. ``options`` is empty
+    # because there is no firm-wide list: a division's groups come from its ratified
+    # policy and are resolved per record (config/governance/_functional_groups).
+    "functional_group": {"label": "Functional Group", "type": "choice", "options": (),
+                         "group": "Organisation"},
     # --- Classification (drives the risk-rating heatmap, identical to a model's:
     # tier band × Materiality × Complexity → RAG). Owner-set; the composite risk
     # rating and heatmap are computed from these plus the register collections.
@@ -114,6 +120,7 @@ PRODUCT_FIELD_SPECS = {
 # they are changed via rebind; ``status`` Retired is reached via retire).
 PRODUCT_EDITABLE_FIELDS = (
     "product", "product_id", "description", "division", "line_of_business",
+    "functional_group",
     "tier", "materiality", "complexity",
     "tier_rationale", "materiality_rationale", "complexity_rationale", "rating_rationale",
     "rag_rating", "status", "owner", "notes",

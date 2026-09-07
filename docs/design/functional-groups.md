@@ -149,10 +149,20 @@ is visible on a register until F4.
 
 ---
 
-### F1 — The policy: store, commands, API
+### F1 — The policy: store, commands, API, and the field's server side — **BUILT**
 
 **Goal.** A division can have an ordered list of functional groups, proposed and
-ratified through the same lifecycle as its risk policy.
+ratified through the same lifecycle as its risk policy, and a record can be filed
+under one of its own division's groups.
+
+**Scope note (2026-09-07).** F1 was first written as the policy alone, with the
+field's server half in F4. That could not be tested: F1's central safety check is
+that a group still in use cannot be removed, and nothing can be in use until a
+record can hold one. Rather than ship an untested guard, the field's **server**
+side moved into F1 — the four field specs, `PRODUCT_EDITABLE_FIELDS`, and the
+domain validation. The field is on no screen (F4 still owns every UI edit), so
+nothing is half-delivered to a user; what moved is only what the guard needs to be
+provable.
 
 **Steps.**
 
@@ -176,8 +186,16 @@ ratified through the same lifecycle as its risk policy.
 - **d. API** — new `src/web/api_functional_groups.py`, five endpoints mirroring
   `api_ml_review_policy.py` (112 lines): `GET /api/functional-groups` (the registry
   — every division's live list plus its `state`, which is what the console loads at
-  startup), `GET /api/functional-groups/<division>` (live + draft + state),
-  and `POST .../propose|approve|reject`. Registered in `src/web/app.py`.
+  startup), `GET /api/functional-groups/<division>` (live + draft + state + how many
+  records hold each group, so the editor can show what a removal would cost before
+  it is attempted), and `POST .../propose|approve|reject`. Registered in
+  `src/web/app.py`.
+- **e. The field, server side** (moved from F4, see the scope note): the four field
+  specs, `"functional_group"` added to the hand-written `PRODUCT_EDITABLE_FIELDS`,
+  and a `reject_unknown_functional_group` branch in each register's
+  `_validate_field`. The rule is written once in
+  `src/governance/functional_groups/_validate.py` and called from all four, because
+  four copies of a rule is how the `/fields` handlers came to disagree.
 
 **Shape.**
 
@@ -188,15 +206,20 @@ ratified through the same lifecycle as its risk policy.
  {"id": "FG-002", "name": "Flood Simulation", "description": ""}]
 ```
 
-**Verify.** New `tests/governance/test_functional_groups.py`: propose then approve
-makes the list live; a draft drives nothing until approved; a division with no
-policy resolves to the empty default; a duplicate name is refused; removing a group
-a model holds is refused and the message names the model; approve records the
-`meeting_id`. Plus `tests/web/test_functional_groups_api.py` for the five
-endpoints.
+**Verify.** `tests/governance/test_functional_groups.py` (26),
+`tests/governance/test_functional_group_field.py` (25, each case run against all
+four registers) and `tests/web/test_functional_groups_api.py` (7).
 
-**Done when** `GET /api/functional-groups` returns a keyed registry and the
-governance suite is green.
+**Done when** `GET /api/functional-groups` returns a keyed registry and the suite
+and audit are green. **Done 2026-09-07.**
+
+**What it also turned up.** Three of the four registers derive their editable-field
+tuple from the spec keys and Products writes its out by hand, so the field rendered
+everywhere and Product edits were refused — the trap §4 predicted, caught by a check
+rather than by a screen. And the ratification API was about to become a third copy
+of the same approve/reject pair and registry body, so those moved to
+`src/web/_ratified_policy_api.py` and the risk and ML review policies were migrated
+onto it in the same change (R8: 25 clones back to 24, none of them in the new code).
 
 ---
 
@@ -267,23 +290,9 @@ block, approve, confirm the Admin banner flips to *approved*.
 **Goal.** Every record carries one Functional Group, chosen from its own division's
 ratified list.
 
-**Steps.**
+**Steps.** Its server side landed in F1 (see that phase's scope note); what is left
+is every screen.
 
-- **a. Config, four edits.** `"functional_group": {"label": "Functional Group",
-  "type": "choice", "options": (), "group": "Organisation"}` into
-  `MODEL_FIELD_SPECS` (`_inventory.py:61`), `PRODUCT_FIELD_SPECS`
-  (`_product.py:67`), `ML_APPLICATION_FIELD_SPECS` (`_ml_application.py:86`) and
-  `AI_SYSTEM_FIELD_SPECS` (`_ai_system.py:89`) — beside `division`, since it is an
-  organisational fact. Empty static options, because there is no firm-wide default
-  list and the real ones come from the division's policy. This is the same shape
-  `materiality` has.
-- **b. `PRODUCT_EDITABLE_FIELDS`** (`_product.py:115`) — add `"functional_group"`.
-  The other three derive theirs. This is the step that is silently missed.
-- **c. Domain validation, four edits.** Add `functional_group` to
-  `_POLICY_CHOICE_FIELDS` in each `_rules.py`, resolving against the division's
-  live functional-group policy rather than its risk policy. The `elif` chain
-  reaches it before `FIELD_CHOICES`, so the empty static options never bite —
-  again as `materiality` already demonstrates.
 - **d. Client registry.** A `Groups` object in `src/static/js/helpers.js` beside
   `Policy`, loaded from `/api/functional-groups` in the same `Promise.all` at
   `main.js:131`. It answers `optionsFor(division)` (`{value: id, label: name}`) and
@@ -399,15 +408,25 @@ ones it names and reports the rest; a second `--apply` is a no-op.
 
 ## 6. Two holes worth knowing about
 
-**Moving a record between divisions orphans its group.** `decide_update_field`
-re-validates only the field being edited (`model_inventory/_rules.py:101`), so
-changing `division` leaves `functional_group` pointing at a group the new division
-does not define. This hole exists today for `materiality` and `complexity` and has
-never been closed. It is more visible here, because the grouped list would show the
-record under a group its division does not have. The cheap fix is to clear
-`functional_group` when `division` changes and say so; the thorough one is to
-re-validate every policy-backed field on a division change, which would close it
-for the risk fields too. Worth a decision, not worth blocking on.
+**Moving a record between divisions — CLOSED in F1, and worse than described.**
+The plan first called this an orphan: `decide_update_field` re-validates only the
+field being edited (`model_inventory/_rules.py:101`), so changing `division` would
+leave `functional_group` pointing at a group the new division does not define.
+
+Writing the tests showed it is not an orphan at all. **Ids are minted per division**,
+so PhysicalRisk and Analytics both have an `FG-001` and they are different groups. A
+record carried across with its group still set does not end up holding a dangling
+reference a screen could show as ungrouped — it silently acquires the new division's
+group of the same number, and nothing about the record looks wrong while it is
+counted, filtered and reported under a group nobody filed it in.
+
+So this was not a decision to defer. F1 refuses a division change while a group is
+set (`reject_division_move_while_grouped`), telling the caller to clear it first.
+That is one extra edit on a rare and consequential change, and being asked where the
+record now files is the right thing to be asked. The equivalent hole for
+`materiality` and `complexity` is still open — those resolve against the risk policy
+by *name*, so a move leaves a band name the new division may not define. Out of
+scope here, but now the better documented of the two.
 
 **The completeness audit will report every record as incomplete.**
 `src/governance/completeness/_gaps.py:110` scores every field spec not in
@@ -481,8 +500,8 @@ Settled by the user on 2026-09-07, and the plan above reflects them:
 
 ## 10. What remains open
 
-- **The division-change hole** (§6, first half): clear the group, or re-validate
-  every policy-backed field. A decision, not a blocker.
+- ~~The division-change hole~~ — closed in F1 by refusing the move while a group
+  is set (§6). The same hole for the risk fields is untouched and still open.
 - **Who may propose a list.** The plan assumes Admin, as the Risk and ML Review
   editors do. If proposing should be restricted further, that is a `config/permissions.py`
   question and should be settled before F2.

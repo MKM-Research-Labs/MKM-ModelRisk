@@ -202,7 +202,14 @@ def test_field_specs_endpoint(client):
     org = next(g for g in specs["groups"] if g["group"] == "Organisation")
     org_keys = [f["key"] for f in org["fields"]]
     # Phase MRC-5: Company retired — the instance is a single institution.
-    assert org_keys == ["division", "line_of_business", "repo_location", "codebase"]
+    # functional_group sits with the org fields because that is what it is: where in
+    # the division's own carve-up the model files.
+    assert org_keys == ["division", "line_of_business", "functional_group",
+                        "repo_location", "codebase"]
+    # It carries no static options: a division's groups come from its ratified
+    # policy, resolved per record, not from the shared field spec.
+    groups = next(f for f in org["fields"] if f["key"] == "functional_group")
+    assert groups["type"] == "choice" and groups["options"] == []
     # A choice field carries its options for the UI to render a dropdown.
     rag = next(f for g in specs["groups"] for f in g["fields"] if f["key"] == "rag_rating")
     assert rag["type"] == "choice"
