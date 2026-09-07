@@ -172,3 +172,71 @@ def test_an_audit_pdf_whose_file_has_gone_missing_is_404_not_a_500(client,
     response = client.get("/api/meetings/MTG1/completeness-audit.pdf")
     assert response.status_code == 404
     assert "file missing" in response.get_json()["error"]
+
+
+# --- What the committee actually has in scope ---------------------------------
+#
+# The audit used to collect models and products only, so a meeting holding an ML
+# Application or an AI System audited neither: the record was on the agenda and
+# absent from the audit the committee ran about it. Fixed 2026-09-07.
+
+def _register_ai_system(client, ai_system_id="AIS-1"):
+    return client.post("/api/ai-systems", json={
+        "ai_system_id": ai_system_id, "confirmed": True,
+        "fields": {"name": "Client mail summariser", "division": "Risk",
+                   "owner": "David K Kelly",
+                   "use_case": "Summarises inbound client correspondence.",
+                   "deployment_pattern": "Agentic (tool-using)"}}, headers=HEADERS)
+
+
+def _register_ml_application(client, ml_application_id="MLA-1"):
+    return client.post("/api/ml-applications", json={
+        "ml_application_id": ml_application_id, "confirmed": True,
+        "fields": {"name": "Retail PD scorecard", "division": "Risk",
+                   "owner": "David K Kelly",
+                   "estimator": "GradientBoostingClassifier",
+                   "use_case": "Ranks retail applicants."}}, headers=HEADERS)
+
+
+def test_an_in_scope_ai_system_is_audited(client, monkeypatch):
+    """One AI System in scope, nothing else: the audit covers exactly it."""
+    _stub_pdf(monkeypatch)
+    _seed_mrc(client)
+    _register_ai_system(client)
+    _schedule_meeting(client)
+    _add(client, "ai_systems_in_scope", {"ai_system_id": "AIS-1"})
+    assert client.post("/api/meetings/MTG1/completeness-audit/run",
+                       json={}, headers=HEADERS).status_code == 200
+    assert _audit_item(client)["audit_entities"] == "1"
+
+
+def test_every_record_type_in_scope_is_counted(client, monkeypatch):
+    """A mixed agenda. The count is the committee's own population — not the firm's,
+    and not the models half of it."""
+    _stub_pdf(monkeypatch)
+    _seed_mrc(client)
+    _register_subject_model(client, model_id="M1")
+    _register_ml_application(client)
+    _register_ai_system(client)
+    _schedule_meeting(client)
+    _add(client, "models_in_scope", {"model_id": "M1"})
+    _add(client, "ml_applications_in_scope", {"ml_application_id": "MLA-1"})
+    _add(client, "ai_systems_in_scope", {"ai_system_id": "AIS-1"})
+    assert client.post("/api/meetings/MTG1/completeness-audit/run",
+                       json={}, headers=HEADERS).status_code == 200
+    assert _audit_item(client)["audit_entities"] == "3"
+
+
+def test_a_record_the_committee_does_not_hold_is_not_audited(client, monkeypatch):
+    """The scope is a filter, not a suggestion. An AI System registered but not put on
+    this meeting's agenda stays out of this meeting's audit."""
+    _stub_pdf(monkeypatch)
+    _seed_mrc(client)
+    _register_subject_model(client, model_id="M1")
+    _register_ai_system(client)
+    _schedule_meeting(client)
+    _add(client, "models_in_scope", {"model_id": "M1"})
+    assert client.post("/api/meetings/MTG1/completeness-audit/run",
+                       json={}, headers=HEADERS).status_code == 200
+    assert _audit_item(client)["audit_entities"] == "1"
+

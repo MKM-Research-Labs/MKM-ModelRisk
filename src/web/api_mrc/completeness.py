@@ -32,6 +32,7 @@ from datetime import date, datetime
 
 from flask import jsonify, send_file
 
+from config.governance._mrc_collections import MEETING_SCOPE
 from src.files import store_generated, upload_path
 from src.governance.completeness.report import render_completeness_pdf
 from src.governance.completeness.scan import scan
@@ -72,13 +73,17 @@ def _audit_item(meeting: dict) -> dict | None:
     return None
 
 
-def _scope_ids(data: dict) -> tuple[list[str], list[str]]:
-    """The model and product ids in scope for this committee's meeting."""
-    model_ids = [i["model_id"] for i in (data.get("models_in_scope") or [])
-                 if i.get("model_id")]
-    product_ids = [i["product_id"] for i in (data.get("products_in_scope") or [])
-                   if i.get("product_id")]
-    return model_ids, product_ids
+def _scope_ids(data: dict) -> dict[str, list[str]]:
+    """The ids in scope for this committee's meeting, per record type.
+
+    Read from ``MEETING_SCOPE`` rather than named here. This used to collect models
+    and products only, so a meeting that had an ML Application or an AI System in
+    scope audited neither -- the record was on the agenda and absent from the audit
+    the committee ran about it.
+    """
+    return {kind: [i[cfg["id_key"]] for i in (data.get(cfg["collection"]) or [])
+                   if i.get(cfg["id_key"])]
+            for kind, cfg in MEETING_SCOPE.items()}
 
 
 @mrc_bp.post("/<meeting_id>/completeness-audit/run")
@@ -99,14 +104,18 @@ def run_completeness_audit(meeting_id: str):
     if item is None:
         return jsonify({"error": "no completeness-audit item on this meeting"}), 404
 
-    model_ids, product_ids = _scope_ids(d)
+    scoped = _scope_ids(d)
     as_of = date.today().isoformat()
-    rows = scan(as_of, model_ids=model_ids, product_ids=product_ids)
+    rows = scan(as_of, model_ids=scoped["model"], product_ids=scoped["product"],
+                ml_application_ids=scoped["ml_application"],
+                ai_system_ids=scoped["ai_system"])
     try:
         # Both halves scoped to the committee: the findings by ``rows``, and the
         # inventory the estate-wide sections read by ``model_ids``.
         pdf = render_completeness_pdf(get_settings(), as_of, rows=rows,
-                                      model_ids=model_ids)
+                                      model_ids=scoped["model"],
+                                      ml_application_ids=scoped["ml_application"],
+                                      ai_system_ids=scoped["ai_system"])
     except TectonicNotFound as exc:
         # Optional system dependency missing: surface an actionable 503 rather
         # than a 500, mirroring the global Audit Reports endpoint.

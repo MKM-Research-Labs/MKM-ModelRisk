@@ -20,6 +20,8 @@
 """Coverage audit: parse the Cobertura ``coverage.xml`` into a summary (R3)."""
 from __future__ import annotations
 
+import os
+
 import audit.coverage as cov_mod
 from audit.coverage import coverage_summary, default_coverage_path, low_coverage_packages
 
@@ -56,10 +58,32 @@ def _write_xml(tmp_path, text):
     return path
 
 
-def test_default_coverage_path_prefers_audit_dir(tmp_path, monkeypatch):
-    audit_copy = tmp_path / "coverage.xml"
-    audit_copy.write_text("<coverage/>")
+def _at(path, when):
+    """Write a report and stamp it, so "which is newer" is the test's to decide."""
+    path.write_text("<coverage/>")
+    os.utime(path, (when, when))
+    return path
+
+
+def test_the_newer_report_wins_whichever_place_it_is_in(tmp_path, monkeypatch):
+    """The audit-dir copy used to be preferred unconditionally, which is silent
+    staleness: a developer running ``coverage xml`` at the repo root got a fresh
+    report and an R3 line quoting the audit tab's last refresh. On 2026-09-07 that
+    line was three days and a whole module out of date, and nothing said so."""
+    audit_copy = _at(tmp_path / "audit_coverage.xml", 1_000_000)
+    root_copy = _at(tmp_path / "root_coverage.xml", 2_000_000)      # newer
     monkeypatch.setattr(cov_mod, "_AUDIT_COVERAGE_XML", audit_copy)
+    monkeypatch.setattr(cov_mod, "COVERAGE_XML", root_copy)
+    assert default_coverage_path() == root_copy
+
+
+def test_the_audit_dir_copy_wins_when_it_is_the_newer_one(tmp_path, monkeypatch):
+    """The other direction: refreshing from the Audit Reports tab must not be
+    overruled by a root file left behind by an older run."""
+    audit_copy = _at(tmp_path / "audit_coverage.xml", 2_000_000)    # newer
+    root_copy = _at(tmp_path / "root_coverage.xml", 1_000_000)
+    monkeypatch.setattr(cov_mod, "_AUDIT_COVERAGE_XML", audit_copy)
+    monkeypatch.setattr(cov_mod, "COVERAGE_XML", root_copy)
     assert default_coverage_path() == audit_copy
 
 
@@ -67,6 +91,13 @@ def test_default_coverage_path_falls_back_to_repo_root(tmp_path, monkeypatch):
     # No audit-dir copy → the repo-root location is used (legacy pytest --cov).
     monkeypatch.setattr(cov_mod, "_AUDIT_COVERAGE_XML", tmp_path / "absent.xml")
     assert default_coverage_path() == cov_mod.COVERAGE_XML
+
+
+def test_with_neither_present_the_root_path_is_named(tmp_path, monkeypatch):
+    """Something has to be returned for the "no report" branch to report on."""
+    monkeypatch.setattr(cov_mod, "_AUDIT_COVERAGE_XML", tmp_path / "absent-a.xml")
+    monkeypatch.setattr(cov_mod, "COVERAGE_XML", tmp_path / "absent-b.xml")
+    assert default_coverage_path() == tmp_path / "absent-b.xml"
 
 
 def test_missing_report_is_unavailable(tmp_path):

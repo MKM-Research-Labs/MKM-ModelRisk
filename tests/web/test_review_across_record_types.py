@@ -224,3 +224,36 @@ def test_the_owner_cannot_be_moved_onto_the_reviewer_either(client, kind):
                       headers=HEADERS)
     assert res.status_code >= 400, f"{kind} let the owner be moved onto its reviewer"
     assert "independent" in res.get_json()["error"]
+
+
+# --- The monitoring position, shared the same way -----------------------------
+
+@pytest.mark.parametrize("kind", _KINDS)
+def test_every_record_type_reports_its_monitoring_position(client, kind):
+    """One route, registered for all three, answering "what do the statistics say".
+
+    A record with nothing recorded reports ``evidenced: False`` WITH a reason, which is
+    a different statement from every measure coming back unmeasurable. That distinction
+    is the whole point of the endpoint — a committee needs to know it is looking at the
+    absence of a measurement rather than a measurement of no change — so it is asserted
+    for each record type rather than assumed to travel.
+    """
+    cfg = _SUBJECTS[kind]
+    _register(client, kind)
+    body = client.get(f"{cfg['api']}/{cfg['id']}/monitoring",
+                      headers=HEADERS).get_json()
+    assert body["evidenced"] is False
+    assert body["results"] == []
+    assert "absence of a measurement" in body["why"]
+
+
+@pytest.mark.parametrize("kind", _KINDS)
+def test_the_monitoring_route_names_the_record_type_it_could_not_find(client, kind):
+    """"the ai_system was not found" is what string-munging a machine key gets you.
+    Each subject carries the noun a person should read."""
+    cfg = _SUBJECTS[kind]
+    res = client.get(f"{cfg['api']}/NOPE-1/monitoring", headers=HEADERS)
+    assert res.status_code == 404
+    subject = next(s for s in SUBJECTS if s.kind == kind)
+    assert subject.noun in res.get_json()["error"]
+
