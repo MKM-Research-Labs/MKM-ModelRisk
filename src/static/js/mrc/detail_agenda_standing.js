@@ -74,7 +74,7 @@ Object.assign(MeetingDetail, {
     if (kind === "membership") return this._membershipCard(item, idx, done);
     return this._agendaShell(item, idx,   // aob
       '<div class="muted" style="margin-top:var(--space-4);font-size:var(--size-sm)">Any other business raised by members.</div>' +
-      this._categorisationAob(),
+      this._aobSignoffs(),
       complete("Complete"));
   },
 

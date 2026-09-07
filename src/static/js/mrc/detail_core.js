@@ -59,11 +59,13 @@ const MeetingDetail = {
     this._priorMinutes = await App.get("/api/meetings/" + meetingId + "/prior-minutes");
     // The membership/role changes waiting on this committee, for the standing item.
     this._membership = (await App.get("/api/meetings/" + meetingId + "/membership")).proposals || [];
-    // The division's risk-categorisation state, so a pending draft surfaces as an AOB
-    // agenda item for this meeting to sign off.
+    // The division's MRC-ratified settings, so a pending draft of either surfaces as an
+    // AOB agenda item for this meeting to sign off (see detail_agenda_signoffs.js).
     const division = (this._meeting.data || {}).division;
     this._categorisation = division
       ? await App.get("/api/risk-policy/" + encodeURIComponent(division)) : null;
+    this._functionalGroups = division
+      ? await App.get("/api/functional-groups/" + encodeURIComponent(division)) : null;
     if (tab) this._tab = tab;
     this._render();
     document.getElementById("mt-detail").scrollIntoView({ block: "start" });
@@ -197,44 +199,4 @@ const MeetingDetail = {
       false, () => this.show(this._id, this._tab), d, bulk);
   },
 
-  // The AOB agenda item's risk-categorisation sign-off block, shown when the meeting's
-  // division has a pending draft and the meeting is still open — a one-off item raised
-  // under Any Other Business for the committee to ratify. Empty otherwise.
-  _categorisationAob() {
-    const detail = this._categorisation;
-    const division = (this._meeting.data || {}).division;
-    if (!division || !detail || detail.state !== "draft") return "";
-    if (this._meeting.status === CLOSED_MEETING_STATUS) return "";
-    const draft = detail.draft;
-    const ratings = (draft.risk_ratings || []).map((r) =>
-      '<span class="ragdot"><span class="dot" style="background:' + esc(r.colour) +
-      '"></span><span style="color:' + esc(r.colour) + '">' + esc(r.name) +
-      "</span></span>").join(" &nbsp; ");
-    const doc = detail.document
-      ? '<a href="/api/risk-policy/' + encodeURIComponent(division) + '/document" target="_blank">↓ ' +
-        esc(detail.document.original_name) + "</a>"
-      : '<span class="muted">none uploaded</span>';
-    return '<div style="margin-top:var(--space-5);padding:var(--space-5) var(--space-6);border:1px solid var(--amber);' +
-      'border-radius:var(--radius-md);background:var(--warn-bg)">' +
-      '<b>Risk categorisation sign-off &mdash; ' + esc(division) + "</b>" +
-      '<p class="muted" style="font-size:var(--size-sm);margin:var(--space-2) 0">' + esc(division) + " has proposed a " +
-      "revised risk categorisation. Approving it makes it live for this division's models; the " +
-      "current categorisation stays in force until then.</p>" +
-      '<div style="font-size:var(--size-sm)">Ratings: ' + ratings + "</div>" +
-      '<div style="font-size:var(--size-sm);margin-top:var(--space-2)">Risk Policy document: ' + doc + " &nbsp;|&nbsp; " +
-      '<a href="/api/risk-policy/' + encodeURIComponent(division) +
-      '/categorisation.pdf" target="_blank">↓ Proposed categorisation (PDF)</a></div>' +
-      '<div class="row" style="margin-top:var(--space-4);gap:var(--space-4)">' +
-      '<button class="btn small primary" id="aob-cat-approve">Approve &amp; make live</button>' +
-      '<button class="btn small danger" id="aob-cat-reject">Reject</button></div></div>';
-  },
-
-  async _decidePolicy(division, action) {
-    try {
-      await App.send("POST", "/api/risk-policy/" + encodeURIComponent(division) + "/" + action,
-        { meeting_id: this._id, confirmed: true });
-      App.toast("Risk categorisation " + (action === "approve" ? "approved and live" : "rejected"), "ok");
-      this.show(this._id, this._tab);   // reload so the AOB item reflects the new state
-    } catch (e) { App.toast(e.message || "failed", "error"); }
-  },
 };

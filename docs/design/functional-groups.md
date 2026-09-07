@@ -265,7 +265,7 @@ the same way. One shared rule in `app.css` covers all of them.
 
 ---
 
-### F3 — Ratification at the division's MRC
+### F3 — Ratification at the division's MRC — **BUILT**
 
 **Goal.** The committee approves the draft and the list goes live.
 
@@ -287,12 +287,28 @@ the same way. One shared rule in `app.css` covers all of them.
 **Shape.** `FunctionalGroupsApproved` carries `{policy, meeting_id}`, so "the
 committee agreed this carve-up" names the sitting.
 
-**Verify.** `tests/web/test_functional_groups_api.py` — approve from a meeting
-records the `meeting_id`; approving with no draft is refused with a message naming
-the division. Then in the app: schedule a meeting for the division, see the AOB
-block, approve, confirm the Admin banner flips to *approved*.
+**Verify.** `tests/web/test_functional_groups_api.py` covers the endpoint; the
+agenda block is browser JS and was verified in the app.
 
-**Done when** a division's list is live and `state` reads `approved`.
+**Done 2026-09-07**, against the real PhysicalRisk estate on the scheduled meeting
+MRC-PR-Q2: the pending draft appeared under AOB as "Functional groups sign-off —
+PhysicalRisk" listing all three groups; the risk-categorisation block stayed
+correctly absent (that division's categorisation is already approved, so there was
+nothing to ratify); Approve made the list live, cleared the draft, recorded
+`approved_at`, and removed the block. The event log carries
+`FunctionalGroupsApproved ... meeting=MRC-PR-Q2` — "which sitting agreed this" is
+answerable, which is the whole point of ratifying it. The model MKM-BRF-001 stayed
+filed as FG-001 across the rename going live.
+
+**No visual**: the browser pane was hidden on the user's side for this phase, so
+the page did not paint and every screenshot came back blank. Verified through the
+DOM and the event log instead.
+
+**Structure.** The categorisation block moved out of `mrc/detail_core.js` with the
+new one, into `mrc/detail_agenda_signoffs.js` — one agenda item carrying two
+ratifications is one subject, and the shell had no room for the second. The shell
+drops 240 → 202 lines. Both blocks share `_aobPanel`, so a third ratification is a
+few lines rather than a third copy.
 
 ---
 

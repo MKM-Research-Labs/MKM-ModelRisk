@@ -62,13 +62,9 @@ Object.assign(MeetingDetail, {
     rule("data-mem-ratify", "ratify", "Ratify %s's roles");
     rule("data-mem-decline", "decline", "Decline the proposed roles for %s");
 
-    // The risk-categorisation sign-off raised under AOB (present only when the division
-    // has a pending draft).
-    const division = (self._meeting.data || {}).division;
-    const approve = document.getElementById("aob-cat-approve");
-    if (approve) approve.onclick = () => self._decidePolicy(division, "approve");
-    const reject = document.getElementById("aob-cat-reject");
-    if (reject) reject.onclick = () => self._decidePolicy(division, "reject");
+    // The ratifications raised under AOB — risk categorisation and functional groups —
+    // are drawn and wired by detail_agenda_signoffs.js.
+    self._bindAobSignoffs();
     document.querySelectorAll("[data-prevmin]").forEach(function (sel) {
       const id = sel.getAttribute("data-prevmin");
       sel.onchange = function () {
