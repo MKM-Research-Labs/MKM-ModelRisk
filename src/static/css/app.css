@@ -74,6 +74,14 @@ textarea { width: 100%; resize: vertical; }
 .btn.ghost { background: transparent; }
 .btn.danger { color: var(--red); border-color: var(--danger-line-soft); }
 .btn.small { padding: 3px 9px; font-size: var(--size-xs); }
+/* A register led by its functional groups: the group is a heading row, and its records
+   are indented beneath it on the sunken ground the dashboard already uses for the same
+   idea (see .dash-member). The heading is not clickable as a row — only its Show/Hide
+   is — so it must not read as one. */
+tr.grouprow > td { background: var(--panel); border-top: 1px solid var(--line); padding: var(--space-4) var(--space-5); }
+tr.groupmember > td:first-child { padding-left: var(--space-8); }
+tr.groupmember > td { background: var(--sunken); }
+
 /* A disabled control has to look disabled. Nothing said so until the functional-group
    editor grew a Remove that is withheld while records are filed under the group: the
    button was genuinely inert and looked exactly like a live one, which reads as a broken

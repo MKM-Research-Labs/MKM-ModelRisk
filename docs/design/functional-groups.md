@@ -379,7 +379,7 @@ looked like a working feature.
 
 ---
 
-### F5 — The grouped Models list
+### F5 — The grouped Models list — **BUILT**
 
 **Goal.** The Models screen opens on functional groups, and expanding one reveals
 its models.
@@ -407,14 +407,33 @@ its models.
 - **e.** Expansion state survives a re-render but not a reload. There is no
   precedent for persisting UI state here and none is needed.
 
-**Verify.** Not unit-testable in the Python suite — this is browser JS. Verify in
-the running app on 5016 against a restored scratch database, with a ratified list
-and several models assigned: collapsed on load, counts correct, expand and
-collapse, a search term flattening the view, and a division with no ratified list
-falling back cleanly. Screenshot both states.
+**Verify.** Browser JS, so verified in the running app on 5016 against the restored
+estate.
 
-**Done when** the Models screen loads collapsed and the counts sum to the
-unfiltered total.
+**Done 2026-09-07.** The Models screen opens on **four rows instead of
+twenty-four**: Storm & Surge Generation (2), Instrument Pricer (1), Flood
+Simulation (1), Ungrouped (20) — in the order PhysicalRisk's committee ratified,
+not alphabetical, with Ungrouped last. Counts sum to the unfiltered total.
+Expanding shows the members indented; the toggle flips Show/Hide; a search term
+flattens to plain rows and clearing it regroups **with the open group still open**;
+sorting by Name sorts *within* the group; a member row still opens the record.
+AI Systems groups the same way from one config line. ML Applications, which has
+nothing filed, falls back to the flat table under "No ML Applications have been
+filed under a functional group yet."
+
+**One deliberate change from the plan.** Step (d) said sorting a column should
+flatten the view, as a filter does. It should not, and does not: sorting is how a
+reader browses *within* the structure, and throwing the structure away at the first
+header click makes the grouped view something you leave by accident and cannot
+easily get back to. Sorting now sorts within each group; only a search or filter
+flattens, because there the reader is looking for a specific record rather than
+browsing.
+
+**The group key is the division AND the id**, never the id alone — ids are minted
+per division, so PhysicalRisk's FG-001 and Analytics' FG-001 would otherwise be
+drawn as one group. Where the visible set spans divisions the group row names its
+division too, since two divisions may both have a "Pricing" and mean different
+things.
 
 ---
 

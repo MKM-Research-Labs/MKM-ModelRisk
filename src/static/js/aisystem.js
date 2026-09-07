@@ -96,6 +96,7 @@ const AISystems = {
         idKey: "ai_system_id", summaryId: "ais-summary", listId: "ais-list",
         filtersId: "ais-filters", tableId: "ais-table", p: "as-",
         noun: "AI Systems",
+        groupBy: "functional_group",
         // Two tiles this estate wants and no other does. Agency first, because it is
         // the question that decides which risks even apply; then what is leaving the
         // firm, because that is the one an auditor opens with.
