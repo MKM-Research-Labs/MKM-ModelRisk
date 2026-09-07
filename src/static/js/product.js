@@ -22,7 +22,10 @@
 function productStatusBadge(status, retired) {
   if (retired) return '<span class="pill">retired</span>';
   const c = Theme.colour("product_status", status);
-  return '<span style="display:inline-block;padding:var(--space-1) 9px;border-radius:var(--radius-xl);color:var(--inverse);' +
+  // ``nowrap`` because the Status column narrowed when the list gained Criticality and
+  // Risk Rating: "Proposed" broke across two lines inside the pill and read as damage.
+  return '<span style="display:inline-block;white-space:nowrap;padding:var(--space-1) 9px;' +
+    'border-radius:var(--radius-xl);color:var(--inverse);' +
     'font-size:var(--size-sm);background:' + c + '">' + esc(status || "—") + "</span>";
 }
 
@@ -110,51 +113,76 @@ const Product = {
       { product_id: id, product: product, fields: fields }, () => this.render());
   },
 
-  _summary(products) {
-    const n = (s) => products.filter((p) => (p.data || {}).status === s && !p.retired).length;
-    const card = (lbl, v, color) =>
-      '<div class="scard" style="border-left-color:' + color + '"><div class="lbl">' +
-      lbl + '</div><div class="val">' + v + "</div></div>";
-    return '<div class="summary">' +
-      card("Total", products.length, Theme.value("accent")) +
-      card("Active", n("Active"), Theme.value("green")) +
-      card("Proposed", n("Proposed"), Theme.value("info")) +
-      card("Suspended", n("Suspended"), Theme.value("amber")) +
-      card("Retired", products.filter((p) => p.retired).length, Theme.value("grey")) +
-      "</div>";
+  // The same list every other register draws -- tiles, filters, a sortable table and
+  // the functional-group headings -- through createRecordList. Products hand-rolled its
+  // own <tr> strings until now, which is why it was the one register with no filters, no
+  // sorting and no clickable tiles; the columns are still its own, because Identifier
+  // and Components are facts no model has.
+  _list: null,
+
+  list() {
+    if (!this._list) {
+      const self = this;
+      this._list = createRecordList({
+        idKey: "product_id", summaryId: "product-summary", listId: "product-list",
+        filtersId: "prd-filters", tableId: "prd-table", p: "pf-", noun: "Products",
+        // A Product is Active or Suspended; it has no lifecycle stage. The filter and
+        // the vocabulary behind it follow this rather than a model's field.
+        statusField: "status",
+        statusFilterLabel: "All statuses",
+        groupBy: "functional_group",
+        // The status counts this screen has always carried. They are a Product's own
+        // vocabulary, so they stay as the register's extra tiles rather than being
+        // pushed into the shared set, where they would mean nothing on a model.
+        extraTiles: (live, tile) => {
+          const n = (v) => live.filter((m) => m.d.status === v).length;
+          return [tile("Active", n("Active"), Theme.value("green"), ""),
+                  tile("Proposed", n("Proposed"), Theme.value("info"), ""),
+                  tile("Suspended", n("Suspended"), Theme.value("amber"), "")];
+        },
+        spec: (key) => self.fieldSpec(key),
+        reload: () => self.loadList(),
+      }, [
+        { key: "id", label: "ID", sortVal: (m) => m.id.toLowerCase(),
+          cell: (m) => '<span class="modelid">' + esc(m.id) + "</span>" },
+        { key: "identifier", label: "Identifier",
+          sortVal: (m) => (m.d.identifier || "").toLowerCase(),
+          cell: (m) => '<span class="code">' + fieldDisplay(m.d.identifier) + "</span>" },
+        { key: "product", label: "Product",
+          sortVal: (m) => (m.d.product || "").toLowerCase(),
+          cell: (m) => fieldDisplay(m.d.product) },
+        { key: "components", label: "Components",
+          sortVal: (m) => (m.d.components || []).length,
+          cell: (m) => componentSummary(m.d) },
+        { key: "tier", label: "Criticality", sortVal: (m) => m.d.tier || 99,
+          cell: (m) => tierBadge(m.d.tier, m.d.division) },
+        { key: "rag", label: "Risk Rating",
+          sortVal: (m) => ragOrder(m.d.rag_rating, m.d.division),
+          cell: (m) => ragBadge(m.d.rag_rating, m.d.division) },
+        { key: "mrc", label: "MRC Status", sortVal: (m) => mrcState(m.d),
+          cell: (m) => mrcStatusBadge(m.d) },
+        { key: "status", label: "Status",
+          sortVal: (m) => m.retired ? "zz" : (m.d.status || "").toLowerCase(),
+          cell: (m) => productStatusBadge(m.d.status, m.retired) },
+      ]);
+    }
+    return this._list;
   },
 
   async loadList() {
     const nav = await MrcNav.load();
+    await Groups.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     const all = await App.get("/api/products");
     const products = all.filter((p) => MrcNav.inScope(this._committees, this._ref, p.data));
-    document.getElementById("product-summary").innerHTML = this._summary(products);
-    const box = document.getElementById("product-list");
     if (!products.length) {
-      box.innerHTML = '<div class="empty">' +
-        (MrcNav.state.div ? "No products in this scope yet. Register one above." : "No Products yet. Register one above.") +
-        "</div>";
+      document.getElementById("product-summary").innerHTML = "";
+      document.getElementById("product-list").innerHTML = '<div class="empty">' +
+        (MrcNav.state.div ? "No products in this scope yet. Register one above."
+                          : "No Products yet. Register one above.") + "</div>";
       return;
     }
-    let rows = "";
-    products.forEach(function (p) {
-      const d = p.data || {};
-      rows +=
-        '<tr class="clickable" data-id="' + esc(p.product_id) + '">' +
-        '<td class="modelid">' + esc(p.product_id) + "</td>" +
-        '<td><span class="code">' + fieldDisplay(d.identifier) + "</span></td>" +
-        "<td>" + fieldDisplay(d.product) + "</td>" +
-        "<td>" + componentSummary(d) + "</td>" +
-        "<td>" + mrcStatusBadge(d) + "</td>" +
-        "<td>" + productStatusBadge(d.status, p.retired) + "</td></tr>";
-    });
-    box.innerHTML =
-      "<table><thead><tr><th>ID</th><th>Identifier</th><th>Product</th>" +
-      "<th>Components</th><th>MRC Status</th><th>Status</th></tr></thead><tbody>" + rows + "</tbody></table>";
-    box.querySelectorAll("tr.clickable").forEach(function (tr) {
-      tr.onclick = function () { ProductDetail.show(tr.getAttribute("data-id")); };
-    });
+    this.list().mount(products, (id) => ProductDetail.show(id));
   },
 };

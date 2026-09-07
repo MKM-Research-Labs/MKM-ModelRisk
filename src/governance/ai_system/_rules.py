@@ -39,13 +39,15 @@ from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
                                           AI_SYSTEM_FIELD_CHOICES,
                                           AI_SYSTEM_FIELD_SPECS,
                                           AI_SYSTEM_REGISTER_FIELDS)
-from config.governance import SIGNOFF_COLLECTIONS
+from config.governance import FUNCTIONAL_GROUP_FIELD, SIGNOFF_COLLECTIONS
 from src.governance import collections as coll
 from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REACTIVATED,
                                              EVENT_REGISTERED, EVENT_RETIRED,
                                              AISystemState)
 from src.governance.errors import DomainError
 from src.governance.independence import validate_independence
+from src.governance.functional_groups import (reject_division_move_while_grouped,
+                                              reject_unknown_functional_group)
 from src.governance.risk_policy import get_risk_policy
 
 # Risk fields whose allowed values come from the record's DIVISION policy.
@@ -61,6 +63,8 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
         allowed = _POLICY_CHOICE_FIELDS[field](get_risk_policy(division or ""))
         if value not in allowed:
             raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
+    elif field == FUNCTIONAL_GROUP_FIELD:
+        reject_unknown_functional_group(value, division)
     elif field in AI_SYSTEM_FIELD_CHOICES and value not in AI_SYSTEM_FIELD_CHOICES[field]:
         allowed = ", ".join(AI_SYSTEM_FIELD_CHOICES[field])
         raise DomainError(f"{field} must be one of: {allowed}")
@@ -112,6 +116,8 @@ def decide_edit_field(
     if field not in AI_SYSTEM_EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
     division = value if field == "division" else state.fields.get("division")
+    if field == "division":
+        reject_division_move_while_grouped(state.fields, value)
     _validate_field(field, value, division)
     validate_independence(field, value, state.fields, "AI System")
     return EVENT_FIELD_EDITED, {"field": field, "value": value}

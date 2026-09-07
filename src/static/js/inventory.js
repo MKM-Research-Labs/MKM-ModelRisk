@@ -20,10 +20,29 @@
 
 // Risk choice fields whose options come from a division's policy, not the field spec.
 const POLICY_DIMENSION_FIELD = { materiality: "materiality", complexity: "complexity" };
+// Likewise, but from the division's ratified functional groups rather than its risk
+// policy. Named here for the same reason the dimensions are: a field key spelled out
+// at each use is a field key that gets missed at one of them.
+const FUNCTIONAL_GROUP_FIELD = "functional_group";
 
 // Build the input control for one field spec. For the risk fields the option list comes
 // from the entity's DIVISION policy (falling back to the spec's constant options / 1-3).
 function inputControl(id, spec, division) {
+  // The record stores a group's ID and the owner picks by its NAME, so this is a
+  // value/label select rather than a list of words — the same shape as the tier band
+  // picker below, for the same reason. A division whose MRC has ratified nothing has
+  // no groups, and the control says so rather than offering an empty dropdown that
+  // looks broken.
+  if (spec.key === FUNCTIONAL_GROUP_FIELD) {
+    const groups = Groups.options(division);
+    if (!groups.length) {
+      return '<select id="' + id + '" disabled><option value="">' +
+        "No groups ratified for this division</option></select>";
+    }
+    const opts = '<option value=""></option>' + groups.map((g) =>
+      '<option value="' + esc(g.value) + '">' + esc(g.label) + "</option>").join("");
+    return '<select id="' + id + '">' + opts + "</select>";
+  }
   if (spec.type === "choice") {
     let options = spec.options;
     if (spec.key === "rag_rating") options = Policy.ratingNames(division) || options;
@@ -175,6 +194,7 @@ const Inventory = {
 
   async loadList() {
     const nav = await MrcNav.load();
+    await Groups.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     // The live estate by default. Hibernated models are fetched only when somebody

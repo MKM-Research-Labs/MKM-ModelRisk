@@ -37,6 +37,16 @@ const InventoryList = {
   _cfg: {
     idKey: "model_id", summaryId: "m-summary", listId: "m-list",
     filtersId: "m-filters", tableId: "m-table", p: "mf-", noun: "models",
+    // Which field carries the record's stage, because the registers do not agree: a
+    // model moves through a lifecycle, a Product is Active or Suspended. The filter and
+    // the column both read the vocabulary of whichever this names.
+    statusField: "lifecycle_stage",
+    // What that filter calls itself. Spelled out rather than derived from the field
+    // label, because "All lifecycle stage" and "All status" both read wrong.
+    statusFilterLabel: "All lifecycle",
+    // Lead with the functional groups rather than one long list — the whole point of
+    // the field. Unset on a register with no groups and it draws exactly as before.
+    groupBy: "functional_group",
     spec: (key) => (typeof Inventory !== "undefined" && Inventory.specByKey
       ? Inventory.specByKey(key) : null),
     reload: () => Inventory.loadList(),
@@ -76,7 +86,8 @@ const InventoryList = {
       cell: (m) => mrcStatusBadge(m.d) },
     { key: "lifecycle", label: "Lifecycle", sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || m.d.status || "").toLowerCase(),
       cell: function (m) { return m.retired ? '<span class="pill">retired</span>'
-        : optionLabel(InventoryList._cfg.spec("lifecycle_stage"), m.d.lifecycle_stage || m.d.status); } },
+        : optionLabel(InventoryList._cfg.spec(InventoryList._cfg.statusField),
+                      m.d.lifecycle_stage || m.d.status); } },
   ],
 
   mount(models, onRow) {
@@ -140,11 +151,26 @@ const InventoryList = {
     const arrow = (k) => this._sort.key === k ? (this._sort.dir > 0 ? " ▲" : " ▼") : "";
     const head = this._columns.map((c) =>
       '<th class="sortable" data-sort="' + c.key + '">' + c.label + arrow(c.key) + "</th>").join("");
+    // A register that carries functional groups leads with them (list_groups.js); one
+    // that does not, or a reader who is filtering for something specific, gets the flat
+    // table exactly as before.
+    if (this._grouped && this._grouped()) {
+      this._openGroups = this._openGroups || {};
+      this._renderGrouped(rows, head);
+      return;
+    }
+    box.innerHTML = this._tableMarkup(rows, head);
+    this._wireTable();
+  },
+
+  // The flat table. Its own method because the grouped view falls back to it whenever
+  // there is nothing to group by, and two copies of a table builder is how the two come
+  // to draw a record differently.
+  _tableMarkup(rows, head) {
     const body = rows.map((m) =>
       '<tr class="clickable" data-id="' + esc(m.id) + '">' +
       this._columns.map((c) => "<td>" + c.cell(m) + "</td>").join("") + "</tr>").join("");
-    box.innerHTML = "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>";
-    this._wireTable();
+    return "<table><thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table>";
   },
 
   _wireTable() {
@@ -172,5 +198,6 @@ function createRecordList(cfg, columns) {
   list._onRow = null;
   list._filters = null;
   list._sort = null;
+  list._openGroups = null;
   return list;
 }

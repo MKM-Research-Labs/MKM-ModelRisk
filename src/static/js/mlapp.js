@@ -102,6 +102,7 @@ const MLApps = {
         idKey: "ml_application_id", summaryId: "mlapp-summary", listId: "mlapp-list",
         filtersId: "mla-filters", tableId: "mla-table", p: "af-",
         noun: "ML Applications",
+        groupBy: "functional_group",
         // What the division's ratified ML review policy asks of the estate. Only
         // meaningful where there IS such a policy, so the tile stays off a register
         // that has never set one rather than reporting a confident "0 short".
@@ -148,6 +149,7 @@ const MLApps = {
 
   async loadList() {
     const nav = await MrcNav.load();
+    await Groups.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     // Retired records are out of the estate and out of every figure, exactly as a

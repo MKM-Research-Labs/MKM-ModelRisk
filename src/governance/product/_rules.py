@@ -29,6 +29,7 @@ from typing import Any
 
 from config.governance import (
     COMPONENT_KIND_MODEL,
+    FUNCTIONAL_GROUP_FIELD,
     PRODUCT_BINDINGS,
     PRODUCT_COMPONENTS,
     VALID_COMPONENT_KINDS,
@@ -49,6 +50,8 @@ from src.governance.product._state import (
     EVENT_RETIRED,
     ProductState,
 )
+from src.governance.functional_groups import (reject_division_move_while_grouped,
+                                              reject_unknown_functional_group)
 from src.governance.risk_policy import get_risk_policy
 
 # Risk fields whose allowed values come from the product's DIVISION policy.
@@ -64,6 +67,8 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
         allowed = _POLICY_CHOICE_FIELDS[field](get_risk_policy(division or ""))
         if value not in allowed:
             raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
+    elif field == FUNCTIONAL_GROUP_FIELD:
+        reject_unknown_functional_group(value, division)
     elif field in PRODUCT_FIELD_CHOICES and value not in PRODUCT_FIELD_CHOICES[field]:
         allowed = ", ".join(PRODUCT_FIELD_CHOICES[field])
         raise DomainError(f"{field} must be one of: {allowed}")
@@ -124,6 +129,8 @@ def decide_edit_field(
     if field not in PRODUCT_EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
     division = value if field == "division" else state.fields.get("division")
+    if field == "division":
+        reject_division_move_while_grouped(state.fields, value)
     _validate_field(field, value, division)
     return EVENT_FIELD_EDITED, {"field": field, "value": value}
 

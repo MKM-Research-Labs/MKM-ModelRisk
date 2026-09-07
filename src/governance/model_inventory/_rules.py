@@ -32,6 +32,7 @@ from config.governance import (
     COLLECTION_SPECS,
     EDITABLE_FIELDS,
     FIELD_CHOICES,
+    FUNCTIONAL_GROUP_FIELD,
     SIGNOFF_COLLECTIONS,
 )
 from src.governance import collections as coll
@@ -44,6 +45,8 @@ from src.governance.model_inventory._state import (
     EVENT_RETIRED,
     ModelState,
 )
+from src.governance.functional_groups import (reject_division_move_while_grouped,
+                                              reject_unknown_functional_group)
 from src.governance.risk_policy import get_risk_policy
 
 # Risk fields whose allowed values come from the DIVISION's live policy, not a global
@@ -56,9 +59,12 @@ _POLICY_CHOICE_FIELDS = {
 
 
 def _validate_field(field: str, value: Any, division: Any) -> None:
-    """Validate one field. Risk fields (tier == Mission Criticality, materiality,
-    complexity, rag_rating) are checked against the model's DIVISION policy; everything
-    else against the global choice sets."""
+    """Validate one field.
+
+    Risk fields (tier == Mission Criticality, materiality, complexity, rag_rating) are
+    checked against the model's DIVISION risk policy, and ``functional_group`` against
+    that division's separately-ratified group list; everything else against the global
+    choice sets."""
     if field == "tier":
         if isinstance(value, bool) or not isinstance(value, int):
             raise DomainError("tier must be an integer")
@@ -72,6 +78,8 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
         allowed = _POLICY_CHOICE_FIELDS[field](get_risk_policy(division or ""))
         if value not in allowed:
             raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
+    elif field == FUNCTIONAL_GROUP_FIELD:
+        reject_unknown_functional_group(value, division)
     elif field in FIELD_CHOICES:
         if value not in FIELD_CHOICES[field]:
             allowed = ", ".join(FIELD_CHOICES[field])
@@ -110,6 +118,8 @@ def decide_update_field(
     # Editing division itself changes which policy governs the risk fields; otherwise
     # use the model's current division.
     division = value if field == "division" else state.fields.get("division")
+    if field == "division":
+        reject_division_move_while_grouped(state.fields, value)
     _validate_field(field, value, division)
     validate_independence(field, value, state.fields, "model")
     # Capture the prior value so the audit trail can show old -> new. Older

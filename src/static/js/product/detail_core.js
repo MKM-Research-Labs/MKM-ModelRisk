@@ -23,7 +23,7 @@
 // field rows, inline editors, sign-off panel and Danger tab augment ProductDetail
 // from detail_edit.js, loaded after. The identifier is derived from the bindings.
 const PRODUCT_OVERVIEW_PRODUCT = ["product", "product_id", "description"];
-const PRODUCT_OVERVIEW_ORG = ["division", "line_of_business"];
+const PRODUCT_OVERVIEW_ORG = ["division", "line_of_business", "functional_group"];
 // The risk assessment (what places the product on the heatmap) lives on the Risk tab,
 // next to the grid it drives; only the headline rag_rating stays on Overview.
 // The fields themselves are the risk-assessment table's business (risk_assessment.js):

@@ -84,7 +84,8 @@ const MLAppDetail = RecordDetail.attach({
   // the record is judged against, and it has no equivalent on a model — so it goes
   // above the fields borrowed from the inventory rather than being left off the page
   // because the model has nothing to put there.
-  _LEFT: ["use_case", "division", "line_of_business", "repo_location", "codebase",
+  _LEFT: ["use_case", "division", "line_of_business", "functional_group",
+          "repo_location", "codebase",
           "estimator", "estimator_version", "vendor", "short_name", "category",
           "methodology", "estimator_rationale", "source_module"],
 

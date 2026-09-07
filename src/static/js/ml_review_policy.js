@@ -101,14 +101,8 @@ const MlReviewPolicyEditor = {
 
   _draw() {
     const c = this._counts();
-    const divSel = '<select id="mrp-div">' + this._divisions.map((d) =>
-      '<option' + (d === this._division ? " selected" : "") + ">" + esc(d) +
-      "</option>").join("") + "</select>";
     this._box.innerHTML =
-      '<div class="row" style="justify-content:space-between;align-items:center">' +
-      '<div class="row" style="align-items:center;gap:var(--space-4)">' +
-      '<label class="muted" style="font-size:var(--size-xs)">Division</label>' + divSel +
-      "</div><div id=\"mrp-status\"></div></div>" +
+      PolicyEditor.header("mrp", this._divisions, this._division) +
       '<p class="lead muted" style="font-size:var(--size-sm);max-width:74ch">The review ' +
       "catalogue is what this platform can ask for; this is what <em>you</em> ask for. " +
       "Untick anything your reviews do not need, and mark as mandatory only what a review " +
@@ -120,25 +114,13 @@ const MlReviewPolicyEditor = {
       '<div id="mrp-groups"></div>';
     this._drawStatus();
     this._drawGroups();
-    const sel = document.getElementById("mrp-div");
-    if (sel) {
-      sel.onchange = () => { this._division = sel.value; this._load(); };
-    }
+    PolicyEditor.bindDivision("mrp", (d) => { this._division = d; this._load(); });
   },
 
   _drawStatus() {
-    const el = document.getElementById("mrp-status");
-    if (!el) return;
-    const map = {
-      seed: '<span class="muted">Nothing ratified — everything is asked for, ' +
-        "nothing is required. Edits start a draft.</span>",
-      draft: '<span class="badge" style="background:var(--amber)">Draft — awaiting MRC ' +
-        "sign-off</span>",
-      approved: '<span class="badge" style="background:var(--green)">Approved</span>' +
-        '<span class="muted" style="margin-left:var(--space-3)">edits start a new ' +
-        "draft</span>",
-    };
-    el.innerHTML = map[this._detail.state] || "";
+    PolicyEditor.status("mrp", this._detail.state,
+      "Nothing ratified — everything is asked for, nothing is required. Edits start a " +
+      "draft.");
   },
 
   _drawGroups() {

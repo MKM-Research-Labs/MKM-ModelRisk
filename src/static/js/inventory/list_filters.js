@@ -119,13 +119,13 @@ Object.assign(InventoryList, {
   // The stages the estate actually uses, from the division's vocabulary, falling
   // back to the shipped words before it has been seeded.
   _lifecycleValues() {
-    const spec = this._cfg.spec("lifecycle_stage");
+    const spec = this._cfg.spec(this._cfg.statusField);
     return (spec && spec.options && spec.options.length) ? spec.options : LIFECYCLE_STAGES;
   },
 
   // What each stage is shown as, where the institution has renamed one.
   _lifecycleLabels() {
-    const spec = this._cfg.spec("lifecycle_stage");
+    const spec = this._cfg.spec(this._cfg.statusField);
     return (spec && spec.option_labels) || {};
   },
 
@@ -156,7 +156,8 @@ Object.assign(InventoryList, {
       sel(this._cfg.p + "rag", f.rag, ["All ratings", ...this._ratings().map((r) => r.name)]) +
       sel(this._cfg.p + "owner", f.owner, ["All owners", ...owners]) +
       sel(this._cfg.p + "review", f.review, ["All reviews", "Overdue", "Due Soon", "On Track", "Not Scheduled"]) +
-      sel(this._cfg.p + "lifecycle", f.lifecycle, ["All lifecycle", ...this._lifecycleValues(), HIBERNATED_FILTER],
+      sel(this._cfg.p + "lifecycle", f.lifecycle,
+          [this._cfg.statusFilterLabel, ...this._lifecycleValues(), HIBERNATED_FILTER],
           this._lifecycleLabels()) +
       '<button class="btn small" id="' + this._cfg.p + 'clear">Clear</button>' +
       '<span class="fcount" id="' + this._cfg.p + 'count"></span>';

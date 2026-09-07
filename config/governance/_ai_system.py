@@ -93,6 +93,12 @@ AI_SYSTEM_FIELD_SPECS = {
                  "reference": "division"},
     "line_of_business": {"label": "Line of Business", "type": "text",
                          "group": "Organisation", "reference": "line_of_business"},
+    # What the record is FOR, as this division's MRC has carved its estate up --
+    # a different question from ``type``, which is what it IS. ``options`` is empty
+    # because there is no firm-wide list: a division's groups come from its ratified
+    # policy and are resolved per record (config/governance/_functional_groups).
+    "functional_group": {"label": "Functional Group", "type": "choice", "options": (),
+                         "group": "Organisation"},
     "repo_location": {"label": "Repository location", "type": "text",
                       "group": "Organisation"},
     "codebase": {"label": "Codebase", "type": "text", "group": "Organisation",

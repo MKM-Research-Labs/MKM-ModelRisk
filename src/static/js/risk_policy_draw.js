@@ -32,17 +32,13 @@ Object.assign(RiskEditor, {
 
   // ---- rendering -----------------------------------------------------------
   _draw() {
-    const divSel = '<select id="rp-div">' + this._divisions.map((d) =>
-      '<option' + (d === this._division ? " selected" : "") + ">" + esc(d) + "</option>").join("") +
-      "</select>";
     const sub = (k, label) => '<button class="dtab' + (this._sub === k ? " active" : "") +
       '" data-rp-sub="' + k + '">' + label + "</button>";
     this._box.innerHTML =
-      '<div class="row" style="justify-content:space-between;align-items:center">' +
-      '<div class="row" style="align-items:center;gap:var(--space-4)"><label class="muted" style="font-size:var(--size-xs)">Division</label>' +
-      divSel + '<a href="/api/risk-policy/' + encodeURIComponent(this._division) +
-      '/categorisation.pdf" target="_blank" style="font-size:var(--size-sm)">↓ Categorisation PDF</a></div>' +
-      '<div id="rp-status"></div></div>' +
+      PolicyEditor.header("rp", this._divisions, this._division,
+        '<a href="/api/risk-policy/' + encodeURIComponent(this._division) +
+        '/categorisation.pdf" target="_blank" style="font-size:var(--size-sm)">' +
+        "↓ Categorisation PDF</a>") +
       '<p class="lead muted" style="font-size:var(--size-sm);max-width:74ch">Define this division\'s risk ' +
       "vocabulary. Edits save as a draft and are proposed to the division's MRC — models keep " +
       "using the last approved (or firm-wide seed) policy until the committee signs it off.</p>" +
@@ -68,9 +64,7 @@ Object.assign(RiskEditor, {
       '<p class="muted" style="font-size:var(--size-xs);margin-top:var(--space-9)">The division\'s formal ' +
       "written Risk Policy document is filed under Documents &rarr; Artefacts, on the " +
       esc(this._division) + " shelf.</p>";
-    document.getElementById("rp-div").onchange = (e) => {
-      this._division = e.target.value; this._load();
-    };
+    PolicyEditor.bindDivision("rp", (d) => { this._division = d; this._load(); });
     this._box.querySelectorAll("[data-rp-sub]").forEach((b) => {
       b.onclick = () => { this._sub = b.getAttribute("data-rp-sub"); this._showSub(); };
     });
@@ -98,15 +92,8 @@ Object.assign(RiskEditor, {
   },
 
   _drawStatus() {
-    const el = document.getElementById("rp-status");
-    if (!el) return;
-    const map = {
-      seed: ['<span class="muted">On the firm-wide seed — edits start a draft.</span>'],
-      draft: ['<span class="badge" style="background:var(--amber)">Draft — awaiting MRC sign-off</span>'],
-      approved: ['<span class="badge" style="background:var(--green)">Approved</span>' +
-        '<span class="muted" style="margin-left:var(--space-3)">edits start a new draft</span>'],
-    };
-    el.innerHTML = (map[this._state] || [""])[0];
+    PolicyEditor.status("rp", this._state,
+      "On the firm-wide seed — edits start a draft.");
   },
 
   // The three dimensions are structural — the heatmap is one grid per band of the
