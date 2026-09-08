@@ -74,7 +74,6 @@ FIELD_CRITICALITY = {
     "rag_rating": 0.90,
     # --- Accountability. An unowned model has nobody to chase for the rest. ---
     "owner": 0.95,
-    "model_owner_role": 0.55,
     "peer_reviewer": 0.75,
     # --- Validation evidence. ---
     "validation_status": 0.90,

@@ -162,7 +162,6 @@ ML_APPLICATION_FIELD_SPECS = {
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
     "peer_reviewer": {"label": "Peer reviewer", "type": "text", "group": "Governance",
                       "reference": "people"},
-    "model_owner_role": {"label": "Owner role", "type": "text", "group": "Governance"},
     "status": {"label": "Status", "type": "text", "group": "Governance"},
     # Where the review has got to. Carried so a record migrated from the inventory
     # keeps it; the workflow that MOVES it arrives with the MRC route (phase 4).

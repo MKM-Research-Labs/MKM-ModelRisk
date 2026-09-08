@@ -134,7 +134,17 @@ MODEL_FIELD_SPECS = {
     "source_module": {"label": "Source module", "type": "text", "group": "Methodology"},
     # --- Governance ---
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
-    "model_owner_role": {"label": "Owner role", "type": "text", "group": "Governance"},
+    # ``model_owner_role`` was retired on 2026-09-08. It held the owner's job title —
+    # a fact about the PERSON, not about the record — so every model that person owned
+    # carried its own copy, all of which went stale together when they changed role.
+    # Admin > People already answers it, with ``roles`` ratified at a meeting, so this
+    # was an ungoverned second copy of a governed fact. Nothing read it but a
+    # completeness weight, which meant the audit marked a record down for not
+    # duplicating something it could already look up.
+    #
+    # Removed from the specs AND from the scoring together. It was once dropped from
+    # the detail screens alone, which left it uneditable while the audit still expected
+    # it — the failure this note exists to stop somebody repeating.
     "peer_reviewer": {
         "label": "Peer reviewer", "type": "text", "group": "Governance", "reference": "people",
     },

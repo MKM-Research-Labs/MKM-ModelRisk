@@ -107,7 +107,7 @@ const MLAppDetail = RecordDetail.attach({
   // validation status, version, review frequency, last review, recertification and the
   // peer reviewer. The MRC sets sign-off and next review at sign-off, and the reviewer
   // belongs on the tab where the review is actually run.
-  _RIGHT: ["rag_rating", "owner", "model_owner_role", "lifecycle_stage", "review_status"],
+  _RIGHT: ["rag_rating", "owner", "lifecycle_stage", "review_status"],
 
 
 

@@ -78,7 +78,7 @@ def test_the_governance_half_uses_a_models_field_names_exactly():
     shared = ("division", "line_of_business", "name", "short_name", "description",
               "tier", "tier_rationale", "materiality", "materiality_rationale",
               "complexity", "complexity_rationale", "rating_rationale", "rag_rating",
-              "owner", "peer_reviewer", "model_owner_role", "status", "review_status",
+              "owner", "peer_reviewer", "status", "review_status",
               "lifecycle_stage", "validation_status", "version", "review_frequency",
               "last_review_date", "validation_date", "recertification_date",
               "next_review_date", "mrc_signoff_date", "mrc_signoff_meeting",

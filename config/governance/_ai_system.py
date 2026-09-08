@@ -194,7 +194,6 @@ AI_SYSTEM_FIELD_SPECS = {
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
     "peer_reviewer": {"label": "Peer reviewer", "type": "text", "group": "Governance",
                       "reference": "people"},
-    "model_owner_role": {"label": "Owner role", "type": "text", "group": "Governance"},
     "status": {"label": "Status", "type": "text", "group": "Governance"},
     "review_status": {"label": "Review status", "type": "choice",
                       "options": VALID_REVIEW_STATUSES, "group": "Governance"},

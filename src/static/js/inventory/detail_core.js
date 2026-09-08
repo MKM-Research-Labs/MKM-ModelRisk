@@ -24,10 +24,11 @@
 // Description is promoted to a full-width summary band above the two columns.
 // Tier + its rating rationale sit at the foot of Model Details, below Complexity.
 // repo_location / codebase (Organisation), type / short_name / tier_rationale
-// (Classification), methodology_rationale (Methodology) and model_owner_role /
-// validation_date (Governance) are governed, audit-scored fields; each renders from
-// the config specs via _row. They had been dropped from these lists, which left them
-// uneditable while the audit still expected them.
+// (Classification), methodology_rationale (Methodology) and validation_date
+// (Governance) are governed, audit-scored fields; each renders from the config specs
+// via _row. They had been dropped from these lists, which left them uneditable while
+// the audit still expected them. (model_owner_role was on that list until it was
+// retired outright on 2026-09-08 — see config/governance/_inventory.py.)
 const OVERVIEW_LEFT = ["division", "line_of_business", "functional_group",
   "repo_location", "codebase", "type", "vendor",
   "short_name", "methodology", "methodology_rationale", "source_module"];
@@ -42,8 +43,7 @@ const OVERVIEW_LEFT = ["division", "line_of_business", "functional_group",
 // Reviewer and validation date moved onto the Review tab, where the review is
 // actually run; review_status stays because it is the one-line answer to "where
 // is this model up to", and it links through to the workflow that sets it.
-const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "model_owner_role", "lifecycle_stage",
-  "review_status"];
+const OVERVIEW_RIGHT_TOP = ["rag_rating", "owner", "lifecycle_stage", "review_status"];
 // The testing evidence is documentation, so it lives under Docs (between Analysis
 // and Monitoring) rather than on a tab of its own. The categories behind that panel
 // come from config with the rest — see doc_tab_groups in the field specs.
