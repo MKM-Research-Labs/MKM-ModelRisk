@@ -66,7 +66,6 @@ FIELDS = {
     "repo_location": "PhysicalRisk",
     "codebase": "PhysicalRisk",
     "owner": "David K Kelly",
-    "model_owner_role": "Chief Science Officer",
     "status": "Active",
     "lifecycle_stage": "Development",
     "version": "1.0.0",

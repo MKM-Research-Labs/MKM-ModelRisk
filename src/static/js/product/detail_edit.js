@@ -98,9 +98,15 @@ Object.assign(ProductDetail, {
     return "";
   },
 
+  // The button is rendered by the SHARED risk panel (DetailTabs._signoffPanel), which
+  // every record type uses, so its id is that panel's -- "req-signoff", not a
+  // product-prefixed one. This looked for "preq-signoff", left over from the
+  // product-specific panel the shared one replaced, found nothing, and returned. The
+  // guard below is what made it silent: the button rendered, carried no handler, and
+  // clicking it did nothing at all.
   _bindSignoffRequest() {
     const self = this;
-    const btn = document.getElementById("preq-signoff");
+    const btn = document.getElementById("req-signoff");
     if (!btn) return;
     btn.onclick = function () {
       const mrc = (self._mrc || {}).mrc;
@@ -108,10 +114,15 @@ Object.assign(ProductDetail, {
         App.toast("No MRC covers this product — bind a model / set up an MRC first.", "error");
         return;
       }
-      App.amend("Request MRC sign-off for " + self._id + " → " + btn.getAttribute("data-proposed") +
+      // The rating being proposed is the heatmap's, carried on the button. Posting an
+      // empty body made the API fall back to the product's CURRENT rating, so the
+      // committee was asked to ratify the rating it already had -- the request read
+      // Amber while the screen that raised it read Red.
+      const proposed = btn.getAttribute("data-proposed");
+      App.amend("Request MRC sign-off for " + self._id + " → " + proposed +
         " (routed to " + (mrc.name || mrc.value) + ").", "POST",
-        "/api/products/" + self._id + "/request-signoff", {},
-        () => self.show(self._id, "overview"));
+        "/api/products/" + self._id + "/request-signoff", { proposed_rag: proposed },
+        () => self.show(self._id, "risk"));
     };
   },
 

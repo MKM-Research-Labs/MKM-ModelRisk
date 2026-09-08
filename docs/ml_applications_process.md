@@ -363,7 +363,6 @@ was trained on, how it performs, and how it could be misread.
 |---|---|---|---|
 | `owner` | Owner | text | `people` list |
 | `peer_reviewer` | Peer reviewer | text | `people` list |
-| `model_owner_role` | Owner role | text |  |
 | `status` | Status | text |  |
 | `review_status` | Review status | choice | Not started, Documents reviewed, Assumptions agreed, Questions answered, Weaknesses agreed, Limitations agreed, Monitoring agreed, Remediation agreed, Signed off |
 | `lifecycle_stage` | Lifecycle stage | choice | `lifecycle_stage` list |

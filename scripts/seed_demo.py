@@ -33,7 +33,7 @@ MODELS = [
     {
         "id": "MKM-GH-001", "name": "GEV Hazard Curve Model",
         "fields": {"category": "Hazard", "tier": 1, "owner": "David K Kelly",
-                   "model_owner_role": "Chief Science Officer", "rag_rating": "Green",
+                   "rag_rating": "Green",
                    "lifecycle_stage": "Production", "materiality": "High", "complexity": "High",
                    "version": "1.0.0", "next_review_date": "2026-04-15",
                    "description": "Generalised Extreme Value hazard curve for storm severity.",
@@ -44,7 +44,7 @@ MODELS = [
     {
         "id": "MKM-SI-001", "name": "Storm Intensity Distribution",
         "fields": {"category": "Hazard", "tier": 2, "owner": "David K Kelly",
-                   "model_owner_role": "Chief Science Officer", "rag_rating": "Amber",
+                   "rag_rating": "Amber",
                    "lifecycle_stage": "Development", "materiality": "Medium", "complexity": "Medium",
                    "version": "1.0.0", "next_review_date": "2026-06-15",
                    "description": "Hybrid Normal-Pareto distribution for storm rainfall intensity.",
@@ -55,7 +55,7 @@ MODELS = [
     {
         "id": "MKM-PR-001", "name": "PRS Pricing Model",
         "fields": {"category": "Pricing", "tier": 1, "owner": "David K Kelly",
-                   "model_owner_role": "Chief Science Officer", "rag_rating": "Green",
+                   "rag_rating": "Green",
                    "lifecycle_stage": "Production", "materiality": "High", "complexity": "High",
                    "version": "2.1.0", "next_review_date": "2026-03-01",
                    "description": "Physical Risk Swap pricing engine.",
@@ -65,7 +65,7 @@ MODELS = [
     {
         "id": "MKM-DD-001", "name": "Depth-Damage Model",
         "fields": {"category": "Loss", "tier": 2, "owner": "A. Singh",
-                   "model_owner_role": "Lead Quant", "rag_rating": "Amber",
+                   "rag_rating": "Amber",
                    "lifecycle_stage": "Validation", "materiality": "Medium", "complexity": "Medium",
                    "version": "0.9.0", "next_review_date": "2026-08-01",
                    "description": "Flood depth to property damage relationship.",
@@ -75,7 +75,7 @@ MODELS = [
     {
         "id": "MKM-PV-001", "name": "Property Valuation Model",
         "fields": {"category": "Valuation", "tier": 3, "owner": "A. Singh",
-                   "model_owner_role": "Lead Quant", "rag_rating": "Green",
+                   "rag_rating": "Green",
                    "lifecycle_stage": "Production", "materiality": "Low", "complexity": "Low",
                    "version": "1.4.0", "next_review_date": "2027-01-10",
                    "description": "Automated valuation model for residential property.",

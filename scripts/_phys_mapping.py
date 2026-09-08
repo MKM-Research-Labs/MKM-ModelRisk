@@ -26,7 +26,7 @@ from __future__ import annotations
 SCALAR_FIELDS = (
     "short_name", "description", "category", "tier", "materiality", "complexity",
     "tier_rationale", "methodology", "methodology_rationale", "source_module", "owner",
-    "model_owner_role", "peer_reviewer", "status", "lifecycle_stage", "version",
+    "peer_reviewer", "status", "lifecycle_stage", "version",
     "validation_status", "rag_rating", "review_frequency", "last_review_date",
     "next_review_date", "mrc_signoff_date", "recertification_date", "validation_date",
 )
