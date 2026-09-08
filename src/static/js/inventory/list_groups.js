@@ -29,6 +29,11 @@
 
 // Where records nobody has filed yet collect. Sorted last, because it is the bucket to
 // empty rather than a group anybody chose.
+// The one filter that is a free-text search rather than a chosen value. Named here
+// because "which of these flattens the view" is a decision about the reader, not a
+// detail of the filter bar.
+const SEARCH_FILTER_KEY = "q";
+
 const UNGROUPED_KEY = "ungrouped";
 
 Object.assign(InventoryList, {
@@ -37,17 +42,21 @@ Object.assign(InventoryList, {
   // returning to the screen wants it as it opens rather than as they left it.
   _openGroups: null,
 
-  // Grouped whenever the register asks for it and the reader is not looking for
-  // something specific. A search term or a filter flattens: somebody who has typed a
-  // name wants the rows that match, not three collapsed groups to open in turn.
+  // Only a typed SEARCH flattens, and only because somebody who has typed a name wants
+  // the rows that match rather than three collapsed groups to open in turn.
   //
-  // Sorting does NOT flatten -- it sorts WITHIN each group. Sorting is how a reader
-  // browses structure, and throwing the structure away at the first header click would
-  // make the grouped view something you leave by accident and cannot easily get back to.
+  // A dropdown filter does NOT flatten. "The models in Development" is still a question
+  // about the estate's structure, and how that subset falls across the functional groups
+  // is most of what the reader is asking; answering it with an ungrouped list throws
+  // away the grouping at the moment it becomes most useful. This used to flatten on any
+  // filter at all, so picking a lifecycle stage or an owner lost the grouping.
+  //
+  // Sorting does not flatten either -- it sorts WITHIN each group. Sorting is how a
+  // reader browses structure, and throwing the structure away at the first header click
+  // would make the grouped view something you leave by accident and cannot get back to.
   _grouped() {
     if (!this._cfg.groupBy) return false;
-    const f = this._filters || {};
-    return !Object.keys(f).some((k) => String(f[k] || "").trim());
+    return !String((this._filters || {})[SEARCH_FILTER_KEY] || "").trim();
   },
 
   // A group's identity is its division AND its id, never the id alone: ids are minted
