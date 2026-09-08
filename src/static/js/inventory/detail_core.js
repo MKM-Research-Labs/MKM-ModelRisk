@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Model detail (the Detail package). This core module owns the header card, the
-// tab bar and tab routing, and the collection-tab wiring. The Overview tab and
+// Model detail (the Detail package). This core module owns the tab bar and tab
+// routing, and the collection-tab wiring; the header card is detail_header.js. The Overview tab and
 // per-field editing augment Detail from detail_overview.js, loaded after.
 // Description is promoted to a full-width summary band above the two columns.
 // Tier + its rating rationale sit at the foot of Model Details, below Complexity.
@@ -96,31 +96,11 @@ const Detail = {
     document.querySelectorAll("[data-dtab]").forEach((b) => {
       b.onclick = () => { this._tab = b.getAttribute("data-dtab"); this._render(); };
     });
+    // The header card sits outside #dt-content and survives a tab change, so its one
+    // edit is bound here rather than with the tab's rows (detail_header.js).
+    this._bindHeader();
     this._renderContent();
     if (this._tab === "danger") this._bindRetire();
-  },
-
-  _header(d) {
-    const sub = esc(this._id) + (d.version ? " · v" + esc(d.version) : "") + (d.category ? " · " + esc(d.category) : "");
-    const dates = HEADER_DATES.map((k) => {
-      // MRC sign-off shows the granting meeting id (not the date) once approved.
-      const value = (k === "mrc_signoff_date" && d.mrc_signoff_meeting)
-        ? esc(d.mrc_signoff_meeting) : fieldDisplay(d[k]);
-      return '<span class="datechip"><span class="muted">' + esc(this.specByKey(k).label) +
-        ":</span> <b>" + value + "</b></span>";
-    }).join("");
-    return '<div class="detail-header"><div>' +
-      '<div class="name">' + esc(d.name || this._id) + "</div>" +
-      '<div class="sub">' + sub + "</div>" +
-      // The RAG rating is the governed
-      // one, and a second, differently-derived verdict in the header invited the
-      // question "where does that come from?" without answering it.
-      '<div style="margin-top:var(--space-4)">' + tierBadge(d.tier, d.division) + ' <span class="muted">' +
-      esc(tierFullLabel(d.tier, d.division)) + "</span></div>" +
-      '<div class="dh-dates">' + dates + "</div></div>" +
-      '<div class="right"><div class="olabel">OWNER</div>' +
-      '<div class="oname">' + fieldDisplay(d.owner) + "</div>" +
-      '<div style="margin-top:var(--space-3)">' + ragBadge(d.rag_rating, d.division) + "</div></div></div>";
   },
 
   _tabbar(d) {
