@@ -87,8 +87,17 @@ HUMAN_OVERSIGHT_MODES = ("Human makes the decision", "Human reviews before actio
                          "Fully autonomous")
 
 # Whether the underlying model can change under the firm's feet (AIR-OP-005).
+#
+# "Not applicable" is last and is a real answer, not a way out of the question: a
+# physics-informed or scientific ML system is not built on somebody's model, so there
+# is no provider version to pin and no policy to state. Without it such a record is
+# marked down for an absence that is not one, and a completeness score that reports
+# unanswerable gaps is one people learn to ignore.
+#
+# It is NOT the answer for a system that does have a foundation model and has simply
+# not decided — that is a blank, and the audit is right to ask about it.
 VERSION_POLICIES = ("Pinned to a named version", "Pinned, reviewed on a cycle",
-                    "Tracks the provider's latest")
+                    "Tracks the provider's latest", "Not applicable")
 
 # EU AI Act Annex III risk classes. FINOS cites the Regulation directly (Articles 12,
 # 26 and 72) and a deployer has to know which class it is in before it can know which
