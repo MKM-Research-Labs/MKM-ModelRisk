@@ -136,6 +136,14 @@ th.sortable:hover { color: var(--accent); }
 .detail-header { background: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: var(--space-8); margin-bottom: var(--space-7); display: flex; justify-content: space-between; align-items: flex-start; }
 .detail-header .name { font-size: var(--size-xl); font-weight: 700; color: var(--text); }
 .detail-header .sub { font-size: var(--size-sm); color: var(--header-sub); margin-top: var(--space-2); }
+/* The name's edit affordance, and the editor it opens in place of the name /
+   identifier pair. The input is title-width because a model's name is a sentence. */
+.detail-header .name .edit-btn { vertical-align: middle; margin-left: var(--space-4); }
+.detail-header .editor { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; max-width: 620px; }
+.detail-header .editor input { flex: 1; min-width: 320px; }
+/* Capped so opening the editor does not widen the header's left column and reflow the
+   owner block on the right. */
+.detail-header .dh-idnote { max-width: 620px; }
 .detail-header .right { text-align: right; }
 .detail-header .right .olabel { font-size: var(--size-xxs); color: var(--header-sub); text-transform: uppercase; }
 .detail-header .right .oname { font-size: var(--size-md); font-weight: 600; color: var(--text); }
