@@ -109,6 +109,30 @@ this file carried for months, and it is worth keeping: with a zero gate a regres
 unmistakable, where a gate of 2 meant reading the list every time to see whether the
 number had moved for your reason or somebody else's.
 
+On 2026-09-09 the same pass ran against a gate that was already green: nothing was
+over 300, but seven files sat between 267 and 293, which is close enough that a
+paragraph of comment trips the gate. Each was split at a seam the file already had, and
+in three cases the file's own section comment marked it. `dashboard.js` (276) gave up
+its two context panels — the queue answers what is owed today, the panels answer how
+much there is and whether it is improving, and only the second pair needs a chart.
+`mrc.js` (273) gave up the meetings: a committee and what that committee does are
+different subjects, and the meetings half is the only part that writes. `app.css` (293)
+became three, because the record detail screen and the landing tab are not the shell
+that frames them. The other four split the same way — an AI System's tabs from which
+tabs it has, the neighbourhood's drawing from its measuring, acting on an agenda item
+from drawing one, and an action's pickers from the tab that uses them.
+
+That last set is worth the note: `mrc/detail_agenda_manual.js` and
+`mrc/detail_actions_fields.js` were named after siblings that already existed
+(`detail_agenda_confirm.js` does for standing items exactly what the first does for
+manual ones), which is the cheapest way to find out whether a seam is real. If the new
+file cannot be named without saying "and", it is not one file.
+
+Splitting CSS has a trap the JS splits do not: a rule moved into a stylesheet that loads
+later moves DOWN the cascade, so an equal-specificity rule it used to lose to it now
+wins. The way through is to cut only at the END of the file — everything moved out of
+`app.css` came after everything left in it, so no relative order changed at all.
+
 On 2026-09-05 the whole reported web backlog went the same way — thirteen files, none
 of them left over 300, and each split by asking what the file was about rather than
 where line 300 fell. `mlapp/detail_core.js` (708) became five: the record, its tabs, the
