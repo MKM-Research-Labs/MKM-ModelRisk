@@ -72,7 +72,7 @@ _POLICY = replace(POLICY, validate=_validate_policy)
 def propose_ml_review_policy(*, division: str, policy: dict, actor: str,
                              reason: str | None = None, config=None) -> Event:
     """Submit a division's draft ML review policy for MRC sign-off."""
-    return _POLICY.propose(division=division, policy=policy, actor=actor,
+    return _POLICY.propose(scope=division, policy=policy, actor=actor,
                            reason=reason, config=config)
 
 
@@ -80,7 +80,7 @@ def approve_ml_review_policy(*, division: str, actor: str,
                              meeting_id: str | None = None,
                              reason: str | None = None, config=None) -> Event:
     """Ratify the pending draft: it becomes the policy reviews are judged against."""
-    return _POLICY.approve(division=division, actor=actor, meeting_id=meeting_id,
+    return _POLICY.approve(scope=division, actor=actor, meeting_id=meeting_id,
                            reason=reason, config=config)
 
 
@@ -88,5 +88,5 @@ def reject_ml_review_policy(*, division: str, actor: str,
                             meeting_id: str | None = None,
                             reason: str | None = None, config=None) -> Event:
     """Decline or withdraw the pending draft. The live policy is unchanged."""
-    return _POLICY.reject(division=division, actor=actor, meeting_id=meeting_id,
+    return _POLICY.reject(scope=division, actor=actor, meeting_id=meeting_id,
                           reason=reason, config=config)
