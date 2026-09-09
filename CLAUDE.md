@@ -109,6 +109,37 @@ this file carried for months, and it is worth keeping: with a zero gate a regres
 unmistakable, where a gate of 2 meant reading the list every time to see whether the
 number had moved for your reason or somebody else's.
 
+On 2026-09-09, a second pass took the next tier — the thirteen files between 233 and
+258 — on the same reasoning: the gate is not the target, and a file that close to it
+has no room to absorb a comment. Several split along a line the file's own head comment
+had already drawn and then stopped honouring. `aisystem/detail_governance.js` said "the
+write side lives here too", so the write side became `_edit`. `helpers.js` said it held
+"two registries" and held three, the largest of which is now `policy_registry.js`.
+`record_detail.js` said DetailShell owns the markup and it owns the sequence, then owned
+a hundred lines of shared row-builders as well; those are `record_detail_rows.js`.
+**When a file's own comment no longer describes it, that is the seam, and it is also a
+sign the comment has been wrong for a while.** Each of those comments was corrected in
+the same commit — a split that leaves the old description in place has moved the problem
+rather than fixed it.
+
+Two of the thirteen were not really about the file they lived in. `inputControl` sat in
+`inventory.js` as though it were a models concern, when every register form, add-a-row
+form and inline editor in the console builds its controls through it; it is now
+`input_control.js`. A file's name is a claim about what depends on it, and that one was
+false.
+
+**A new lesson, from getting it wrong three times in this pass.** The content-survival
+check that CLAUDE.md already demands proves nothing was LOST. It does not prove the
+result is well-formed: twice a range swallowed the `},` that closed the previous member,
+and once it swallowed the `};` that closed the whole object — and in that last case the
+brace was still present in the output, just inside the wrong file, so the survival check
+passed while the file no longer parsed. **Run `node --check` on every file on both sides
+of a JS split**, and re-run it over the whole tree at the end. It is instant and it
+catches exactly the class of error the line-counting check cannot see. Before cutting,
+print the boundary lines and number them; an object's closing `};` is not part of the
+last member, and the blank line between two members belongs to whichever side you say it
+does — but only one of them.
+
 On 2026-09-09 the same pass ran against a gate that was already green: nothing was
 over 300, but seven files sat between 267 and 293, which is close enough that a
 paragraph of comment trips the gate. Each was split at a seam the file already had, and

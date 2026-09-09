@@ -144,53 +144,6 @@ const Detail = {
     return Collections.render(d, { collections: [this.collSpec(key)] }, this._model.retired);
   },
 
-  // The model's MRC record: granted rating sign-offs (which land here once a
-  // committee approves) plus decisions linked from the meeting log. Actions are
-  // now first-class on the model (the Actions tab), not a read-only projection.
-  _mrcLinkage(d) {
-    const signoffs = d.signoff_history || [];
-    const soSection = signoffs.length
-      ? DetailTabs.signoffHistory(signoffs, d.division)
-      : '<div class="section-header">Sign-off history</div>' +
-        '<div class="empty">No MRC sign-offs granted yet.</div>';
-    // Every meeting where this model's analysis was presented (it was in scope),
-    // with the committee's outcome and a link to the paper if one was tabled.
-    const pres = this._analysisPresentations || [];
-    const presSection = pres.length
-      ? pres.map((a) => {
-          const paper = a.analysis_filename
-            ? ' &middot; <a href="/api/meetings/' + esc(a.meeting_id) + "/models/" + esc(this._id) +
-              '/analysis" target="_blank" rel="noopener">analysis paper</a>'
-            : "";
-          return '<div class="prow"><div style="font-size:var(--size-sm)"><b>' + esc(a.meeting_id) + "</b> " +
-            '<span class="muted">' + esc(a.meeting_date || "") + "</span> &mdash; " +
-            esc(a.analysis_status || "Pending") +
-            (a.presenter ? ' <span class="muted">presented by ' + esc(a.presenter) + "</span>" : "") +
-            paper + "</div></div>";
-        }).join("")
-      : '<div class="empty">No analysis presented to an MRC yet.</div>';
-    // What the committee is still owed on this model, ahead of the historical record:
-    // an outstanding action is the live obligation, so it leads rather than sitting
-    // under the decisions that are already taken.
-    const outstanding = outstandingActions(this._mrcActions);
-    const settled = (this._mrcActions || []).length - outstanding.length;
-    const settledNote = settled
-      ? '<p class="muted" style="font-size:var(--size-xs)">' + settled + " closed action" +
-        (settled === 1 ? "" : "s") + " not shown — the meeting that agreed each one still " +
-        "holds it.</p>"
-      : "";
-    return '<p class="muted">The model&rsquo;s MRC record — actions still outstanding, granted ' +
-      "rating sign-offs, the meetings its analysis was presented at, plus decisions linked from " +
-      "meetings (read-only, sourced from the meeting log).</p>" +
-      '<div class="section-header">MRC actions outstanding</div>' +
-      DetailTabs.linkedItems("Actions outstanding", outstanding,
-                             ["description", "owner", "status"]) + settledNote +
-      soSection +
-      '<div class="section-header">Analysis presented to the MRC</div>' + presSection +
-      '<div class="section-header">Decisions</div>' +
-      DetailTabs.linkedItems("Decisions", this._decisions, ["description", "date"]);
-  },
-
   _bindCollections(keys) {
     // Refresh in place (no scroll) so a register edit does not jump the page.
     Collections.bind("/api/models/" + this._id + "/collections/",

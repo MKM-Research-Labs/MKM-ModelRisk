@@ -187,11 +187,14 @@
 
   <script src="{{ url_for('static', filename='js/api.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/helpers.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/policy_registry.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/input_control.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/badges.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/doc_links.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/detail_shell.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/risk_assessment.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc_nav.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/mrc_nav_scope.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/org_scope.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/actor.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/danger_zone.js', v=asset_version) }}"></script>
@@ -202,9 +205,11 @@
   <script src="{{ url_for('static', filename='js/inventory_tabs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory_tabs_risk.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/detail_core.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/inventory/detail_mrc.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/detail_header.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/detail_tabs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/detail_overview.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/inventory/detail_overview_edit.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/graph_wire.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/neighbourhood.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/inventory/neighbourhood_draw.js', v=asset_version) }}"></script>
@@ -223,20 +228,24 @@
   <script src="{{ url_for('static', filename='js/doc_panel.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/record_detail.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/record_detail_rows.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/changes.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mlapp.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/aisystem.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/aisystem/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/aisystem/detail_tabs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/aisystem/detail_governance.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/aisystem/detail_governance_edit.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mlapp/detail_core.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mlapp/detail_tabs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mlapp/detail_training.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mlapp/detail_train_row.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mlapp/detail_policy.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/detail_core.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/product/detail_tabs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/detail_mrc.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/model_map.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/product/model_map_draw.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/detail_edit.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/product/detail_actions.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc.js', v=asset_version) }}"></script>
@@ -256,11 +265,14 @@
   <script src="{{ url_for('static', filename='js/mrc/detail_signoff.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/detail_scope.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/detail_models.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/mrc/detail_models_bind.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/detail_analysis.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/audit.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/audit_reports.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/gov_docs.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/gov_docs_edit.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/gov_artefacts.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/gov_artefacts_tiles.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/gov_vendor_docs.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/settings.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/mrc/committee_list.js', v=asset_version) }}"></script>
@@ -273,6 +285,7 @@
   <script src="{{ url_for('static', filename='js/functional_groups.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/admin_misc.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/reference.js', v=asset_version) }}"></script>
+  <script src="{{ url_for('static', filename='js/reference_institution.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/reference_lists.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/clients.js', v=asset_version) }}"></script>
   <script src="{{ url_for('static', filename='js/clients_detail.js', v=asset_version) }}"></script>
