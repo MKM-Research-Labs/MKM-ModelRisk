@@ -1,7 +1,8 @@
 # Design & plan: Lifecycle stages — a firm-wide catalogue, divisions choose from it
 
 **Status:** Proposed 2026-09-09, revised the same day after the user's decision on §9
-(the catalogue). **Step 1 built 2026-09-09** (§6); steps 2-5 not started. Written after
+(the catalogue). **Steps 1-3 built 2026-09-09** (§6); steps 4-5 not started. The
+backfill has NOT been run against the live estate — see §6a for what it found there. Written after
 the user observed that Lifecycle stage is hardcoded and so is not user-defined via
 Admin.
 **Area:** `config/governance/_inventory.py`, three registers' rules, two new ratified
@@ -246,21 +247,62 @@ Two departures from what this step originally proposed, both found in the writin
 being true when the risk fields began reading the division's ratified policy. Corrected
 in the same commit rather than left standing over code that reads the admin list.
 
-**Step 2 — `scope` on `RatifiedPolicy`, then the catalogue.**
-The parameter rename and `scope_noun` first, on its own, with the three existing
-policies' tests unchanged and green — a refactor nobody should have to read alongside a
-feature. Then `config/governance/_lifecycle_stages.py` and
-`src/governance/lifecycle_stage_catalogue/`, registered and tested, reading nothing yet.
+**Step 2 — `scope` on `RatifiedPolicy`, then the catalogue — BUILT 2026-09-09.**
+`RatifiedPolicy` keys on `scope`, and `scope_noun=None` marks a singleton: its refusals
+then read *"there is no proposed lifecycle stage catalogue awaiting sign-off"* rather
+than naming the fixed id it is stored under. The three existing policies pass
+`scope=division` and are otherwise untouched — their 81 tests were green without
+modification, which is the whole test of a behaviour-neutral rename.
 
-**Step 3 — backfill the catalogue, before anything reads it.**
-A new policy seeds a vacuum and never reaches an existing estate (the standing-agenda
-lesson). `scripts/backfill_lifecycle_catalogue.py` proposes **and** approves an initial
-catalogue built from *the current global reference list* — not from the shipped tuple —
-so an adopter who has already renamed "Production" to "Live", or added a stage, keeps it.
-Idempotent: skipped once a catalogue is approved. Run against scratch (5016) first; the
-live run is the user's to execute (P1 authorship, and R9).
-**No per-division backfill** — §4.2's default covers every division that has ratified
-nothing, which on day one is all of them.
+Then `config/governance/_lifecycle_stages.py` (the catalogue's shape, its default, and
+its keys) and `src/governance/lifecycle_stage_catalogue/` (store + commands), tested and
+reading nothing yet. Two checks look outside the catalogue, both at propose time: a
+stage records hold cannot be removed, and a stored **value** cannot be renamed — the
+second is not in functional groups, which mints ids nobody types, and is needed here
+because the value IS the key and a rename would orphan every record in the stage.
+
+**Step 3 — backfill the catalogue — BUILT 2026-09-09, NOT YET RUN.**
+`scripts/backfill_lifecycle_catalogue.py` builds the first catalogue from *the current
+global reference list* — not from the shipped tuple — so an adopter who has already
+renamed "Production" to "Live", or added a stage, keeps it. Dry run by default, `--apply`
+to write, and it prints the database it resolved to before doing either.
+
+It ratifies **without a meeting**, deliberately: what it carries over is the vocabulary
+already in force across the estate, and asking a committee to ratify the status quo
+before the feature works at all is ceremony. The event names the backfill as its author,
+so the trail says plainly that no sitting agreed it; what a committee ratifies is the
+first change *after* this.
+
+Quiet when there is nothing to do — an already-ratified catalogue, an outstanding draft
+(a committee mid-decision, which it must not settle underneath), an unseeded list, or a
+list that still matches the words the catalogue already defaults to. **No per-division
+backfill**: §4.2's default covers every division that has ratified nothing, which on day
+one is all of them.
+
+### 6a. What the dry run found on the live estate
+
+Run read-only against `mkm_modelrisk` on 2026-09-09 (nothing written):
+
+```
+   Demo               Development   Validation   Production   Retired
+ + Pre Development
+```
+
+Two facts nobody had written down, and both matter:
+
+- The estate has added a stage — **"Demo"** — which before step 1 was offered on every
+  dropdown and refused on save. Step 1 makes it saveable.
+- **"Pre Development" has been removed from the admin list, but records are still in
+  it.** So the backfill carries it back into the catalogue, because a catalogue that
+  omitted it could not be proposed at all — the domain refuses to drop a stage records
+  hold.
+
+That last point has a consequence worth deciding before the backfill is run for real:
+carrying the stage back in **re-offers it on every dropdown**, undoing what looks like a
+deliberate removal. Step 4 resolves it properly — the catalogue may hold a stage that no
+division's ratified subset offers, which is exactly the shape this needs — but until
+step 4 exists there is no such subset. Options: run the backfill after step 4; or move
+those records to another stage first; or accept the stage reappearing for the interval.
 
 **Step 4 — switch the readers.**
 `src/governance/lifecycle_stages/` (the per-division layer); three `_validate_field`s
@@ -306,20 +348,27 @@ add the stages to `docs/user_guide.md`.
   removed is refused (the two tests that would have caught this).~~ **Done in step 1**,
   with five more: the registration path, `validation_status`, the unseeded fallback, and
   one apiece for ML Applications and AI Systems.
+- ~~A draft drives nothing, at both layers~~ / ~~a proposal dropping a stage records
+  hold is refused, naming them~~ / ~~the singleton's refusal names no scope~~ —
+  **done in step 2** (16 tests), with the value-immutability rule and the
+  label-rename-moves-nothing case.
+- ~~The catalogue backfill is idempotent and preserves an adopter's renamed labels.~~
+  **Done in step 3** (9 tests), including the draft it must not walk over and the stage
+  the estate holds but the list has dropped.
+- ~~`RatifiedPolicy`'s three existing policies are unchanged by the `scope` rename.~~
+  **Done in step 2** — their 81 tests passed unmodified.
+
+Still to write, with step 4:
+
 - A division may not ratify a stage that is not in the catalogue.
 - A division that has ratified nothing offers the whole catalogue, and registers, edits
   and reports exactly as today (the default path — the migration-free guarantee).
 - A stage dropped from the catalogue leaves every division's list at once, including a
   division that had ratified a subset naming it.
-- A draft drives nothing, at both layers: propose, then assert the register still offers
-  the live list.
-- A proposal dropping a stage records hold is refused at propose time, naming them —
-  once against the whole estate, once scoped to a division.
 - A division move carrying a stage the target does not use is refused.
-- The catalogue backfill is idempotent and preserves an adopter's renamed labels.
-- `RatifiedPolicy`'s three existing policies are unchanged by the `scope` rename.
-- `python -m audit` reads `PASS: 0 gated finding(s)`, and `pytest` is green, on the
-  merged tree before the push.
+
+And on every step: `python -m audit` reads `PASS: 0 gated finding(s)`, and `pytest` is
+green, on the merged tree before the push.
 
 ## 9. Settled
 
