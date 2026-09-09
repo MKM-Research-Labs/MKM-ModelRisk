@@ -96,3 +96,39 @@ def reject_unknown_values(specs: dict[str, Any], collection: str,
             raise DomainError(
                 f"{field['label']} must be one of: "
                 f"{', '.join(str(a) for a in allowed)}")
+
+
+def live_choice_values(spec: dict[str, Any], config=None) -> tuple:
+    """What a choice field may actually hold, as its admin list stands today.
+
+    The scalar sibling of ``reject_unknown_values``, and the mirror of the console's
+    ``resolve_field``: a field whose ``reference`` names a list with entries takes its
+    allowed values from that list, and keeps the options it shipped with only while the
+    list is empty. Both sides now decide by ONE rule.
+
+    They decided by two until 2026-09-09, and the two disagreed. ``resolve_field``
+    promoted a field's options to the admin list's values, so the dropdown offered
+    whatever an institution had curated; validation read ``FIELD_CHOICES``, derived from
+    the tuple the platform shipped. A lifecycle stage an adopter added was therefore
+    offered on every screen and refused on save -- the failure the comment above
+    ``VALID_LIFECYCLE_STAGES`` predicted and nothing closed.
+
+    A status vocabulary stores its ``value`` and shows its ``label``, so values are read
+    under ``value_key`` where the spec names one; every other list stores what it shows.
+
+    An empty list falls back to the shipped options rather than to "anything goes". That
+    is what ``resolve_field`` does on the console, and it keeps the vocabulary closed on
+    a database whose lists have never been seeded -- which is exactly how an estate
+    acquires "Production", "production" and "Prod".
+    """
+    from src.governance.reference._store import get_reference_lists
+
+    options = tuple(spec.get("options") or ())
+    reference = spec.get("reference")
+    if not reference:
+        return options
+    ref_spec = REFERENCE_SPECS.get(reference) or {}
+    key = ref_spec.get("value_key") or ref_spec.get("display", "value")
+    values = tuple(item[key] for item in get_reference_lists(config).get(reference, ())
+                   if item.get(key))
+    return values or options

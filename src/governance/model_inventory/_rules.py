@@ -17,11 +17,16 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Pure decision logic for the model-inventory aggregate.
+"""Decision logic for the model-inventory aggregate.
 
 Each ``decide_*`` function validates a command against the current state and
 returns the ``(event_type, payload)`` to append, or raises ``DomainError``.
-No I/O happens here, so the rules are trivially unit-testable.
+
+Nothing is WRITTEN here, so a rule can be exercised on a state object alone. Reads
+are another matter: a vocabulary an institution owns cannot be checked without
+looking it up, so the risk fields ask the division's ratified policy, a functional
+group asks its ratified list, and a reference-backed choice asks the admin list.
+This docstring claimed no I/O at all long after the first of those arrived.
 """
 from __future__ import annotations
 
@@ -33,11 +38,13 @@ from config.governance import (
     EDITABLE_FIELDS,
     FIELD_CHOICES,
     FUNCTIONAL_GROUP_FIELD,
+    MODEL_FIELD_SPECS,
     SIGNOFF_COLLECTIONS,
 )
 from src.governance import collections as coll
 from src.governance.errors import DomainError
 from src.governance.independence import validate_independence
+from src.governance.reference import live_choice_values
 from src.governance.model_inventory._state import (
     EVENT_FIELD_UPDATED,
     EVENT_REACTIVATED,
@@ -81,9 +88,12 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
     elif field == FUNCTIONAL_GROUP_FIELD:
         reject_unknown_functional_group(value, division)
     elif field in FIELD_CHOICES:
-        if value not in FIELD_CHOICES[field]:
-            allowed = ", ".join(FIELD_CHOICES[field])
-            raise DomainError(f"{field} must be one of: {allowed}")
+        # The vocabulary as the admin list stands, not as it shipped: a field backed by
+        # a reference is offered from that list on every screen, so it has to be
+        # accepted from it here (see ``live_choice_values``).
+        allowed = live_choice_values(MODEL_FIELD_SPECS[field])
+        if value not in allowed:
+            raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
 
 
 def decide_register(

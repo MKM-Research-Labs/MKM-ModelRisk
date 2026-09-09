@@ -30,8 +30,10 @@ institution calls that stage now.
 from __future__ import annotations
 
 from config.governance import (LIFECYCLE_STAGE_LIST, STATUS_VOCABULARIES,
-                               VALID_LIFECYCLE_STAGES, VQ_STATUS_LIST)
-from src.governance.reference import (ensure_default_status_vocabularies,
+                               VALID_LIFECYCLE_STAGES, VALIDATION_STATUS_LIST,
+                               VQ_STATUS_LIST)
+from src.governance.reference import (ensure_default_estimators,
+                                      ensure_default_status_vocabularies,
                                       get_reference_lists)
 from tests.web.conftest import HEADERS
 
@@ -127,3 +129,126 @@ def test_a_renamed_review_answer_still_counts_as_addressed(client):
     row = next(r for r in scan("2026-08-10") if r["entity_id"] == "M9")
     unanswered = [g for g in row["gaps"] if g["key"] == "validation_questions"]
     assert not unanswered, "the audit reads the stored value, not the label"
+
+
+# --- The console's promise and the domain's answer ---------------------------------
+#
+# Until 2026-09-09 these were decided by two different rules that disagreed: the
+# dropdown came from the admin list (``resolve_field``) and validation came from the
+# tuple the platform shipped (``FIELD_CHOICES``). A stage an institution added was
+# therefore offered on every screen and refused on save. ``live_choice_values`` is the
+# one rule both sides now use; these are the tests that would have caught the drift.
+
+_ADDED = {"value": "Decommissioning", "label": "Winding down"}
+
+
+def _add_stage(client, fields=None):
+    return client.post(f"/api/reference/collections/{LIFECYCLE_STAGE_LIST}",
+                       json={"fields": fields or _ADDED, "confirmed": True},
+                       headers=HEADERS)
+
+
+def test_a_stage_the_institution_adds_can_be_saved(client):
+    """The other half of ``test_a_stage_the_institution_adds_is_offered``, which
+    asserted only that the dropdown offered it."""
+    ensure_default_status_vocabularies()
+    _add_stage(client)
+    client.post("/api/models", json={"model_id": "M1", "name": "Alpha", "confirmed": True},
+                headers=HEADERS)
+    saved = client.post("/api/models/M1/field",
+                        json={"field": "lifecycle_stage", "value": "Decommissioning",
+                              "confirmed": True}, headers=HEADERS)
+    assert saved.status_code == 200, saved.get_json()
+    assert client.get("/api/models/M1").get_json()["data"]["lifecycle_stage"] \
+        == "Decommissioning"
+
+
+def test_a_stage_the_institution_removed_is_refused(client):
+    """The drift ran both ways: a stage taken off the list stayed acceptable to the
+    domain, so the curated list was advisory in both directions."""
+    ensure_default_status_vocabularies()
+    retired_stage = next(s for s in _stages(client) if s["value"] == "Retired")
+    client.post(f"/api/reference/collections/{LIFECYCLE_STAGE_LIST}/"
+                f"{retired_stage['item_id']}/delete",
+                json={"confirmed": True}, headers=HEADERS)
+    client.post("/api/models", json={"model_id": "M2", "name": "Beta", "confirmed": True},
+                headers=HEADERS)
+    refused = client.post("/api/models/M2/field",
+                          json={"field": "lifecycle_stage", "value": "Retired",
+                                "confirmed": True}, headers=HEADERS)
+    assert refused.status_code == 400
+    assert "Retired" not in refused.get_json()["error"]
+
+
+def test_registration_accepts_an_added_stage_too(client):
+    """Registration validates the same fields by the same rule, so it drifted too."""
+    ensure_default_status_vocabularies()
+    _add_stage(client)
+    created = client.post(
+        "/api/models",
+        json={"model_id": "M3", "name": "Gamma", "confirmed": True,
+              "fields": {"lifecycle_stage": "Decommissioning"}}, headers=HEADERS)
+    assert created.status_code == 201, created.get_json()
+
+
+def test_the_other_status_vocabulary_moved_with_it(client):
+    """``validation_status`` is the same shape as the lifecycle field and carried the
+    same defect. It is fixed by the same rule rather than by a second copy of it."""
+    ensure_default_status_vocabularies()
+    client.post(f"/api/reference/collections/{VALIDATION_STATUS_LIST}",
+                json={"fields": {"value": "Under Appeal", "label": "Under appeal"},
+                      "confirmed": True}, headers=HEADERS)
+    client.post("/api/models", json={"model_id": "M4", "name": "Delta", "confirmed": True},
+                headers=HEADERS)
+    saved = client.post("/api/models/M4/field",
+                        json={"field": "validation_status", "value": "Under Appeal",
+                              "confirmed": True}, headers=HEADERS)
+    assert saved.status_code == 200, saved.get_json()
+
+
+def test_an_unseeded_database_still_enforces_the_shipped_words(client):
+    """The fallback matters: an empty list means the words the platform shipped, not
+    'anything goes'. That is what keeps the vocabulary closed on a fresh install."""
+    assert not get_reference_lists()[LIFECYCLE_STAGE_LIST]
+    client.post("/api/models", json={"model_id": "M5", "name": "Epsilon",
+                                     "confirmed": True}, headers=HEADERS)
+    refused = client.post("/api/models/M5/field",
+                          json={"field": "lifecycle_stage", "value": "Decommissioning",
+                                "confirmed": True}, headers=HEADERS)
+    assert refused.status_code == 400
+    assert "Production" in refused.get_json()["error"]
+
+
+def test_an_ml_application_takes_the_added_stage(client):
+    """All three registers carried their own copy of the defect, so all three are
+    covered: the fix is one rule they share, not three that agree today."""
+    ensure_default_status_vocabularies()
+    ensure_default_estimators()
+    _add_stage(client)
+    client.post("/api/ml-applications",
+                json={"ml_application_id": "MLA-0001", "confirmed": True,
+                      "fields": {"name": "Retail PD scorecard", "division": "Risk",
+                                 "owner": "David K Kelly",
+                                 "estimator": "GradientBoostingClassifier",
+                                 "use_case": "Ranks retail applicants."}},
+                headers=HEADERS)
+    saved = client.post("/api/ml-applications/MLA-0001/field",
+                        json={"field": "lifecycle_stage", "value": "Decommissioning",
+                              "confirmed": True}, headers=HEADERS)
+    assert saved.status_code == 200, saved.get_json()
+
+
+def test_an_ai_system_takes_the_added_stage(client):
+    ensure_default_status_vocabularies()
+    _add_stage(client)
+    client.post("/api/ai-systems",
+                json={"ai_system_id": "AIS-0001", "confirmed": True,
+                      "fields": {"name": "Client mail summariser", "division": "Risk",
+                                 "owner": "David K Kelly",
+                                 "use_case": "Summarises client correspondence.",
+                                 "deployment_pattern": "Agentic (tool-using)"}},
+                headers=HEADERS)
+    saved = client.post("/api/ai-systems/AIS-0001/field",
+                        json={"field": "lifecycle_stage", "value": "Decommissioning",
+                              "confirmed": True}, headers=HEADERS)
+    assert saved.status_code == 200, saved.get_json()

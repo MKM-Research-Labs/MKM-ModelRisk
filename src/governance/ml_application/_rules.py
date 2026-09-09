@@ -39,6 +39,7 @@ from config.governance import (FUNCTIONAL_GROUP_FIELD,
 from src.governance import collections as coll
 from src.governance.errors import DomainError
 from src.governance.independence import validate_independence
+from src.governance.reference import live_choice_values
 from src.governance.ml_application._state import (EVENT_FIELD_EDITED, EVENT_REACTIVATED,
                                                   EVENT_REGISTERED, EVENT_RETIRED,
                                                   MLApplicationState)
@@ -61,9 +62,11 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
             raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
     elif field == FUNCTIONAL_GROUP_FIELD:
         reject_unknown_functional_group(value, division)
-    elif field in ML_APPLICATION_FIELD_CHOICES and value not in ML_APPLICATION_FIELD_CHOICES[field]:
-        allowed = ", ".join(ML_APPLICATION_FIELD_CHOICES[field])
-        raise DomainError(f"{field} must be one of: {allowed}")
+    elif field in ML_APPLICATION_FIELD_CHOICES:
+        # From the admin list where one backs the field, not from the shipped tuple.
+        allowed = live_choice_values(ML_APPLICATION_FIELD_SPECS[field])
+        if value not in allowed:
+            raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
 
 
 def _require_editable(state: MLApplicationState) -> None:

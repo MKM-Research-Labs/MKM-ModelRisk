@@ -46,6 +46,7 @@ from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REACTIVAT
                                              AISystemState)
 from src.governance.errors import DomainError
 from src.governance.independence import validate_independence
+from src.governance.reference import live_choice_values
 from src.governance.functional_groups import (reject_division_move_while_grouped,
                                               reject_unknown_functional_group)
 from src.governance.risk_policy import get_risk_policy
@@ -65,9 +66,11 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
             raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
     elif field == FUNCTIONAL_GROUP_FIELD:
         reject_unknown_functional_group(value, division)
-    elif field in AI_SYSTEM_FIELD_CHOICES and value not in AI_SYSTEM_FIELD_CHOICES[field]:
-        allowed = ", ".join(AI_SYSTEM_FIELD_CHOICES[field])
-        raise DomainError(f"{field} must be one of: {allowed}")
+    elif field in AI_SYSTEM_FIELD_CHOICES:
+        # From the admin list where one backs the field, not from the shipped tuple.
+        allowed = live_choice_values(AI_SYSTEM_FIELD_SPECS[field])
+        if value not in allowed:
+            raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
 
 
 def _require_editable(state: AISystemState) -> None:
