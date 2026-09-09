@@ -1,0 +1,52 @@
+/* Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE. */
+/* The record detail screen: the tab strip down a record, the widgets on its tabs,
+   and the Danger Zone at the end of them.
+
+   Split from app.css, which dresses the application around a record — the top bar,
+   the register tables, the modals. Everything here appears only once a record is
+   open, and it is the one part of the console a reviewer spends the day inside.
+
+   The heatmap belongs with them rather than with the tables: it is a picture of two
+   scales crossing, not a table of values, which is why it sizes to its content and
+   its cells are fixed squares. Loads after app.css. */
+
+/* Model-detail tabs + widgets */
+.dtabs { display: flex; flex-wrap: wrap; gap: var(--space-1); border-bottom: 1px solid var(--line); margin: var(--space-7) 0 var(--space-8); }
+.dtab { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: var(--space-4) var(--space-6); cursor: pointer; font: inherit; font-size: var(--size-sm); }
+.dtab:hover { color: var(--text); }
+.dtab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+.dh-dates { display: flex; flex-wrap: wrap; gap: var(--space-9); margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--rule); }
+.datechip { font-size: var(--size-xs); }
+.progress { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin: var(--space-2) 0 var(--space-6); }
+.progress .bar { height: 100%; border-radius: 4px; }
+.riskbanner { border: 2px solid; border-radius: var(--radius-xl); padding: var(--space-9); margin: var(--space-4) 0 var(--space-8); }
+.vbanner { background: var(--accent-soft); border-left: 3px solid var(--accent); border-radius: var(--radius-md); padding: var(--space-5) var(--space-7); margin-bottom: var(--space-6); }
+.vitem { border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-5) var(--space-7); margin-bottom: var(--space-5); font-size: var(--size-sm); }
+.rowact { white-space: nowrap; }
+.rowact .edit-btn + .edit-btn { margin-left: var(--space-5); }
+.rowact .btn + .btn { margin-left: var(--space-4); }
+td.num, th.num { text-align: center; }
+
+/* GitHub-style "Danger Zone" — red-bordered card holding destructive actions. */
+.dtab-danger { color: var(--red); }
+.dtab-danger.active { color: var(--red); border-bottom-color: var(--red); }
+.dtab-danger:hover { color: var(--red); }
+.danger-zone { border: 1px solid var(--red); border-radius: var(--radius-lg); overflow: hidden; }
+.danger-zone .dz-header { background: var(--red); color: var(--inverse); padding: var(--space-4) var(--space-8); font-weight: 700; font-size: var(--size-sm); text-transform: uppercase; letter-spacing: 0.5px; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.danger-zone .dz-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); padding: var(--space-7) var(--space-8); }
+.danger-zone .dz-row + .dz-row { border-top: 1px solid var(--danger-line-soft); }
+.danger-zone .dz-text b { display: block; margin-bottom: var(--space-2); }
+.danger-zone .dz-text p { margin: 0; font-size: var(--size-sm); }
+.danger-zone .dz-action { flex-shrink: 0; }
+
+/* W4a — Risk Rating heatmap grid. Shrink the whole table to its content — the
+   row-label column was stretching to fill the card, leaving a huge empty
+   band on the left. */
+.heatmap-wrap { display: inline-flex; align-items: stretch; gap: var(--space-3); margin: var(--space-3) 0; }
+.hm-y-axis { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 700; font-size: var(--size-xs); text-transform: uppercase; letter-spacing: 1px; color: var(--muted); text-align: center; padding: 20px 0; }
+.hm-x-axis { font-weight: 700; font-size: var(--size-xs); text-transform: uppercase; letter-spacing: 1px; color: var(--muted); text-align: center; padding: 0 0 var(--space-2) 70px; }
+.heatmap { border-collapse: separate; border-spacing: 4px; width: auto; }
+.heatmap th { text-align: center; color: var(--muted); font-size: var(--size-xs); text-transform: uppercase; letter-spacing: 0.4px; padding: var(--space-2) var(--space-3); font-weight: 700; }
+.heatmap tbody th { text-align: right; width: 70px; white-space: nowrap; }
+.heatmap thead th:first-child { width: 70px; }
+.heatmap td.hcell { width: 90px; height: 60px; text-align: center; vertical-align: middle; border-radius: var(--radius-md); font-size: var(--size-sm); font-weight: 600; }
