@@ -21,8 +21,8 @@
 // One filed document: the actions on its row, the editor that amends what it says, and
 // the upload that adds another.
 //
-// Split from gov_docs.js, which is the tab around them — the two panels, the model-type
-// filter, and the table the rows sit in.
+// Split from gov_docs.js, which is the tab around them — the three panels, the
+// model-type filter, and the Bibliography table the rows sit in.
 //
 // The editor takes the model types and the free-text description together, in one pass,
 // because they answer different questions and a document needs both: the types are what

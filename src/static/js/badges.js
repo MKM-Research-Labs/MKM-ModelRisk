@@ -30,7 +30,8 @@
 // spec is asked first for that reason — a status renamed in Admin must not display by
 // its stored value.
 //
-// Colours come from Theme and Policy in helpers.js, which loads first.
+// Colours come from Theme in helpers.js and Policy in policy_registry.js, both of
+// which load first.
 
 // Display a scalar value, or an em dash when empty.
 // What a stored value is shown as. A status vocabulary separates the two — the

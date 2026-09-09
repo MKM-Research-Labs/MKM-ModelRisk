@@ -18,6 +18,23 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// The Models tab: the register of every model, and the form that adds one to it.
+//
+// This file is the tab's own business — fetching the field specs, drawing the list,
+// and registering a model. The list itself is inventory/list.js and its filters and
+// group headings are the files beside that; a single open model is the Detail package
+// under inventory/.
+//
+// Registering is the only write here, and it asks for the least it can: an id, a name,
+// a type and an owner. Division and Line of Business are not offered, because they are
+// fixed by the region selected in the navigator above — a model registered from a
+// screen scoped to a division belongs to that division, and asking again invites the
+// two to disagree. Everything else is set on the record afterwards, where the audit
+// can see it move.
+//
+// inputControl used to live here, which made a console-wide helper look like a models
+// concern; it is input_control.js now.
+
 const Inventory = {
   _specs: null,
   _ref: {},                       // reference data (mrc / division / line_of_business)

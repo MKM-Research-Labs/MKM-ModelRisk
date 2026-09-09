@@ -18,8 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Custom (non-generic) tab renderers for the model detail: Validation, Risk
-// Rating, Versions timeline and the per-model Audit trail.
+// Custom (non-generic) tab renderers for the model detail: the sign-off history behind
+// a rating, the Versions timeline, the per-model Audit trail, and the linked-items list
+// the MRC views are built from.
+//
+// The Risk Rating tab's own renderers — the heatmap and its axes — are the larger half
+// and live in inventory_tabs_risk.js, which assigns onto the same DetailTabs.
 const DetailTabs = {
 
   // W4c — chronological table of approved sign-offs on this model. Rendered

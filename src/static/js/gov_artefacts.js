@@ -21,8 +21,9 @@
 // Artefacts panel of the Documents tab: what the institution ISSUES, filed per
 // division, plus a company-wide shelf and the FINOS shelf.
 //
-// Extracted from gov_docs.js when the FINOS shelf arrived. That file was already
-// past the 300-line mark rule R2 reports web files at, and the panel is a
+// Extracted from gov_docs.js when the FINOS shelf arrived. That file was already past
+// the 300-line mark rule R2 held web files to — reported then, gated since
+// 2026-09-05 — and the panel is a
 // self-contained screen with its own state — the same split gov_vendor_docs.js
 // already makes, and the same load()/shell()/bind() interface.
 //
