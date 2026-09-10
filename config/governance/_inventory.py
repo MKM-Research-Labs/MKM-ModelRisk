@@ -38,20 +38,13 @@ VALID_VALIDATION_STATUSES = (
 )
 VALID_MATERIALITY = ("Low", "Medium", "High")
 VALID_COMPLEXITY = ("Low", "Medium", "High")
-# The admin vocabulary behind the lifecycle field. Named here, beside the field
-# that uses it, because the reference specs import from this module and not the
-# other way round.
-LIFECYCLE_STAGE_LIST = "lifecycle_stage"
 VALIDATION_STATUS_LIST = "validation_status"
-# "Pre Development" is where a model sits once it is proposed but not yet started --
-# a submitted bid, an approved business case awaiting kickoff. It is first because the
-# tuple is read in order and the order is what every dropdown offers.
-#
-# Note this tuple is the VALIDATION list as well as the seed for the admin reference
-# list. Adding a stage to the reference list alone changes what the dropdown shows but
-# not what the command will accept, and the write is then refused by _validate_field.
-VALID_LIFECYCLE_STAGES = ("Pre Development", "Development", "Validation",
-                          "Production", "Retired")
+# The lifecycle stages moved to ``_lifecycle_stages`` on 2026-09-09, when they stopped
+# being a tuple this module owned and became a catalogue a committee ratifies. Both
+# names are re-exported here so every existing import goes on working, and so that the
+# field spec below still reads against the vocabulary it offers.
+from config.governance._lifecycle_stages import (  # noqa: E402,F401 (re-export)
+    LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_STAGES)
 VALID_REVIEW_FREQUENCIES = ("Monthly", "Quarterly", "Semi-annual", "Annual")
 TIER_MIN = 1
 TIER_MAX = 3
@@ -149,10 +142,24 @@ MODEL_FIELD_SPECS = {
         "label": "Peer reviewer", "type": "text", "group": "Governance", "reference": "people",
     },
     "status": {"label": "Status", "type": "text", "group": "Governance"},
+    # The stages come from the institution's CATALOGUE, narrowed to the ones this
+    # record's division has ratified -- so the options vary by record and cannot be
+    # settled by a spec. The console resolves them per division from the
+    # ``/api/lifecycle-stages`` registry, exactly as it already does for ``rag_rating``
+    # off the division's risk policy.
+    #
+    # ``options`` is kept, and is the catalogue's own default: it is what a screen shows
+    # before the registry has loaded, and what a caller reading ``/fields`` alone gets.
+    # Emptying it the way ``functional_group`` does would leave a dropdown that looks
+    # broken for the seconds before the fetch returns -- and this field, unlike a group,
+    # is one every record is expected to carry.
+    #
+    # No ``reference``: the admin ``lifecycle_stage`` list no longer drives this. It is
+    # retained only as the source the catalogue backfill reads (see
+    # scripts/backfill_lifecycle_catalogue.py) and goes once that has been run.
     "lifecycle_stage": {
         "label": "Lifecycle stage", "type": "choice",
         "options": VALID_LIFECYCLE_STAGES, "group": "Governance",
-        "reference": LIFECYCLE_STAGE_LIST,
     },
     "version": {"label": "Version", "type": "text", "group": "Governance"},
     "validation_status": {

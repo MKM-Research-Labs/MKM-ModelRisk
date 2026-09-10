@@ -39,7 +39,8 @@ from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
                                           AI_SYSTEM_FIELD_CHOICES,
                                           AI_SYSTEM_FIELD_SPECS,
                                           AI_SYSTEM_REGISTER_FIELDS)
-from config.governance import FUNCTIONAL_GROUP_FIELD, SIGNOFF_COLLECTIONS
+from config.governance import (FUNCTIONAL_GROUP_FIELD, LIFECYCLE_STAGE_FIELD,
+                               SIGNOFF_COLLECTIONS)
 from src.governance import collections as coll
 from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REACTIVATED,
                                              EVENT_REGISTERED, EVENT_RETIRED,
@@ -49,6 +50,8 @@ from src.governance.independence import validate_independence
 from src.governance.reference import live_choice_values
 from src.governance.functional_groups import (reject_division_move_while_grouped,
                                               reject_unknown_functional_group)
+from src.governance.lifecycle_stages import (reject_division_move_out_of_stage,
+                                             reject_unknown_lifecycle_stage)
 from src.governance.risk_policy import get_risk_policy
 
 # Risk fields whose allowed values come from the record's DIVISION policy.
@@ -66,6 +69,10 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
             raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
     elif field == FUNCTIONAL_GROUP_FIELD:
         reject_unknown_functional_group(value, division)
+    elif field == LIFECYCLE_STAGE_FIELD:
+        # Before the choice branch: what the field may hold is the division's ratified
+        # list, not the tuple beside the spec (see the model inventory's rules).
+        reject_unknown_lifecycle_stage(value, division)
     elif field in AI_SYSTEM_FIELD_CHOICES:
         # From the admin list where one backs the field, not from the shipped tuple.
         allowed = live_choice_values(AI_SYSTEM_FIELD_SPECS[field])
@@ -121,6 +128,7 @@ def decide_edit_field(
     division = value if field == "division" else state.fields.get("division")
     if field == "division":
         reject_division_move_while_grouped(state.fields, value)
+        reject_division_move_out_of_stage(state.fields, value)
     _validate_field(field, value, division)
     validate_independence(field, value, state.fields, "AI System")
     return EVENT_FIELD_EDITED, {"field": field, "value": value}

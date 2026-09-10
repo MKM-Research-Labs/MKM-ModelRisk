@@ -215,7 +215,13 @@ def test_a_hibernated_model_accepts_signoff_items_but_nothing_else():
 
 
 def test_a_vocabulary_the_platform_owns_is_checked_against_its_own_options():
-    """The risk bands come from the division's ratified policy; the workflow
-    vocabularies do not, and are checked here against what the platform ships."""
-    with pytest.raises(DomainError, match="lifecycle_stage must be one of"):
-        decide_update_field(_registered(), field="lifecycle_stage", value="Nonsense")
+    """The risk bands come from the division's ratified policy and the lifecycle
+    stages from its ratified list; the review cadence comes from neither, and is
+    checked here against what the platform ships.
+
+    It was ``lifecycle_stage`` that stood here, until 2026-09-09 made that field one
+    of the institution's own -- which is exactly why the example had to move rather
+    than have its expected message updated.
+    """
+    with pytest.raises(DomainError, match="review_frequency must be one of"):
+        decide_update_field(_registered(), field="review_frequency", value="Fortnightly")

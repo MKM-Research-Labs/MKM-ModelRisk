@@ -55,6 +55,31 @@ LIFECYCLE_CATALOGUE_AGGREGATE = "LifecycleStageCatalogue"
 LIFECYCLE_CATALOGUE_NOUN = "lifecycle stage catalogue"
 LIFECYCLE_CATALOGUE_SCOPE = "global"
 
+# The field every register carries, named here so no module spells it as a literal.
+LIFECYCLE_STAGE_FIELD = "lifecycle_stage"
+
+# --- The second layer: which of the catalogue a division actually uses -------------
+#
+# Per division, ratified by that division's own MRC. It holds an ordered list of
+# catalogue VALUES -- not a second copy of the words, which would be two places to
+# rename a stage and one of them would go stale.
+#
+# The default is EMPTY, and empty means "the whole catalogue, in catalogue order". That
+# is what makes this free of migration in its turn: a division that has ratified nothing
+# offers every stage, which is exactly how the estate behaves today, so the layer can
+# ship before a single committee has met. An empty list is refused at propose time for
+# the same reason -- ratifying "no stages" would be indistinguishable from having
+# ratified nothing, and it would leave a division unable to file anything.
+DIVISION_STAGES_AGGREGATE = "DivisionLifecycleStages"
+DIVISION_STAGES_NOUN = "division lifecycle stage list"
+
+
+def default_division_stages() -> list[str]:
+    """What a division that has ratified nothing has chosen: nothing, which is read
+    as the whole catalogue (see ``lifecycle_stages.stages_for``)."""
+    return []
+
+
 # The keys a catalogue entry may carry. Closed, because the catalogue is a small
 # document a committee ratifies: a mistyped key that silently dropped its value would
 # be approved without anybody having seen what was lost.
@@ -83,6 +108,19 @@ DEFAULT_LIFECYCLE_STAGES = (
 )
 
 
+# The stages as a bare tuple, derived rather than written a second time. This is the
+# vocabulary the whole platform used to be built on, and it lived in ``_inventory``
+# beside the field it served -- which stopped making sense once the stages became a
+# ratified policy of their own and that module was two subjects rather than one.
+# Re-exported from ``_inventory`` so every existing import goes on working.
+VALID_LIFECYCLE_STAGES = tuple(value for value, _description in DEFAULT_LIFECYCLE_STAGES)
+
+# The admin list the stages used to be held in. Superseded by the catalogue and kept
+# only until the backfill has carried an institution's curated words across; named here
+# now rather than in ``_inventory``, beside everything else about the stages.
+LIFECYCLE_STAGE_LIST = "lifecycle_stage"
+
+
 def default_lifecycle_stages() -> list[dict]:
     """The catalogue an institution that has ratified nothing runs on.
 
@@ -100,9 +138,15 @@ def default_lifecycle_stages() -> list[dict]:
 
 __all__ = [
     "DEFAULT_LIFECYCLE_STAGES",
+    "LIFECYCLE_STAGE_LIST",
+    "VALID_LIFECYCLE_STAGES",
+    "DIVISION_STAGES_AGGREGATE",
+    "DIVISION_STAGES_NOUN",
+    "LIFECYCLE_STAGE_FIELD",
     "LIFECYCLE_CATALOGUE_AGGREGATE",
     "LIFECYCLE_CATALOGUE_NOUN",
     "LIFECYCLE_CATALOGUE_SCOPE",
     "LIFECYCLE_STAGE_KEYS",
+    "default_division_stages",
     "default_lifecycle_stages",
 ]

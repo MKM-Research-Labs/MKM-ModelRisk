@@ -83,8 +83,13 @@ STANDING_AGENDA_LIST = "standing_agenda"
 # a ``label`` (what a screen shows). Seeding the value to today's word is what makes
 # these free of migration: nothing in the estate moves when a label is renamed.
 STATUS_VOCABULARIES = {
+    # Superseded 2026-09-09 by the ratified catalogue (config/_lifecycle_stages) and
+    # each division's choice from it. Editing this list no longer changes any screen;
+    # it is kept because the catalogue backfill reads it, and goes once that has run.
     LIFECYCLE_STAGE_LIST: ("Lifecycle stages", "LC", VALID_LIFECYCLE_STAGES,
-                           "The stages a model moves through."),
+                           "Superseded by Admin > Lifecycle stages, which the MRC "
+                           "ratifies. Kept only until the estate has been carried "
+                           "across; editing it changes nothing."),
     VALIDATION_STATUS_LIST: ("Validation statuses", "VS", VALID_VALIDATION_STATUSES,
                              "How far a model has got through validation."),
     IMPACT_LIST: ("Impact levels", "IM", VALID_IMPACT,

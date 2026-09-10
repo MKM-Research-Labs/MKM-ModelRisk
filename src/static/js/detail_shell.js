@@ -81,6 +81,12 @@ const DetailShell = {
     if (key === "functional_group" && d[key]) {
       return esc(Groups.nameFor(d[key], d.division));
     }
+    // The label the institution ratified for the stored value. A stage the division no
+    // longer uses falls back to the value itself, so a record left behind by a re-cut
+    // reads as needing attention rather than as never having been set.
+    if (key === "lifecycle_stage" && d[key]) {
+      return esc(Stages.labelFor(d[key], d.division));
+    }
     if (key === "mrc_signoff_date" && d.mrc_signoff_meeting) {
       return '<span class="code">' + esc(d.mrc_signoff_meeting) + "</span>";
     }

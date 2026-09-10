@@ -48,6 +48,11 @@ const Reference = {
     // against Model Type above, which is what it IS. MRC-ratified like the two
     // policies, so it sits with them rather than among the flat lists.
     ["functional_groups", "Functional Groups"],
+    // The stages a record moves through: the institution's catalogue, and each
+    // division's choice from it. MRC-ratified at both layers, so it sits with the
+    // policies rather than among the flat lists — which is where it used to be, as an
+    // admin list that edited a label and nothing else.
+    ["lifecycle_stages", "Lifecycle Stages"],
     // The questionnaire every review works through. Its own tab rather than a row
     // among the reference lists: it is the institution's own standard, and the
     // review workflow is built around it.
@@ -117,6 +122,11 @@ const Reference = {
     // an admin-managed one, so it does not come from /api/reference at all.
     if (this._tab === "functional_groups") {
       await FunctionalGroupsEditor.render(container);
+      return;
+    }
+    // Likewise the lifecycle stages: two ratified layers rather than an admin list.
+    if (this._tab === "lifecycle_stages") {
+      await LifecycleStagesEditor.render(container);
       return;
     }
     // Likewise the ML review policy: per-division, MRC-ratified, and about the other

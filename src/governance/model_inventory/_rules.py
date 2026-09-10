@@ -38,6 +38,7 @@ from config.governance import (
     EDITABLE_FIELDS,
     FIELD_CHOICES,
     FUNCTIONAL_GROUP_FIELD,
+    LIFECYCLE_STAGE_FIELD,
     MODEL_FIELD_SPECS,
     SIGNOFF_COLLECTIONS,
 )
@@ -54,6 +55,8 @@ from src.governance.model_inventory._state import (
 )
 from src.governance.functional_groups import (reject_division_move_while_grouped,
                                               reject_unknown_functional_group)
+from src.governance.lifecycle_stages import (reject_division_move_out_of_stage,
+                                             reject_unknown_lifecycle_stage)
 from src.governance.risk_policy import get_risk_policy
 
 # Risk fields whose allowed values come from the DIVISION's live policy, not a global
@@ -87,6 +90,12 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
             raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
     elif field == FUNCTIONAL_GROUP_FIELD:
         reject_unknown_functional_group(value, division)
+    elif field == LIFECYCLE_STAGE_FIELD:
+        # Checked BEFORE the choice branch, as the functional group is: the field is
+        # still a ``choice`` in the specs (its static options are the fallback the
+        # console shows before the registry loads), but what it may actually hold is
+        # the division's ratified list, not the tuple beside the spec.
+        reject_unknown_lifecycle_stage(value, division)
     elif field in FIELD_CHOICES:
         # The vocabulary as the admin list stands, not as it shipped: a field backed by
         # a reference is offered from that list on every screen, so it has to be
@@ -130,6 +139,7 @@ def decide_update_field(
     division = value if field == "division" else state.fields.get("division")
     if field == "division":
         reject_division_move_while_grouped(state.fields, value)
+        reject_division_move_out_of_stage(state.fields, value)
     _validate_field(field, value, division)
     validate_independence(field, value, state.fields, "model")
     # Capture the prior value so the audit trail can show old -> new. Older

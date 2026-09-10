@@ -38,15 +38,11 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Any
 
-from config.governance import LIFECYCLE_CATALOGUE_SCOPE, LIFECYCLE_STAGE_KEYS
+from config.governance import (LIFECYCLE_CATALOGUE_SCOPE, LIFECYCLE_STAGE_FIELD,
+                               LIFECYCLE_STAGE_KEYS)
 from src.database import Event
 from src.governance.errors import DomainError
 from src.governance.lifecycle_stage_catalogue._store import POLICY, get_catalogue
-
-# The field every register carries. Named once here so no module in this package
-# spells it as a literal.
-LIFECYCLE_STAGE_FIELD = "lifecycle_stage"
-
 
 def _validate_catalogue(policy: Any) -> None:
     """A catalogue is an ordered array of ``{value, label, description}`` and nothing else.

@@ -1,8 +1,9 @@
 # Design & plan: Lifecycle stages — a firm-wide catalogue, divisions choose from it
 
 **Status:** Proposed 2026-09-09, revised the same day after the user's decision on §9
-(the catalogue). **Steps 1-3 built 2026-09-09** (§6); steps 4-5 not started. The
-backfill has NOT been run against the live estate — see §6a for what it found there. Written after
+(the catalogue). **Steps 1-5 built 2026-09-09** (§6). Two things remain and both are the
+user's call: the live backfill (§6a), and the **Company-level MRC the catalogue needs and
+this estate does not have** (§6b). Written after
 the user observed that Lifecycle stage is hardcoded and so is not user-defined via
 Admin.
 **Area:** `config/governance/_inventory.py`, three registers' rules, two new ratified
@@ -299,22 +300,111 @@ Two facts nobody had written down, and both matter:
 
 That last point has a consequence worth deciding before the backfill is run for real:
 carrying the stage back in **re-offers it on every dropdown**, undoing what looks like a
-deliberate removal. Step 4 resolves it properly — the catalogue may hold a stage that no
-division's ratified subset offers, which is exactly the shape this needs — but until
-step 4 exists there is no such subset. Options: run the backfill after step 4; or move
-those records to another stage first; or accept the stage reappearing for the interval.
+deliberate removal. **Step 4 has since resolved it** — the catalogue may hold a stage no
+division's ratified subset offers, so the estate can carry "Pre Development" for the
+records in it while no division offers it to anybody new. The remaining choice is
+whether to narrow the divisions before or after running the backfill.
 
-**Step 4 — switch the readers.**
-`src/governance/lifecycle_stages/` (the per-division layer); three `_validate_field`s
-call `reject_unknown_lifecycle_stage`; `lifecycle_stage` leaves `FIELD_CHOICES`; the
-field spec's `options` becomes the catalogue default and the console overrides per
-division through a `Stages` registry beside `Groups` (`helpers.js`) and the one
-`inputControl` hook (`inventory.js:36`). Delete `inventory/list.js:26`'s stale four-item
-copy and read the filter's values from the registry. Retire the global `lifecycle_stage`
-reference list **last**, once nothing reads it, leaving `STATUS_VOCABULARIES` to the six
-lists that remain firm-wide.
+**And the order of the last two steps follows from this.** The reference list is the only
+record of what the institution curated, and the backfill is the only thing that reads it,
+so the list cannot be retired until the backfill has run: step 5 → live backfill → retire
+the list. Deleting it earlier loses "Demo" and every rename permanently.
 
-**Step 5 — the committee surfaces.**
+**Step 4 — switch the readers — BUILT 2026-09-09.**
+`src/governance/lifecycle_stages/` is the per-division layer, and the three registers'
+`_validate_field` call `reject_unknown_lifecycle_stage` before the choice branch — the
+ordering `functional_group` already uses, so the field stays a `choice` in the specs
+while what it may actually hold comes from the division. A division move now also
+refuses where the target does not use the record's stage.
+
+`/api/lifecycle-stages` is the registry, and it hands back the stages **already resolved
+per division**, so "empty means the whole catalogue" is a server rule rather than one
+JavaScript re-implements. The console reads it through `Stages` — its own file, not a
+fourth member of `helpers.js`, which is at 257 lines of a gated 300 and has been split
+once already for holding subjects that were never one.
+
+Three departures worth recording:
+
+- **The spec keeps its static options and loses its `reference`.** Emptying it the way
+  `functional_group` does would leave a dropdown looking broken for the seconds before
+  the registry returns, and unlike a group this is a field every record is expected to
+  carry. `rag_rating` is the precedent: static options in config, per-division override
+  in the console.
+- **`inventory/list.js`'s four-item copy is gone**, and the filter reads the registry.
+  That copy had drifted — it was missing "Pre Development" — which is visible in the
+  verification below, where the filter now offers the stage it used to hide.
+- **The tests that asserted the old source of truth moved rather than being patched.**
+  `lifecycle_stage` was the example in two rules tests of "a vocabulary the platform
+  owns"; it is not one any more, so the example is now `review_frequency`. The lifecycle
+  cases in `test_status_vocabularies.py` moved to the catalogue, and `validation_status`
+  is what exercises the reference-backed path there now.
+
+**Verified against a restored copy of the live estate** (scratch DB, served on a spare
+port; the browser pane was hidden, so this is DOM and API evidence, not a screenshot):
+ratifying the label "Live in production" for the stored value `Production` changed every
+screen and moved no record; narrowing PhysicalRisk to three stages narrowed its dropdown
+to three; a fourth stage was refused on save with *"lifecycle stage must be one of: Pre
+Development, Development, Live in production (Production)"*; and a division proposal that
+would have dropped a stage in use was refused naming the record — `MKM-PIML-001`.
+
+**Step 5 — the committee surfaces — BUILT 2026-09-09, and only then the old list.**
+Admin → Lifecycle Stages draws both layers on one screen: the catalogue above
+(`lifecycle_catalogue.js`), a division's choice from it below (`lifecycle_stages.js`),
+each auto-saving as a draft to its own committee. Two AOB panels on a meeting ratify
+them. `Remove` is disabled on a stage with records in it, with the count as the reason,
+and `Stored as` is fixed once a stage is live — the domain refuses both anyway, but a
+disabled control is an explanation where a refusal afterwards is a surprise.
+
+Two things the build changed:
+
+- **The catalogue moved to `/api/lifecycle-catalogue`.** It read well under
+  `/api/lifecycle-stages/catalogue`, and Werkzeug does prefer a static rule to
+  `/<division>` — but a division named "catalogue" would then be unreachable, and a
+  routing table that holds only because nobody names a division badly is not one to
+  leave lying around.
+- **The catalogue's AOB panel keys on the committee's LEVEL, not the meeting's
+  division** — the trap §4.4 predicted, confirmed in the build: `MeetingDetail` holds no
+  committee list of its own, so a first attempt at the level lookup read an undefined
+  field and the panel would have silently never appeared. The level is now resolved when
+  the meeting loads, from `MrcNav`'s cached list.
+
+Verified end to end on the restored estate: an edit in Admin saved as a draft and moved
+neither the live catalogue nor the registry; the division's panel appeared on its
+committee's open meeting; Approve made it live and the console's registry reloaded in
+place.
+
+### 6b. The catalogue has no committee on this estate
+
+The design says the **Company-level** MRC ratifies the catalogue. The MKM estate has
+exactly one committee — `MRC-PR`, at **Division** level — so
+`committee_at_levels(("Company",), …)` finds nobody, and a catalogue draft would sit
+unratifiable for ever. Found by building it, not by reading the config.
+
+The editor now says so before anybody edits: `/api/lifecycle-catalogue` returns a
+`ratifier`, and the catalogue pane draws a warning when it is null. That closes the
+silent dead end but not the question, which is the user's:
+
+1. **Add a Company-level MRC** under Admin → MRC. Matches the design, and is what an
+   institution-wide vocabulary arguably deserves. **Chosen 2026-09-09**, and proved on
+   the restored estate: with `MRC-CO` present the `ratifier` resolves, the Admin warning
+   goes, and a Company meeting — which carries no division, the case a division-keyed
+   panel would have missed — draws the catalogue's AOB panel and ratifies it. The live
+   committee is the user's to create; it is a governance record and should carry their
+   identity, not `system` (R9, and the P1 authorship rule).
+2. **Let the most senior existing committee ratify it** where no Company-level one
+   exists — a one-line change to `committee_at_levels(("Company", "Division", …))`, at
+   the cost of a division's committee ratifying something firm-wide.
+
+Until one is chosen, the catalogue runs on its default (the shipped five) and every
+division offers all of them, which is exactly today's behaviour — so nothing is blocked
+except changing the vocabulary itself.
+
+Retiring the global `lifecycle_stage` reference list is now **blocked on the live
+backfill** (§6a): that list is the only record of what the institution curated, and the
+backfill is what reads it. Delete it first and the estate's "Demo" stage and any renames
+are gone for good. So the order is: step 5's editor and AOB panels → the live backfill →
+retire the list. Until then it sits in Admin with a hint saying it drives nothing.
+
 The Admin editor (`lifecycle_stages.js`, shaped on `functional_groups.js`, with the
 catalogue and the per-division subset as two panes), the two AOB ratification panels,
 and the row in the MRC pack. Then correct `adopter-configurable-vocabulary.md:70` and
@@ -334,11 +424,14 @@ add the stages to `docs/user_guide.md`.
   the same, or a committee could approve a draft that orphans every record in a stage.
 - **A Company-level meeting has no division** (§4.4). Anything keyed on
   `meeting.data.division` will silently never fire for the catalogue.
-- **R2 headroom.** `_inventory.py` is at 288 lines and `_reference.py` at 293; both are
-  edited here. Moving the stage vocabulary into its own
-  `config/governance/_lifecycle_stages.py` takes lines *out* of both, which is the
-  natural seam rather than a splitting exercise. `api_mrc/signoff.py` (295) and
-  `_signoff_routing.py` (284) are untouched under §1's decisions.
+- **R2 headroom — and this one bit.** `_inventory.py` was at 288 of a gated 300, and
+  step 4's explanatory comment pushed it to 302: a real gate failure, caught by
+  `tests/audit/test_audit_large_files.py`. The fix was the seam this note already
+  named — `VALID_LIFECYCLE_STAGES` and `LIFECYCLE_STAGE_LIST` moved to
+  `_lifecycle_stages.py`, where the stages are defined once and derived from
+  `DEFAULT_LIFECYCLE_STAGES` rather than written a second time — not a trimmed comment.
+  `_inventory.py` is 295 and the five words now have one home. `api_mrc/signoff.py`
+  (295) and `_signoff_routing.py` (284) are untouched under §1's decisions.
 - **`kill -HUP` does not reload Python** (CLAUDE.md §4). Restart `dev_app.sh` when
   verifying on 5016.
 
@@ -358,14 +451,18 @@ add the stages to `docs/user_guide.md`.
 - ~~`RatifiedPolicy`'s three existing policies are unchanged by the `scope` rename.~~
   **Done in step 2** — their 81 tests passed unmodified.
 
-Still to write, with step 4:
+Written with step 4:
 
-- A division may not ratify a stage that is not in the catalogue.
-- A division that has ratified nothing offers the whole catalogue, and registers, edits
-  and reports exactly as today (the default path — the migration-free guarantee).
-- A stage dropped from the catalogue leaves every division's list at once, including a
-  division that had ratified a subset naming it.
-- A division move carrying a stage the target does not use is refused.
+- ~~A division may not ratify a stage that is not in the catalogue.~~
+- ~~A division that has ratified nothing offers the whole catalogue, and registers, edits
+  and reports exactly as today (the default path — the migration-free guarantee).~~
+- ~~A stage dropped from the catalogue leaves every division's list at once, including a
+  division that had ratified a subset naming it.~~
+- ~~A division move carrying a stage the target does not use is refused.~~
+
+All four done in step 4 (15 tests), with 11 more over the API in step 5 — including the
+registry resolving per division, a draft driving nothing at either layer, and the
+catalogue reporting that no committee can ratify it.
 
 And on every step: `python -m audit` reads `PASS: 0 gated finding(s)`, and `pytest` is
 green, on the merged tree before the push.

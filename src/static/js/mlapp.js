@@ -151,7 +151,7 @@ const MLApps = {
         { key: "lifecycle", label: "Lifecycle",
           sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || "").toLowerCase(),
           cell: (m) => m.retired ? '<span class="pill">retired</span>'
-            : optionLabel(self.fieldSpec("lifecycle_stage"), m.d.lifecycle_stage) },
+            : fieldDisplay(Stages.labelFor(m.d.lifecycle_stage, m.d.division)) },
       ]);
     }
     return this._list;
@@ -160,6 +160,7 @@ const MLApps = {
   async loadList() {
     const nav = await MrcNav.load();
     await Groups.load();
+    await Stages.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     // Retired records are out of the estate and out of every figure, exactly as a

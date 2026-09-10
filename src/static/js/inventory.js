@@ -24,6 +24,7 @@ const POLICY_DIMENSION_FIELD = { materiality: "materiality", complexity: "comple
 // policy. Named here for the same reason the dimensions are: a field key spelled out
 // at each use is a field key that gets missed at one of them.
 const FUNCTIONAL_GROUP_FIELD = "functional_group";
+const LIFECYCLE_STAGE_FIELD = "lifecycle_stage";
 
 // Build the input control for one field spec. For the risk fields the option list comes
 // from the entity's DIVISION policy (falling back to the spec's constant options / 1-3).
@@ -46,6 +47,17 @@ function inputControl(id, spec, division) {
   if (spec.type === "choice") {
     let options = spec.options;
     if (spec.key === "rag_rating") options = Policy.ratingNames(division) || options;
+    // The stages this division's committee agreed to use, narrowed from the
+    // institution's catalogue. The spec's own options are the catalogue default and
+    // stand in until the registry has loaded, so the control is never empty.
+    else if (spec.key === LIFECYCLE_STAGE_FIELD) {
+      const stages = Stages.options(division);
+      if (stages.length) {
+        const opts = ['<option value=""></option>'] .concat(stages.map((s) =>
+          '<option value="' + esc(s.value) + '">' + esc(s.label) + "</option>")).join("");
+        return '<select id="' + id + '">' + opts + "</select>";
+      }
+    }
     else if (POLICY_DIMENSION_FIELD[spec.key]) {
       options = Policy.dimensionBandNames(POLICY_DIMENSION_FIELD[spec.key], division) || options;
     }
@@ -195,6 +207,7 @@ const Inventory = {
   async loadList() {
     const nav = await MrcNav.load();
     await Groups.load();
+    await Stages.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     // The live estate by default. Hibernated models are fetched only when somebody

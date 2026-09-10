@@ -23,7 +23,6 @@
 // filtering and sorting never re-fetch. The tiles summarise the whole set;
 // clicking a Tier / RAG tile toggles the matching filter.
 
-const LIFECYCLE_STAGES = ["Development", "Validation", "Production", "Retired"];
 // Not a lifecycle stage but the natural place to ask for one: a hibernated model is
 // out of the estate and out of every count, so the only way to see one — to reactivate
 // it, say — is to ask. Picking it re-fetches with the retired models included.
@@ -84,10 +83,17 @@ const InventoryList = {
     // and the review filter still surface it as a portfolio-health signal.
     { key: "mrc", label: "MRC Status", sortVal: (m) => mrcState(m.d),
       cell: (m) => mrcStatusBadge(m.d) },
+    // A model's stage is labelled by the registry (the institution ratified the word);
+    // a Product's ``status`` is a platform vocabulary and still reads off its spec.
     { key: "lifecycle", label: "Lifecycle", sortVal: (m) => m.retired ? "zz" : (m.d.lifecycle_stage || m.d.status || "").toLowerCase(),
-      cell: function (m) { return m.retired ? '<span class="pill">retired</span>'
-        : optionLabel(InventoryList._cfg.spec(InventoryList._cfg.statusField),
-                      m.d.lifecycle_stage || m.d.status); } },
+      cell: function (m) {
+        if (m.retired) return '<span class="pill">retired</span>';
+        if (m.d.lifecycle_stage) {
+          return fieldDisplay(Stages.labelFor(m.d.lifecycle_stage, m.d.division));
+        }
+        return optionLabel(InventoryList._cfg.spec(InventoryList._cfg.statusField),
+                           m.d.status);
+      } },
   ],
 
   mount(models, onRow) {
