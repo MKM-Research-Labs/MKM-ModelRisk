@@ -25,8 +25,9 @@
 // "a division that has ratified nothing offers the whole catalogue" is written once,
 // on the server, rather than a second time here.
 //
-// Its own file rather than another member of helpers.js, which is at 257 lines of a
-// gated 300 and has already been split once for holding subjects that were never one.
+// Its own file rather than another member of helpers.js, which has been split twice
+// already for holding subjects that were never one (badges and documents on
+// 2026-09-05, the risk policy on 2026-09-09).
 
 const Stages = {
   _divisions: {},

@@ -19,8 +19,10 @@
 // SOFTWARE.
 // ML Application detail: the master-detail counterpart to the list in mlapp.js.
 //
-// The same nine tabs a model carries, less Connections -- an ML Application has no
-// dependency chain, so there is no graph to draw.
+// Twelve tabs. Most are a model's, because an ML Application is reviewed as one, but
+// the set is not the same in either direction: there is no Connections tab -- an ML
+// Application has no dependency chain, so there is no graph to draw -- and it adds
+// Training and Trains, which a model has no equivalent of.
 // Migrated onto RecordDetail when the AI System screen arrived: the fetch/render/
 // close sequence was the third copy of it, and the copies had drifted -- this one hid
 // the list view by adding a `hidden` class that no stylesheet rule matches, so the

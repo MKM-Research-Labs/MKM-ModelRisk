@@ -18,9 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Model detail (the Detail package). This core module owns the tab bar and tab
-// routing, and the collection-tab wiring; the header card is detail_header.js. The Overview tab and
-// per-field editing augment Detail from detail_overview.js, loaded after.
+// Model detail (the Detail package). This core module owns the fetch, the tab bar and
+// tab routing, and the collection-tab wiring. Four files augment Detail and load after
+// it: detail_header.js (the header card), detail_tabs.js (what each tab draws),
+// detail_overview.js and detail_overview_edit.js (the two Overview columns and the
+// writes to them), and detail_mrc.js (what the MRC has decided about the record).
+// The field lists below are defined here and rendered there.
 // Description is promoted to a full-width summary band above the two columns.
 // Tier + its rating rationale sit at the foot of Model Details, below Complexity.
 // repo_location / codebase (Organisation), type / short_name / tier_rationale

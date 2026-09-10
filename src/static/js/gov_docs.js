@@ -27,13 +27,16 @@ function parseModelTypes(str) {
   return (str || "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-// Two panels, because the tab holds two different kinds of thing. Bibliography is the
-// external reference material this governance framework is built on — papers, standards,
-// regulatory texts — which is everything filed here to date. Artefacts is for what the
-// institution itself produces; what belongs there is still being decided, so it is an
-// empty panel rather than a guess at a schema.
-// Vendors is a third kind again: neither what we read nor what we issue, but what a
-// supplier hands over about its own product. It lives in gov_vendor_docs.js.
+// Three panels, because the tab holds three different kinds of thing, and the
+// distinction is who wrote the document. Bibliography is the external reference
+// material this governance framework is built on — papers, standards, regulatory
+// texts. Artefacts is what the institution itself issues, filed per division with a
+// company-wide shelf and the FINOS shelf beside it; it is a screen of its own, in
+// gov_artefacts.js. Vendors is neither what we read nor what we issue, but what a
+// supplier hands over about its own product, and lives in gov_vendor_docs.js.
+//
+// Only Bibliography is drawn by this file. The other two own their state and render
+// themselves through the same load()/shell()/bind() interface.
 const GOV_DOC_PANELS = [
   { key: "bibliography", label: "Bibliography" },
   { key: "artefacts", label: "Artefacts" },
