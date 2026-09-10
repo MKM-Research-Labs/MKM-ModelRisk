@@ -66,6 +66,20 @@ const MeetingDetail = {
       ? await App.get("/api/risk-policy/" + encodeURIComponent(division)) : null;
     this._functionalGroups = division
       ? await App.get("/api/functional-groups/" + encodeURIComponent(division)) : null;
+    this._divisionStages = division
+      ? await App.get("/api/lifecycle-stages/" + encodeURIComponent(division)) : null;
+    // The stage CATALOGUE is the institution's, not a division's, so it is fetched for
+    // every meeting and the panel decides whether this committee is the one that
+    // ratifies it (see _lifecycleCatalogueAob).
+    this._stageCatalogue = await App.get("/api/lifecycle-catalogue");
+    // Which LEVEL this meeting's committee sits at. The catalogue is firm-wide, so only
+    // a Company-level committee ratifies it -- and a Company-level meeting carries no
+    // division, so the level is the only thing that can decide. MeetingDetail holds no
+    // committee list of its own; MrcNav's is cached and shared.
+    const nav = await MrcNav.load();
+    const committee = (nav.committees || []).find(
+      (c) => c.value === (this._meeting.data || {}).mrc);
+    this._mrcLevel = (committee && committee.level) || "";
     if (tab) this._tab = tab;
     this._render();
     document.getElementById("mt-detail").scrollIntoView({ block: "start" });

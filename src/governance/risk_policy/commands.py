@@ -139,7 +139,7 @@ def propose_policy(*, division: str, policy: dict, actor: str,
                    reason: str | None = None, config=None) -> Event:
     """Submit a division's draft risk policy for MRC sign-off. Validated now so a broken
     policy never reaches the committee; it stays a draft until approved."""
-    return _POLICY.propose(division=division, policy=policy, actor=actor,
+    return _POLICY.propose(scope=division, policy=policy, actor=actor,
                            reason=reason, config=config)
 
 
@@ -147,14 +147,14 @@ def approve_policy(*, division: str, actor: str, meeting_id: str | None = None,
                    reason: str | None = None, config=None) -> Event:
     """Ratify the division's pending draft — its MRC has signed it off, so it becomes the
     live policy. Records the meeting it was approved at for the audit trail."""
-    return _POLICY.approve(division=division, actor=actor, meeting_id=meeting_id,
+    return _POLICY.approve(scope=division, actor=actor, meeting_id=meeting_id,
                            reason=reason, config=config)
 
 
 def reject_policy(*, division: str, actor: str, meeting_id: str | None = None,
                   reason: str | None = None, config=None) -> Event:
     """Decline/withdraw the division's pending draft. The live policy is unchanged."""
-    return _POLICY.reject(division=division, actor=actor, meeting_id=meeting_id,
+    return _POLICY.reject(scope=division, actor=actor, meeting_id=meeting_id,
                           reason=reason, config=config)
 
 

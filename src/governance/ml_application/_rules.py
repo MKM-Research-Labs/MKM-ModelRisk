@@ -30,6 +30,7 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (FUNCTIONAL_GROUP_FIELD,
+                               LIFECYCLE_STAGE_FIELD,
                                ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_EDITABLE_FIELDS,
                                ML_APPLICATION_FIELD_CHOICES,
@@ -39,11 +40,14 @@ from config.governance import (FUNCTIONAL_GROUP_FIELD,
 from src.governance import collections as coll
 from src.governance.errors import DomainError
 from src.governance.independence import validate_independence
+from src.governance.reference import live_choice_values
 from src.governance.ml_application._state import (EVENT_FIELD_EDITED, EVENT_REACTIVATED,
                                                   EVENT_REGISTERED, EVENT_RETIRED,
                                                   MLApplicationState)
 from src.governance.functional_groups import (reject_division_move_while_grouped,
                                               reject_unknown_functional_group)
+from src.governance.lifecycle_stages import (reject_division_move_out_of_stage,
+                                             reject_unknown_lifecycle_stage)
 from src.governance.risk_policy import get_risk_policy
 
 # Risk fields whose allowed values come from the record's DIVISION policy.
@@ -61,9 +65,15 @@ def _validate_field(field: str, value: Any, division: Any) -> None:
             raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
     elif field == FUNCTIONAL_GROUP_FIELD:
         reject_unknown_functional_group(value, division)
-    elif field in ML_APPLICATION_FIELD_CHOICES and value not in ML_APPLICATION_FIELD_CHOICES[field]:
-        allowed = ", ".join(ML_APPLICATION_FIELD_CHOICES[field])
-        raise DomainError(f"{field} must be one of: {allowed}")
+    elif field == LIFECYCLE_STAGE_FIELD:
+        # Before the choice branch: what the field may hold is the division's ratified
+        # list, not the tuple beside the spec (see the model inventory's rules).
+        reject_unknown_lifecycle_stage(value, division)
+    elif field in ML_APPLICATION_FIELD_CHOICES:
+        # From the admin list where one backs the field, not from the shipped tuple.
+        allowed = live_choice_values(ML_APPLICATION_FIELD_SPECS[field])
+        if value not in allowed:
+            raise DomainError(f"{field} must be one of: {', '.join(allowed)}")
 
 
 def _require_editable(state: MLApplicationState) -> None:
@@ -114,6 +124,7 @@ def decide_edit_field(
     division = value if field == "division" else state.fields.get("division")
     if field == "division":
         reject_division_move_while_grouped(state.fields, value)
+        reject_division_move_out_of_stage(state.fields, value)
     _validate_field(field, value, division)
     validate_independence(field, value, state.fields, "ML Application")
     return EVENT_FIELD_EDITED, {"field": field, "value": value}

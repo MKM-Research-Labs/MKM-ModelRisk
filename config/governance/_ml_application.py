@@ -65,7 +65,7 @@ from config.governance._review import REVIEW_FIELD_SPECS
 from config.governance._collections import (COLLECTION_SPECS, EVALUATIONS_COLLECTION,
                                             FAIRNESS_COLLECTION,
                                             MONITORING_COLLECTION)
-from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY,
+from config.governance._inventory import (VALID_COMPLEXITY,
                                           VALID_REVIEW_STATUSES,
                                           VALID_LIFECYCLE_STAGES, VALID_MATERIALITY,
                                           VALID_RAG_RATINGS, VALID_REVIEW_FREQUENCIES,
@@ -167,9 +167,11 @@ ML_APPLICATION_FIELD_SPECS = {
     # keeps it; the workflow that MOVES it arrives with the MRC route (phase 4).
     "review_status": {"label": "Review status", "type": "choice",
                       "options": VALID_REVIEW_STATUSES, "group": "Governance"},
+    # From the division's ratified stage list, resolved by the console per record --
+    # see the model inventory's spec for the whole of the reasoning. ``options`` is the
+    # catalogue default, shown until the registry loads.
     "lifecycle_stage": {"label": "Lifecycle stage", "type": "choice",
-                        "options": VALID_LIFECYCLE_STAGES, "group": "Governance",
-                        "reference": LIFECYCLE_STAGE_LIST},
+                        "options": VALID_LIFECYCLE_STAGES, "group": "Governance"},
     "validation_status": {"label": "Validation status", "type": "choice",
                           "options": VALID_VALIDATION_STATUSES, "group": "Governance",
                           "reference": VALIDATION_STATUS_LIST},

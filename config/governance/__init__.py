@@ -224,6 +224,7 @@ from config.governance._product import (COMPONENT_KIND_AI, COMPONENT_KIND_ML,
 from config.governance._attention import *  # noqa: F401,F403
 from config.governance._attention_reasons import *  # noqa: F401,F403
 from config.governance._functional_groups import *  # noqa: F401,F403
+from config.governance._lifecycle_stages import *  # noqa: F401,F403
 from config.governance._ml_exports import *  # noqa: F401,F403
 from config.governance._reference import (
     CODEBASE_LIST, DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES, DEFAULT_MODEL_TYPES,

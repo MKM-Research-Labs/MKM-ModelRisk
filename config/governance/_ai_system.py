@@ -74,7 +74,7 @@ from config.governance._ai import (AI_SYSTEM_QUESTION_LIST, DATA_EGRESS_CLASSES,
 from config.governance._collections import (COLLECTION_SPECS, EVALUATIONS_COLLECTION,
                                             FAIRNESS_COLLECTION,
                                             MONITORING_COLLECTION)
-from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_COMPLEXITY,
+from config.governance._inventory import (VALID_COMPLEXITY,
                                           VALID_LIFECYCLE_STAGES, VALID_MATERIALITY,
                                           VALID_RAG_RATINGS, VALID_REVIEW_FREQUENCIES,
                                           VALID_REVIEW_STATUSES,
@@ -197,9 +197,11 @@ AI_SYSTEM_FIELD_SPECS = {
     "status": {"label": "Status", "type": "text", "group": "Governance"},
     "review_status": {"label": "Review status", "type": "choice",
                       "options": VALID_REVIEW_STATUSES, "group": "Governance"},
+    # From the division's ratified stage list, resolved by the console per record --
+    # see the model inventory's spec for the whole of the reasoning. ``options`` is the
+    # catalogue default, shown until the registry loads.
     "lifecycle_stage": {"label": "Lifecycle stage", "type": "choice",
-                        "options": VALID_LIFECYCLE_STAGES, "group": "Governance",
-                        "reference": LIFECYCLE_STAGE_LIST},
+                        "options": VALID_LIFECYCLE_STAGES, "group": "Governance"},
     "validation_status": {"label": "Validation status", "type": "choice",
                           "options": VALID_VALIDATION_STATUSES, "group": "Governance",
                           "reference": VALIDATION_STATUS_LIST},

@@ -114,6 +114,7 @@ const Inventory = {
   async loadList() {
     const nav = await MrcNav.load();
     await Groups.load();
+    await Stages.load();
     this._ref = nav.ref;
     this._committees = nav.committees;
     // The live estate by default. Hibernated models are fetched only when somebody

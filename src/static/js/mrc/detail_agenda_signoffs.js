@@ -58,7 +58,59 @@ Object.assign(MeetingDetail, {
 
   // Everything raised under AOB for ratification, in the order a committee meets it.
   _aobSignoffs() {
-    return this._categorisationAob() + this._functionalGroupsAob();
+    return this._categorisationAob() + this._functionalGroupsAob() +
+      this._divisionStagesAob() + this._lifecycleCatalogueAob();
+  },
+
+  // Which of the catalogue's stages this division uses. A per-division draft like the
+  // two above, so it answers the same three questions through ``_aobPending``.
+  _divisionStagesAob() {
+    const detail = this._divisionStages;
+    const division = this._aobPending(detail);
+    if (!division) return "";
+    const shown = (detail.draft || []).map((v) =>
+      "<li>" + esc((detail.labels || {})[v] || v) +
+      ' <span class="muted code">' + esc(v) + "</span></li>").join("");
+    const body = '<ul style="font-size:var(--size-sm);margin:0;padding-left:var(--space-8)">' +
+      (shown || '<li class="muted">None.</li>') + "</ul>";
+    return this._aobPanel("aob-lstage",
+      "Lifecycle stages sign-off &mdash; " + esc(division),
+      esc(division) + " has proposed which of the institution's lifecycle stages its " +
+      "records use, and in what order its screens offer them. Approving it makes these " +
+      "the stages a record here can be in; the current list stays in force until then.",
+      body);
+  },
+
+  // The institution's whole stage catalogue, which only the COMPANY-level committee
+  // ratifies. Unlike everything else on this tab it is not keyed on the meeting's
+  // division, because a Company-level meeting HAS no division (derive_org_scope only
+  // sets one for the other two levels) -- so ``_aobPending`` would refuse it for the one
+  // committee entitled to see it. The committee's own level is what decides.
+  _lifecycleCatalogueAob() {
+    const detail = this._stageCatalogue;
+    if (!detail || detail.state !== "draft") return "";
+    if (this._meeting.status === CLOSED_MEETING_STATUS) return "";
+    if (this._committeeLevel() !== "Company") return "";
+    const stages = (detail.draft || []).map((s) =>
+      "<li><b>" + esc(s.label || s.value) + '</b> <span class="muted code">' +
+      esc(s.value) + "</span>" +
+      (s.description ? ' <span class="muted">&mdash; ' + esc(s.description) + "</span>" : "") +
+      "</li>").join("");
+    const body = '<ul style="font-size:var(--size-sm);margin:0;padding-left:var(--space-8)">' +
+      (stages || '<li class="muted">None.</li>') + "</ul>";
+    return this._aobPanel("aob-lcat",
+      "Lifecycle stage catalogue sign-off",
+      "A revised catalogue of the lifecycle stages this institution recognises has been " +
+      "proposed. It is firm-wide: approving it makes these the stages every division " +
+      "chooses from. A stage's stored value never changes, so renaming one moves no " +
+      "record; the current catalogue stays in force until this is approved.",
+      body);
+  },
+
+  // This meeting's committee level, resolved when the meeting was loaded. Company-level
+  // committees are the institution-wide ones.
+  _committeeLevel() {
+    return this._mrcLevel || "";
   },
 
   _categorisationAob() {
@@ -118,6 +170,7 @@ Object.assign(MeetingDetail, {
       // What the committee has just made live is what every picker and every grouped
       // list must now offer, including on this page.
       await Groups.load();
+      await Stages.load();
       App.toast(noun + (action === "approve" ? " approved and live" : " rejected"), "ok");
       this.show(this._id, this._tab);   // reload so the AOB item reflects the new state
     } catch (e) { App.toast(e.message || "failed", "error"); }
@@ -132,6 +185,28 @@ Object.assign(MeetingDetail, {
                                     action);
   },
 
+  _decideDivisionStages(division, action) {
+    return this._decideRatification("lifecycle-stages", "Lifecycle stages", division,
+                                    action);
+  },
+
+  // The catalogue is addressed by name rather than by division: it is the
+  // institution's, and there is only one.
+  _decideLifecycleCatalogue(_division, action) {
+    return this._decideCatalogue(action);
+  },
+
+  async _decideCatalogue(action) {
+    try {
+      await App.send("POST", "/api/lifecycle-catalogue/" + action,
+                     { meeting_id: this._id, confirmed: true });
+      await Stages.load();
+      App.toast("Lifecycle stage catalogue " +
+        (action === "approve" ? "approved and live" : "rejected"), "ok");
+      this.show(this._id, this._tab);
+    } catch (e) { App.toast(e.message || "failed", "error"); }
+  },
+
   // Wiring for whichever of the two blocks is present.
   _bindAobSignoffs() {
     const self = this;
@@ -142,5 +217,7 @@ Object.assign(MeetingDetail, {
     });
     wire("aob-cat", self._decidePolicy);
     wire("aob-fg", self._decideFunctionalGroups);
+    wire("aob-lstage", self._decideDivisionStages);
+    wire("aob-lcat", self._decideLifecycleCatalogue);
   },
 });
