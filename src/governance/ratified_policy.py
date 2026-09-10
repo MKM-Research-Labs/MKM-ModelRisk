@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""A per-division policy the MRC ratifies: Proposed → Approved / Rejected.
+"""A policy the MRC ratifies: Proposed → Approved / Rejected.
 
 Two things in this codebase are settings an institution writes down and a committee
 then stands behind — the risk policy (what a rating *means* in a division) and the ML
@@ -37,6 +37,13 @@ This module is the lifecycle once. ``risk_policy`` and ``ml_review_policy`` diff
 what a policy *is* and what makes one valid, which arrive as ``default`` and
 ``validate``; they do not differ in how a committee ratifies one, and writing that out
 twice is how a rule ends up fixed in one copy and not the other.
+
+**The stream is keyed on a SCOPE, which is usually but not always a division.** It was
+spelled ``division`` throughout until 2026-09-09, when the lifecycle stage catalogue
+arrived: one document for the whole institution, stored under a single fixed id. That
+is a scope of one, and the lifecycle is otherwise identical -- so the parameter is named
+for what it is, and ``scope_noun=None`` marks a singleton whose refusals must not name a
+scope its reader cannot see ("global has no proposed catalogue" helps nobody).
 """
 from __future__ import annotations
 
@@ -67,7 +74,7 @@ def recorded_date(recorded_at) -> str | None:
 
 @dataclass(frozen=True)
 class RatifiedPolicy:
-    """The lifecycle for one kind of MRC-ratified, per-division policy.
+    """The lifecycle for one kind of MRC-ratified policy.
 
     ``noun`` appears in the refusals, so a caller reads "PhysicalRisk has no proposed
     ML review policy awaiting sign-off" rather than a generic message that leaves them
@@ -81,6 +88,16 @@ class RatifiedPolicy:
     # An optional extra event some policies carry (the risk policy's uploaded
     # document). Folded into ``load`` when present so it survives a rebuild.
     document_event: str | None = None
+    # What the stream is keyed on, as a refusal should name it. Every policy that is
+    # ratified per org unit is keyed on a division; ``None`` marks a SINGLETON -- one
+    # document for the whole institution under one fixed id -- and switches the wording
+    # to sentences that do not mention a scope at all.
+    scope_noun: str | None = "division"
+
+    @property
+    def singleton(self) -> bool:
+        """One document for the institution, rather than one per scope."""
+        return self.scope_noun is None
 
     @property
     def proposed_event(self) -> str:
@@ -94,15 +111,15 @@ class RatifiedPolicy:
     def rejected_event(self) -> str:
         return f"{self.aggregate_type}Rejected"
 
-    def load(self, division: str, config=None) -> dict:
-        """Fold a division's stream into ``{live, draft, document, state, approved,
+    def load(self, scope: str, config=None) -> dict:
+        """Fold one scope's stream into ``{live, draft, document, state, approved,
         approved_at, version}``."""
         live = self.default()
         draft = document = approved_at = None
         approved = False
         version = 0
         for event in read_stream(aggregate_type=self.aggregate_type,
-                                 aggregate_id=division, config=config):
+                                 aggregate_id=scope, config=config):
             if event.event_type == self.proposed_event:
                 draft = event.payload["policy"]
             elif event.event_type == self.approved_event:
@@ -123,58 +140,63 @@ class RatifiedPolicy:
         return {"live": live, "draft": draft, "document": document, "state": state,
                 "approved": approved, "approved_at": approved_at, "version": version}
 
-    def live(self, division: str, config=None):
-        """The policy a division's records actually use."""
-        return self.load(division, config)["live"]
+    def live(self, scope: str, config=None):
+        """The policy this scope's records actually use."""
+        return self.load(scope, config)["live"]
 
-    def draft(self, division: str, config=None):
-        """The division's proposal awaiting MRC sign-off, or None."""
-        return self.load(division, config)["draft"]
+    def draft(self, scope: str, config=None):
+        """The proposal awaiting MRC sign-off, or None."""
+        return self.load(scope, config)["draft"]
 
-    def propose(self, *, division: str, policy, actor: str,
+    def propose(self, *, scope: str, policy, actor: str,
                 reason: str | None = None, config=None) -> Event:
-        """Submit a division's draft for MRC sign-off.
+        """Submit a draft for MRC sign-off.
 
         Validated now, so a broken policy never reaches the committee; it stays a
         draft either way until somebody approves it.
         """
-        if not str(division).strip():
-            raise DomainError(f"a {self.noun} must belong to a division")
+        if not self.singleton and not str(scope).strip():
+            raise DomainError(f"a {self.noun} must belong to a {self.scope_noun}")
         if self.validate:
             self.validate(policy)
-        return self._append(division, self.proposed_event, {"policy": policy},
+        return self._append(scope, self.proposed_event, {"policy": policy},
                             actor, reason, config)
 
-    def approve(self, *, division: str, actor: str, meeting_id: str | None = None,
+    def approve(self, *, scope: str, actor: str, meeting_id: str | None = None,
                 reason: str | None = None, config=None) -> Event:
         """Ratify the pending draft: it becomes the live policy.
 
         Records the meeting it was approved at, because "the committee agreed this"
         is only evidence if you can say which sitting.
         """
-        state = self._require_draft(division, "awaiting sign-off", config)
-        return self._append(division, self.approved_event,
+        state = self._require_draft(scope, "awaiting sign-off", config)
+        return self._append(scope, self.approved_event,
                             {"policy": state["draft"], "meeting_id": meeting_id},
                             actor, reason, config, state=state)
 
-    def reject(self, *, division: str, actor: str, meeting_id: str | None = None,
+    def reject(self, *, scope: str, actor: str, meeting_id: str | None = None,
                reason: str | None = None, config=None) -> Event:
         """Decline or withdraw the pending draft. The live policy is unchanged."""
-        state = self._require_draft(division, "to reject", config)
-        return self._append(division, self.rejected_event, {"meeting_id": meeting_id},
+        state = self._require_draft(scope, "to reject", config)
+        return self._append(scope, self.rejected_event, {"meeting_id": meeting_id},
                             actor, reason, config, state=state)
 
-    def _require_draft(self, division: str, what: str, config) -> dict:
-        state = self.load(division, config)
+    def _require_draft(self, scope: str, what: str, config) -> dict:
+        state = self.load(scope, config)
         if state["draft"] is None:
-            raise DomainError(f"{division} has no proposed {self.noun} {what}")
+            # A singleton has no scope worth naming: "there is no proposed lifecycle
+            # stage catalogue awaiting sign-off" says the whole of it, where naming the
+            # fixed id it is stored under would only puzzle the reader.
+            if self.singleton:
+                raise DomainError(f"there is no proposed {self.noun} {what}")
+            raise DomainError(f"{scope} has no proposed {self.noun} {what}")
         return state
 
-    def _append(self, division: str, event_type: str, payload: dict, actor: str,
+    def _append(self, scope: str, event_type: str, payload: dict, actor: str,
                 reason: str | None, config, state: dict | None = None) -> Event:
-        state = state if state is not None else self.load(division, config)
+        state = state if state is not None else self.load(scope, config)
         return append_event(
-            aggregate_type=self.aggregate_type, aggregate_id=division,
+            aggregate_type=self.aggregate_type, aggregate_id=scope,
             event_type=event_type, payload=payload, actor=actor, reason=reason,
             expected_version=state["version"], config=config,
         )

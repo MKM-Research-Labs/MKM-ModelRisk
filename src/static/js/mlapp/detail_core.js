@@ -43,7 +43,7 @@ const MLAppDetail = RecordDetail.attach({
       '<span style="margin-left:var(--space-5)">' + tierBadge(d.tier, d.division) + " " +
       ragBadge(d.rag_rating, d.division) + " " +
       (this._record.retired ? '<span class="pill">retired</span>'
-        : optionLabel(MLApps.fieldSpec("lifecycle_stage"), d.lifecycle_stage)) + "</span>" +
+        : fieldDisplay(Stages.labelFor(d.lifecycle_stage, d.division))) + "</span>" +
       '<span style="flex:1"></span><button class="btn small ghost" id="mla-content-close">Close</button>' +
       "</div>";
   },

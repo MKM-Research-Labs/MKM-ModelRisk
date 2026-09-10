@@ -87,9 +87,12 @@ def test_editing_a_risk_field_is_validated_against_the_policy_too():
 # --- Vocabularies the platform does own --------------------------------------
 
 def test_a_value_outside_a_fixed_vocabulary_is_refused_and_the_options_listed():
-    with pytest.raises(DomainError, match="lifecycle_stage must be one of"):
+    """``lifecycle_stage`` was the example until 2026-09-09, when the stages became
+    the institution's own -- ratified per division from a firm-wide catalogue -- and
+    stopped being a vocabulary the platform owns at all."""
+    with pytest.raises(DomainError, match="review_frequency must be one of"):
         register_ml_application(ml_application_id="MLA-0002",
-                                fields={**_MINIMUM, "lifecycle_stage": "Nonsense"},
+                                fields={**_MINIMUM, "review_frequency": "Fortnightly"},
                                 actor="admin")
 
 

@@ -116,15 +116,29 @@ Object.assign(InventoryList, {
   },
 
   // --- filters ---
-  // The stages the estate actually uses, from the division's vocabulary, falling
-  // back to the shipped words before it has been seeded.
+  // The stages the register can filter by. For a model that is the institution's
+  // catalogue, from the registry; for a Product, whose ``status`` is a platform
+  // vocabulary, it is still the field spec. Falling back to the spec either way, so a
+  // filter drawn before the registry has loaded is the shipped words rather than blank.
+  //
+  // This used to fall back to a four-item copy of the stages held in list.js — which
+  // had drifted, missing "Pre Development", and is gone.
   _lifecycleValues() {
     const spec = this._cfg.spec(this._cfg.statusField);
-    return (spec && spec.options && spec.options.length) ? spec.options : LIFECYCLE_STAGES;
+    if (this._cfg.statusField === "lifecycle_stage") {
+      const stages = Stages.forDivision(null);
+      if (stages.length) return stages;
+    }
+    return (spec && spec.options) || [];
   },
 
-  // What each stage is shown as, where the institution has renamed one.
+  // What each stage is shown as, where the institution has ratified a word for it.
   _lifecycleLabels() {
+    if (this._cfg.statusField === "lifecycle_stage") {
+      const shown = {};
+      Stages.options(null).forEach((s) => { shown[s.value] = s.label; });
+      if (Object.keys(shown).length) return shown;
+    }
     const spec = this._cfg.spec(this._cfg.statusField);
     return (spec && spec.option_labels) || {};
   },

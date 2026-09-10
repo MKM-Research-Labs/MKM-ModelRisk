@@ -147,7 +147,8 @@ document.addEventListener("DOMContentLoaded", function () {
   //
   // The dashboard lands rather than the inventory: the first question a reader has is
   // whether anything needs them, and a register cannot answer it.
-  Promise.all([Policy.load(), Groups.load(), Theme.load()]).then(function () {
+  Promise.all([Policy.load(), Groups.load(), Stages.load(), Theme.load()])
+    .then(function () {
     if (!openHash()) showTab("dashboard");
   });
   // A second link, followed while the console is already open, must move the page

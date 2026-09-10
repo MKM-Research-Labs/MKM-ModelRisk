@@ -179,7 +179,7 @@ def propose_functional_groups(*, division: str, groups: Any, actor: str,
     """
     minted = _mint_ids(groups)
     _reject_removals_in_use(division, minted, config)
-    return _POLICY.propose(division=division, policy=minted, actor=actor,
+    return _POLICY.propose(scope=division, policy=minted, actor=actor,
                            reason=reason, config=config)
 
 
@@ -187,7 +187,7 @@ def approve_functional_groups(*, division: str, actor: str,
                               meeting_id: str | None = None,
                               reason: str | None = None, config=None) -> Event:
     """Ratify the pending draft: it becomes the list records are assigned from."""
-    return _POLICY.approve(division=division, actor=actor, meeting_id=meeting_id,
+    return _POLICY.approve(scope=division, actor=actor, meeting_id=meeting_id,
                            reason=reason, config=config)
 
 
@@ -195,5 +195,5 @@ def reject_functional_groups(*, division: str, actor: str,
                              meeting_id: str | None = None,
                              reason: str | None = None, config=None) -> Event:
     """Decline or withdraw the pending draft. The live list is unchanged."""
-    return _POLICY.reject(division=division, actor=actor, meeting_id=meeting_id,
+    return _POLICY.reject(scope=division, actor=actor, meeting_id=meeting_id,
                           reason=reason, config=config)
