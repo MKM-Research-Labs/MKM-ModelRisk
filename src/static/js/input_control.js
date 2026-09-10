@@ -26,15 +26,19 @@
 // controls through this, so a division whose policy renames a band has to be answered
 // here once rather than per screen.
 //
-// The two field groups named at the top are the ones whose options do NOT come from the
-// field spec. Materiality and complexity come from the DIVISION's risk policy, and the
-// functional group from what that division's MRC has ratified — so the same field
-// offers different choices on two records that differ only by division, and falls back
-// to the spec's constant options only when the division has no policy of its own.
+// The three field groups named at the top are the ones whose options do NOT come from
+// the field spec. Materiality and complexity come from the DIVISION's risk policy, the
+// functional group from what that division's MRC has ratified, and the lifecycle stage
+// from the division's ratified choice out of the institution's catalogue — so the same
+// field offers different choices on two records that differ only by division. The risk
+// dimensions fall back to the spec's constant options where the division has no policy
+// of its own; the stages fall back to the spec's options (the catalogue default) where
+// the registry has nothing for the division, before it has loaded or for an unknown one.
 // They are named as constants for the reason the file is separate: a field key spelled
 // out at each use is a field key that gets missed at one of them.
 //
-// Loads after policy_registry.js and helpers.js, whose registries it reads.
+// Loads after policy_registry.js and helpers.js, whose registries it reads. Stages is
+// read at call time, so stages.js loads after this file rather than before it.
 
 // Risk choice fields whose options come from a division's policy, not the field spec.
 const POLICY_DIMENSION_FIELD = { materiality: "materiality", complexity: "complexity" };

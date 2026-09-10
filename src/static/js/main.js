@@ -21,10 +21,12 @@
 // What the console is, at the top level: which tabs exist, which of them answer to the
 // region navigator, and what a link into one of them means.
 //
-// The bootstrap is the last thing to run. It waits on the three registries -- the
-// theme's tokens, the risk policy and the functional groups -- before the first render,
-// because every screen below draws vocabulary and colour from them, and a screen that
-// rendered first would show an adopter's renamed status by its stored value.
+// The bootstrap is the last thing to run. It waits on four registries -- the theme's
+// tokens, the risk policy, the functional groups and the lifecycle stages -- before the
+// first render, because every screen below draws vocabulary and colour from them, and a
+// screen that rendered first would show an adopter's renamed status by its stored
+// value. Groups and Stages are also re-read whenever a screen that uses them is
+// entered; this wait only guarantees nothing is drawn before the first read.
 //
 // A tab is registered here rather than discovering itself, so the set of tabs is one
 // list you can read. REGION_TABS says which of them the org navigator applies to, and

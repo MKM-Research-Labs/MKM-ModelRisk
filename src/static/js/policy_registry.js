@@ -27,8 +27,8 @@
 // complexity triple lands on are all the DIVISION's answer, falling back to the
 // firm-wide seed and only then to the built-in palette.
 //
-// Loaded once at startup by main.js, alongside Theme and Groups, so every screen
-// reads a settled policy rather than fetching one per record.
+// Loaded once at startup by main.js, in the same wait as Theme, Groups and Stages, so
+// every screen reads a settled policy rather than fetching one per record.
 //
 // Loads after helpers.js, which defines the Theme tokens the colours resolve through.
 
