@@ -30,6 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Any
 
+from config.governance._ai_complexity import MODEL_CLASS_BY_RECORD_TYPE
 from src.governance import collections as coll
 
 EVENT_REGISTERED = "AISystemRegistered"
@@ -84,6 +85,9 @@ def initial_state() -> AISystemState:
 def record_data(state: AISystemState) -> dict[str, Any]:
     """A state as the flat record shape everything downstream reads."""
     data = dict(state.fields)
+    # Registration stamps the class from 2026-09-23; a record registered before then
+    # carries none in its event, and its type answers the question the same way.
+    data.setdefault("model_class", MODEL_CLASS_BY_RECORD_TYPE["AISystem"])
     for collection, items in state.collections.items():
         data[collection] = list(items)
     data["configuration_snapshots"] = [dict(s) for s in state.snapshots]

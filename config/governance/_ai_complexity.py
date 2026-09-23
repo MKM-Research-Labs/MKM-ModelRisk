@@ -141,8 +141,32 @@ GRID_MATERIALITY_LEVELS = VALID_MATERIALITY
 # evidence is asked of it.
 GRID_UNPLACED = "Not placed"
 
+# --- The fields, as the AI System record carries them ----------------------------------
 
-__all__ = ["AI_AUTONOMY_AGENT", "AI_AUTONOMY_LABELS", "AI_AUTONOMY_LEVELS",
+# Spread into ``AI_SYSTEM_FIELD_SPECS`` rather than written there, which sits at the line
+# gate. Each stores the code the spec names and shows its label. ``model_class`` is
+# immutable: registration stamps it from the record type, and the only way to move a
+# record across the SR 26-2 boundary is to register it as the other kind of record.
+AI_COMPLEXITY_FIELD_SPECS = {
+    "model_class": {"label": "Model class", "type": "choice", "options": MODEL_CLASSES,
+                    "option_labels": MODEL_CLASS_LABELS, "immutable": True,
+                    "group": "Classification"},
+    "ai_system_type": {"label": "AI system type", "type": "choice",
+                       "options": AI_SYSTEM_TYPES, "option_labels": AI_SYSTEM_TYPE_LABELS,
+                       "group": "Classification"},
+    "ai_autonomy": {"label": "Autonomy", "type": "choice", "options": AI_AUTONOMY_LEVELS,
+                    "option_labels": AI_AUTONOMY_LABELS, "group": "Classification"},
+    "ai_usage_frequency": {"label": "Usage frequency", "type": "choice",
+                           "options": AI_USAGE_FREQUENCIES,
+                           "option_labels": AI_USAGE_FREQUENCY_LABELS,
+                           "group": "Classification"},
+}
+# Offered on the register form, never demanded: a system is registered before anybody
+# has measured how often it runs, and an unplaced system says so on its record.
+AI_COMPLEXITY_REGISTER_OPTIONAL = ("ai_system_type", "ai_autonomy", "ai_usage_frequency")
+
+
+__all__ = ["AI_COMPLEXITY_FIELD_SPECS", "AI_COMPLEXITY_REGISTER_OPTIONAL","AI_AUTONOMY_AGENT", "AI_AUTONOMY_LABELS", "AI_AUTONOMY_LEVELS",
            "AI_AUTONOMY_SINGLE_CALL", "AI_AUTONOMY_WORKFLOW", "AI_COMPLEXITY_LEVELS",
            "AI_COMPLEXITY_RULE", "AI_SYSTEM_TYPES", "AI_SYSTEM_TYPE_AGENTIC",
            "AI_SYSTEM_TYPE_GENERATIVE", "AI_SYSTEM_TYPE_LABELS", "AI_USAGE_FREQUENCIES",

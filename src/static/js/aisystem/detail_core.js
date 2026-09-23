@@ -39,15 +39,20 @@ const AISystemDetail = RecordDetail.attach({
   _RIGHT: ["division", "line_of_business", "functional_group", "owner",
            "peer_reviewer", "tier",
            "materiality", "complexity", "rag_rating", "lifecycle_stage"],
+  // The SR 26-2 boundary and the AI complexity axis; grid position is drawn after them.
+  _AI_CLASS: ["model_class", "ai_system_type", "ai_autonomy", "ai_usage_frequency"],
   _EXPOSURE: ["data_egress", "data_egress_basis", "eu_ai_act_class",
               "eu_ai_act_rationale"],
   _CONTROLS: ["human_oversight", "guardrails", "grounding", "output_variability",
               "explainability_approach"],
   _TESTING: ["unit_tests", "integration_tests", "benchmark_tests"],
 
+  // Agentic by its classification or by its deployment pattern: the classification is
+  // newer, and a record not yet classified must not lose the Tools tab it had.
   _agentic() {
     const d = this._record.data || {};
-    return /Agentic|Multi-agent/.test(d.deployment_pattern || "");
+    return d.ai_system_type === "AGENTIC" || d.ai_autonomy === "AGENT" ||
+      /Agentic|Multi-agent/.test(d.deployment_pattern || "");
   },
 
   _header(d) {

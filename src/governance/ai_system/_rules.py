@@ -39,6 +39,7 @@ from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
                                           AI_SYSTEM_FIELD_CHOICES,
                                           AI_SYSTEM_FIELD_SPECS,
                                           AI_SYSTEM_REGISTER_FIELDS)
+from config.governance._ai_complexity import MODEL_CLASS_BY_RECORD_TYPE
 from config.governance import (FUNCTIONAL_GROUP_FIELD, LIFECYCLE_STAGE_FIELD,
                                SIGNOFF_COLLECTIONS)
 from src.governance import collections as coll
@@ -105,6 +106,12 @@ def decide_register(
     for required in AI_SYSTEM_REGISTER_FIELDS:
         if not fields.get(required):
             raise DomainError(f"{required} is required")
+    # Which side of the SR 26-2 line this record is on is what it IS, so it is stamped
+    # here rather than asked. A caller naming the other class is refused, not overruled.
+    model_class = MODEL_CLASS_BY_RECORD_TYPE["AISystem"]
+    if fields.get("model_class", model_class) != model_class:
+        raise DomainError(f"an AI System's model_class is {model_class}")
+    fields = {**fields, "model_class": model_class}
     division = fields.get("division")
     for field, value in fields.items():
         if field not in AI_SYSTEM_FIELD_SPECS:
@@ -125,6 +132,8 @@ def decide_edit_field(
     _require_editable(state)
     if field not in AI_SYSTEM_EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
+    if AI_SYSTEM_FIELD_SPECS[field].get("immutable"):
+        raise DomainError(f"{field} is set at registration and cannot be edited")
     division = value if field == "division" else state.fields.get("division")
     if field == "division":
         reject_division_move_while_grouped(state.fields, value)

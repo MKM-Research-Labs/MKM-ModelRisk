@@ -25,6 +25,7 @@ from typing import Any
 from src.database import read_all, read_view, replace_view
 from src.governance.ai_system._state import apply, initial_state, record_data
 from src.governance.ai_system.commands import AGGREGATE_TYPE
+from src.governance.ai_system.complexity import grid_position
 
 _VIEW = "ai_system_view"
 _COLUMNS = ("ai_system_id", "data", "retired", "version")
@@ -44,10 +45,16 @@ def rebuild_ai_system_view(config=None) -> int:
     return replace_view(_VIEW, _COLUMNS, rows, config=config)
 
 
+def _placed(row: dict[str, Any]) -> dict[str, Any]:
+    """The row with its grid position, resolved now rather than stored in the view:
+    an edit to the grid tables re-places every system without a rebuild."""
+    return {**row, "grid": grid_position(row.get("data") or {})}
+
+
 def get_ai_system(ai_system_id: str, config=None) -> dict[str, Any] | None:
     rows = read_view(_VIEW, _COLUMNS, where="ai_system_id", value=ai_system_id,
                      config=config)
-    return rows[0] if rows else None
+    return _placed(rows[0]) if rows else None
 
 
 def list_ai_systems(config=None, *, include_retired: bool = False) -> list[dict[str, Any]]:
@@ -59,5 +66,6 @@ def list_ai_systems(config=None, *, include_retired: bool = False) -> list[dict[
     The record survives in the log. ``include_retired=True`` is for reads that are
     *about* a particular record rather than about the estate.
     """
-    rows = read_view(_VIEW, _COLUMNS, order_by="ai_system_id", config=config)
+    rows = [_placed(row) for row in read_view(_VIEW, _COLUMNS, order_by="ai_system_id",
+                                              config=config)]
     return rows if include_retired else [row for row in rows if not row.get("retired")]
