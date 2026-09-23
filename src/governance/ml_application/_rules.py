@@ -38,6 +38,7 @@ from config.governance import (FUNCTIONAL_GROUP_FIELD,
                                ML_APPLICATION_REGISTER_FIELDS,
                                SIGNOFF_COLLECTIONS)
 from src.governance import collections as coll
+from src.governance.model_class import reject_immutable_edit, stamp_model_class
 from src.governance.errors import DomainError
 from src.governance.independence import validate_independence
 from src.governance.reference import live_choice_values
@@ -101,6 +102,8 @@ def decide_register(
     for required in ML_APPLICATION_REGISTER_FIELDS:
         if not fields.get(required):
             raise DomainError(f"{required} is required")
+    # Inside SR 26-2 scope by what it is; stamped rather than asked.
+    fields = stamp_model_class("MLApplication", fields)
     division = fields.get("division")
     for field, value in fields.items():
         if field not in ML_APPLICATION_FIELD_SPECS:
@@ -121,6 +124,7 @@ def decide_edit_field(
     _require_editable(state)
     if field not in ML_APPLICATION_EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
+    reject_immutable_edit(ML_APPLICATION_FIELD_SPECS, field)
     division = value if field == "division" else state.fields.get("division")
     if field == "division":
         reject_division_move_while_grouped(state.fields, value)

@@ -41,24 +41,11 @@ edits a table rather than a function (§4).
 from __future__ import annotations
 
 from config.governance._inventory import VALID_COMPLEXITY, VALID_MATERIALITY
+from config.governance._model_class import (  # noqa: F401 (re-exported)
+    MODEL_CLASSES, MODEL_CLASS_AI_SYSTEM, MODEL_CLASS_BY_RECORD_TYPE, MODEL_CLASS_FIELD_SPEC,
+    MODEL_CLASS_LABELS, MODEL_CLASS_ML_APP)
 
 # --- The SR 26-2 boundary --------------------------------------------------------------
-
-MODEL_CLASS_ML_APP = "ML_APP"
-MODEL_CLASS_AI_SYSTEM = "AI_SYSTEM"
-MODEL_CLASSES = (MODEL_CLASS_ML_APP, MODEL_CLASS_AI_SYSTEM)
-MODEL_CLASS_LABELS = {
-    MODEL_CLASS_ML_APP: "ML App (inside SR 26-2 MRM scope)",
-    MODEL_CLASS_AI_SYSTEM: "AI System (generative or agentic)",
-}
-
-# A model in the inventory and an ML Application are both traditional quantitative or
-# ML work; an AI System is not. Keyed by the aggregate type each domain registers under.
-MODEL_CLASS_BY_RECORD_TYPE = {
-    "ModelInventoryEntry": MODEL_CLASS_ML_APP,
-    "MLApplication": MODEL_CLASS_ML_APP,
-    "AISystem": MODEL_CLASS_AI_SYSTEM,
-}
 
 AI_SYSTEM_TYPE_GENERATIVE = "GENERATIVE"
 AI_SYSTEM_TYPE_AGENTIC = "AGENTIC"
@@ -148,9 +135,7 @@ GRID_UNPLACED = "Not placed"
 # immutable: registration stamps it from the record type, and the only way to move a
 # record across the SR 26-2 boundary is to register it as the other kind of record.
 AI_COMPLEXITY_FIELD_SPECS = {
-    "model_class": {"label": "Model class", "type": "choice", "options": MODEL_CLASSES,
-                    "option_labels": MODEL_CLASS_LABELS, "immutable": True,
-                    "group": "Classification"},
+    **MODEL_CLASS_FIELD_SPEC,
     "ai_system_type": {"label": "AI system type", "type": "choice",
                        "options": AI_SYSTEM_TYPES, "option_labels": AI_SYSTEM_TYPE_LABELS,
                        "group": "Classification"},

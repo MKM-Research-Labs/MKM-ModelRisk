@@ -31,6 +31,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from src.governance import collections as coll
+from src.governance.model_class import with_model_class
 
 EVENT_REGISTERED = "MLApplicationRegistered"
 EVENT_FIELD_EDITED = "MLApplicationFieldEdited"
@@ -62,7 +63,7 @@ def record_data(state: MLApplicationState) -> dict[str, Any]:
     question of the same shape the screens do, and a second copy of this fold is a
     second chance for the two to disagree about what a record contains.
     """
-    data = dict(state.fields)
+    data = with_model_class("MLApplication", dict(state.fields))
     for collection, items in state.collections.items():
         data[collection] = list(items)
     return data

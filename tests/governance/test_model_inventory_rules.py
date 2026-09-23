@@ -54,7 +54,8 @@ def test_register_emits_event_with_identity():
         initial_state(), model_id="M1", name="Alpha", fields={"tier": 2}
     )
     assert event_type == EVENT_REGISTERED
-    assert payload == {"model_id": "M1", "name": "Alpha", "tier": 2}
+    assert payload == {"model_id": "M1", "name": "Alpha", "tier": 2,
+                       "model_class": "ML_APP"}  # stamped (spec v0.5 §2.1)
 
 
 def test_register_rejects_duplicate():

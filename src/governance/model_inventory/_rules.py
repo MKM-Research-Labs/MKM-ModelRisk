@@ -43,6 +43,7 @@ from config.governance import (
     SIGNOFF_COLLECTIONS,
 )
 from src.governance import collections as coll
+from src.governance.model_class import reject_immutable_edit, stamp_model_class
 from src.governance.errors import DomainError
 from src.governance.independence import validate_independence
 from src.governance.reference import live_choice_values
@@ -114,6 +115,8 @@ def decide_register(
         raise DomainError("model_id and name are required")
     # Risk fields are validated against this model's division policy — set in the same
     # command at registration.
+    # Inside SR 26-2 scope by what it is; stamped rather than asked.
+    fields = stamp_model_class("ModelInventoryEntry", fields)
     division = fields.get("division")
     for field, value in fields.items():
         if field not in EDITABLE_FIELDS:
@@ -134,6 +137,7 @@ def decide_update_field(
         raise DomainError("cannot edit a retired model")
     if field not in EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
+    reject_immutable_edit(MODEL_FIELD_SPECS, field)
     # Editing division itself changes which policy governs the risk fields; otherwise
     # use the model's current division.
     division = value if field == "division" else state.fields.get("division")

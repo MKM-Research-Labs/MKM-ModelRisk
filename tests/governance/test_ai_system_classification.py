@@ -51,7 +51,7 @@ def test_registration_stamps_the_ai_system_class():
 
 
 def test_registering_across_the_sr26_2_line_is_refused():
-    with pytest.raises(DomainError, match="model_class is AI_SYSTEM"):
+    with pytest.raises(DomainError, match="model_class for this record type is AI_SYSTEM"):
         register_ai_system(ai_system_id="AIS-0002",
                            fields={**_MINIMUM, "model_class": "ML_APP"}, actor="admin")
 

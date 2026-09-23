@@ -24,6 +24,7 @@ fields: each entry carries a label, an input type, its group (for the grouped
 detail view), and — for choice fields — its options. ``EDITABLE_FIELDS`` and
 ``FIELD_CHOICES`` are derived from it so validation and the UI never drift apart.
 """
+from config.governance._model_class import MODEL_CLASS_FIELD_SPEC
 from config.governance._review import (REVIEW_FIELD_SPECS,
                                        VALID_REVIEW_STATUSES,  # noqa: F401 (re-export)
                                        VALID_REVIEW_TRIGGERS)
@@ -177,6 +178,7 @@ MODEL_FIELD_SPECS = {
         "label": "RAG rating", "type": "choice",
         "options": VALID_RAG_RATINGS, "group": "Governance",
     },
+    **MODEL_CLASS_FIELD_SPEC,  # the SR 26-2 boundary: stamped, immutable
     "review_frequency": {
         "label": "Review frequency", "type": "choice",
         "options": VALID_REVIEW_FREQUENCIES, "group": "Governance",

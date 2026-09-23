@@ -29,6 +29,7 @@ from typing import Any
 
 from src.database import read_all, read_view, replace_view
 from src.governance.model_inventory._state import apply, initial_state
+from src.governance.model_class import with_model_class
 from src.governance.model_inventory.commands import AGGREGATE_TYPE
 
 _VIEW = "model_inventory_view"
@@ -37,7 +38,7 @@ _COLUMNS = ("model_id", "data", "retired", "version")
 
 def _document(state) -> dict[str, Any]:
     """Scalar fields plus each non-empty collection, as one JSONB document."""
-    data = dict(state.fields)
+    data = with_model_class(AGGREGATE_TYPE, dict(state.fields))
     for collection, items in state.collections.items():
         data[collection] = list(items)
     return data

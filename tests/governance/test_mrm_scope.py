@@ -56,8 +56,7 @@ def test_a_stored_model_class_cannot_disagree_with_the_record_type():
     the only other names for the same thing stay out.
     """
     for specs in (MODEL_FIELD_SPECS, ML_APPLICATION_FIELD_SPECS, AI_SYSTEM_FIELD_SPECS):
-        if "model_class" in specs:
-            assert specs["model_class"].get("immutable") is True
+        assert specs["model_class"].get("immutable") is True
         assert "record_class" not in specs
         assert "record_type" not in specs
 
