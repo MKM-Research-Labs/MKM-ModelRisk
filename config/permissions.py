@@ -17,7 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""Who may author a change (coding rule R1). Phase P1 of ``docs/permissions_design.md``.
+"""Who may author a change (coding rule R1). Phase P1 of ``docs/Platform/permissions_design.md``.
 
 The identity header is taken at face value — whatever string arrives becomes the event's
 actor — so an unregistered identity could author on the governance record. On 2026-08-06

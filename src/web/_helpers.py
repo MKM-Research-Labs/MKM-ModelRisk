@@ -163,6 +163,10 @@ def resolve_field(field: dict, options_by_list: dict | None = None,
         shown = (labels_by_list or reference_option_labels()).get(reference)
         if shown:
             resolved["option_labels"] = dict(shown)
+    elif field.get("option_labels"):
+        # A fixed vocabulary that stores a code and shows a word (an AI System's
+        # autonomy level), declared on the spec rather than in an admin list.
+        resolved["option_labels"] = dict(field["option_labels"])
     # Set once and never after: the console shows it but must not offer it for
     # editing, and must not send it back — the domain would refuse the whole edit.
     if field.get("immutable"):
@@ -242,6 +246,8 @@ def grouped_field_specs(field_specs: dict, options_by_list: dict[str, list]) -> 
                  "type": resolved["type"], "options": resolved["options"]}
         if resolved.get("option_labels"):
             field["option_labels"] = resolved["option_labels"]
+        if resolved.get("immutable"):
+            field["immutable"] = True
         group["fields"].append(field)
     return groups
 

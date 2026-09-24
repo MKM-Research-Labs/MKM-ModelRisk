@@ -60,9 +60,11 @@ Object.assign(RecordDetail.methods, {
       const spec = this._cfg.fieldSpec(key);
       if (!spec) return "";
       const shared = DetailShell.fieldValue(key, spec, d);
+      // An immutable field is shown and never offered for editing: the domain refuses
+      // the edit, and an "edit" link that can only fail is worse than none.
       return DetailShell.row(key, riskFieldLabel(spec, d.division),
                              shared === null ? optionLabel(spec, d[key]) : shared,
-                             !this._record.retired);
+                             !this._record.retired && !spec.immutable);
     },
 
     fieldRows(keys) { return keys.map((k) => this.fieldRow(k)).join(""); },

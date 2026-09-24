@@ -46,6 +46,7 @@ from src.governance.ai_system._state import (EVENT_FIELD_EDITED, EVENT_REACTIVAT
                                              EVENT_REGISTERED, EVENT_RETIRED,
                                              AISystemState)
 from src.governance.errors import DomainError
+from src.governance.model_class import reject_immutable_edit, stamp_model_class
 from src.governance.independence import validate_independence
 from src.governance.reference import live_choice_values
 from src.governance.functional_groups import (reject_division_move_while_grouped,
@@ -105,6 +106,9 @@ def decide_register(
     for required in AI_SYSTEM_REGISTER_FIELDS:
         if not fields.get(required):
             raise DomainError(f"{required} is required")
+    # Which side of the SR 26-2 line this record is on is what it IS, so it is stamped
+    # rather than asked.
+    fields = stamp_model_class("AISystem", fields)
     division = fields.get("division")
     for field, value in fields.items():
         if field not in AI_SYSTEM_FIELD_SPECS:
@@ -125,6 +129,7 @@ def decide_edit_field(
     _require_editable(state)
     if field not in AI_SYSTEM_EDITABLE_FIELDS:
         raise DomainError(f"field not editable: {field}")
+    reject_immutable_edit(AI_SYSTEM_FIELD_SPECS, field)
     division = value if field == "division" else state.fields.get("division")
     if field == "division":
         reject_division_move_while_grouped(state.fields, value)

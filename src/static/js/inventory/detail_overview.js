@@ -152,9 +152,10 @@ Object.assign(Detail, {
       // MRC sign-off shows the granting meeting (not the raw date) once approved.
       value = '<span class="code">' + esc(d.mrc_signoff_meeting) + "</span>";
     }
-    // Sign-off + next review are set by the MRC at sign-off, not edited by hand.
-    const editLink = (key === "mrc_signoff_date" || key === "next_review_date")
-      ? "" : this._editLink(key);
+    // Sign-off + next review are set by the MRC at sign-off, not edited by hand, and
+    // an immutable field (the model class) is never edited at all.
+    const editLink = (key === "mrc_signoff_date" || key === "next_review_date" ||
+                      f.immutable) ? "" : this._editLink(key);
     return '<div class="inforow" id="row-' + key + '"><div class="k">' +
       esc(riskFieldLabel(f, d.division)) +
       '</div><div class="v">' + value + "</div>" + editLink + "</div>";

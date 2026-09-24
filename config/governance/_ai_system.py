@@ -66,6 +66,8 @@ from __future__ import annotations
 
 from config.governance._ai_regimes import DEFAULT_MARKETS, MARKETS_LIST
 from config.governance._review import REVIEW_FIELD_SPECS
+from config.governance._ai_complexity import (AI_COMPLEXITY_FIELD_SPECS,
+                                              AI_COMPLEXITY_REGISTER_OPTIONAL)
 
 from config.governance._ai import (AI_SYSTEM_QUESTION_LIST, DATA_EGRESS_CLASSES,
                                    DEPLOYMENT_PATTERNS, EU_AI_ACT_CLASSES,
@@ -189,6 +191,8 @@ AI_SYSTEM_FIELD_SPECS = {
                          "group": "Classification"},
     "rag_rating": {"label": "RAG rating", "type": "choice", "options": VALID_RAG_RATINGS,
                    "group": "Classification"},
+    # The SR 26-2 boundary and the AI complexity axis (spec v0.5 §2, AIGov edition).
+    **AI_COMPLEXITY_FIELD_SPECS,
     # --- Governance. ``owner`` and ``peer_reviewer`` are what the accountability
     #     and independence probes read; independence compares the two. ---
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},
@@ -252,7 +256,7 @@ AI_SYSTEM_REGISTER_FIELDS = ("name", "division", "owner", "use_case", "deploymen
 # beginning and these two did not. It cannot be mandatory, though: a division may have
 # no lines of business defined, and a record genuinely governed at division level has
 # no honest answer to give.
-AI_SYSTEM_REGISTER_OPTIONAL = ("line_of_business",)
+AI_SYSTEM_REGISTER_OPTIONAL = ("line_of_business",) + AI_COMPLEXITY_REGISTER_OPTIONAL
 from config.governance._ai_system_collections import (  # noqa: E402
     AGENT_TOOLS_COLLECTION, AI_REVIEW_QUESTIONS_COLLECTION,
     AI_SYSTEM_COLLECTION_SPECS)

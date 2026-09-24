@@ -12,7 +12,7 @@ It is the operating description. The design decisions behind it, with the
 alternatives that were rejected, are in [`docs/design/mlmodel.md`](design/mlmodel.md),
 [`docs/design/ml-training-tab.md`](design/ml-training-tab.md) and
 [`docs/design/ml-review-policy.md`](design/ml-review-policy.md). The general console
-walkthrough is [`docs/user_guide.md`](user_guide.md); this document assumes it.
+walkthrough is [`docs/Integration guide/user_guide.md`](<../Integration guide/user_guide.md>); this document assumes it.
 
 **Scope.** Classical and statistical machine learning — regression, GLMs, gradient
 boosting, random forests, clustering. The trained-on-data estate. LLMs and agentic AI

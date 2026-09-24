@@ -13,7 +13,7 @@ from the institution's SSO at the perimeter; every authenticated user may amend,
 gated by an explicit confirmation step, with each change attributed to its author
 and reason.
 
-> **New here?** The [**User Guide**](docs/user_guide.md) walks through every
+> **New here?** The [**User Guide**](<docs/Integration guide/user_guide.md>) walks through every
 > screen and feature. This README covers installation and the architecture.
 
 > **Installing on Windows 11?** Go straight to
@@ -61,7 +61,7 @@ and reason.
 |---|---|
 | **Persistence** | PostgreSQL, accessed only through `src/database/` (one sanctioned utility). |
 | **Model of record** | Event sourcing / CQRS — an append-only `events` table; read models (projections) are rebuilt from it. |
-| **Immutability** | Enforced at the database-grant level: the runtime `mkm_app` role can `SELECT`/`INSERT` but never `UPDATE`/`DELETE`/`TRUNCATE`. Those grants are PostgreSQL DDL and do **not** cross to another engine — for SQL Server see [`docs/mssql-immutability.md`](docs/mssql-immutability.md). Each event chains to the previous event's SHA-256 hash, so tampering is detectable. |
+| **Immutability** | Enforced at the database-grant level: the runtime `mkm_app` role can `SELECT`/`INSERT` but never `UPDATE`/`DELETE`/`TRUNCATE`. Those grants are PostgreSQL DDL and do **not** cross to another engine — for SQL Server see [`docs/MS Sql/mssql-immutability.md`](<docs/MS Sql/mssql-immutability.md>). Each event chains to the previous event's SHA-256 hash, so tampering is detectable. |
 | **Authorisation** | No built-in auth — identity arrives from SSO at the perimeter. All users may amend; a confirmation step is mandatory and the actor + reason are stamped on every event. |
 | **Web layer** | A Flask app factory + blueprints, with a dependency-free vanilla-JS console. |
 | **Documents & PDFs** | Uploads stored on disk with metadata in the event stream; PDFs rendered via LaTeX (tectonic). |
@@ -419,7 +419,7 @@ powershell -ExecutionPolicy Bypass -File scripts\start.ps1
 > **No command line at all?** Double-click **`START-HERE.bat`** in the repo root.
 > It installs Python and PostgreSQL via winget if they are missing, then runs the
 > setup — no terminal, no git, nothing pre-installed.
-> [**docs/windows-setup.md**](docs/windows-setup.md) is a click-by-click walkthrough
+> [**docs/Integration guide/windows-setup.md**](<docs/Integration guide/windows-setup.md>) is a click-by-click walkthrough
 > from downloading a ZIP onwards, written for a non-technical user.
 
 > Run it as your **normal user, not elevated** — `initdb` refuses to run as
@@ -506,7 +506,7 @@ On Windows, where gunicorn does not run, use `python model.py` instead.
 
 **Step 5 — Open it.** Visit **http://127.0.0.1:5015**, set the **Acting as** field
 (top-right) to your name/email — that identity is stamped on every change — and
-follow the [**User Guide**](docs/user_guide.md).
+follow the [**User Guide**](<docs/Integration guide/user_guide.md>).
 
 #### Running it again
 
@@ -687,7 +687,7 @@ tests/         Unit/integration tests + tests/e2e (Playwright browser suite)
 docs/          User guide, dependency manifest, coding rules
 ```
 
-See [`docs/user_guide.md`](docs/user_guide.md) for a walkthrough of every screen,
+See [`docs/Integration guide/user_guide.md`](<docs/Integration guide/user_guide.md>) for a walkthrough of every screen,
 and [`docs/rules/`](docs/rules/) for the coding rules.
 
 ## Licence
