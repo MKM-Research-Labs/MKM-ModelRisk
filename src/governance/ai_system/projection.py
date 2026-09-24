@@ -26,6 +26,7 @@ from src.database import read_all, read_view, replace_view
 from src.governance.ai_system._state import apply, initial_state, record_data
 from src.governance.ai_system.commands import AGGREGATE_TYPE
 from src.governance.ai_system.complexity import grid_position
+from src.governance.ai_system.coverage import property_coverage
 
 _VIEW = "ai_system_view"
 _COLUMNS = ("ai_system_id", "data", "retired", "version")
@@ -46,9 +47,12 @@ def rebuild_ai_system_view(config=None) -> int:
 
 
 def _placed(row: dict[str, Any]) -> dict[str, Any]:
-    """The row with its grid position, resolved now rather than stored in the view:
-    an edit to the grid tables re-places every system without a rebuild."""
-    return {**row, "grid": grid_position(row.get("data") or {})}
+    """The row with its grid position and property coverage, resolved now rather than
+    stored in the view: an edit to the tables, or a new piece of evidence, moves both
+    without a rebuild."""
+    data = row.get("data") or {}
+    grid = grid_position(data)
+    return {**row, "grid": grid, "coverage": property_coverage(data, grid)}
 
 
 def get_ai_system(ai_system_id: str, config=None) -> dict[str, Any] | None:

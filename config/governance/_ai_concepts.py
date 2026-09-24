@@ -89,7 +89,30 @@ INTENSITY_CONCEPTS: dict[str, tuple[int, ...]] = {
     INTENSITY_INTENSIVE: _FLOOR + (4, 5, 6, 7, 8),
 }
 
+# --- What the property coverage view says about each -----------------------------------
+
+# A concept's evidence, read against the configuration in force now. "Stale" and
+# "failing" are findings, not gaps: evidence exists and says something unwelcome, which
+# is a different conversation from there being none.
+EVIDENCE_LIVE = "live"
+EVIDENCE_STALE = "stale"
+EVIDENCE_FAILING = "failing"
+EVIDENCE_ABSENT = "no evidence"
+EVIDENCE_NOT_APPLICABLE = "not applicable"
+EVIDENCE_STATUSES = (EVIDENCE_LIVE, EVIDENCE_STALE, EVIDENCE_FAILING, EVIDENCE_ABSENT,
+                     EVIDENCE_NOT_APPLICABLE)
+
+# A property, across the concepts that advance it and that the system is asked for.
+PROPERTY_LIVE = "rests on live evidence"
+PROPERTY_PARTIAL = "partly evidenced"
+PROPERTY_UNCOVERED = "not evidenced"
+PROPERTY_NOT_ASKED = "not asked of this system"
+
 
 __all__ = ["AI_CONCEPTS", "AI_CONCEPT_NUMBERS", "AI_LIFECYCLE_PHASES",
-           "CONCEPT_AUTONOMY", "INTENSITY_CONCEPTS", "PHASE_BASELINE", "PHASE_DESIGN",
-           "PHASE_ESCALATE", "PHASE_OPERATE", "PHASE_REVALIDATE"]
+           "CONCEPT_AUTONOMY", "EVIDENCE_ABSENT", "EVIDENCE_FAILING",
+           "EVIDENCE_LIVE", "EVIDENCE_NOT_APPLICABLE", "EVIDENCE_STALE",
+           "EVIDENCE_STATUSES", "INTENSITY_CONCEPTS", "PROPERTY_LIVE",
+           "PROPERTY_NOT_ASKED", "PROPERTY_PARTIAL", "PROPERTY_UNCOVERED",
+           "PHASE_BASELINE", "PHASE_DESIGN", "PHASE_ESCALATE", "PHASE_OPERATE",
+           "PHASE_REVALIDATE"]

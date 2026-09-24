@@ -36,7 +36,8 @@ Object.assign(AISystemDetail, {
 
   _evidenceTab() {
     const d = this._record.data || {};
-    return '<div class="section-header">Run traces</div>' +
+    return this._coveragePanel(this._record.coverage) +
+      '<div class="section-header" style="margin-top:var(--space-8)">Run traces</div>' +
       this._lead("Where each evidential run's trace lives, its content hash, and whether " +
                  "it holds everything a system of this autonomy owes. Recorded by the " +
                  "observability pipeline, never typed.") +
@@ -52,6 +53,44 @@ Object.assign(AISystemDetail, {
                  "judge until another clears it.") +
       this._calibrationTable(d.judge_calibrations || []) + this._calibrationControls() +
       '<div id="ais-stress-cases" style="margin-top:var(--space-8)"></div>';
+  },
+
+  // Property coverage, resolved server-side on every read (ai_system/coverage.py). Four
+  // tiles — one per property — then the nine concepts that feed them. A concept the
+  // system is not asked for (by its grid band, or its autonomy) is shown dimmed rather
+  // than hidden: "not asked" is an answer a reviewer should be able to see given.
+  _coveragePanel(cov) {
+    if (!cov) return "";
+    const tone = {"rests on live evidence": "green", "partly evidenced": "amber",
+                  "not evidenced": "red"};
+    const concept = {live: "green", stale: "amber", failing: "red"};
+    const tiles = Object.keys(cov.properties).map((p) => {
+      const v = cov.properties[p];
+      const bg = tone[v.status] ? Theme.value(tone[v.status]) : Theme.value("grey");
+      return '<div class="card" style="flex:1;min-width:150px;padding:var(--space-4)">' +
+        '<div class="section-header" style="margin:0">' + esc(p) + "</div>" +
+        '<span class="badge" style="background:' + bg + '">' + esc(v.status) + "</span>" +
+        (v.gaps.length ? '<div class="muted" style="font-size:var(--size-xs);' +
+          'margin-top:var(--space-2)">gaps: concepts ' + esc(v.gaps.join(", ")) + "</div>"
+          : "") + "</div>";
+    }).join("");
+    const rows = cov.concepts.map((c) =>
+      "<tr" + (c.asked ? "" : ' class="muted"') + "><td>" + esc(c.number) + ". " +
+      esc(c.name) + '<div class="muted" style="font-size:var(--size-xs)">' +
+      esc(c.phase) + "</div></td><td>" + (concept[c.status]
+        ? '<span class="badge" style="background:' + Theme.value(concept[c.status]) +
+          '">' + esc(c.status) + "</span>" : esc(c.status)) +
+      (c.asked ? "" : ' <span class="pill">not asked</span>') + "</td><td>" +
+      esc(c.detail) + "</td></tr>").join("");
+    return '<div class="section-header">Property coverage</div>' +
+      this._lead("Which of the four properties rest on evidence about the system as " +
+                 "configured now. Held to " + esc(cov.held_to) +
+                 (cov.placed ? "" : " &mdash; place the system on the grid (Overview) " +
+                   "to be held only to what its band asks") + ".") +
+      '<div class="row" style="gap:var(--space-4);flex-wrap:wrap">' + tiles + "</div>" +
+      '<table style="margin-top:var(--space-5)"><thead><tr><th>Concept</th>' +
+      "<th>Evidence</th><th>What it says</th></tr></thead><tbody>" + rows +
+      "</tbody></table>";
   },
 
   _badge(ok, yes, no) {
