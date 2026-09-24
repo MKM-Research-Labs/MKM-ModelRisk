@@ -687,7 +687,7 @@ tests/         Unit/integration tests + tests/e2e (Playwright browser suite)
 docs/          User guide, dependency manifest, coding rules
 ```
 
-See [`docs/user_guide.md`](<docs/Integration guide/user_guide.md>) for a walkthrough of every screen,
+See [`docs/Integration guide/user_guide.md`](<docs/Integration guide/user_guide.md>) for a walkthrough of every screen,
 and [`docs/rules/`](docs/rules/) for the coding rules.
 
 ## Licence

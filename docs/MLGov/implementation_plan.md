@@ -7,7 +7,7 @@ The spec says *what* and *why*; this says *where*, *in what order*, and *how you
 is done*. Where the two disagree about what already exists, this document wins — §2 records
 the corrections.
 
-> **Two documents are called v0.5.** The one above (`docs/AIML/…_v0.5.docx`) descends from
+> **Two documents are called v0.5.** The one above (`docs/MLGov/…_v0.5.docx`) descends from
 > v0.4 and is what Phases 0–6 built. A second, the **AIGov edition**
 > (`docs/AIGov/AI_Agentic_Governance_Module_Spec_v0_5.docx`, 2026-09-23), descends from v0.3
 > and folds in Moody's *From Principles to Practice* (August 2026). Its delta against the
