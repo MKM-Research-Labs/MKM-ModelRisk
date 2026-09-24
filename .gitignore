@@ -45,3 +45,8 @@ docs/Bib/
 docs/sklearn/*.pdf
 docs/space-economy/
 docs/*.docx
+
+# Third-party material kept beside the spec it informed, never committed: Moody's
+# "Governing Generative and Agentic AI Systems" deck. And Office's lock files.
+docs/AIGov/Governing_Generative_and_Agentic_AI_Systems.pdf
+~$*

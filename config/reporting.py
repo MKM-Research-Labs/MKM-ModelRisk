@@ -42,7 +42,7 @@ DOCUMENT_CLASSIFICATION_COLOUR = RAG["red"]
 # What a band with no colour of its own falls back to, in the risk-policy tables.
 DOCUMENT_UNRATED_COLOUR = RAG["grey"]
 
-# The colour names the standalone integration guide (docs/integration_guide.tex)
+# The colour names the standalone integration guide (docs/Integration guide/integration_guide.tex)
 # defines for itself, and the document colour each one takes. That guide is a
 # hand-written LaTeX file rather than a document assembled from ``preamble()`` --
 # it has to build outside the app too -- so the platform hands it these
