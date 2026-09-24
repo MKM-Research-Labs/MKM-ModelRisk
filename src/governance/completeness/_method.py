@@ -57,6 +57,7 @@ from config.governance import (
     UNRATED_MULTIPLIER,
     UNTIERED_WEIGHT,
 )
+from src.governance.completeness._method_departures import departures_table
 from src.governance.latex import _para_table, _section, _subsection
 
 SCOPE = (
@@ -120,6 +121,9 @@ METHOD = (
     "fields and left the expensive ones blank. A record is reported as "
     "materially incomplete below "
     + f"{COMPLETENESS_ACCEPTABLE_AT:.0%}".replace("%", "\\%") + ".\n\n"
+    "Every figure quoted here is the firm-wide basis. Where a division's committee "
+    "has ratified its own, that division's records are scored on it, and the "
+    "appendix lists each departure beside the value it replaces.\n\n"
 )
 
 
@@ -175,11 +179,15 @@ def method_section() -> str:
     return _section("Basis of preparation and method", SCOPE + "\n\n" + METHOD)
 
 
-def appendix() -> str:
+def appendix(rows=()) -> str:
     """The full weight set, printed from the live constants, inside the ``appendices``
     environment so it is lettered (Appendix A) and set off by an Appendices divider,
-    as the ``docs/Swaption.tex`` template does."""
+    as the ``docs/Swaption.tex`` template does.
+
+    ``rows`` are the scored records, read only for the basis each division was
+    scored on; the departures lead, so no table below is read as the whole story."""
     body = [
+        _subsection("Division departures", departures_table(rows)),
         _subsection("Severity bands and remediation targets", _band_table()),
         _subsection("Escalation factors", _factor_table()),
         _subsection("Field criticality", _para_table(

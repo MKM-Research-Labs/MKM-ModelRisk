@@ -43,6 +43,8 @@ from config.governance import (
 from config.governance._completeness_weights import (AUDIT_WEIGHT_KEYS,
                                                      AUDIT_WEIGHT_MAX,
                                                      AUDIT_WEIGHT_MIN)
+from src.governance.completeness import build_completeness_tex
+from src.governance.completeness._method_departures import departures, departures_table
 from src.governance.completeness._rules import _carried, audit_entity
 from src.governance.completeness._weights import criticality
 from src.governance.errors import DomainError
@@ -92,7 +94,10 @@ def test_a_malformed_weight_falls_back_rather_than_raising_mid_audit():
 def test_a_division_that_sets_nothing_is_audited_exactly_as_before():
     """The regression guard: the seed's empty sections change no number."""
     seeded = {key: {} for key in AUDIT_WEIGHT_KEYS}
-    assert _audit({}, seeded) == _audit({})
+    scored, before = _audit({}, seeded), _audit({})
+    # The row carries the policy it was scored on, which differs by construction.
+    assert scored.pop("audit_policy") != before.pop("audit_policy")
+    assert scored == before
 
 
 def test_a_field_weight_moves_the_gap():
@@ -179,3 +184,50 @@ def test_a_weight_out_of_bounds_or_not_a_number_is_refused(weight):
     """The floor is the point: a weight near zero makes a real gap vanish."""
     with pytest.raises(DomainError, match="must be a number from 0.10 to 2.00"):
         _validate_policy(_with_audit(doc_weights={DOC: weight}))
+
+
+# --- The report states each division's basis ---------------------------------------
+
+def _row(division, audit):
+    return {**_audit({"division": division}, audit), "gaps": []}
+
+
+def test_a_scored_row_carries_the_basis_it_was_scored_on():
+    row = _audit({"division": "Rates"}, {"field_weights": {FIELD: 1.9}})
+    assert row["division"] == "Rates"
+    assert row["audit_policy"] == {"field_weights": {FIELD: 1.9}}
+
+
+def test_the_seed_departs_from_nothing():
+    """Compared by value: the seed copies every firm-wide setting onto the policy."""
+    assert departures(default_policy()["audit"]) == []
+
+
+def test_a_changed_setting_and_weight_are_both_departures():
+    audit = {"untiered_weight": 0.5, "field_weights": {FIELD: 1.9}}
+    assert departures(audit) == [
+        ["Untiered weight", "0.90", "0.50"],
+        [f"Field weight: {FIELD}", f"{FIELD_CRITICALITY[FIELD]:.2f}", "1.90"]]
+
+
+def test_a_weight_restating_the_firm_wide_value_is_not_a_departure():
+    assert departures({"doc_weights": {DOC: DOC_CRITICALITY[DOC]}}) == []
+
+
+def test_no_division_departing_is_said_rather_than_left_blank():
+    table = departures_table([_row("Rates", None), _row("", {"untiered_weight": 0.5})])
+    assert "No division in this report departs" in table
+
+
+def test_departures_are_listed_under_the_division_that_ratified_them():
+    table = departures_table([_row("Rates", {"doc_weights": {DOC: 0.2}}),
+                              _row("Credit", None)])
+    assert "Rates" in table and "0.20" in table and "Credit" not in table
+
+
+def test_the_report_prints_a_divisions_departures_in_its_appendix():
+    rows = [_row("Rates", {"collection_weights": {COLLECTION: 0.2}})]
+    tex = (build_completeness_tex(rows, {"fields": {}}, AS_OF)
+           .replace("\\allowbreak{}", "").replace("\\_", "_"))
+    assert "Division departures" in tex
+    assert f"Collection weight: {COLLECTION}" in tex

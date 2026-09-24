@@ -213,6 +213,10 @@ def audit_entity(
         # cannot be answered by one number read from config at printing time.
         "acceptable_at": _setting(audit_policy, "acceptable_at"),
         "conditional_at": _setting(audit_policy, "conditional_at"),
+        # And the whole basis, so the report can state where each division departs
+        # from the firm-wide one without reading a policy a second time.
+        "division": data.get("division") or "",
+        "audit_policy": audit_policy or {},
         "gaps": gaps,
     }
 

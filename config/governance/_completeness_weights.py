@@ -73,6 +73,7 @@ def _weightable(names, table, exempt) -> frozenset:
 AUDIT_WEIGHT_SECTIONS = {
     "field": {
         "policy_key": "field_weights",
+        "label": "Field",
         "table": FIELD_CRITICALITY,
         "default": DEFAULT_FIELD_CRITICALITY,
         "names": _weightable(
@@ -81,6 +82,7 @@ AUDIT_WEIGHT_SECTIONS = {
     },
     "collection": {
         "policy_key": "collection_weights",
+        "label": "Collection",
         "table": COLLECTION_CRITICALITY,
         "default": DEFAULT_COLLECTION_CRITICALITY,
         "names": _weightable(
@@ -90,6 +92,7 @@ AUDIT_WEIGHT_SECTIONS = {
     },
     "document": {
         "policy_key": "doc_weights",
+        "label": "Documentation",
         "table": DOC_CRITICALITY,
         "default": DEFAULT_DOC_CRITICALITY,
         "names": _weightable([*DOC_CATEGORIES, *PRODUCT_AUDIT_DOC_CATEGORIES],
