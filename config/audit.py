@@ -33,13 +33,14 @@ from config.files import UPLOAD_DIR
 AUDIT_OUTPUT_DIR = UPLOAD_DIR / "audit" / DatabaseConfig.from_env().name
 
 # The user guide (Markdown) — published as a PDF into the Audit Reports tab.
-USER_GUIDE_MD = Path(__file__).resolve().parents[1] / "docs" / "user_guide.md"
+USER_GUIDE_MD = (Path(__file__).resolve().parents[1] / "docs" / "Integration guide"
+                 / "user_guide.md")
 
 # The integration guide (LaTeX) — how the platform works, how to restyle it, how to
 # move it to another SQL engine or a container, and how it takes identity from an
 # SSO. Published as a PDF into the Audit Reports tab beside the user guide.
 INTEGRATION_GUIDE_TEX = (
-    Path(__file__).resolve().parents[1] / "docs" / "integration_guide.tex"
+    Path(__file__).resolve().parents[1] / "docs" / "Integration guide" / "integration_guide.tex"
 )
 INTEGRATION_GUIDE_PDF_NAME = "integration_guide.pdf"
 
