@@ -145,8 +145,15 @@ def _monitoring(data, version):
 
 
 def _trajectory(data, version):
-    # No trajectory score is stored anywhere yet: the scorer exists, its results do not.
-    return _result(EVIDENCE_ABSENT, "No trajectory score recorded.")
+    current, why = _bound(data.get("trajectory_scores") or [], version, "trajectory score")
+    if why:
+        return why
+    latest = current[-1]
+    if not latest.get("acceptable"):
+        return _result(EVIDENCE_FAILING, f"Run {latest['run_id']}'s trajectory was not "
+                                         "acceptable.")
+    return _result(EVIDENCE_LIVE, f"{len(current)} run(s) scored under v{version}; the "
+                                  "latest trajectory was acceptable.")
 
 
 def _stress(data, version):

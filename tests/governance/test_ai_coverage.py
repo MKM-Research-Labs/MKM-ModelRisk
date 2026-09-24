@@ -67,7 +67,7 @@ def test_an_empty_record_evidences_nothing():
     assert all(p["status"] == "not evidenced" for p in cov["properties"].values())
 
 
-def test_a_fully_evidenced_agent_rests_on_live_evidence_bar_its_trajectories():
+def test_an_agent_with_no_trajectory_score_is_short_of_it():
     cov = property_coverage(_live_record(), {"placed": False})
     live = {c["number"] for c in cov["concepts"] if c["status"] == "live"}
     assert live == {1, 2, 3, 4, 5, 7, 8, 9}
@@ -75,6 +75,19 @@ def test_a_fully_evidenced_agent_rests_on_live_evidence_bar_its_trajectories():
     # Robustness is advanced by 1, 2, 4, 6, 7, 8 — only 6 is missing.
     assert cov["properties"]["robustness"] == {"status": "partly evidenced",
                                                "live": [1, 2, 4, 7, 8], "gaps": [6]}
+
+
+def test_an_acceptable_trajectory_completes_an_agents_evidence():
+    scored = _live_record(trajectory_scores=[{"run_id": "R1", "config_version": 1,
+                                              "acceptable": True}])
+    cov = property_coverage(scored, {"placed": False})
+    assert all(p["status"] == "rests on live evidence" for p in cov["properties"].values())
+    bad = _live_record(trajectory_scores=[{"run_id": "R1", "config_version": 1,
+                                           "acceptable": False}])
+    assert _status(bad, 6) == "failing"
+    old = _live_record(trajectory_scores=[{"run_id": "R0", "config_version": 0,
+                                           "acceptable": True}])
+    assert _status(old, 6) == "stale"
 
 
 def test_trajectories_are_not_asked_of_a_system_that_cannot_act():

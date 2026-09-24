@@ -27,7 +27,8 @@
 // from what was sent; the console only draws it and sends raw material.
 //
 // Traces are written by the system's observability pipeline (POST .../traces), not typed,
-// so there is no button for them. The stress-test cases are an ordinary register, drawn
+// so there is no button for them; nor for trajectory scores (POST .../trajectory-scores),
+// which are produced by whatever scores the run from its trace. The stress-test cases are an ordinary register, drawn
 // by the shared collection renderer beneath the runs.
 //
 // Assigns onto AISystemDetail; loads after detail_governance_edit.js.
@@ -42,6 +43,12 @@ Object.assign(AISystemDetail, {
                  "it holds everything a system of this autonomy owes. Recorded by the " +
                  "observability pipeline, never typed.") +
       this._tracesTable(d.run_traces || []) +
+      (this._agentic() ? '<div class="section-header" style="margin-top:var(--space-8)">' +
+        "Trajectory scores</div>" +
+        this._lead("Each scored agent run, at every level: was each step supported and " +
+                   "permissible, did each sequence hang together, and was the whole " +
+                   "path acceptable. A clean final path does not excuse a bad step.") +
+        this._trajectoryTable(d.trajectory_scores || []) : "") +
       '<div class="section-header" style="margin-top:var(--space-8)">Stress-test runs</div>' +
       this._lead("Each run of the whole suite, judged case by case against what the " +
                  "system should have done. The suite's version moves on its own when " +
@@ -112,6 +119,23 @@ Object.assign(AISystemDetail, {
             esc(t.missing.map((m) => labels[m] || m).join(", ")) + "</div>" : "") +
         '</td><td><span class="code">' + esc(String(t.content_hash).slice(0, 12)) +
         "&hellip;</span></td></tr>").join("") + "</tbody></table>";
+  },
+
+  _trajectoryTable(rows) {
+    if (!rows.length) return '<div class="empty">No agent run scored.</div>';
+    return "<table><thead><tr><th>Run</th><th>Method</th><th>Run score</th>" +
+      "<th>Result</th><th>Scored</th></tr></thead><tbody>" +
+      rows.slice().reverse().map((t) => '<tr><td><span class="code">' + esc(t.run_id) +
+        "</span></td><td>" + esc(t.method) + (t.reference_trajectory_id
+          ? ' <span class="muted">vs ' + esc(t.reference_trajectory_id) + "</span>" : "") +
+        "</td><td>" + (t.run_score === null ? "&mdash;"
+          : esc(Math.round(t.run_score * 100)) + "%") + "</td><td>" +
+        this._badge(t.acceptable, "acceptable", "not acceptable") +
+        ((t.failed_steps || []).concat(t.failed_sequences || []).length
+          ? ' <span class="muted">' + esc((t.failed_steps || [])
+              .concat(t.failed_sequences || []).join(", ")) + "</span>" : "") +
+        "</td><td>" + fieldDisplay(t.scored_at) + "</td></tr>").join("") +
+      "</tbody></table>";
   },
 
   _stressRunsTable(rows) {

@@ -263,3 +263,19 @@ def record_judge_calibration(*, ai_system_id: str, judge_ai_system_id: str, pair
         state, ai_system_id=ai_system_id, judge_ai_system_id=judge_ai_system_id,
         pairs=pairs, dimension=dimension, recorded_at=_now(recorded_at))
     return _record(ai_system_id, decision, version, actor, reason, config)
+
+
+def score_trajectory(*, ai_system_id: str, run_id: str, steps, sequences, actor: str,
+                     observed_path=None, reference_trajectory_id: str = "",
+                     reference_path=None, run_acceptable=None, criteria: str = "",
+                     reason: str = "", scored_at: str | None = None,
+                     config=None) -> Event:
+    """Score a recorded agent run at step, sequence and run level (concept 6)."""
+    from src.governance.ai_system._rules_trajectory import decide_score_trajectory
+    state, version = _load(ai_system_id, config)
+    decision = decide_score_trajectory(
+        state, run_id=run_id, steps=steps, sequences=sequences,
+        observed_path=observed_path, reference_trajectory_id=reference_trajectory_id,
+        reference_path=reference_path, run_acceptable=run_acceptable,
+        criteria=criteria, scored_at=_now(scored_at))
+    return _record(ai_system_id, decision, version, actor, reason, config)

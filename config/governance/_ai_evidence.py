@@ -123,6 +123,15 @@ JUDGE_RELIANCE_IN_FORCE = "in force"
 JUDGE_RELIANCE_SUSPENDED = "suspended"
 JUDGE_RELIANCE_UNCALIBRATED = "not calibrated"
 
+# --- Trajectory scores (concept 6) -------------------------------------------------------
+
+# Scored against a recorded trace, never on its own: the trace is the evidence and the
+# score reads from it. Where a reference trajectory exists, the run is compared with it by
+# graph-edit distance (MKM's measure, not the paper's); this is the similarity below which
+# the path is not acceptable, whatever it returned. Where none exists, the assessor judges
+# the run against stated criteria and must say what they were.
+TRAJECTORY_MIN_SIMILARITY = 0.8
+
 
 __all__ = ["CALIBRATION_AGREEMENT_WITHIN", "CALIBRATION_TOLERANCE",
            "JUDGE_RELIANCE_IN_FORCE", "JUDGE_RELIANCE_SUSPENDED",
@@ -130,4 +139,4 @@ __all__ = ["CALIBRATION_AGREEMENT_WITHIN", "CALIBRATION_TOLERANCE",
            "STRESS_CATEGORIES", "STRESS_CATEGORY_LABELS", "STRESS_OCCASIONS",
            "STRESS_RESPONSES", "STRESS_RESPONSE_LABELS", "TRACE_CONTENT_LABELS",
            "TRACE_HASH_ALGORITHM", "TRACE_HASH_HEX_LENGTH", "TRACE_PURPOSES",
-           "TRACE_REQUIRED_CONTENT"]
+           "TRACE_REQUIRED_CONTENT", "TRAJECTORY_MIN_SIMILARITY"]

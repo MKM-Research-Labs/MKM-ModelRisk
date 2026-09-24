@@ -64,6 +64,7 @@ EVENT_REACTIVATED = "AISystemReactivated"
 EVENT_TRACE_RECORDED = "RunTraceRecorded"
 EVENT_STRESS_RUN_RECORDED = "StressTestRunRecorded"
 EVENT_CALIBRATION_RECORDED = "JudgeCalibrationRecorded"
+EVENT_TRAJECTORY_SCORED = "TrajectoryScored"
 
 
 @dataclass(frozen=True)
@@ -85,6 +86,7 @@ class AISystemState:
     traces: tuple = ()
     stress_runs: tuple = ()
     calibrations: tuple = ()
+    trajectory_scores: tuple = ()
 
 
 def initial_state() -> AISystemState:
@@ -104,6 +106,7 @@ def record_data(state: AISystemState) -> dict[str, Any]:
     data["run_traces"] = [dict(t) for t in state.traces]
     data["stress_test_runs"] = [dict(r) for r in state.stress_runs]
     data["judge_calibrations"] = [dict(c) for c in state.calibrations]
+    data["trajectory_scores"] = [dict(t) for t in state.trajectory_scores]
     return data
 
 
@@ -132,6 +135,8 @@ def apply(state: AISystemState, event_type: str,
         return replace(state, stress_runs=state.stress_runs + (dict(payload),))
     if event_type == EVENT_CALIBRATION_RECORDED:
         return replace(state, calibrations=state.calibrations + (dict(payload),))
+    if event_type == EVENT_TRAJECTORY_SCORED:
+        return replace(state, trajectory_scores=state.trajectory_scores + (dict(payload),))
     if event_type == EVENT_RETIRED:
         # ``retired`` is the fact; the lifecycle stage is the institution's own
         # vocabulary and is not overwritten with a word we chose.
@@ -149,4 +154,4 @@ __all__ = ["AISystemState", "initial_state", "record_data", "apply",
            "EVENT_SNAPSHOT_TAKEN", "EVENT_ENVELOPE_RECORDED",
            "EVENT_THRESHOLD_SET", "EVENT_MANIFEST_SEALED", "EVENT_REACTIVATED",
            "EVENT_TRACE_RECORDED", "EVENT_STRESS_RUN_RECORDED",
-           "EVENT_CALIBRATION_RECORDED"]
+           "EVENT_CALIBRATION_RECORDED", "EVENT_TRAJECTORY_SCORED"]

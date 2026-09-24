@@ -37,6 +37,7 @@ from src.governance.ai_system.commands import (
     take_configuration_snapshot,
     remove_collection_item,
     retire_ai_system,
+    score_trajectory,
     update_ai_system_field,
     update_collection_item,
 )
@@ -70,7 +71,7 @@ __all__ = [
     "rebuild_variability_envelope_view", "record_judge_calibration",
     "record_run_trace", "record_stress_test_run", "record_variability_envelope",
     "register_ai_system", "remove_collection_item", "retire_ai_system",
-    "list_snapshots", "seal_release_manifest", "set_trigger_threshold",
+    "list_snapshots", "score_trajectory", "seal_release_manifest", "set_trigger_threshold",
     "standing_risks", "take_configuration_snapshot",
     "update_ai_system_field", "update_collection_item",
 ]

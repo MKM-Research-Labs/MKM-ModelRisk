@@ -19,9 +19,9 @@
 # SOFTWARE.
 """The run evidence an AI System's owner — or its observability pipeline — records.
 
-Three routes, one per record in ``config/governance/_ai_evidence.py``: a hashed trace
-reference, a run of the stress-test suite, and a calibration of the judge against expert
-grading. Each body carries raw material and the domain works out the verdict — whether
+Four routes, one per record in ``config/governance/_ai_evidence.py``: a hashed trace
+reference, a run of the stress-test suite, a calibration of the judge against expert
+grading, and the score of an agent run's trajectory. Each body carries raw material and the domain works out the verdict — whether
 the trace is complete, which cases failed, what agreement the judge showed — for the
 reason the envelope route gives: a caller that posts its own verdict has answered the
 question the record exists to ask.
@@ -35,7 +35,7 @@ from flask import jsonify
 from src.command import dispatch
 from src.governance.ai_system import (get_ai_system, rebuild_ai_system_view,
                                       record_judge_calibration, record_run_trace,
-                                      record_stress_test_run)
+                                      record_stress_test_run, score_trajectory)
 from src.governance.ai_system._rules_evidence import judge_reliance
 from src.web._helpers import context_from_request, json_body
 from src.web.api_ai_system import ai_system_bp
@@ -94,3 +94,21 @@ def record_calibration(ai_system_id: str):
     data = _data(ai_system_id)
     return jsonify({"calibration": data["judge_calibrations"][-1],
                     "judge_reliance": judge_reliance(data["judge_calibrations"])}), 201
+
+
+@ai_system_bp.post("/<ai_system_id>/trajectory-scores")
+def record_trajectory_score(ai_system_id: str):
+    """Score a recorded agent run: ``steps`` and ``sequences`` as lists of verdicts, and
+    either a reference path to compare with or the criteria the run was judged against."""
+    if (gone := _missing(ai_system_id)):
+        return gone
+    body = json_body()
+    dispatch("score_trajectory", score_trajectory, context=context_from_request(body),
+             ai_system_id=ai_system_id, run_id=body.get("run_id", ""),
+             steps=body.get("steps") or [], sequences=body.get("sequences") or [],
+             observed_path=body.get("observed_path"),
+             reference_trajectory_id=body.get("reference_trajectory_id", ""),
+             reference_path=body.get("reference_path"),
+             run_acceptable=body.get("run_acceptable"), criteria=body.get("criteria", ""))
+    rebuild_ai_system_view()
+    return jsonify({"score": _data(ai_system_id)["trajectory_scores"][-1]}), 201

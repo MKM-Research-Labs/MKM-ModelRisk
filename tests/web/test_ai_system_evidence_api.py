@@ -91,6 +91,26 @@ def test_a_refusal_comes_back_as_a_400_with_the_reason(client):
     assert "not a registered AI System" in res.get_json()["error"]
 
 
-@pytest.mark.parametrize("path", ["traces", "stress-runs", "calibrations"])
+@pytest.mark.parametrize("path", ["traces", "stress-runs", "calibrations",
+                                  "trajectory-scores"])
 def test_an_unknown_system_is_a_404(client, path):
     assert _post(client, path, {}).status_code == 404
+
+
+def test_an_agent_run_is_scored_from_its_trace(client):
+    client.post("/api/ai-systems", headers=HEADERS, json={
+        "ai_system_id": "AIS-0001", "actor": "admin",
+        "fields": {"name": "Agent", **_MIN, "ai_autonomy": "AGENT"}})
+    client.post("/api/ai-systems/AIS-0001/snapshots", json={"actor": "admin"},
+                headers=HEADERS)
+    _post(client, "traces", {"run_id": "R1", "trace_uri": "otel://R1",
+                             "content_hash": "cd" * 32, "contents": [],
+                             "purpose": "Production sample"})
+    res = _post(client, "trajectory-scores", {
+        "run_id": "R1", "reference_trajectory_id": "REF-1",
+        "observed_path": ["a", "b"], "reference_path": ["a", "b"],
+        "steps": [{"step": "a", "supported": True, "permissible": True}],
+        "sequences": [{"sequence": "a→b", "coherent": True, "complete": True}]})
+    assert res.status_code == 201 and res.get_json()["score"]["acceptable"] is True
+    cov = client.get("/api/ai-systems/AIS-0001").get_json()["coverage"]
+    assert next(c for c in cov["concepts"] if c["number"] == 6)["status"] == "live"
