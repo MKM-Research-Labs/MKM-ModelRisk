@@ -62,9 +62,13 @@ AUDIT_WEIGHT_MIN = 0.10
 AUDIT_WEIGHT_MAX = 2.00
 
 
-def _weightable(names, table, exempt) -> frozenset:
-    """Everything the audit can raise a gap against, less what it never scores."""
-    return frozenset(set(names) | set(table)) - frozenset(exempt)
+def _weightable(names, exempt) -> frozenset:
+    """Everything some record is audited on, less what the audit never scores.
+
+    From the specs, not the weight tables: a table can hold a weight for a name no
+    record carries any more, and a division weighting it would ratify a change
+    that moves no score."""
+    return frozenset(names) - frozenset(exempt)
 
 
 # Each section of ``policy["audit"]``: the firm-wide table it overrides, the value
@@ -78,7 +82,7 @@ AUDIT_WEIGHT_SECTIONS = {
         "default": DEFAULT_FIELD_CRITICALITY,
         "names": _weightable(
             [*MODEL_FIELD_SPECS, *PRODUCT_FIELD_SPECS, *ML_APPLICATION_FIELD_SPECS,
-             *AI_SYSTEM_FIELD_SPECS], FIELD_CRITICALITY, EXEMPT_FIELDS),
+             *AI_SYSTEM_FIELD_SPECS], EXEMPT_FIELDS),
     },
     "collection": {
         "policy_key": "collection_weights",
@@ -88,7 +92,7 @@ AUDIT_WEIGHT_SECTIONS = {
         "names": _weightable(
             [*COLLECTION_SPECS, *PRODUCT_COLLECTION_SPECS,
              *ML_APPLICATION_COLLECTION_SPECS, *AI_SYSTEM_COLLECTION_SPECS],
-            COLLECTION_CRITICALITY, EXEMPT_COLLECTIONS),
+            EXEMPT_COLLECTIONS),
     },
     "document": {
         "policy_key": "doc_weights",
@@ -96,7 +100,7 @@ AUDIT_WEIGHT_SECTIONS = {
         "table": DOC_CRITICALITY,
         "default": DEFAULT_DOC_CRITICALITY,
         "names": _weightable([*DOC_CATEGORIES, *PRODUCT_AUDIT_DOC_CATEGORIES],
-                             DOC_CRITICALITY, EXEMPT_DOC_CATEGORIES),
+                             EXEMPT_DOC_CATEGORIES),
     },
 }
 

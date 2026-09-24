@@ -1,6 +1,7 @@
 # Design: completeness criticality weights become the division's own
 
-**Status:** In build — agreed 2026-09-24; tasks 1–2 on branch `claude/design-screenshots-project-plan-97d3e9`
+**Status:** Built — agreed and complete 2026-09-24 (tasks 1–4; task 5's cases landed with
+the code they test; the editor verified on the scratch estate)
 **Area:** Completeness audit / Risk policy / MRC
 
 ## Decision
@@ -49,6 +50,10 @@ five details wrong:
 Found on the way: `broken_doc_escalation` was offered per division in the editor and
 accepted by the validator, but `_gaps.py` multiplied by the firm-wide constant, so a
 division's value was silently ignored. It is read from the policy now.
+
+Found while building the editor: the weight table still held `analytics_model` and
+`market_data_model`, fields no record carries, so the audit never scores them. What a
+division may weight is therefore drawn from the record specs, not from the tables.
 
 ## Tasks
 

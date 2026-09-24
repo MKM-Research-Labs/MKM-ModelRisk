@@ -47,6 +47,7 @@ const RiskEditor = {
     const detail = await App.get("/api/risk-policy/" + encodeURIComponent(this._division));
     this._state = detail.state;
     this._document = detail.document || null;
+    this._weights = detail.audit_weights || null;
     // Edit the pending draft if there is one, otherwise start from the live policy.
     this._policy = JSON.parse(JSON.stringify(detail.draft || detail.live));
     this._draw();
