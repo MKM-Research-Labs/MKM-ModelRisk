@@ -27,6 +27,7 @@ hibernated at the time.
 """
 from __future__ import annotations
 
+from config.governance._committee_context import SIGNOFF_REQUEST_CONTEXT_FIELDS
 from config.governance._inventory import VALID_RAG_RATINGS
 
 # Named here with the collections they key, so the two names and the two specs
@@ -88,5 +89,7 @@ SIGNOFF_COLLECTION_SPECS = {
         {"key": "note", "label": "Note", "type": "text"},
         {"key": "from_owner", "label": "Previous owner", "type": "text"},
         {"key": "to_owner", "label": "New owner", "type": "text"},
+        # An AI System's place on the grid when the request was raised (spec §3.3).
+        *SIGNOFF_REQUEST_CONTEXT_FIELDS,
     ]},
 }

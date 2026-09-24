@@ -115,7 +115,20 @@ Object.assign(MeetingDetail, {
     return '<div class="card" style="margin-bottom:var(--space-4)"><div class="row" ' +
       'style="justify-content:space-between;align-items:center">' +
       "<div>" + this._subjectLabelHtml(subjectId) + " " + this._signoffAsk(item) +
-      doc + '</div><div class="rowact">' + decision + "</div></div></div>";
+      doc + this._gridContext(item) + '</div><div class="rowact">' + decision +
+      "</div></div></div>";
+  },
+
+  // An AI System's place on the grid and what its evidence holds up, as it stood when
+  // the request was raised. Shown to the committee, never used to choose it — see
+  // config/governance/_committee_context.py. Absent for every other record type.
+  _gridContext(item) {
+    if (!item.grid_position) return "";
+    return '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-2)">' +
+      "Grid " + esc(item.grid_position) +
+      (item.governance_intensity ? ' <span class="pill">' + esc(item.governance_intensity) +
+        "</span>" : "") +
+      (item.property_coverage ? "<br>" + esc(item.property_coverage) : "") + "</div>";
   },
 
   // Approvals are split by what is being signed off, so a committee working

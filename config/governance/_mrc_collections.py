@@ -29,6 +29,7 @@ itself; these gain one when a new kind of record can be decided about, which is
 what a fourth and fifth subject in the sign-off routing did.
 """
 from config.governance._collections import VALID_SIGNOFF_KINDS
+from config.governance._committee_context import AGENDA_CONTEXT_FIELDS
 from config.governance._inventory import VALID_RAG_RATINGS
 from config.governance._mrc import (DEFAULT_ACTION_STATUS, VALID_ACTION_STATUSES,
                                     VALID_AGENDA_STATUS, VALID_ANALYSIS_STATUS,
@@ -76,6 +77,8 @@ MRC_COLLECTION_SPECS = {
          "options": VALID_SIGNOFF_KINDS, "hidden": True},
         {"key": "proposed_rag", "label": "Proposed RAG",
          "type": "choice", "options": VALID_RAG_RATINGS, "hidden": True},
+        # An AI System's grid position, copied from the request it came from.
+        *AGENDA_CONTEXT_FIELDS,
         # An owner ratification: who it was and who it now is, so the committee
         # reads the change on the agenda item rather than opening the model.
         {"key": "from_owner", "label": "Previous owner", "type": "text", "hidden": True},
