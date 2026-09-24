@@ -122,8 +122,8 @@ FIELD_CRITICALITY = {
     # --- Product-only fields. ---
     "product": 0.90,
     "product_id": 0.90,
-    "analytics_model": 0.85,
-    "market_data_model": 0.60,
+    # ``analytics_model`` and ``market_data_model`` were product scalars; they are now
+    # component slots, audited through COLLECTION_CRITICALITY["components"].
     "calculating_agent": 0.60,
     "monitoring_approach": 0.70,
     # ``monitoring_results`` was a product-only scalar; monitoring results now live

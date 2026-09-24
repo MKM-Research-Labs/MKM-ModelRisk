@@ -53,7 +53,9 @@ division's value was silently ignored. It is read from the policy now.
 
 Found while building the editor: the weight table still held `analytics_model` and
 `market_data_model`, fields no record carries, so the audit never scores them. What a
-division may weight is therefore drawn from the record specs, not from the tables.
+division may weight is therefore drawn from the record specs, not from the tables, and
+the two dead entries were removed (they became product component slots, audited
+through the `components` collection).
 
 ## Tasks
 
