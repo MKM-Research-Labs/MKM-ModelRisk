@@ -57,6 +57,7 @@ from src.governance.ml_application import (
     update_ml_application_field,
 )
 from src.governance.ai_system.commands import AGGREGATE_TYPE as AI_SYSTEM_AGGREGATE
+from src.governance.ai_system.committee_context import committee_context
 from src.governance.ai_system import (
     add_collection_item as _ai_add,
     get_ai_system,
@@ -94,7 +95,7 @@ class Subject:
                  get: Callable, list_all: Callable, add_cmd, update_cmd, field_cmd,
                  rebuild: Callable, id_kwarg: str, retire_cmd=None, reactivate_cmd=None,
                  aggregate_type: str | None = None, doc_scope: Callable | None = None,
-                 noun: str | None = None):
+                 noun: str | None = None, context: Callable | None = None):
         self.kind = kind
         # How the record type reads in a sentence written for a person — a minute the
         # committee signs, an error the owner is shown. ``kind`` is the machine key and
@@ -118,6 +119,10 @@ class Subject:
         self._id_kwarg = id_kwarg                  # e.g. "model_id" (command kwarg)
         self._retire_cmd = retire_cmd
         self._reactivate_cmd = reactivate_cmd
+        # What a sign-off request on this record carries to its committee beyond the
+        # ask itself — an AI System's grid position (_committee_context). None for the
+        # record types that carry nothing extra.
+        self._context = context
 
     def get(self, subject_id: str) -> dict | None:
         return self._get(subject_id)
@@ -127,6 +132,9 @@ class Subject:
 
     def rebuild(self) -> None:
         self._rebuild()
+
+    def committee_context(self, subject_id: str) -> dict[str, str]:
+        return self._context(self.get(subject_id)) if self._context else {}
 
     # The three writes, each in two forms. The ``_as`` form names the command it is
     # running; the plain form is that same call under the generic name. The review
@@ -253,6 +261,7 @@ AI_SYSTEM_SUBJECT = Subject(
     retire_cmd=retire_ai_system, reactivate_cmd=reactivate_ai_system,
     noun="AI System",
     aggregate_type=AI_SYSTEM_AGGREGATE, doc_scope=ai_system_scope,
+    context=committee_context,
 )
 SUBJECTS = (MODEL_SUBJECT, PRODUCT_SUBJECT, HANDOFF_SUBJECT, ML_APPLICATION_SUBJECT,
             AI_SYSTEM_SUBJECT)
