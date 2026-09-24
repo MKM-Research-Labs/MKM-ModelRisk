@@ -88,7 +88,8 @@ const MLAppDetail = RecordDetail.attach({
   // because the model has nothing to put there.
   _LEFT: ["use_case", "division", "line_of_business", "functional_group",
           "repo_location", "codebase",
-          "estimator", "estimator_version", "vendor", "short_name", "category",
+          "estimator", "estimator_version", "vendor", "model_class", "short_name",
+          "category",
           "methodology", "estimator_rationale", "source_module"],
 
   // Testing evidence is asked of the review, not of the fit: whether the code is
@@ -123,7 +124,7 @@ const MLAppDetail = RecordDetail.attach({
     const shared = DetailShell.fieldValue(key, spec, d);
     return DetailShell.row(key, riskFieldLabel(spec, d.division),
                            shared === null ? optionLabel(spec, d[key]) : shared,
-                           !this._record.retired);
+                           !this._record.retired && !spec.immutable);
   },
 
   // Every Overview field is editable in place, through the shared editor the model and

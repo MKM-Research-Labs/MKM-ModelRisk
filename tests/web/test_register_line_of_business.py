@@ -66,7 +66,7 @@ def test_the_field_is_offered_at_registration_but_not_demanded(client, url, id_k
                                                                new_id, extra):
     specs = client.get(f"{url}/fields").get_json()
     assert "line_of_business" not in specs["register"], "it must not become mandatory"
-    assert specs["register_optional"] == ["line_of_business"]
+    assert "line_of_business" in specs["register_optional"]
 
 
 @REGISTERS

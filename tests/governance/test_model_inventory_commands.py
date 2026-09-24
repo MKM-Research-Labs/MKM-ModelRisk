@@ -43,7 +43,8 @@ def test_register_appends_first_event():
     assert event.stream_seq == 1
     assert event.event_type == "ModelRegistered"
     assert event.actor == "alice"
-    assert event.payload == {"model_id": "M1", "name": "Alpha", "tier": 2}
+    assert event.payload == {"model_id": "M1", "name": "Alpha", "tier": 2,
+                             "model_class": "ML_APP"}  # stamped (spec v0.5 §2.1)
 
 
 def test_update_appends_chained_event_with_actor_and_reason():

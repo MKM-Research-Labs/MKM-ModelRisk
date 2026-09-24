@@ -71,8 +71,12 @@ const Collections = {
 
   _cell(c, item, f, retired, autosave) {
     if (f.type === "choice" && !retired) {
+      // Stores the value, shows its label where the spec gives one (a stress case's
+      // expected response); every other register shows exactly what it stores.
+      const shown = f.option_labels || {};
       const opts = ["", ...f.options]
-        .map((o) => "<option" + (o === item[f.key] ? " selected" : "") + ">" + esc(o) + "</option>")
+        .map((o) => '<option value="' + esc(o) + '"' + (o === item[f.key] ? " selected" : "") +
+          ">" + esc(shown[o] || o) + "</option>")
         .join("");
       return '<td><select style="width:100%" data-upd="' + c.key + "|" +
         esc(item.item_id) + "|" + f.key + '">' + opts + "</select></td>";

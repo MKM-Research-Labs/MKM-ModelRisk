@@ -42,6 +42,7 @@ from src.governance.model_inventory.risk import compute_risk_rating
 from config.governance._ai_regimes import regimes_for
 from config.governance._ai_triggers import FALLBACK_STATES, TRIGGER_PROPERTIES
 from config.governance._change import CHANGE_CLASSES
+from config.governance._ai_evidence_specs import evidence_specs
 from src.governance.ai_system._rules import diff_snapshots
 from src.governance.ai_system.envelope import envelope_status
 from src.governance.ai_system import (current_config_version,
@@ -83,6 +84,7 @@ def field_specs():
         "trigger_properties": list(TRIGGER_PROPERTIES),
         "fallback_states": list(FALLBACK_STATES),
         "change_classes": list(CHANGE_CLASSES),
+        **evidence_specs(),
     })
 
 

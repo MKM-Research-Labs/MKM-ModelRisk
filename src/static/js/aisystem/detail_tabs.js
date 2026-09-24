@@ -46,7 +46,27 @@ Object.assign(AISystemDetail, {
       '<div><div class="section-header">Governance</div>' +
       this.mrcRow("AI System") + this.fieldRows(this._RIGHT) + this.mrcStatusRow() +
       this.fieldRow("next_review_date") + "</div></div>" +
+      '<div class="section-header" style="margin-top:var(--space-8)">' +
+      "Classification &amp; AI complexity</div>" +
+      this._lead("Which side of the SR 26-2 line this system sits on, and how much of " +
+                 "its path it chooses and how often it runs. With materiality, those " +
+                 "place it on the grid that sets how much evidence it owes.") +
+      this.fieldRows(this._AI_CLASS) + this._gridRow() +
       DetailShell.retiredFlag(this._record.retired);
+  },
+
+  // Resolved server-side from the grid tables; the console only draws it. An unplaced
+  // system says what is missing rather than showing an empty cell.
+  _gridRow() {
+    const g = this._record.grid || {};
+    const value = g.placed
+      ? esc(g.position) + ' <span class="pill">' + esc(g.intensity) + "</span>" +
+        '<div class="muted" style="font-size:var(--size-xs);margin-top:var(--space-2)">' +
+        "Asks for evidence on concepts " + esc((g.concepts || []).join(", ")) + "</div>"
+      : '<span class="muted">' + esc(g.position || "Not placed") +
+        (g.missing && g.missing.length ? " &mdash; missing " + esc(g.missing.join(", ")) : "") +
+        "</span>";
+    return DetailShell.row("grid", "Grid position", value, false);
   },
 
 
@@ -121,6 +141,9 @@ Object.assign(AISystemDetail, {
                    "worth seeing.") +
         this._triggersPanel(d);
       this._bindEdits(); this._bindTriggers(); return;
+    }
+    if (this._tab === "evidence") {
+      box.innerHTML = this._evidenceTab(); this._bindEvidence(); return;
     }
     if (this._tab === "risk") {
       box.innerHTML = '<div class="section-header">Risk assessment</div>' +

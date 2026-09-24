@@ -19,9 +19,10 @@
 # SOFTWARE.
 """Coverage across all three record types, and the boundary around them.
 
-Two things carry this phase. The record type is the FILTER — there is no separate
-classification column, because two answers to what a record is drift the first time
-somebody edits one. And "out of scope" is always printed beside what is governed
+Two things carry this phase. The record type is the FILTER — and where a record also
+stores ``model_class`` (spec v0.5 §2.1, AIGov edition, decided 2026-09-23) that column is
+stamped from the type and immutable, because two answers to what a record is drift the
+first time somebody edits one. And "out of scope" is always printed beside what is governed
 elsewhere, because read alone it looks like "ungoverned".
 """
 from __future__ import annotations
@@ -49,13 +50,13 @@ _ESTATE = [
 
 # --- The record type is the filter --------------------------------------------
 
-def test_no_model_class_field_exists():
-    """No duplicate classification field crept in for reporting convenience. A record's
-    type is what it IS; a column repeating it gives two answers that differ the first
-    time somebody edits one.
+def test_a_stored_model_class_cannot_disagree_with_the_record_type():
+    """The column exists because the spec's exam filter names it; what must not creep in
+    is a SECOND answer to what a record is. So wherever it is carried it is immutable, and
+    the only other names for the same thing stay out.
     """
     for specs in (MODEL_FIELD_SPECS, ML_APPLICATION_FIELD_SPECS, AI_SYSTEM_FIELD_SPECS):
-        assert "model_class" not in specs
+        assert specs["model_class"].get("immutable") is True
         assert "record_class" not in specs
         assert "record_type" not in specs
 

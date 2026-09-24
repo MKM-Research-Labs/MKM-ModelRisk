@@ -33,7 +33,7 @@
 // the audit still expected them. (model_owner_role was on that list until it was
 // retired outright on 2026-09-08 — see config/governance/_inventory.py.)
 const OVERVIEW_LEFT = ["division", "line_of_business", "functional_group",
-  "repo_location", "codebase", "type", "vendor",
+  "repo_location", "codebase", "type", "vendor", "model_class",
   "short_name", "methodology", "methodology_rationale", "source_module"];
 // The owner's risk assessment (what places the model on the heatmap) lives on the Risk
 // tab, next to the grid it drives — not the Overview. Only the headline rag_rating (owner

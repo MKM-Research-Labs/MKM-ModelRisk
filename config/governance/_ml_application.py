@@ -60,6 +60,7 @@ What this record deliberately does NOT carry, and why:
 """
 from __future__ import annotations
 
+from config.governance._model_class import MODEL_CLASS_FIELD_SPEC
 from config.governance._review import REVIEW_FIELD_SPECS
 
 from config.governance._collections import (COLLECTION_SPECS, EVALUATIONS_COLLECTION,
@@ -157,6 +158,7 @@ ML_APPLICATION_FIELD_SPECS = {
                          "group": "Classification"},
     "rag_rating": {"label": "RAG rating", "type": "choice", "options": VALID_RAG_RATINGS,
                    "group": "Classification"},
+    **MODEL_CLASS_FIELD_SPEC,  # the SR 26-2 boundary: stamped, immutable
     # --- Governance. ``owner`` and ``peer_reviewer`` are what the accountability
     #     and independence probes read; the independence check compares the two. ---
     "owner": {"label": "Owner", "type": "text", "group": "Governance", "reference": "people"},

@@ -42,7 +42,11 @@ JUDGE_FIELD = "judge_ai_system_id"
 def judges_of(data: dict[str, Any]) -> list[str]:
     """The judges whose scores this record relies on, in the order first named."""
     seen: list[str] = []
-    for row in data.get(EVALUATIONS_COLLECTION) or []:
+    # A calibration names its judge as surely as an evaluation does: a judge whose
+    # agreement with the experts is on record is one this system relies on.
+    rows = list(data.get(EVALUATIONS_COLLECTION) or []) + list(
+        data.get("judge_calibrations") or [])
+    for row in rows:
         judge = str(row.get(JUDGE_FIELD) or "").strip()
         if judge and judge not in seen:
             seen.append(judge)

@@ -7,6 +7,13 @@ The spec says *what* and *why*; this says *where*, *in what order*, and *how you
 is done*. Where the two disagree about what already exists, this document wins — §2 records
 the corrections.
 
+> **Two documents are called v0.5.** The one above (`docs/MLGov/…_v0.5.docx`) descends from
+> v0.4 and is what Phases 0–6 built. A second, the **AIGov edition**
+> (`docs/AIGov/AI_Agentic_Governance_Module_Spec_v0_5.docx`, 2026-09-23), descends from v0.3
+> and folds in Moody's *From Principles to Practice* (August 2026). Its delta against the
+> built module is §11d; where §11d and an earlier section disagree, §11d is the later
+> decision.
+
 ---
 
 ## 1. How to read this
@@ -676,6 +683,10 @@ implementation. **Depends on** 0.2.
 Applies only where `deployment_pattern` is in the agentic set — `Agentic (tool-using)`,
 `Multi-agent` — derived from the field, never from a second stored label (spec §2).
 **Verify:** `test_trajectory_scoring_skipped_for_direct_prompting`. **Depends on** 0.4.
+**Superseded in part by §11d.** A stored score now requires an *agent-autonomy trace*, and
+property coverage reads applicability from `ai_autonomy`, falling back to the deployment
+pattern only for a record not yet classified. `score_trajectory()` in `trajectory.py` still
+reads the pattern; moving it onto `ai_autonomy` is open (§11d.5).
 
 #### 4.4 Trigger register, thresholds per property
 A threshold **per property per model** — correctness, consistency, robustness,
@@ -722,8 +733,10 @@ One report, filtered primarily on **record type**, answering "what is in MRM sco
 is governed outside it" in a form an examiner can read.
 
 **Verify:** `test_coverage_counts_all_three_record_types`;
-`test_no_model_class_field_exists` — the record type is the filter, and no duplicate
-classification field crept in for reporting convenience.
+`test_a_stored_model_class_cannot_disagree_with_the_record_type` — the record type is the
+filter. *(Was `test_no_model_class_field_exists`. The AIGov edition stores `model_class`
+and the user adopted that on 2026-09-23 — §11d.1. The guard it kept, no second answer to
+what a record is, is now held by the field being stamped from the type and immutable.)*
 
 **Depends on.** Phases 1–5.
 
@@ -772,7 +785,7 @@ migration in Phase 3.
 | The question split (1.3) lands after an estate is seeded | Hard ordering constraint in 1.3 — records keep the wording they were registered with. |
 | A second review implementation grows for AI Systems | Phase 1R precedes Phases 3–5 deliberately, and 1R.1 closes only if the model tests pass unmodified. |
 | `mitigation_status` reappears on the failure-mode register | 4.5 asserts its absence. |
-| A `model_class` field returns for reporting convenience | Phase 6 asserts the record type is the filter. |
+| A `model_class` field drifts from the record type | Stored since 2026-09-23 (§11d.1), stamped at registration and immutable; Phase 6 asserts it on all three record types. |
 | A variability envelope from too few runs reads as a well-behaved system | 3.2 refuses rather than narrowing. |
 | Logic leaks into ModelOne instead of config | Add each deployment-varying parameter to the audit as it is built, so the boundary is checked per commit. |
 | A new field is added to config and not to the hand-curated screens | 3.1 lists the surfaces explicitly; treat every field addition the same way. |
@@ -912,6 +925,101 @@ served table carries both forms and the console uses them verbatim.
 
 ---
 
+## 11d. The AIGov edition of v0.5 (2026-09-23 → 24)
+
+The AIGov edition adds what the August 2026 practice paper names and the built module had
+nowhere to put: an SR 26-2 classification field, a second complexity axis for AI Systems,
+the evidence behind four of the nine concepts, and a view of which properties that
+evidence holds up. Built on `claude/aigov-spec-v0-5-c26c79` in six commits; everything
+below is on that branch.
+
+### 11d.1 Decisions the user took (2026-09-23)
+
+| Question | Decision | Reverses |
+|---|---|---|
+| Store `model_class` / `ai_system_type`, or keep the record type as the only answer? | **Store**, as the edition asks. Stamped from the record type at registration and immutable, so it cannot disagree. | `test_no_model_class_field_exists` (Phase 6) and the matching risk (§11) |
+| The frequency scale, the autonomy × frequency rule and the grid → intensity table are open in the spec | **Seed defaults as config**; an adopter or the MRC edits the tables | — |
+| Trace storage | **Hashed references** to the system's own observability store; the hash lands in the event log | — |
+| Order | Part A first (classification, grid, property coverage), then the evidence records the coverage view needed, then concept 6 | — |
+
+Still open in the edition and **not** decided here: the exception mechanism (reuse the
+Policy's exceptions process, or a separate object). The FINOS refresh-cadence decision is
+re-listed in the edition but was withdrawn on 2026-09-07 and stays withdrawn.
+
+### 11d.2 Classification and the grid (spec §2)
+
+- `config/governance/_model_class.py` — `ML_APP` / `AI_SYSTEM`, the record-type map and the
+  immutable field spec, in a module with no imports because the inventory's config needs it.
+- `src/governance/model_class.py` — stamp at registration (refusing the other class),
+  refuse an edit to an immutable field, read an older record as its type says. One copy for
+  models, ML Applications and AI Systems.
+- `config/governance/_ai_complexity.py` — `ai_system_type`, `ai_autonomy`
+  (single call / workflow / agent), `ai_usage_frequency` (seeded: ad hoc, periodic, daily,
+  continuous), the combination rule and the materiality × complexity → intensity grid.
+- `src/governance/ai_system/complexity.py` — `grid_position()`, resolved on every read. An
+  AI System missing an input reads **Not placed** and names what is missing; it is never
+  given a default cell.
+- `config/governance/_ai_concepts.py` — the nine concepts, their phase, the properties each
+  advances (the paper's matrix), and which concepts each intensity band asks for.
+
+**For review, because they are guesses rather than decisions:** the frequency levels; that
+an agent is at least Medium complexity; that stress testing (concept 7) is asked only at
+Intensive, although the paper says to stress-test before every release. The tests hold the
+tables' *shape* (complete, monotonic, cumulative), not their values.
+
+### 11d.3 Evidence records (spec §9.1, §9.3)
+
+All four are immutable `AISystem` events, bound to the configuration version in force, with
+the verdict computed server-side from what the caller sent.
+
+| Concept | Event | What is recorded | Refused when |
+|---|---|---|---|
+| 2 Trace | `RunTraceRecorded` | URI, SHA-256, declared content; `complete` / `missing` against what the autonomy level owes | no snapshot, no autonomy, bad hash, duplicate run |
+| 7 Stress | `StressTestRunRecorded` | the case register copied, observed vs expected per case; suite version moves itself when the cases change | a case without a result, an unknown response |
+| 5 ACE | `JudgeCalibrationRecorded` | paired expert / judge scores; agreement within one point; the first per judge and dimension sets the level; more than 0.05 below it suspends the judge | fewer than 20 items, off-scale, self-judging, unregistered judge |
+| 6 Trajectory | `TrajectoryScored` | step, sequence and run level; graph-edit distance against a reference (≥ 0.8) or stated criteria; acceptable only if all three pass | no agent trace for the run, a second score, criteria missing |
+
+An incomplete trace is recorded, not refused — the gap is the finding. A calibration now
+counts as a judge dependency, so a judge change surfaces on the systems it calibrates.
+Routes: `POST /api/ai-systems/<id>/{traces,stress-runs,calibrations,trajectory-scores}`.
+The Evidence tab shows all four and records suite runs and calibrations; traces and
+trajectory scores arrive from the pipeline that produces them.
+
+### 11d.4 Property coverage (spec §3.8)
+
+`src/governance/ai_system/coverage.py`, resolved on read beside `grid`. Each concept is
+**live**, **stale** (produced under an earlier configuration, or the record has moved past
+its last snapshot), **failing** (on record and unwelcome), **no evidence** or **not
+applicable**. Each property then rests on live evidence, is partly evidenced, or is not
+evidenced, across the concepts that advance it and that the system is asked for — its grid
+band's when placed, every applicable concept when not. Drawn at the top of the Evidence tab.
+
+### 11d.5 What is open
+
+| Item | Where it lands |
+|---|---|
+| Grid position as a committee-routing input (spec §3.3) | `committee_at_levels` / `Subject`; 0.3's routing already takes record type and pattern |
+| `score_trajectory()` still reads `deployment_pattern`; coverage falls back to it only for unclassified records | `trajectory.py` |
+| Exception record with a decision outcome (spec §9.4) | Blocked on the exception-mechanism decision |
+| Envelope-derived controls (cap / retry / escalation limit) and benchmark scoring method by output type (spec §9.2) | `_rules_baseline.py`, the evaluations spec |
+| An estate-wide property coverage report (spec Phase 6) | Built per system only; the completeness audit is the natural home |
+
+### 11d.6 Verification
+
+Each commit ran the full suite (last: **2588 passed, 2 skipped**) and `python -m audit`
+(**PASS: 0 gated finding(s)**), with new modules at 100% coverage. The screens were checked
+against a restore of the live estate in `mkm_modelrisk_scratch_aigov` on port 5026 — 5016
+was another session's. On it: all 24 models and the ML Application read `ML_APP` without a
+backfill; `MKM-PIML-001` places at Low × Low (Baseline) and is held to concepts 1, 2, 3 and
+9; an incomplete trace, a failed suite run and a calibration drop that suspends the judge
+all read as failing; and the paper's own trajectory example — unsupported extract, missed
+cross-check — scores 80% on path similarity and is still not acceptable.
+
+**Nothing here needs running against live.** No migration, no backfill; the new fields read
+correctly on existing records the moment the app restarts on the merged code.
+
+---
+
 ## 12. Database changes
 
 Explicit, because two thirds of the steps store something new and only some of them need
@@ -982,6 +1090,10 @@ not.
 - **The question library (1.1–1.3).** Reference lists and per-record questionnaires are
   collections too.
 - **0.3 routing, 0.5 criteria, 2.1 regimes.** Configuration only.
+- **All of §11d.** The four new AI System events fold into the existing `ai_system_view`;
+  `model_class`, the grid position and property coverage are resolved on read. No
+  migration and no backfill — a record registered before `model_class` existed reads the
+  class its type implies.
 
 ### 12.6 Registering a new projection
 
@@ -1013,6 +1125,8 @@ Convention is `<Aggregate><Verb>` in PascalCase — `ModelRegistered`, `AISystem
 | `AISystem` | `TriggerThresholdSet` | 4.4 |
 | `AISystem` | `FailureModeRegistered` | 4.5 |
 | `AISystem` | `ReleaseManifestSealed` | 5.1 |
+| `AISystem` | `RunTraceRecorded`, `StressTestRunRecorded`, `JudgeCalibrationRecorded` | §11d.3 |
+| `AISystem` | `TrajectoryScored` | §11d.3 |
 
 **An event type is permanent.** The log is append-only and a junk event can only be retired
 through a committee, so name it once and add it to the projection's `apply()` in the same
