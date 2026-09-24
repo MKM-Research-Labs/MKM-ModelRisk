@@ -31,6 +31,7 @@ from flask import Blueprint, Response, jsonify, request, send_file
 
 from src.command import dispatch
 from src.files import UploadError, save_upload, upload_path
+from src.governance.completeness.weight_catalogue import weight_catalogue
 from src.governance.mrc_settings import get_settings
 from src.governance.risk_policy import (
     approve_policy,
@@ -62,7 +63,10 @@ def risk_policy_registry():
 def _detail(division: str) -> dict:
     state = load(division)
     return {"division": division, "live": state["live"], "draft": state["draft"],
-            "document": state["document"], "state": state["state"], "seed": default_policy()}
+            "document": state["document"], "state": state["state"], "seed": default_policy(),
+            # What the Audit tab's weight tables list: every name a division may weight,
+            # its label, and the firm-wide value a blank input stands for.
+            "audit_weights": weight_catalogue()}
 
 
 @risk_policy_bp.get("/api/risk-policy/<division>")

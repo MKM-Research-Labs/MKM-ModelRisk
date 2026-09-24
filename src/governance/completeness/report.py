@@ -95,7 +95,7 @@ def build_completeness_tex(rows: list[dict], settings: dict, as_of: str, *,
         # review cycle. Two populations, two questions, said so here.
         + framework_section(rows, coverage or models or [], as_of, ratified,
                             evidence)
-        + appendix()
+        + appendix(rows)
         + "\\end{document}\n"
     )
 

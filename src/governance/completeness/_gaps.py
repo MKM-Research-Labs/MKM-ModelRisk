@@ -29,23 +29,17 @@ from __future__ import annotations
 from typing import Any
 
 from config.governance import (
-    BROKEN_DOC_ESCALATION,
     COLLECTION_ANSWERED,
-    COLLECTION_CRITICALITY,
     CONDITIONAL_DOC_CATEGORIES,
     DOC_CATEGORY_SATISFIED_BY,
-    DEFAULT_COLLECTION_CRITICALITY,
-    DEFAULT_DOC_CRITICALITY,
-    DEFAULT_FIELD_CRITICALITY,
-    DOC_CRITICALITY,
     EXEMPT_COLLECTIONS,
     EXEMPT_DOC_CATEGORIES,
     EXEMPT_FIELDS,
-    FIELD_CRITICALITY,
     PLACEHOLDER_VALUES,
     REVIEWER_INDEPENDENCE,
     RULE_SPECS,
 )
+from src.governance.completeness._weights import criticality, setting
 from src.identity import same_person
 
 # Each rule: does it apply to this record at all, and does the record satisfy it?
@@ -98,8 +92,8 @@ def _collection_shortfall(data: dict, name: str) -> tuple[int, int]:
     return answered, max(len(entries), 1)
 
 
-def _field_gaps(data: dict, specs: dict) -> list[dict]:
-    """One gap per unrecorded scalar field."""
+def _field_gaps(data: dict, specs: dict, audit_policy=None) -> list[dict]:
+    """One gap per unrecorded scalar field, weighed on the division's audit policy."""
     gaps = []
     for key, spec in specs.items():
         if key in EXEMPT_FIELDS or _recorded(data.get(key)):
@@ -107,7 +101,7 @@ def _field_gaps(data: dict, specs: dict) -> list[dict]:
         gaps.append({
             "kind": "field", "key": key, "label": spec.get("label", key),
             "group": spec.get("group", ""), "detail": "",
-            "criticality": FIELD_CRITICALITY.get(key, DEFAULT_FIELD_CRITICALITY),
+            "criticality": criticality("field", key, audit_policy),
         })
     return gaps
 
@@ -138,7 +132,7 @@ def _rules_carried(data: dict) -> float:
                in RULE_CHECKS.items() if applies(data) and satisfied(data))
 
 
-def _collection_gaps(data: dict, specs: dict) -> list[dict]:
+def _collection_gaps(data: dict, specs: dict, audit_policy=None) -> list[dict]:
     """One gap per empty or part-worked collection."""
     gaps = []
     for name, spec in specs.items():
@@ -155,7 +149,7 @@ def _collection_gaps(data: dict, specs: dict) -> list[dict]:
             # A part-worked collection is scaled by how much of it is left, so a
             # model with eight of nine validation questions answered does not
             # rank alongside one that has answered none.
-            "criticality": (COLLECTION_CRITICALITY.get(name, DEFAULT_COLLECTION_CRITICALITY)
+            "criticality": (criticality("collection", name, audit_policy)
                             * (1 - answered / expected)),
             "partial": partial,
         })
@@ -180,7 +174,8 @@ def _held_categories(data: dict, available) -> tuple[set, set]:
     return retrievable, cited - retrievable
 
 
-def _document_gaps(data: dict, categories: tuple, available=None) -> list[dict]:
+def _document_gaps(data: dict, categories: tuple, available=None,
+                   audit_policy=None) -> list[dict]:
     """One gap per documentation category that cannot produce a file.
 
     A category whose only records point at absent files is reported separately
@@ -188,6 +183,7 @@ def _document_gaps(data: dict, categories: tuple, available=None) -> list[dict]:
     finding is not merely a hole but a misstatement of coverage.
     """
     retrievable, cited_only = _held_categories(data, available)
+    broken_escalation = setting(audit_policy, "broken_doc_escalation")
     gaps = []
     for category in categories:
         if category in retrievable or category in EXEMPT_DOC_CATEGORIES:
@@ -204,11 +200,11 @@ def _document_gaps(data: dict, categories: tuple, available=None) -> list[dict]:
         if trigger and not _entries(data, trigger):
             continue
         broken = category in cited_only
-        criticality = DOC_CRITICALITY.get(category, DEFAULT_DOC_CRITICALITY)
+        weight = criticality("document", category, audit_policy)
         gaps.append({
             "kind": "document_broken" if broken else "document",
             "key": category, "label": category, "group": "Documentation",
             "detail": "recorded, file absent" if broken else "nothing uploaded",
-            "criticality": criticality * (BROKEN_DOC_ESCALATION if broken else 1.0),
+            "criticality": weight * (broken_escalation if broken else 1.0),
         })
     return gaps

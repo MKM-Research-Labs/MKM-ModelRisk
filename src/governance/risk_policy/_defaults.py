@@ -38,6 +38,7 @@ from config.theme import (
     RISK_RATING_COLOURS,
     UNRATED_COLOUR,
 )
+from config.governance._completeness_weights import AUDIT_WEIGHT_KEYS
 from config.governance import (
     AUDIT_POLICY_DEFAULTS,
     COMPLEXITY_ORDER,
@@ -129,6 +130,8 @@ def default_policy() -> dict:
         "grid": _default_grid(),
         # What the completeness audit scores this division against. Seeded from the
         # firm-wide values, so a division that never opens this section is audited
-        # exactly as it was before the section existed.
-        "audit": dict(AUDIT_POLICY_DEFAULTS),
+        # exactly as it was before the section existed. The criticality weights start
+        # empty rather than copied: an empty section reads through to the firm-wide
+        # tables, so the policy states only what the division has decided differently.
+        "audit": {**AUDIT_POLICY_DEFAULTS, **{key: {} for key in AUDIT_WEIGHT_KEYS}},
     }

@@ -57,7 +57,7 @@ Object.assign(RiskEditor, {
       esc(this._dimName("complexity")) + " table per " +
       esc(this._dimName("mission_criticality")) + " band. Pick each cell\'s rating." +
       '</p><div id="rp-grids"></div></section>' +
-      '<section data-rp="audit"><div id="rp-audit"></div></section>' +
+      '<section data-rp="audit"><div id="rp-audit"></div><div id="rp-weights"></div></section>' +
       // The written policy document now lives on Documents -> Artefacts, filed on its
       // division's shelf with the rest of what that division issues. This tab configures
       // the categorisation; it is no longer also a filing cabinet.
@@ -76,6 +76,8 @@ Object.assign(RiskEditor, {
     // reaches the MRC with the rest of the policy rather than as a setting of its own.
     RiskPolicyAudit.render(document.getElementById("rp-audit"), this._policy,
                            () => this._save());
+    RiskPolicyWeights.render(document.getElementById("rp-weights"), this._policy,
+                             this._weights, () => this._save());
     this._showSub();
   },
 

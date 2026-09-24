@@ -136,6 +136,18 @@ AUDIT_POLICY_DEFAULTS = {
     "broken_doc_escalation": BROKEN_DOC_ESCALATION,
 }
 
+# How each setting is named where the report lists a division's departures from
+# the values above -- the same names the Admin -> Risk -> Audit panel uses.
+AUDIT_SETTING_LABELS = {
+    "acceptable_at": "Acceptable at",
+    "conditional_at": "Conditional at",
+    "untiered_weight": "Untiered weight",
+    "unrated_multiplier": "Unrated multiplier",
+    "event_pressure_per_event": "Event pressure, each",
+    "event_pressure_cap": "Event pressure, capped at",
+    "broken_doc_escalation": "Broken document escalation",
+}
+
 COMPLETENESS_ACCEPTABLE_AT = 0.85
 COMPLETENESS_CONDITIONAL_AT = 0.60
 
