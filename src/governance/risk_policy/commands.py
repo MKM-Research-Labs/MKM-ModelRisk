@@ -29,6 +29,9 @@ from __future__ import annotations
 from dataclasses import replace
 
 from config.governance import AUDIT_POLICY_DEFAULTS
+from config.governance._completeness_weights import (AUDIT_WEIGHT_MAX,
+                                                     AUDIT_WEIGHT_MIN,
+                                                     AUDIT_WEIGHT_SECTIONS)
 from src.database import Event, append_event
 from src.governance.errors import DomainError
 from src.governance.risk_policy._store import (
@@ -52,8 +55,31 @@ def _validate_band(band, where: str) -> None:
         raise DomainError(f"{where}: a band has no name")
 
 
+def _is_number(value) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def _validate_weights(section, value) -> None:
+    """One criticality-weight section: names the audit knows, weights within bounds.
+
+    An unrecognised name is refused rather than ignored: a committee that ratified
+    a weight on a misspelt field would believe it had re-weighted something it had
+    not. The floor stops a weight being set so low that a real gap vanishes from
+    the division's remediation list.
+    """
+    if not isinstance(value, dict):
+        raise DomainError(f"audit weights '{section['policy_key']}' must be an object")
+    for name, weight in value.items():
+        if name not in section["names"]:
+            raise DomainError(f"{section['policy_key']}: '{name}' is not scored by the audit")
+        if not _is_number(weight) or not AUDIT_WEIGHT_MIN <= weight <= AUDIT_WEIGHT_MAX:
+            raise DomainError(
+                f"{section['policy_key']}: the weight for '{name}' must be a number from "
+                f"{AUDIT_WEIGHT_MIN:.2f} to {AUDIT_WEIGHT_MAX:.2f}")
+
+
 def _validate_audit(policy) -> None:
-    """The audit section, if present, holds numbers and nothing else.
+    """The audit section, if present, holds numbers and the three weight tables.
 
     Every key is optional — a division that has set two of them is audited on those
     two and the firm-wide values for the rest — but a key that is present and not a
@@ -65,10 +91,14 @@ def _validate_audit(policy) -> None:
         return
     if not isinstance(audit, dict):
         raise DomainError("the audit section must be an object")
+    weights = {s["policy_key"]: s for s in AUDIT_WEIGHT_SECTIONS.values()}
     for key, value in audit.items():
+        if key in weights:
+            _validate_weights(weights[key], value)
+            continue
         if key not in AUDIT_POLICY_DEFAULTS:
             raise DomainError(f"unknown audit setting: {key}")
-        if isinstance(value, bool) or not isinstance(value, (int, float)):
+        if not _is_number(value):
             raise DomainError(f"audit setting '{key}' must be a number")
         if value < 0:
             raise DomainError(f"audit setting '{key}' cannot be negative")

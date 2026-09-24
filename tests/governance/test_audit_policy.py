@@ -32,6 +32,7 @@ from __future__ import annotations
 import pytest
 
 from config.governance import AUDIT_POLICY_DEFAULTS
+from config.governance._completeness_weights import AUDIT_WEIGHT_KEYS
 from src.governance.completeness._rules import (event_pressure, rag_multiplier,
                                                 tier_weight)
 from src.governance.errors import DomainError
@@ -40,8 +41,11 @@ from src.governance.risk_policy.commands import _validate_policy
 
 
 def test_the_seed_reproduces_the_firm_wide_values():
-    """A fresh division is audited exactly as it was before the section existed."""
-    assert default_policy()["audit"] == AUDIT_POLICY_DEFAULTS
+    """A fresh division is audited exactly as it was before the section existed:
+    the firm-wide settings, and criticality-weight sections left empty so every
+    weight reads through to the firm-wide tables."""
+    assert default_policy()["audit"] == {
+        **AUDIT_POLICY_DEFAULTS, **{key: {} for key in AUDIT_WEIGHT_KEYS}}
 
 
 def test_a_division_can_set_what_it_is_scored_against():

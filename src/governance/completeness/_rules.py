@@ -21,7 +21,8 @@
 
 No I/O happens here, so every rule is trivially unit-testable and the arithmetic
 an auditor is asked to trust can be checked in isolation from the report that
-prints it. The weights themselves live in ``config.governance`` (rule R1); this
+prints it. The firm-wide weights live in ``config.governance`` (rule R1) and a
+division's overrides on its risk policy; ``_weights`` resolves the two and this
 module only applies them.
 
 Each gap carries its own factors rather than only the product, so a finding can
@@ -34,17 +35,10 @@ from datetime import date
 from typing import Any
 
 from config.governance import (
-    AUDIT_POLICY_DEFAULTS,
-    COLLECTION_CRITICALITY,
-    DEFAULT_COLLECTION_CRITICALITY,
-    DEFAULT_DOC_CRITICALITY,
-    DEFAULT_FIELD_CRITICALITY,
-    DOC_CRITICALITY,
     EVENT_PRESSURE_CAP,
     EVENT_PRESSURE_PER_EVENT,
     EXEMPT_COLLECTIONS,
     EXEMPT_FIELDS,
-    FIELD_CRITICALITY,
     RAG_MULTIPLIERS,
     REMEDIATION_ACTIONS,
     REMEDIATION_SLA_DAYS,
@@ -67,20 +61,12 @@ from src.governance.completeness._gaps import (
     _rule_gaps,
     _rules_carried,
 )
+from src.governance.completeness._weights import criticality, setting as _setting
 
 
 # ---------------------------------------------------------------------------
 # Escalation factors
 # ---------------------------------------------------------------------------
-
-def _setting(policy: dict | None, key: str) -> float:
-    """One audit setting: the division's if its committee has ratified one, else the
-    firm-wide value. Read here rather than at the call sites so a division that has
-    set two of seven is scored on those two and the defaults for the rest."""
-    value = (policy or {}).get(key)
-    return float(value) if isinstance(value, (int, float)) and not isinstance(value, bool) \
-        else AUDIT_POLICY_DEFAULTS[key]
-
 
 def tier_weight(tier: Any, policy: dict | None = None) -> float:
     """The tier's share of the severity. An untiered record escalates rather
@@ -188,9 +174,11 @@ def audit_entity(
     escalation = (factors["tier_weight"] * factors["rag_multiplier"]
                   * factors["event_pressure"] * factors["staleness"])
 
-    raw = (_field_gaps(data, field_specs)
-           + _collection_gaps(data, collection_specs)
-           + _document_gaps(data, doc_categories, available)
+    # The division's own criticality weights, where its committee has set any, weigh
+    # both what is missing here and what is held in ``_carried`` -- one scale.
+    raw = (_field_gaps(data, field_specs, audit_policy)
+           + _collection_gaps(data, collection_specs, audit_policy)
+           + _document_gaps(data, doc_categories, available, audit_policy)
            + _rule_gaps(data))
 
     gaps = []
@@ -213,7 +201,7 @@ def audit_entity(
     # filled in its cheap fields and left the expensive ones blank.
     missing = sum(g["criticality"] for g in gaps)
     total = missing + _carried(data, field_specs, collection_specs,
-                               doc_categories, available)
+                               doc_categories, available, audit_policy)
     return {
         "entity_kind": entity_kind, "entity_id": entity_id,
         "entity_name": entity_name, "tier": tier, "rag": rag,
@@ -230,17 +218,17 @@ def audit_entity(
 
 
 def _carried(data: dict, field_specs: dict, collection_specs: dict,
-             doc_categories: tuple, available=None) -> float:
+             doc_categories: tuple, available=None, audit_policy=None) -> float:
     """Total criticality of everything this record does hold — the denominator
-    of the completeness ratio."""
-    total = sum(FIELD_CRITICALITY.get(k, DEFAULT_FIELD_CRITICALITY)
+    of the completeness ratio, on the same weights as the gaps."""
+    total = sum(criticality("field", k, audit_policy)
                 for k in field_specs
                 if k not in EXEMPT_FIELDS and _recorded(data.get(k)))
     for name in collection_specs:
         if name in EXEMPT_COLLECTIONS:
             continue
         answered, expected = _collection_shortfall(data, name)
-        total += (COLLECTION_CRITICALITY.get(name, DEFAULT_COLLECTION_CRITICALITY)
+        total += (criticality("collection", name, audit_policy)
                   * min(answered / expected, 1.0) if expected else 0)
     # Documentation counts toward completeness on exactly the terms it is asked
     # for: a category never demanded (History) is not credited either, and one
@@ -254,5 +242,5 @@ def _carried(data: dict, field_specs: dict, collection_specs: dict,
             continue
         covering = DOC_CATEGORY_SATISFIED_BY.get(category)
         if category in retrievable or (covering and covering in retrievable):
-            total += DOC_CRITICALITY.get(category, DEFAULT_DOC_CRITICALITY)
+            total += criticality("document", category, audit_policy)
     return total
