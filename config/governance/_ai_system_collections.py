@@ -30,6 +30,7 @@ Re-exported from ``_ai_system`` so every existing import goes on working.
 from __future__ import annotations
 
 from config.governance._ai import AI_SYSTEM_QUESTION_LIST
+from config.governance._ai_evidence import STRESS_CASES_SPEC
 from config.governance._ai_failure_modes import (FAILURE_MODE_COLLECTION,
                                                  FAILURE_MODE_SPEC)
 from config.governance._assessments import MONITORING_COLLECTION
@@ -66,6 +67,10 @@ AI_SYSTEM_COLLECTION_SPECS = {
     # tool chain manipulation, MCP server compromise, state poisoning —
     # are exposures of generative and agentic systems specifically.
     FAILURE_MODE_COLLECTION: FAILURE_MODE_SPEC[FAILURE_MODE_COLLECTION],
+    # The cases a stress-test run is judged against (concept 7). Editable, because a
+    # suite grows; each RUN is an immutable event that copies the cases it ran, and the
+    # suite's version moves whenever they differ from the last run's.
+    **STRESS_CASES_SPEC,
     "change_history": COLLECTION_SPECS["change_history"],
     "operational_failure_events": COLLECTION_SPECS["operational_failure_events"],
     "actions": COLLECTION_SPECS["actions"],

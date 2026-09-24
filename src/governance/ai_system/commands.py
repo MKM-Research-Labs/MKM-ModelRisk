@@ -211,3 +211,55 @@ def seal_release_manifest(*, ai_system_id: str, release: str, change_class: str,
     decision = decide_seal_manifest(state, release=release, change_class=change_class,
                                     sealed_at=stamped, note=note)
     return _record(ai_system_id, decision, version, actor, reason, config)
+
+
+# --- Run evidence (config/governance/_ai_evidence.py) -----------------------------------
+
+def _now(stamp: str | None) -> str:
+    from datetime import datetime, timezone
+    return stamp or datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def record_run_trace(*, ai_system_id: str, run_id: str, trace_uri: str,
+                     content_hash: str, contents, purpose: str, actor: str,
+                     reason: str = "", recorded_at: str | None = None,
+                     config=None) -> Event:
+    """Record a hashed reference to one run's trace; the hash lands in the event log."""
+    from src.governance.ai_system._rules_evidence import decide_record_trace
+    state, version = _load(ai_system_id, config)
+    decision = decide_record_trace(state, run_id=run_id, trace_uri=trace_uri,
+                                   content_hash=content_hash, contents=contents,
+                                   purpose=purpose, recorded_at=_now(recorded_at))
+    return _record(ai_system_id, decision, version, actor, reason, config)
+
+
+def record_stress_test_run(*, ai_system_id: str, occasion: str, observed: dict,
+                           actor: str, reason: str = "", run_at: str | None = None,
+                           config=None) -> Event:
+    """Record one run of the whole stress-test suite against its cases."""
+    from src.governance.ai_system._rules_evidence import decide_record_stress_run
+    state, version = _load(ai_system_id, config)
+    decision = decide_record_stress_run(state, occasion=occasion, observed=observed,
+                                        run_at=_now(run_at))
+    return _record(ai_system_id, decision, version, actor, reason, config)
+
+
+def record_judge_calibration(*, ai_system_id: str, judge_ai_system_id: str, pairs,
+                             dimension: str, actor: str, reason: str = "",
+                             recorded_at: str | None = None, config=None) -> Event:
+    """Reconcile expert and judge grading on the same items.
+
+    The judge must be a registered AI System: it is a governed model in its own right
+    (spec §9.6), and a calibration against a judge nobody has registered is a number
+    with no provenance.
+    """
+    from src.governance.ai_system._rules_evidence import decide_record_calibration
+    from src.governance.errors import DomainError
+    judge_state, _ = _load(str(judge_ai_system_id or "").strip(), config)
+    if judge_ai_system_id and not judge_state.exists:
+        raise DomainError(f"judge {judge_ai_system_id} is not a registered AI System")
+    state, version = _load(ai_system_id, config)
+    decision = decide_record_calibration(
+        state, ai_system_id=ai_system_id, judge_ai_system_id=judge_ai_system_id,
+        pairs=pairs, dimension=dimension, recorded_at=_now(recorded_at))
+    return _record(ai_system_id, decision, version, actor, reason, config)

@@ -76,6 +76,8 @@ const AISystemDetail = RecordDetail.attach({
       ["system", "The AI system", null],
       ["exposure", "Exposure", null],
       ["controls", "Controls", null],
+      // What the runs have left on record: traces, stress tests, judge calibration.
+      ["evidence", "Evidence", null],
     ];
     // Only where it can act. An empty Tools tab on a summariser invites somebody to
     // fill it in, and there is nothing true to put there.

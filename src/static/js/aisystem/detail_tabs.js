@@ -142,6 +142,9 @@ Object.assign(AISystemDetail, {
         this._triggersPanel(d);
       this._bindEdits(); this._bindTriggers(); return;
     }
+    if (this._tab === "evidence") {
+      box.innerHTML = this._evidenceTab(); this._bindEvidence(); return;
+    }
     if (this._tab === "risk") {
       box.innerHTML = '<div class="section-header">Risk assessment</div>' +
         this._lead("The owner sets these; they place the AI System on the heatmap " +
