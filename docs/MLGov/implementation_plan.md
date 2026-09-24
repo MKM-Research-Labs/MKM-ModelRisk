@@ -998,11 +998,30 @@ band's when placed, every applicable concept when not. Drawn at the top of the E
 
 | Item | Where it lands |
 |---|---|
-| Grid position as a committee-routing input (spec §3.3) | `committee_at_levels` / `Subject`; 0.3's routing already takes record type and pattern |
 | `score_trajectory()` still reads `deployment_pattern`; coverage falls back to it only for unclassified records | `trajectory.py` |
 | Exception record with a decision outcome (spec §9.4) | Blocked on the exception-mechanism decision |
 | Envelope-derived controls (cap / retry / escalation limit) and benchmark scoring method by output type (spec §9.2) | `_rules_baseline.py`, the evaluations spec |
 | An estate-wide property coverage report (spec Phase 6) | Built per system only; the completeness audit is the natural home |
+
+### 11d.5a Grid position reaches the committee — without choosing it (2026-09-24)
+
+Spec §3.3 makes grid position "an additional routing input". Taken literally that is the
+escalation ladder §11b deleted, so the user decided (2026-09-24) that it **travels with
+the request** instead. Every record still goes to the committee for its division and line
+of business; an AI System's sign-off request records its grid position, intensity band
+and a one-line property coverage summary when it is raised, and the agenda item made from
+it copies them. Both are immutable — the minute has to say what was put to the committee,
+not what the record reads now.
+
+- `config/governance/_committee_context.py` — the three fields, spread into the request
+  and agenda specs (hidden on the agenda, whose manual add form must not offer them).
+- `src/governance/ai_system/committee_context.py` — flattens the row's `grid` and
+  `coverage`; `Subject` gained an optional `context`, set only on `AI_SYSTEM_SUBJECT`.
+- `raise_signoff` / `attach_request` carry it; the Signoff tab shows it under the ask.
+- **Verify:** `tests/web/test_signoff_grid_context.py` — the request and its agenda item
+  carry the position; **an Intensive and a Baseline system route to the same committee**
+  (the §11b guard); an unplaced system says what it is missing; other record types carry
+  nothing; the fields cannot be edited; a decision on such an item still goes through.
 
 ### 11d.6 Verification
 

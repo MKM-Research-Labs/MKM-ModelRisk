@@ -35,6 +35,7 @@ from __future__ import annotations
 from datetime import date
 
 
+from config.governance._committee_context import COMMITTEE_CONTEXT_KEYS
 from config.governance import (
     CLOSED_MEETING_STATUS,
     SIGNOFF_HISTORY_COLLECTION,
@@ -178,6 +179,9 @@ def raise_signoff(ctx: CommandContext, subject: Subject, subject_id: str, *,
         fields["from_owner"] = from_owner
     if to_owner is not None:
         fields["to_owner"] = to_owner
+    # Where the record sits on the grid, as it stands now. It rides with the request;
+    # it never changes where the request goes (config/governance/_committee_context).
+    fields.update(subject.committee_context(subject_id))
     subject.add_item(ctx, subject_id, REQUESTS, fields)
     subject.rebuild()
     refreshed = subject.get(subject_id) or {"data": {}}
@@ -219,7 +223,7 @@ def attach_request(ctx: CommandContext, subject: Subject, subject_id: str,
     # Only a rating decision carries a proposed rating.
     if proposed:
         fields["proposed_rag"] = proposed
-    for key in ("from_owner", "to_owner"):
+    for key in ("from_owner", "to_owner", *COMMITTEE_CONTEXT_KEYS):
         if request_item.get(key):
             fields[key] = request_item[key]
     dispatch(
