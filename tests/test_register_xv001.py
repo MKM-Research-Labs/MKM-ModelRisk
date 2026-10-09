@@ -58,12 +58,12 @@ def test_registers_the_model_with_its_governance_data():
     data = get_model("MKM-XV-001")["data"]
     assert data["name"] == "PRS XVA Model"
     assert data["tier"] == 1
-    assert data["version"] == "0.1.0"
-    assert data["lifecycle_stage"] == "Development"
+    assert data["version"] == "0.9.0"
+    assert data["lifecycle_stage"] == "Validation"
     assert data["validation_status"] == "Pending"
-    assert len(data["assumptions"]) == 5
-    assert len(data["limitations"]) == 4
-    assert len(data["model_weaknesses"]) == 3
+    assert len(data["assumptions"]) == 6
+    assert len(data["limitations"]) == 6
+    assert len(data["model_weaknesses"]) == 4
     # Registration seeds the nine SR 26-2 questions.
     assert len(data["validation_questions"]) == 9
 
@@ -90,7 +90,7 @@ def test_is_idempotent():
     again = register_xv001.register()
     assert again["registered"] is False
     assert again["edges_declared"] == 0
-    assert len(get_model("MKM-XV-001")["data"]["assumptions"]) == 5
+    assert len(get_model("MKM-XV-001")["data"]["assumptions"]) == 6
 
 
 def test_skips_edges_when_a_neighbour_is_absent():
