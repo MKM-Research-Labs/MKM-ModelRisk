@@ -65,6 +65,11 @@ FIELDS = {
     "source_module": "src/models/xva/",
     "repo_location": "PhysicalRisk",
     "codebase": "PhysicalRisk",
+    # Placed with MKM-PR-001, the pricer it overlays, so a committee covers it
+    # from its first event rather than from a later edit.
+    "division": "PhysicalRisk",
+    "line_of_business": "PRS Platform",
+    "functional_group": "FG-004",
     "owner": "David K Kelly",
     "status": "Proposed",
     "lifecycle_stage": "Development",
