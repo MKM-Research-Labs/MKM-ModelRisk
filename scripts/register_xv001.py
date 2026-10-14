@@ -77,26 +77,33 @@ def _register(config=None) -> bool:
     return True
 
 
-def _declare_chain(config=None) -> int:
-    """Declare the chain edges around MKM-XV-001, skipping any that exist.
+def _declare_chain(config=None) -> tuple[list, list]:
+    """Declare the chain edges around MKM-XV-001, leaving any that exist.
 
-    Returns the number of edges newly declared.
+    Returns ``(declared, skipped)``: the edges newly declared, and each edge that
+    could not be, as ``(edge, reason)`` so a missing neighbour is never silent.
     """
     existing = {(link["from"], link["to"]) for link in derive_chain(config=config)["links"]}
-    declared = 0
+    declared, skipped = [], []
     for producer, consumer in CHAIN_EDGES:
-        if (producer, consumer) in existing:
+        edge = (producer, consumer)
+        if edge in existing:
             continue
-        if get_model(producer, config=config) is None or get_model(consumer, config=config) is None:
+        absent = [m for m in edge if get_model(m, config=config) is None]
+        if absent:
+            skipped.append((edge, f"{', '.join(absent)} not in the inventory"))
             continue
         try:
             add_collection_item(
                 model_id=producer, collection="dependencies", actor=ACTOR, config=config,
                 fields={"direction": "downstream", "model_id": consumer})
-            declared += 1
-        except DomainError:
-            continue  # a cycle the guard rejects — leave the chain intact
-    return declared
+            declared.append(edge)
+            # The cycle guard reads the inventory view, so the next edge must
+            # see this one or a cycle through two new edges goes unnoticed.
+            rebuild_inventory_view(config=config)
+        except DomainError as exc:
+            skipped.append((edge, f"refused: {exc}"))  # e.g. a cycle the guard rejects
+    return declared, skipped
 
 
 def register(config=None) -> dict:
@@ -107,11 +114,12 @@ def register(config=None) -> dict:
     registered = _register(config=config)
     # Rebuild before declaring the chain: derive_chain and the get_model guards
     # in _declare_chain read the inventory view, which must reflect the just-
-    # registered model or the new edges are silently skipped.
+    # registered model or every new edge is skipped as a missing neighbour.
     rebuild_inventory_view(config=config)
-    declared = _declare_chain(config=config)
+    declared, skipped = _declare_chain(config=config)
     rebuild_inventory_view(config=config)
-    return {"registered": registered, "edges_declared": declared}
+    return {"registered": registered, "edges_declared": len(declared),
+            "edges": declared, "edges_skipped": skipped}
 
 
 def main() -> int:
@@ -125,8 +133,11 @@ def main() -> int:
               f"{len(WEAKNESSES)} weaknesses.")
     else:
         print("MKM-XV-001 already registered; left untouched.")
-    print(f"chain edges declared: {result['edges_declared']} "
-          f"(MKM-PR-001, MKM-EF-001 -> MKM-XV-001 -> MKM-TD-001)")
+    print(f"chain edges declared: {result['edges_declared']}")
+    for producer, consumer in result["edges"]:
+        print(f"  declared {producer} -> {consumer}")
+    for (producer, consumer), reason in result["edges_skipped"]:
+        print(f"  SKIPPED  {producer} -> {consumer}: {reason}")
     return 0
 
 

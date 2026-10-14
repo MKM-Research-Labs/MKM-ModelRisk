@@ -30,6 +30,9 @@ import pytest
 
 from scripts import attach_xv001_docs, register_xv001
 
+# Registering XV-001 files it under FG-004, which must be ratified first.
+pytestmark = pytest.mark.usefixtures("physicalrisk_groups")
+
 
 def _register():
     register_xv001.register()

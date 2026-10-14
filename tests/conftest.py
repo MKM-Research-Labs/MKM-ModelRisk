@@ -158,3 +158,18 @@ def _clean_event_log():
             cur.execute("DELETE FROM finding_history")
             cur.execute("DELETE FROM attention_trend")
     yield
+
+
+@pytest.fixture
+def physicalrisk_groups():
+    """The estate's ratified PhysicalRisk functional groups, through FG-004
+    (Valuation & Pricing). A record may only be filed under a ratified group, so a
+    seed script that files one (``register_xv001``) needs the list signed off first."""
+    from src.governance.functional_groups import (approve_functional_groups,
+                                                  propose_functional_groups)
+
+    names = ("Storm Generation", "Hazard Propagation", "Damage & Vulnerability",
+             "Valuation & Pricing")
+    propose_functional_groups(division="PhysicalRisk", actor="admin",
+                              groups=[{"name": name} for name in names])
+    approve_functional_groups(division="PhysicalRisk", actor="chair")

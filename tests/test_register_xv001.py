@@ -27,21 +27,27 @@ inventory view, and a re-run must be a no-op.
 """
 from __future__ import annotations
 
+import pytest
+
 from scripts import register_xv001
 from src.governance.model_inventory import (
+    add_collection_item,
     derive_chain,
     get_model,
     rebuild_inventory_view,
     register_model,
 )
 
+# XV-001 is filed under FG-004, which must be ratified before it can register.
+pytestmark = pytest.mark.usefixtures("physicalrisk_groups")
+
 _NEIGHBOURS = (("MKM-PR-001", "PRS Pricing"), ("MKM-EF-001", "Event Frequency"),
                ("MKM-TD-001", "Trading Desk"))
 
 
-def _register_neighbours():
+def _register_neighbours(neighbours=_NEIGHBOURS):
     """The three models MKM-XV-001 connects to must exist for the edges to land."""
-    for model_id, name in _NEIGHBOURS:
+    for model_id, name in neighbours:
         register_model(model_id=model_id, name=name, actor="test")
     rebuild_inventory_view()
 
@@ -61,6 +67,9 @@ def test_registers_the_model_with_its_governance_data():
     assert data["version"] == "0.9.0"
     assert data["lifecycle_stage"] == "Validation"
     assert data["validation_status"] == "Pending"
+    # Placed with the PRS pricer, so a committee covers it from registration.
+    assert (data["division"], data["line_of_business"], data["functional_group"]) == (
+        "PhysicalRisk", "PRS Platform", "FG-004")
     assert len(data["assumptions"]) == 6
     assert len(data["limitations"]) == 6
     assert len(data["model_weaknesses"]) == 4
@@ -80,7 +89,9 @@ def test_places_the_model_between_its_inputs_and_the_trading_desk():
 
 def test_reports_all_three_new_edges():
     _register_neighbours()
-    assert register_xv001.register()["edges_declared"] == 3
+    result = register_xv001.register()
+    assert result["edges_declared"] == 3
+    assert result["edges_skipped"] == []
 
 
 def test_is_idempotent():
@@ -99,6 +110,31 @@ def test_skips_edges_when_a_neighbour_is_absent():
 
     assert result["registered"] is True
     assert result["edges_declared"] == 0
+    assert len(result["edges_skipped"]) == 3
+
+
+def test_names_the_missing_neighbour_of_a_skipped_edge(capsys):
+    """The estate today: no Trading Desk model, so that edge is reported, not lost."""
+    _register_neighbours(_NEIGHBOURS[:2])
+    assert register_xv001.main() == 0
+
+    out = capsys.readouterr().out
+    assert "chain edges declared: 2" in out
+    assert "SKIPPED  MKM-XV-001 -> MKM-TD-001: MKM-TD-001 not in the inventory" in out
+
+
+def test_reports_an_edge_the_cycle_guard_refuses():
+    """TD-001 already feeding PR-001 makes XV-001 -> TD-001 a cycle."""
+    _register_neighbours()
+    add_collection_item(model_id="MKM-TD-001", collection="dependencies", actor="test",
+                        fields={"direction": "downstream", "model_id": "MKM-PR-001"})
+    rebuild_inventory_view()
+
+    result = register_xv001.register()
+    assert result["edges_declared"] == 2
+    [(edge, reason)] = result["edges_skipped"]
+    assert edge == ("MKM-XV-001", "MKM-TD-001")
+    assert reason.startswith("refused: ")
 
 
 def test_the_two_gating_limitations_are_recorded():
