@@ -49,7 +49,8 @@ const ModelDocs = {
   },
 
   // The real categories behind a tab: itself, unless it is a group (Testing is a
-  // panel over four categories, and nothing is ever filed under the label).
+  // panel over several categories; Benchmark and Review over one each). Nothing is
+  // ever filed under a group's label.
   _members(cat) {
     return (this._groups && this._groups[cat]) || [cat];
   },
@@ -78,7 +79,8 @@ const ModelDocs = {
   _renderCategory() {
     const members = this._members(this._cat);
     if (members.length > 1) { this._renderGroup(members); return; }
-    const items = DocLinks.visible(this._docs, this._cat);
+    // A one-member group lists, and files into, its member — never its label.
+    const items = DocLinks.visible(this._docs, members[0]);
     const rows = items.length ? items.map((d) =>
       "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +
       esc(fmtTimestamp(d.uploaded_at)) + "</td><td>" + fmtSize(d.size) +
@@ -113,7 +115,7 @@ const ModelDocs = {
     if (!fileInput.files.length) { App.toast("Choose a file first", "error"); return; }
     const form = new FormData();
     form.append("file", fileInput.files[0]);
-    form.append("category", this._cat);
+    form.append("category", this._members(this._cat)[0]);
     form.append("description", document.getElementById("doc-desc").value);
     fetch(this._base + this._id + "/documents", {
       method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,

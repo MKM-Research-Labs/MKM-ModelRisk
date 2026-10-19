@@ -28,7 +28,9 @@
 // parameter for every difference, and that is harder to read than the duplication was.
 const DetailShell = {
   // The tab strip. ``tabs`` is [key, label, badge] triples -- a null badge renders no
-  // count, which is how a tab with nothing to count (Overview, Risk) stays clean.
+  // count, which is how a tab with nothing to count (Overview, Risk) stays clean. An
+  // optional fourth item is a colour: the label is then drawn on it, so a tab can say
+  // what it holds (Risk Rating, in the colour of the rating) before it is opened.
   // ``attr`` is the data attribute the screen binds its clicks to, so each detail view
   // keeps its own event namespace.
   tabBar(tabs, active, attr) {
@@ -36,7 +38,9 @@ const DetailShell = {
       const danger = t[0] === "danger" ? " dtab-danger" : "";
       return '<button class="dtab' + (t[0] === active ? " active" : "") + danger +
         '" ' + attr + '="' + t[0] + '">' +
-        esc(t[1]) + (t[2] !== null && t[2] !== undefined ? " (" + t[2] + ")" : "") +
+        (t[3] ? '<span class="dtab-pill" style="background:' + t[3] + ";color:" +
+          readableOn(t[3]) + '">' + esc(t[1]) + "</span>" : esc(t[1])) +
+        (t[2] !== null && t[2] !== undefined ? " (" + t[2] + ")" : "") +
         "</button>";
     }).join("") + "</div>";
   },

@@ -46,8 +46,8 @@ def test_fields_endpoint_lists_doc_categories(client):
 def test_fields_endpoint_surfaces_each_category_in_one_place(client):
     """Every category belongs to exactly one panel, so the console never lists the
     same document twice. Testing evidence is documentation: it sits under Docs,
-    between Analysis and Monitoring, as a group over its four categories rather
-    than as a category anything is filed under."""
+    between Analysis and Monitoring, as a group over its categories rather than as
+    a category anything is filed under. Benchmark is a group of the same kind."""
     specs = client.get("/api/models/fields").get_json()
     tabs = specs["doc_tab_categories"]
     # Where Testing sits is the point — between the analysis of a model and the
@@ -55,11 +55,15 @@ def test_fields_endpoint_surfaces_each_category_in_one_place(client):
     # that would break every time a panel is added beside it.
     assert tabs.index("Analysis") < tabs.index("Testing") < tabs.index("Monitoring")
     assert specs["doc_tab_groups"]["Testing"] == [
-        "Test Results", "Unit Test", "Integration Test", "Benchmark Test"]
+        "Test Results", "Unit Test", "Integration Test"]
+    # Benchmark evidence has its own panel; it is still testing evidence elsewhere.
+    assert specs["doc_tab_groups"]["Benchmark"] == ["Benchmark Test"]
+    assert "Benchmark Test" in specs["testing_doc_categories"]
     assert "Test Results" in specs["testing_doc_categories"]
     # The group label names a panel, never a filing place — so no document can
     # carry it, and its members appear in exactly one tab.
     assert "Testing" not in specs["doc_categories"]
+    assert "Benchmark" not in specs["doc_categories"]
     for testing_cat in specs["testing_doc_categories"]:
         assert testing_cat not in specs["doc_tab_categories"]
     assert specs["hidden_doc_extensions"] == ["tex"]
