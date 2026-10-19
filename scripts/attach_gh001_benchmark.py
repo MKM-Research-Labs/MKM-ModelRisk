@@ -22,11 +22,10 @@
 
 The benchmark is generated in PhysicalRisk by ``python -m tools.wolfram_oracle``
 (``docs/models/gev_hazard_benchmark/``), a LaTeX document on the house template
-(``docs/models/shared/mkm_header.tex``). Only its PDF is filed, under Analysis
-beside the model's existing analysis.pdf; the CSVs that sit next to it stay in
-PhysicalRisk, which is where the numbers behind the PDF can be regenerated. The
-stored name is the document's own, which says Wolfram produced it and cannot
-collide with analysis.pdf.
+(``docs/models/shared/mkm_header.tex``). Only its PDF is filed, as a Benchmark
+Test, which the Docs tab lists on its own Benchmark panel. The CSVs beside it
+stay in PhysicalRisk, where the numbers behind the PDF can be regenerated. The
+stored name is the document's own, which says Wolfram produced it.
 
 Idempotent: a document whose stored name is already attached is skipped, so the
 script is safe to re-run. A REGENERATED benchmark is therefore not re-filed
@@ -42,6 +41,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from config.governance._documents import BENCHMARK_DOC_CATEGORY
 from config.paths import PRODUCER_ROOT as PHYS_ROOT
 from src.governance.documents import add_document
 from src.governance.model_inventory import get_model, rebuild_inventory_view
@@ -52,7 +52,7 @@ MODEL_ID = "MKM-GH-001"
 _DIR = "docs/models/gev_hazard_benchmark"
 
 DOCS = [
-    ("Analysis", "MKM-GH-001_wolfram_benchmark.pdf", f"{_DIR}/MKM-GH-001_wolfram_benchmark.pdf",
+    (BENCHMARK_DOC_CATEGORY, "MKM-GH-001_wolfram_benchmark.pdf", f"{_DIR}/MKM-GH-001_wolfram_benchmark.pdf",
      "Wolfram oracle benchmark - GEV Hazard Curve Model"),
 ]
 

@@ -61,11 +61,6 @@ Object.assign(Detail, {
       this._bindSignoffRequest();
       return;
     }
-    if (this._tab === "changes") {
-      box.innerHTML = '<div id="dt-changes"></div>';
-      Changes.render("model", this._id, "dt-changes", this._model.retired);
-      return;
-    }
     if (this._tab === "audit") { box.innerHTML = DetailTabs.audit(this._audit); return; }
     if (this._tab === "danger") { box.innerHTML = this._dangerContent(); return; }
     if (this._tab === "decisions") { box.innerHTML = this._mrcLinkage(d); return; }

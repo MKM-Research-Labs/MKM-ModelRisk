@@ -20,8 +20,8 @@
 
 """The GH-001 benchmark attach (scripts.attach_gh001_benchmark).
 
-Files the PhysicalRisk Wolfram oracle benchmark under Analysis. The properties
-worth protecting: only the PDF is filed, under Analysis; a re-run is a no-op;
+Files the PhysicalRisk Wolfram oracle benchmark as a Benchmark Test. The
+properties worth protecting: only the PDF is filed, under that category; a re-run is a no-op;
 and a missing source file stops the run before anything is written.
 """
 from __future__ import annotations
@@ -50,11 +50,11 @@ def _docs():
             for d in get_model(attach.MODEL_ID)["data"].get("documents") or []}
 
 
-def test_it_files_only_the_pdf_under_analysis(tmp_path):
+def test_it_files_only_the_pdf_as_a_benchmark_test(tmp_path):
     _register()
     result = attach.apply(phys_root=_fake_output(tmp_path))
-    assert result["attached"] == [("Analysis", "MKM-GH-001_wolfram_benchmark.pdf")]
-    assert _docs() == {"MKM-GH-001_wolfram_benchmark.pdf": "Analysis"}
+    assert result["attached"] == [("Benchmark Test", "MKM-GH-001_wolfram_benchmark.pdf")]
+    assert _docs() == {"MKM-GH-001_wolfram_benchmark.pdf": "Benchmark Test"}
 
 
 def test_it_is_idempotent(tmp_path):

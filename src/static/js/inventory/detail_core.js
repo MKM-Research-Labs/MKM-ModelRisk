@@ -112,21 +112,18 @@ const Detail = {
     const cov = vq.filter((q) => q.status === "Addressed").length + "/" + vq.length;
     const tabs = [
       ["overview", "Overview", null],
-      ["version_history", "Versions", null],
+      ["version_history", "Versions", n("version_history")],
       // Dependencies and Connections were two halves of one subject — a table of
       // declared feeds, and the picture those declarations draw. One tab now: the
       // graph you wire, with both registers beneath it.
       ["connections", "Connections", n("dependencies") + n("data_sources")],
       ["raci_roles", "RACI", n("raci_roles")],
       ["review", "Review", cov],
-      ["risk", "Risk Rating", null],
-      // Who the model could disadvantage, one row per attribute assessed. Beside Risk
-      // Rating rather than under Connections: it is a property of the assessment, not
-      // of the wiring.
-      ["fairness_assessments", "Fairness", n("fairness_assessments")],
-      // What testing returned, beside Fairness: both are measurements about the
-      // model rather than descriptions of it.
-      ["evaluations", "Evaluations", n("evaluations")],
+      // In the heatmap rating's colour — the division's, as the banner on the tab uses.
+      ["risk", "Risk Rating", null, this._ratingColour()],
+      // No Fairness, Evaluations or Changes tab on a model: none of the estate's
+      // models uses them (2026-10-19), so they were three empty tabs. ML Apps and
+      // AI Systems keep all three, where fairness and evaluation are the point.
       // Outstanding actions count here too: the badge should say there is something
       // still owed to the committee, not only how much history the tab holds.
       ["decisions", "MRC linkage", (d.signoff_history || []).length +
@@ -135,12 +132,15 @@ const Detail = {
         .concat(this._specs.testing_doc_categories || []))],
       // Audit is the final tab — the complete, read-only record of every change,
       // entry and upload, so it always sits last after Danger.
-      // Changes sits before Danger: an open Material change is a reason to look
-      // at the record, and it should not be reached past the retire button.
-      ["changes", "Changes", null],
       ["danger", "Danger", null], ["audit", "Audit", this._audit.length],
     ];
     return DetailShell.tabBar(tabs, this._tab, "data-dtab");
+  },
+
+  _ratingColour() {
+    const hm = (this._risk || {}).heatmap || {};
+    if (!hm.rag) return null;
+    return (hm.rating_colours || {})[hm.rag] || Theme.hex("rag", hm.rag) || null;
   },
 
   _collSection(key, d) {

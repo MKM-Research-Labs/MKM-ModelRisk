@@ -30,16 +30,23 @@
 # where Analysis is the wider work done about the model.
 # Testing sits between Analysis and Monitoring: it is part of the documentation
 # somebody reads about a model, not a separate concern with its own tab. It is a
-# GROUP rather than a category — the evidence is filed under four categories (the
-# overall pack plus one per test type) and they belong together on one panel.
+# GROUP rather than a category — the evidence is filed under the overall pack plus
+# one category per test type, and they belong together on one panel.
 TESTING_TAB_LABEL = "Testing"
+# Benchmark sits beside Testing with a panel of its own: a benchmark checks the model
+# against an independent implementation (a Wolfram oracle, a reference library), which
+# is evidence a reviewer looks for by name rather than inside the test pack. It is
+# still testing evidence, so its category stays in TESTING_DOC_CATEGORIES for the
+# report and the completeness scan; only the panel that lists it moves.
+BENCHMARK_TAB_LABEL = "Benchmark"
+BENCHMARK_DOC_CATEGORY = "Benchmark Test"
 # The Review tab lists the SIGNED reports a review produces — the issued document, not
 # the reviewer's working papers, which stay beside the stage that produced them. It is a
 # group for the same reason Testing is: the tab is called "Review", nothing is filed under
 # that name here, and the panel resolves to the report category.
 REVIEW_TAB_LABEL = "Review"
 DOC_TAB_CATEGORIES = ("Core Documentation", "Sensitivity", "Analysis", TESTING_TAB_LABEL,
-                      REVIEW_TAB_LABEL, "Monitoring", "History")
+                      BENCHMARK_TAB_LABEL, REVIEW_TAB_LABEL, "Monitoring", "History")
 
 # The Review tab's first stage: the preliminary pack a reviewer works from, and
 # whatever else the review generates as it runs. Offered beside the stage it
@@ -67,7 +74,7 @@ MRC_REVIEWABLE_CATEGORIES = ("Sensitivity", "Analysis", "Test Results",
 # three back the in-context upload panel beside each unit / integration / benchmark
 # test field. They are listed there rather than as Docs categories of their own, so a
 # test document appears under Testing and nowhere else.
-TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", "Benchmark Test")
+TESTING_DOC_CATEGORIES = ("Test Results", "Unit Test", "Integration Test", BENCHMARK_DOC_CATEGORY)
 
 # Attached in context beside the item they evidence — Remediation sits at the foot of
 # the model's Risk Rating tab — so they are not offered as standalone Docs categories.
@@ -91,7 +98,9 @@ TRAINING_DOC_CATEGORIES = (CALIBRATION_DOC_CATEGORY, CONVERGENCE_DOC_CATEGORY,
 # listing documents has to resolve the group to its real categories first.
 # The Review panel lists every report a review has issued, the way History lists every
 # Model Risk Document: the sign-off stage links the current one, and this is the archive.
-DOC_TAB_GROUPS = {TESTING_TAB_LABEL: TESTING_DOC_CATEGORIES,
+DOC_TAB_GROUPS = {TESTING_TAB_LABEL: tuple(c for c in TESTING_DOC_CATEGORIES
+                                           if c != BENCHMARK_DOC_CATEGORY),
+                  BENCHMARK_TAB_LABEL: (BENCHMARK_DOC_CATEGORY,),
                   REVIEW_TAB_LABEL: (REVIEW_REPORT_CATEGORY,)}
 
 # Every category a document can actually carry. The group label is excluded on
