@@ -21,11 +21,11 @@
 """Attach MKM-GH-001's Wolfram oracle benchmark to its ModelRisk record.
 
 The benchmark is generated in PhysicalRisk by ``python -m tools.wolfram_oracle``
-(``docs/models/benchmark/gev_hazard/``): a PDF that states the findings and two
-CSVs carrying every number behind them. All three are filed under Analysis,
-beside the model's existing analysis.pdf. The stored names carry a
-``wolfram_gev_hazard_benchmark`` prefix so they cannot collide with that or with each
-other.
+(``docs/models/benchmark/gev_hazard/``). Only the PDF is filed, under Analysis
+beside the model's existing analysis.pdf; the CSVs that sit next to it stay in
+PhysicalRisk, which is where the numbers behind the PDF can be regenerated. The
+stored name carries a ``wolfram_`` prefix so it says what produced it and cannot
+collide with analysis.pdf.
 
 Idempotent: a document whose stored name is already attached is skipped, so the
 script is safe to re-run. A REGENERATED benchmark is therefore not re-filed
@@ -53,10 +53,6 @@ _DIR = "docs/models/benchmark/gev_hazard"
 DOCS = [
     ("Analysis", "wolfram_gev_hazard_benchmark.pdf", f"{_DIR}/gev_hazard_benchmark.pdf",
      "Wolfram oracle benchmark - GEV Hazard Curve Model"),
-    ("Analysis", "wolfram_gev_hazard_benchmark_return_levels.csv", f"{_DIR}/return_levels.csv",
-     "Wolfram oracle benchmark data: return levels and exceedance"),
-    ("Analysis", "wolfram_gev_hazard_benchmark_fit.csv", f"{_DIR}/fit.csv",
-     "Wolfram oracle benchmark data: maximum-likelihood fit"),
 ]
 
 
