@@ -53,8 +53,8 @@ def _docs():
 def test_it_files_only_the_pdf_under_analysis(tmp_path):
     _register()
     result = attach.apply(phys_root=_fake_output(tmp_path))
-    assert result["attached"] == [("Analysis", "wolfram_gev_hazard_benchmark.pdf")]
-    assert _docs() == {"wolfram_gev_hazard_benchmark.pdf": "Analysis"}
+    assert result["attached"] == [("Analysis", "MKM-GH-001_wolfram_benchmark.pdf")]
+    assert _docs() == {"MKM-GH-001_wolfram_benchmark.pdf": "Analysis"}
 
 
 def test_it_is_idempotent(tmp_path):
@@ -68,7 +68,7 @@ def test_a_missing_file_writes_nothing(tmp_path):
     _register()
     root = _fake_output(tmp_path)
     (root / attach.DOCS[-1][2]).unlink()
-    with pytest.raises(FileNotFoundError, match="gev_hazard_benchmark.pdf"):
+    with pytest.raises(FileNotFoundError, match="MKM-GH-001_wolfram_benchmark.pdf"):
         attach.apply(phys_root=root)
     assert _docs() == {}
 
@@ -80,4 +80,4 @@ def test_it_refuses_when_the_model_is_absent(tmp_path):
 
 def test_the_real_spec_points_at_the_generated_benchmark():
     assert [rel for _, _, rel, _ in attach.DOCS] == [
-        "docs/models/benchmark/gev_hazard/gev_hazard_benchmark.pdf"]
+        "docs/models/gev_hazard_benchmark/MKM-GH-001_wolfram_benchmark.pdf"]

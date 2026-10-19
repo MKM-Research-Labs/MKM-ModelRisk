@@ -21,10 +21,11 @@
 """Attach MKM-GH-001's Wolfram oracle benchmark to its ModelRisk record.
 
 The benchmark is generated in PhysicalRisk by ``python -m tools.wolfram_oracle``
-(``docs/models/benchmark/gev_hazard/``). Only the PDF is filed, under Analysis
+(``docs/models/gev_hazard_benchmark/``), a LaTeX document on the house template
+(``docs/models/shared/mkm_header.tex``). Only its PDF is filed, under Analysis
 beside the model's existing analysis.pdf; the CSVs that sit next to it stay in
 PhysicalRisk, which is where the numbers behind the PDF can be regenerated. The
-stored name carries a ``wolfram_`` prefix so it says what produced it and cannot
+stored name is the document's own, which says Wolfram produced it and cannot
 collide with analysis.pdf.
 
 Idempotent: a document whose stored name is already attached is skipped, so the
@@ -48,10 +49,10 @@ from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGR
 
 ACTOR = "attach_gh001_benchmark"
 MODEL_ID = "MKM-GH-001"
-_DIR = "docs/models/benchmark/gev_hazard"
+_DIR = "docs/models/gev_hazard_benchmark"
 
 DOCS = [
-    ("Analysis", "wolfram_gev_hazard_benchmark.pdf", f"{_DIR}/gev_hazard_benchmark.pdf",
+    ("Analysis", "MKM-GH-001_wolfram_benchmark.pdf", f"{_DIR}/MKM-GH-001_wolfram_benchmark.pdf",
      "Wolfram oracle benchmark - GEV Hazard Curve Model"),
 ]
 
