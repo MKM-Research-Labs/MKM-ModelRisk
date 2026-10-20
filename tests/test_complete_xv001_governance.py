@@ -34,13 +34,32 @@ from scripts import complete_xv001_governance as complete
 from scripts import register_xv001
 from src.governance.completeness import findings, scan
 from src.governance.model_inventory import get_model, rebuild_inventory_view, register_model
+from src.governance.reference import add_option
 
 pytestmark = pytest.mark.usefixtures("physicalrisk_groups")
 
 _PDF = "docs/models/prs_xva/MKM-XV-001_model_document.pdf"
 
 
+# The admin lists as they stand on the live estate: vendor, data source and people
+# are strict references, so an empty (unenforced) list would hide a bad value.
+_LISTS = {
+    "vendor": ("MKM Research Labs", "QuanLib", "Other"),
+    "data_source": ("Manual", "Other", "Simulated", "MKM historical storm catalogue",
+                    "Physics-generated synthetic data"),
+    "people": ("David K Kelly", "Johnny Mattimore"),
+}
+
+
+def _seed_lists():
+    for list_name, values in _LISTS.items():
+        key = "name" if list_name == "people" else "value"
+        for value in values:
+            add_option(list_name=list_name, fields={key: value}, actor="test")
+
+
 def _registered(tmp_path):
+    _seed_lists()
     for model_id, name in (("MKM-PR-001", "PRS Pricing"), ("MKM-EF-001", "Event Frequency"),
                            ("MKM-TD-001", "Trading Desk")):
         register_model(model_id=model_id, name=name, actor="test")
@@ -64,7 +83,7 @@ def test_it_fills_the_blank_fields_and_moves_to_v0_10(tmp_path):
     complete.apply(phys_root=_registered(tmp_path))
     d = _data()
     assert d["description"].startswith("The PRS XVA Model")
-    assert d["vendor"] == "In-house"
+    assert d["vendor"] == "MKM Research Labs"
     assert d["next_review_date"] == "2027-10-09"
     assert d["materiality_rationale"] and d["complexity_rationale"]
     assert d["version"] == "0.10.0"
@@ -74,7 +93,7 @@ def test_it_records_the_collections(tmp_path):
     complete.apply(phys_root=_registered(tmp_path))
     d = _data()
     assert {v["version"] for v in d["version_history"]} == {"0.9.0", "0.10.0"}
-    assert len(d["data_sources"]) == 6
+    assert len(d["data_sources"]) == 4
     assert len(d["evaluations"]) == 4
     assert {r["raci"] for r in d["raci_roles"]} >= {"Accountable", "Responsible"}
     assert len(d["fairness_assessments"]) == 1
@@ -148,3 +167,16 @@ def test_main_reports(tmp_path, monkeypatch, capsys):
                         (complete.attach_xv001_docs.DOCS, root, None))
     assert complete.main() == 0
     assert "XV-001 record" in capsys.readouterr().out
+
+
+def test_a_run_that_stopped_part_way_resumes_without_rewriting(tmp_path, monkeypatch):
+    """A failure after some fields were written leaves them as events only; the
+    next run must see them rather than write them a second time."""
+    root = _registered(tmp_path)
+    monkeypatch.setitem(complete.data.SCALARS, "vendor", "Not on the list")
+    with pytest.raises(Exception):
+        complete.apply(phys_root=root)
+    monkeypatch.undo()
+    summary = complete.apply(phys_root=root)
+    assert "description" not in summary["fields"]
+    assert "vendor" in summary["fields"]

@@ -69,6 +69,9 @@ def _blank(value) -> bool:
 
 def apply(config=None, phys_root=None) -> dict:
     """Fill the audited record gaps idempotently; return a summary."""
+    # Fold in writes from an earlier run that stopped before its final rebuild,
+    # so they are seen as present and not written again.
+    rebuild_inventory_view(config=config)
     model = get_model(MODEL_ID, config=config)
     if model is None:
         raise RuntimeError(f"{MODEL_ID} is not registered.")

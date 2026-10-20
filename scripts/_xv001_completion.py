@@ -52,7 +52,7 @@ SCALARS = {
         "exposure, collateral with a margin period of risk, wrong-way risk, and SA-CCR "
         "and BA-CVA capital recomputed in every simulated state."
     ),
-    "vendor": "In-house",
+    "vendor": "MKM Research Labs",
     # Annual review, a year after the model was built and submitted.
     "next_review_date": "2027-10-09",
 }
@@ -78,23 +78,25 @@ CHANGES = [
                     "PRS trade commit as well as at EOD."},
 ]
 
+# ``data_source`` must be a value on the admin Data Source list; what each feed
+# carries is in the note. The PRS pricer is an upstream model, recorded as a chain
+# edge rather than a data source.
 DATA_SOURCES = [
-    {"data_source": "MKM-PR-001 PRS pricer: trade terms, discount curve and risk-free value",
-     "note": "Reproduced at t = 0 to 1e-12 (pricer reconciliation check)."},
-    {"data_source": "Trading Desk market state: gauge hazard term structure",
-     "note": "Tenor-bucket hazards bootstrapped into the CIR++ shift; six gauges with "
-             "no term structure fall back to a flat curve and are listed in the run."},
-    {"data_source": "Counterparty records: CDS curve, recovery and rating",
-     "note": "Synthetic. Generated counterparties carry a rating-proxy curve, flagged "
-             "RatingProxy on every output."},
-    {"data_source": "Counterparty CDM: netting agreements and CSA terms",
-     "note": "Synthetic; counterparties without CreditSupport run uncollateralised."},
-    {"data_source": "config/xva.py: funding spread, hazard volatility, capital parameters",
-     "note": "Placeholders: hazard volatility 0.30 and mean reversion 0.5 are not "
-             "calibrated; funding spread has no treasury source."},
-    {"data_source": "MKM-EF-001 event catalogue (trigger correlation)",
-     "note": "Supported by the engine but not yet passed in by the desk, so triggers "
-             "are independent given the hazard factor."},
+    {"data_source": "Physics-generated synthetic data",
+     "note": "Gauge hazard term structure from the Trading Desk market state, built "
+             "from the synthetic storm simulation; six gauges with no term structure "
+             "fall back to a flat curve and are listed in each run."},
+    {"data_source": "Simulated",
+     "note": "Counterparty CDS curves, recovery, netting and CSA terms. Generated "
+             "counterparties carry a rating-proxy curve, flagged RatingProxy on every "
+             "output; those without CreditSupport run uncollateralised."},
+    {"data_source": "Manual",
+     "note": "config/xva.py placeholders: hazard volatility 0.30 and mean reversion "
+             "0.5 are not calibrated, and the funding spread has no treasury source."},
+    {"data_source": "MKM historical storm catalogue",
+     "note": "Event catalogue (MKM-EF-001) for trigger correlation. Supported by the "
+             "engine but not yet passed in by the desk, so triggers are independent "
+             "given the hazard factor."},
 ]
 
 EVALUATIONS = [
