@@ -1,6 +1,10 @@
 # FINOS AI Governance Framework — coverage and gaps
 
 **Status:** Section 5 BUILT on this branch, gate green. Section 6 not started.
+**Superseded in part (2026-10-20):** the FINOS shelf (§3, Step 2) was withdrawn from
+Documents → Artefacts. With it went the 21 mitigation rows it evidenced; the
+mitigation catalogue now lists only the two the register evidences (AIR-PREV-005,
+AIR-DET-015). Read the shelf sections below as history.
 **Date:** 2026-08-25
 **Source:** `docs/finos/FINOS AI Governance Framework_.pdf` — the single-page export
 of the AIR governance site, 201pp

@@ -138,7 +138,7 @@ def test_the_bias_row_now_counts_the_whole_estate():
     from config.governance._finos import FINOS_RISKS
 
     def _row(estate):
-        rows = coverage([], estate, "2026-08-26", (), [])
+        rows = coverage([], estate, "2026-08-26", ())
         return next(r for r in rows
                     if r["framework"] == FINOS_RISKS and r["ref"] == "AIR-OP-016")
 

@@ -44,7 +44,7 @@ AS_OF = "2026-08-28"
 
 
 def _row(estate, framework, ref):
-    rows = coverage([], estate, AS_OF, (), [])
+    rows = coverage([], estate, AS_OF, ())
     return next(r for r in rows if r["framework"] == framework and r["ref"] == ref)
 
 
@@ -149,8 +149,8 @@ def test_non_determinism_wants_the_reproducibility_check_specifically():
 
 
 def test_the_judge_mitigation_is_evidenced_from_the_register():
-    """AIR-DET-015, the second mitigation the platform evidences from the record
-    rather than a filed paper — on the same reasoning as acceptance testing."""
+    """AIR-DET-015 is counted from the record, on the same reasoning as acceptance
+    testing."""
     none_yet = _ai(evaluations=[_eval()])
     assert _row(none_yet, FINOS_MITIGATIONS, "AIR-DET-015")["state"] == COVERAGE_ABSENT
 
@@ -158,4 +158,3 @@ def test_the_judge_mitigation_is_evidenced_from_the_register():
                                     result="Scored 4.2/5 for faithfulness.")])
     row = _row(judged, FINOS_MITIGATIONS, "AIR-DET-015")
     assert row["state"] == COVERAGE_EVIDENCED
-    assert row["probe"] != "finos_evidence"

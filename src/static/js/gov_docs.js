@@ -31,8 +31,7 @@ function parseModelTypes(str) {
 // distinction is who wrote the document. Bibliography is the external reference
 // material this governance framework is built on — papers, standards, regulatory
 // texts. Artefacts is what the institution itself issues, filed per division with a
-// company-wide shelf and the FINOS shelf beside it; it is a screen of its own, in
-// gov_artefacts.js. Vendors is neither what we read nor what we issue, but what a
+// company-wide shelf beside them; it is a screen of its own, in gov_artefacts.js. Vendors is neither what we read nor what we issue, but what a
 // supplier hands over about its own product, and lives in gov_vendor_docs.js.
 //
 // Only Bibliography is drawn by this file. The other two own their state and render

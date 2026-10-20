@@ -129,14 +129,11 @@ def _scope(models: list[dict]) -> str:
 
 
 def framework_section(rows: list[dict], models: list[dict], as_of: str,
-                      ratified=(), evidence=()) -> str:
-    """The coverage section, or nothing at all when no framework is configured.
-
-    ``evidence`` are the documents filed on the FINOS shelf; see ``coverage``.
-    """
+                      ratified=()) -> str:
+    """The coverage section, or nothing at all when no framework is configured."""
     if not FRAMEWORK_COVERAGE:
         return ""
-    clauses = coverage(rows, models, as_of, ratified, evidence)
+    clauses = coverage(rows, models, as_of, ratified)
     body = [_scope(models), _headline(clauses)]
     body.extend(_framework_table(framework, clauses)
                 for framework, _rows in FRAMEWORK_COVERAGE)

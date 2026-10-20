@@ -43,9 +43,8 @@ DOCUMENTS = "documents"
 GOVERNANCE_DOCUMENTS_AGGREGATE = "GovernanceDocuments"
 
 # The artefact shelves (api_artefacts). Named here beside the documents aggregate,
-# and for the same reason that one is: two callers now read this stream -- the API
-# that files an artefact and the completeness audit that counts the FINOS shelf --
-# and a second spelling of an aggregate id is a bug that reads as an empty shelf.
+# and for the same reason that one is: a second spelling of an aggregate id is a bug
+# that reads as an empty shelf.
 GOVERNANCE_ARTEFACTS_AGGREGATE = "GovernanceArtefacts"
 
 
@@ -54,14 +53,12 @@ def clean_tags(tags) -> list:
 
     Accepts ``None`` (no tags) or any iterable of labels; anything falsy after
     trimming is dropped. It sanitises SHAPE and nothing else — membership of a
-    taxonomy is never enforced here, so renaming a model type in Admin, or editing
-    the FINOS catalogue, never rejects a document already filed against the old
-    name. A tag nobody recognises is inert, which is the failure mode to want: the
-    coverage table simply does not count it.
+    taxonomy is never enforced here, so renaming a model type in Admin never rejects
+    a document already filed against the old name. A tag nobody recognises is inert,
+    which is the failure mode to want.
 
-    Written generically because it now has two callers. ``model_types`` was the
-    first and named it; ``finos_refs`` is the second, and a third copy is how this
-    repo has been bitten before.
+    Written generically rather than inside ``add_document``: a second copy of a
+    tag-cleaner is how this repo has been bitten before.
     """
     if not tags:
         return []
@@ -134,8 +131,7 @@ def find_document(aggregate_type: str, aggregate_id: str, item_id: str, config=N
 
 def add_document(
     *, aggregate_type: str, aggregate_id: str, scope: str, filename: str, data: bytes,
-    description: str, actor: str, category: str = "", model_types=None,
-    finos_refs=None, config=None,
+    description: str, actor: str, category: str = "", model_types=None, config=None,
 ) -> dict:
     """Store the file on disk and record its metadata against the aggregate.
 
@@ -143,12 +139,6 @@ def add_document(
     model types it relates to (a list of labels). It is orthogonal to ``category``
     — the per-model tab a document lives under — which remains forbidden on the
     external Documents area.
-
-    ``finos_refs`` tags a document on the FINOS shelf with the mitigation
-    references it describes (``AIR-PREV-005`` and so on). Orthogonal in the same
-    way, and deliberately many-to-one: an institution with a single control paper
-    files it once against everything it covers, and one with separate control
-    documentation files several. The completeness audit reads these.
     """
     if aggregate_type == GOVERNANCE_DOCUMENTS_AGGREGATE and (category or "").strip():
         raise DomainError(
@@ -162,7 +152,6 @@ def add_document(
         "category": category, "filename": meta["filename"],
         "original_name": meta["original_name"], "description": description or "",
         "model_types": clean_tags(model_types),
-        "finos_refs": clean_tags(finos_refs),
         "size": len(data), "uploaded_at": datetime.now(timezone.utc).isoformat(),
     }
     append_event(
