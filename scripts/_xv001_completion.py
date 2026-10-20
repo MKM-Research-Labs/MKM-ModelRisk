@@ -25,7 +25,7 @@ Split from ``complete_xv001_governance`` as ``_xv001_data`` is from
 ``docs/xva/project_plan.md`` (sections 15-16), ``docs/xva/validation_evidence.json``
 and the model document. Nothing here claims work that has not been done: the
 model has not been independently validated, so the validation and sign-off
-dates, the sign-off history and the peer reviewer are deliberately absent.
+dates and the sign-off history are deliberately absent.
 """
 from __future__ import annotations
 
@@ -53,6 +53,8 @@ SCALARS = {
         "and BA-CVA capital recomputed in every simulated state."
     ),
     "vendor": "MKM Research Labs",
+    # Named by the owner; independent of the owner, as the reviewer rule requires.
+    "peer_reviewer": "Johnny Mattimore",
     # Annual review, a year after the model was built and submitted.
     "next_review_date": "2027-10-09",
 }

@@ -87,6 +87,8 @@ def test_it_fills_the_blank_fields_and_moves_to_v0_10(tmp_path):
     assert d["next_review_date"] == "2027-10-09"
     assert d["materiality_rationale"] and d["complexity_rationale"]
     assert d["version"] == "0.10.0"
+    # Someone other than the owner, so the reviewer-independence rule holds.
+    assert d["peer_reviewer"] == "Johnny Mattimore" != d.get("owner")
 
 
 def test_it_records_the_collections(tmp_path):
@@ -110,12 +112,11 @@ def test_the_validation_upgrades_are_honest(tmp_path):
 
 
 def test_nothing_is_recorded_for_work_not_done(tmp_path):
-    """The validation, sign-off and review record stays empty, and the peer
-    reviewer is left for the owner to name."""
+    """The validation, sign-off and review record stays empty."""
     complete.apply(phys_root=_registered(tmp_path))
     d = _data()
     for field in ("validation_date", "last_review_date", "mrc_signoff_date",
-                  "recertification_date", "peer_reviewer"):
+                  "recertification_date"):
         assert not d.get(field), field
     assert not d.get("signoff_history")
 
@@ -126,7 +127,7 @@ def test_it_closes_the_audited_gaps(tmp_path):
     complete.apply(phys_root=root)
     closed = before - _gaps()
     assert closed >= {"description", "materiality_rationale", "complexity_rationale",
-                      "vendor", "next_review_date", "data_sources", "evaluations", "raci_roles",
+                      "vendor", "next_review_date", "peer_reviewer", "data_sources", "evaluations", "raci_roles",
                       "fairness_assessments", "version_history",
                       "Analysis", "Convergence", "Calibration"}
 

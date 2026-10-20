@@ -27,8 +27,7 @@ document filed under three categories only. This fills those in from the build
 evidence (see ``_xv001_completion``), never inflated.
 
 Left open on purpose, because the work has not happened: validation date, last
-review, MRC sign-off and recertification, the sign-off history, and the peer
-reviewer (a named person other than the owner, for the owner to choose).
+review, MRC sign-off and recertification, and the sign-off history.
 Monitoring and segment-analysis documents are not covered by the model document.
 
 Idempotent: a scalar already set is left alone, an item already present is
