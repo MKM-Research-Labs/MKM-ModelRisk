@@ -41,7 +41,7 @@ from config.governance import (
     ISO_31000,
     TREATABLE_RATINGS,
 )
-from src.governance.completeness.framework import (DECLARED, PROBES, REF_PROBES,
+from src.governance.completeness.framework import (DECLARED, PROBES,
                                                    coverage, tally)
 from src.governance.completeness.framework_report import framework_section
 
@@ -71,8 +71,7 @@ def test_every_configured_clause_is_assessed_and_names_a_known_probe():
     assert len(clauses) == sum(len(rows) for _name, rows in FRAMEWORK_COVERAGE)
     for clause in clauses:
         assert clause["state"] in COVERAGE_STATES
-        assert (clause["probe"] in PROBES or clause["probe"] in REF_PROBES
-                or clause["probe"] in DECLARED)
+        assert clause["probe"] in PROBES or clause["probe"] in DECLARED
         assert clause["evidence"].strip()
 
 

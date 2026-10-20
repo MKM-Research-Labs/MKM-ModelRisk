@@ -227,7 +227,7 @@ def test_the_agentic_risk_rows_only_bite_on_agentic_systems():
 
     _register()   # retrieval-augmented, not agentic
     estate = [get_ai_system("AIS-0001")]
-    rows = coverage([], estate, "2026-08-25", (), [])
+    rows = coverage([], estate, "2026-08-25", ())
     agentic = next(r for r in rows
                    if r["framework"] == FINOS_RISKS and r["ref"] == "AIR-SEC-024")
     assert agentic["total"] == 0
@@ -243,7 +243,7 @@ def test_filling_the_ai_fields_moves_the_finos_risk_rows():
     from config.governance._finos import FINOS_RISKS
 
     def _row(estate, ref):
-        rows = coverage([], estate, "2026-08-25", (), [])
+        rows = coverage([], estate, "2026-08-25", ())
         return next(r for r in rows
                     if r["framework"] == FINOS_RISKS and r["ref"] == ref)
 
@@ -299,7 +299,7 @@ def test_an_unassessable_row_stays_absent_however_well_kept_the_record_is():
 
     _register()
     estate = [get_ai_system("AIS-0001")]
-    rows = coverage([], estate, "2026-08-25", (), [])
+    rows = coverage([], estate, "2026-08-25", ())
     for ref in ("AIR-SEC-026", "AIR-SEC-027", "AIR-SEC-008", "AIR-RC-023"):
         row = next(r for r in rows
                    if r["framework"] == FINOS_RISKS and r["ref"] == ref)

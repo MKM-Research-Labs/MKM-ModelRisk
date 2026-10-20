@@ -22,7 +22,7 @@
 // note under each saying what it is for.
 //
 // Split from gov_artefacts.js, which owns the panel around them — the shelf picker, the
-// upload, and the FINOS blurb. A tile rather than a table row because what the
+// upload, and the blurb. A tile rather than a table row because what the
 // institution ISSUES is a thing you pick up: a Terms of Reference or a presentation is
 // opened, not scanned down a column.
 //
@@ -37,7 +37,7 @@ Object.assign(GovArtefacts, {
   _tiles() {
     const own = (this._artefacts[this._shelf] || []).map((a) => this._tile({
       title: a.original_name, kind: a.category || "Other",
-      note: this._note(a),
+      note: a.description,
       links: [["Open", "/api/artefacts/" + encodeURIComponent(this._shelf) + "/" +
                esc(a.item_id) + "/download?inline=1"],
               ["Download", "/api/artefacts/" + encodeURIComponent(this._shelf) + "/" +
@@ -49,24 +49,9 @@ Object.assign(GovArtefacts, {
       '<div class="empty">Nothing filed on this shelf yet.</div>';
   },
 
-  // What the tile says under its title. On the FINOS shelf the references matter as
-  // much as the description: a document nobody tagged evidences nothing, and that
-  // has to be visible on the tile rather than discovered in the audit.
-  _note(a) {
-    const refs = a.finos_refs || [];
-    if (!this._isFinos()) return a.description;
-    const tags = refs.length
-      ? "Evidences: " + refs.join(", ")
-      : "No mitigations tagged — this document evidences nothing.";
-    return a.description ? a.description + " — " + tags : tags;
-  },
-
   // Artefacts the platform produces rather than an adopter uploading them: the user
   // guide (company-wide) and each division's risk policy document.
   _platformTiles() {
-    // The FINOS shelf holds neither. It is not a division, so there is no risk
-    // policy to offer, and offering one would invent a division called FINOS.
-    if (this._isFinos()) return "";
     if (this._shelf === (this._shelves[0] || "")) {
       return this._tile({
         title: "User Guide", kind: "Guide",

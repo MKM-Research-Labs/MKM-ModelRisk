@@ -55,9 +55,9 @@ def test_evidence_resolver_is_shared(monkeypatch):
     seen: list[str] = []
     real = engine._measured
 
-    def recording(probe, estate, note, ref=""):
+    def recording(probe, estate, note):
         seen.append(probe)
-        return real(probe, estate, note, ref)
+        return real(probe, estate, note)
 
     monkeypatch.setattr(engine, "_measured", recording)
     clauses = _coverage()
