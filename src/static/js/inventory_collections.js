@@ -73,8 +73,12 @@ const Collections = {
     if (f.type === "choice" && !retired) {
       // Stores the value, shows its label where the spec gives one (a stress case's
       // expected response); every other register shows exactly what it stores.
+      // A value the list no longer offers (a RACI role since removed in Admin) is kept
+      // as an option, so the row still shows what it holds rather than a blank.
       const shown = f.option_labels || {};
-      const opts = ["", ...f.options]
+      const held = item[f.key];
+      const legacy = held && !f.options.includes(held) ? [held] : [];
+      const opts = ["", ...legacy, ...f.options]
         .map((o) => '<option value="' + esc(o) + '"' + (o === item[f.key] ? " selected" : "") +
           ">" + esc(shown[o] || o) + "</option>")
         .join("");

@@ -86,6 +86,10 @@ const Reference = {
     // decides how much of them anybody is shown.
     ["ml_review_policy", "ML Review Policy"],
     ["standing_agenda", "Agenda"],
+    // The roles a Product's RACI is assigned to. A vocabulary in shape (stored as /
+    // shown as) but its own tab, because it carries which accountability a new
+    // Product is scaffolded with, and that is what an administrator comes here for.
+    ["raci_role", "RACI Roles"],
     // Every status vocabulary on one tab: shown-as is the institution's to change,
     // stored-as is what the records already hold and never moves.
     ["vocabulary", "Vocabulary"],
@@ -203,6 +207,7 @@ const Reference = {
         "rewrites an answer already given.");
       return;
     }
-    this._renderList(container, spec, res.data[this._tab] || []);
+    // A list whose config says what it governs says so here too (the RACI roles).
+    this._renderList(container, spec, res.data[this._tab] || [], spec.hint || "");
   },
 };

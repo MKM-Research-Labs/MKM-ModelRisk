@@ -115,20 +115,10 @@ VALID_VERSION_LIFECYCLE = (
 # independent Yes/No because in practice an event may inform one and not the
 # other (e.g. internal noise that didn't reach the client).
 VALID_INFORMED = ("Yes", "No")
-# The four RACI accountabilities, defining who does what for a product's use of
-# models in production (the RACI operating model, held at the product level).
-VALID_RACI_CODES = ("Responsible", "Accountable", "Consulted", "Informed")
-# The RACI operating model seeded when a product is registered: one entry per
-# accountability, each with a standard governance role the adopter then edits. A
-# product's RACI is complete only with all four, so registration scaffolds them —
-# the way a model's nine SR 26-2 questions are seeded on registration. Pairs of
-# (raci code, default role).
-DEFAULT_RACI = (
-    ("Responsible", "Model user"),
-    ("Accountable", "Model owner"),
-    ("Consulted", "Model Risk Committee"),
-    ("Informed", "Senior management"),
-)
+# The RACI accountabilities and the roles that hold them live in ``_raci``: the
+# roles are an admin list, and DEFAULT_RACI is only what that list is seeded with.
+from config.governance._raci import (DEFAULT_RACI, RACI_ROLE_LIST,  # noqa: E402,F401
+                                     VALID_RACI_CODES)
 # An operational event's MRC review state. "Pending" = raised on the product,
 # awaiting a committee; "Received" = the MRC reviewed and formally received it.
 VALID_EVENT_REVIEW_STATUS = ("Pending", "Received")
@@ -251,7 +241,11 @@ COLLECTION_SPECS = {
     # the product level (a product uses models in production); the per-event R/A/C/I
     # on operational_failure_events records who acted on a specific incident.
     "raci_roles": {"label": "RACI roles", "id_prefix": "RC", "fields": [
-        {"key": "role", "label": "Role", "type": "text", "required": True},
+        # Picked from the admin RACI role list. The shipped roles stand in only while
+        # that list is empty; an entry recorded under a role since removed keeps it.
+        {"key": "role", "label": "Role", "type": "choice", "required": True,
+         "options": tuple(role for _code, role in DEFAULT_RACI),
+         "reference": RACI_ROLE_LIST},
         {"key": "raci", "label": "RACI", "type": "choice",
          "options": VALID_RACI_CODES, "required": True},
         {"key": "assigned_to", "label": "Assigned to", "type": "text", "reference": "people"},
