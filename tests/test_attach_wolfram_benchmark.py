@@ -96,4 +96,5 @@ def test_the_real_spec_points_at_the_generated_benchmarks():
     assert {rel for rel, _ in attach.BENCHMARKS.values()} == {
         "docs/models/gev_hazard_benchmark/MKM-GH-001_wolfram_benchmark.pdf",
         "docs/models/prs_pricing_benchmark/MKM-PR-001_wolfram_benchmark.pdf",
+        "docs/models/storm_intensity_benchmark/MKM-SI-001_wolfram_benchmark.pdf",
     }

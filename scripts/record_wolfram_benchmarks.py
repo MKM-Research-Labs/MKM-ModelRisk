@@ -18,12 +18,12 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Record the Wolfram benchmarks on GH-001 and PR-001, and re-issue PR-001's document.
+"""Record the Wolfram benchmarks on GH-001, PR-001 and SI-001; re-issue PR-001's document.
 
 Both benchmarks are filed (scripts.attach_wolfram_benchmark). This records what
 they established:
 
-* ``benchmark_tests = Yes`` on both models;
+* ``benchmark_tests = Yes`` on each benchmarked model;
 * validation question VQ-008 (Benchmarking) at Partially Addressed, with a
   rationale that cites the benchmark and says what is still outstanding. On
   GH-001 it replaces a status that read Addressed over a rationale saying no
@@ -82,6 +82,17 @@ VQ_RATIONALE = {
         "(s8.3) and the effect of the book's yield curve (s8.4); both are corrected in "
         "model documentation v3.1. Outstanding: no benchmark against an alternative "
         "pricing method (e.g. ISDA-standard pricing with accrued premium on trigger)."),
+    "MKM-SI-001": (
+        "Partially addressed. The implementation was benchmarked on 2026-10-20 against "
+        "Wolfram Engine 15.0 and a 50-digit mpmath implementation of the model document "
+        "(MKM-SI-001_wolfram_benchmark.pdf, Docs > Benchmark): exceedance and return-"
+        "period intensities match the documented formulae to about 1e-15 and the "
+        "quantile to 3.8e-9 (Acklam's inverse normal); Wolfram agrees with the reference "
+        "to 5e-30. It found that the Imax clamp puts 1.0% (historical) to 29.7% "
+        "(extreme) of storms exactly on the cap, so return-period intensities saturate, "
+        "and that IntensityDistribution is not used by the production storm generator. "
+        "Outstanding: no benchmark against an alternative method or observed storm data, "
+        "and the calibration the document describes (MLE body, Hill tail) has no code."),
 }
 
 # PR-001's re-issued documentation: files under MODEL_DOCS_DIR/<model>/, and the

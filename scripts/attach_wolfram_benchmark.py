@@ -56,6 +56,8 @@ BENCHMARKS = {
                    "Wolfram oracle benchmark - GEV Hazard Curve Model"),
     "MKM-PR-001": ("docs/models/prs_pricing_benchmark/MKM-PR-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark - PRS Analytical Pricing Model"),
+    "MKM-SI-001": ("docs/models/storm_intensity_benchmark/MKM-SI-001_wolfram_benchmark.pdf",
+                   "Wolfram oracle benchmark - Storm Intensity Distribution"),
 }
 
 
