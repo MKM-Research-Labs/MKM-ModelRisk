@@ -85,6 +85,17 @@ const Collections = {
       return '<td><select style="width:100%" data-upd="' + c.key + "|" +
         esc(item.item_id) + "|" + f.key + '">' + opts + "</select></td>";
     }
+    if (f.type === "multichoice" && !retired) {
+      // Several at once (the roles an event was reported to). Values the list no
+      // longer offers stay selectable, so a save does not quietly drop them.
+      const held = Array.isArray(item[f.key]) ? item[f.key] : [];
+      const shown = f.option_labels || {};
+      const opts = [...held.filter((v) => !f.options.includes(v)), ...f.options]
+        .map((o) => '<option value="' + esc(o) + '"' + (held.includes(o) ? " selected" : "") +
+          ">" + esc(shown[o] || o) + "</option>").join("");
+      return '<td><select multiple size="3" style="width:100%" data-upd="' + c.key + "|" +
+        esc(item.item_id) + "|" + f.key + '">' + opts + "</select></td>";
+    }
     if (f.type === "date" && !retired) {
       return '<td><input type="date" style="width:100%" data-upd="' + c.key + "|" +
         esc(item.item_id) + "|" + f.key + '" value="' + esc(item[f.key] || "") + '"></td>';

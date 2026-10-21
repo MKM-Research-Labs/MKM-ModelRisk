@@ -111,10 +111,6 @@ VERSION_LIFECYCLE_LIST = "version_lifecycle"
 VALID_VERSION_LIFECYCLE = (
     "New", "Being Enhanced", "No New Development", "Marked for Removal",
 )
-# Stakeholder-informed flags on an Operational Failure Event (W4b). Each is an
-# independent Yes/No because in practice an event may inform one and not the
-# other (e.g. internal noise that didn't reach the client).
-VALID_INFORMED = ("Yes", "No")
 # The RACI accountabilities and the roles that hold them live in ``_raci``: the
 # roles are an admin list, and DEFAULT_RACI is only what that list is seeded with.
 from config.governance._raci import (DEFAULT_RACI, RACI_ROLE_LIST,  # noqa: E402,F401
@@ -212,23 +208,20 @@ COLLECTION_SPECS = {
         {"key": "note", "label": "Mapping / compatibility note", "type": "text"},
     ]},
     # W4b — Operational Failure Events: post-mortems of incidents touching the
-    # model, with RACI (Responsible / Accountable / Consulted / Informed). The
-    # Stakeholders leg ("Informed") is split into Client + Senior management so
-    # each can be toggled independently.
+    # model, with RACI (Responsible / Accountable / Consulted / Informed). R, A and C
+    # name the people who acted; "Informed" is which roles were told, picked from the
+    # admin RACI role list rather than a fixed pair of stakeholders. No ``options``
+    # on it: the shipped seed would refuse a role an institution added, so
+    # membership is checked against the live list (reference.reject_unknown_values).
     "operational_failure_events": {"label": "Events", "id_prefix": "EV", "fields": [
         {"key": "date", "label": "Event date", "type": "date", "required": True},
         {"key": "description", "label": "What happened", "type": "text", "required": True},
         {"key": "remediation", "label": "Remediation", "type": "text"},
-        {"key": "responsible", "label": "Responsible (Operational)",
-         "type": "text", "reference": "people"},
-        {"key": "accountable", "label": "Accountable (Model owner)",
-         "type": "text", "reference": "people"},
-        {"key": "consulted", "label": "Consulted (MRC)",
-         "type": "text", "reference": "people"},
-        {"key": "informed_client", "label": "Informed: Client",
-         "type": "choice", "options": VALID_INFORMED},
-        {"key": "informed_senior_mgmt", "label": "Informed: Senior management",
-         "type": "choice", "options": VALID_INFORMED},
+        {"key": "responsible", "label": "Responsible", "type": "text", "reference": "people"},
+        {"key": "accountable", "label": "Accountable", "type": "text", "reference": "people"},
+        {"key": "consulted", "label": "Consulted", "type": "text", "reference": "people"},
+        {"key": "informed", "label": "Informed", "type": "multichoice",
+         "reference": RACI_ROLE_LIST},
         # MRC review of the event (W4b feed-up). Set by the committee when it
         # receives the event at a meeting; not edited on the add form.
         {"key": "mrc_status", "label": "MRC status", "type": "choice",

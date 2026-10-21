@@ -129,3 +129,30 @@ def test_the_seed_takes_in_the_roles_the_estate_already_carries(client):
     assert ensure_default_raci_roles() == len(DEFAULT_RACI) + 1
     desk = _roles()["Trading Desk"]
     assert desk["label"] == "Trading Desk" and not desk.get("raci")
+
+
+def test_an_event_is_reported_to_roles_from_the_list(client):
+    """Informed is which roles were told, from the same list: no fixed stakeholders."""
+    assert _register(client).status_code == 201
+    ensure_default_raci_roles()
+    add_option(list_name=RACI_ROLE_LIST, actor="admin",
+               fields={"label": "Front Office", "value": "Front Office"})
+    specs = client.get("/api/products/fields").get_json()["collections"]
+    events = next(c for c in specs if c["key"] == "operational_failure_events")
+    fields = {f["key"]: f for f in events["fields"]}
+    assert "informed_client" not in fields and "informed_senior_mgmt" not in fields
+    assert fields["informed"]["type"] == "multichoice"
+    assert "Front Office" in fields["informed"]["options"]
+    assert [fields[k]["label"] for k in ("responsible", "accountable", "consulted")] == [
+        "Responsible", "Accountable", "Consulted"]
+    url = "/api/products/Product-0001/collections/operational_failure_events"
+    event = {"date": "2026-10-01", "description": "Curve flipped sign"}
+    refused = client.post(url, json={"fields": {**event, "informed": ["Nobody"]},
+                                     "confirmed": True}, headers=HEADERS)
+    assert refused.status_code == 400
+    added = client.post(url, json={"fields": {**event,
+                                              "informed": ["Front Office", "Model owner"]},
+                                   "confirmed": True}, headers=HEADERS)
+    assert added.status_code == 201, added.get_json()
+    held = client.get("/api/products/Product-0001").get_json()["data"]
+    assert held["operational_failure_events"][0]["informed"] == ["Front Office", "Model owner"]
