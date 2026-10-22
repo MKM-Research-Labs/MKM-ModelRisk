@@ -65,13 +65,13 @@ def test_the_role_picker_reads_the_admin_list_and_its_labels(client):
     ensure_default_raci_roles()
     add_option(list_name=RACI_ROLE_LIST, actor="admin",
                fields={"label": "Front Office", "value": "Front Office"})
-    user = _roles()["Model user"]
+    user = _roles()["Operations Lead"]
     update_option(list_name=RACI_ROLE_LIST, item_id=user["item_id"], actor="admin",
-                  fields={"label": "Desk user"})
+                  fields={"label": "Ops lead"})
     field = _role_field(client)
     assert field["type"] == "choice"
-    assert "Front Office" in field["options"] and "Model user" in field["options"]
-    assert field["option_labels"]["Model user"] == "Desk user"
+    assert "Front Office" in field["options"] and "Operations Lead" in field["options"]
+    assert field["option_labels"]["Operations Lead"] == "Ops lead"
 
 
 def test_registration_scaffolds_the_roles_the_list_marks(client):
@@ -79,15 +79,15 @@ def test_registration_scaffolds_the_roles_the_list_marks(client):
     add_option(list_name=RACI_ROLE_LIST, actor="admin",
                fields={"label": "Front Office", "value": "Front Office",
                        "raci": "Responsible"})
-    remove_option(list_name=RACI_ROLE_LIST, item_id=_roles()["Model user"]["item_id"],
+    remove_option(list_name=RACI_ROLE_LIST, item_id=_roles()["Operations Lead"]["item_id"],
                   actor="admin")
     # Offered, but not scaffolded: no accountability marked.
     add_option(list_name=RACI_ROLE_LIST, actor="admin",
                fields={"label": "Quant", "value": "Quant"})
     assert _register(client).status_code == 201
     assert [(r["raci"], r["role"]) for r in _raci(client)] == [
-        ("Responsible", "Front Office"), ("Accountable", "Model owner"),
-        ("Consulted", "Model Risk Committee"), ("Informed", "Senior management")]
+        ("Responsible", "Front Office"), ("Accountable", "Model Owner"),
+        ("Consulted", "Independent Validator"), ("Informed", "MRC")]
 
 
 def test_an_unseeded_list_still_scaffolds_all_four(client):
@@ -105,30 +105,31 @@ def test_a_role_off_the_list_is_refused_but_a_held_one_keeps_displaying(client):
     assert refused.status_code == 400
     # Removing a role from the list leaves the entries that hold it alone, and they
     # can still be edited.
-    remove_option(list_name=RACI_ROLE_LIST, item_id=_roles()["Model owner"]["item_id"],
+    remove_option(list_name=RACI_ROLE_LIST, item_id=_roles()["Model Owner"]["item_id"],
                   actor="admin")
-    held = next(r for r in _raci(client) if r["role"] == "Model owner")
+    held = next(r for r in _raci(client) if r["role"] == "Model Owner")
     edited = client.post(f"{url}/{held['item_id']}",
                          json={"fields": {"description": "Signs off the use"},
                                "confirmed": True}, headers=HEADERS)
     assert edited.status_code == 200, edited.get_json()
-    held = next(r for r in _raci(client) if r["role"] == "Model owner")
+    held = next(r for r in _raci(client) if r["role"] == "Model Owner")
     assert held["description"] == "Signs off the use"
-    assert "Model owner" not in _role_field(client)["options"]
+    assert "Model Owner" not in _role_field(client)["options"]
 
 
-def test_the_seed_takes_in_the_roles_the_estate_already_carries(client):
-    """Free text before the list existed: each word on record becomes an entry."""
+def test_a_one_off_role_is_not_seeded_but_still_displays(client):
+    """The seed is the four every model carries; a word held by one record is left
+    on that record rather than promoted into the list."""
     client.post("/api/models", json={"model_id": "M1", "name": "Alpha", "confirmed": True},
                 headers=HEADERS)
-    for role in ("Trading Desk", "Model owner", "Trading Desk"):
-        added = client.post("/api/models/M1/collections/raci_roles",
-                            json={"fields": {"role": role, "raci": "Informed"},
-                                  "confirmed": True}, headers=HEADERS)
-        assert added.status_code == 201, added.get_json()
-    assert ensure_default_raci_roles() == len(DEFAULT_RACI) + 1
-    desk = _roles()["Trading Desk"]
-    assert desk["label"] == "Trading Desk" and not desk.get("raci")
+    added = client.post("/api/models/M1/collections/raci_roles",
+                        json={"fields": {"role": "Trading Desk", "raci": "Informed"},
+                              "confirmed": True}, headers=HEADERS)
+    assert added.status_code == 201, added.get_json()
+    assert ensure_default_raci_roles() == len(DEFAULT_RACI)
+    assert "Trading Desk" not in _roles()
+    held = client.get("/api/models/M1").get_json()["data"]["raci_roles"]
+    assert [r["role"] for r in held] == ["Trading Desk"]
 
 
 def test_an_event_is_reported_to_roles_from_the_list(client):
@@ -151,8 +152,8 @@ def test_an_event_is_reported_to_roles_from_the_list(client):
                                      "confirmed": True}, headers=HEADERS)
     assert refused.status_code == 400
     added = client.post(url, json={"fields": {**event,
-                                              "informed": ["Front Office", "Model owner"]},
+                                              "informed": ["Front Office", "Model Owner"]},
                                    "confirmed": True}, headers=HEADERS)
     assert added.status_code == 201, added.get_json()
     held = client.get("/api/products/Product-0001").get_json()["data"]
-    assert held["operational_failure_events"][0]["informed"] == ["Front Office", "Model owner"]
+    assert held["operational_failure_events"][0]["informed"] == ["Front Office", "Model Owner"]

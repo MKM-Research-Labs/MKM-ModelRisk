@@ -243,7 +243,7 @@ def test_events_tab_records_a_post_mortem_with_raci(page: Page, base_url: str):
          "remediation": "Rolled back to prior dataset; root cause under investigation",
          "responsible": "Lena Okafor",
          # Informed is a pick from the admin RACI role list, seeded at startup.
-         "informed": "Senior management"},
+         "informed": "MRC"},
     )
     # An event row is edited in place, so what happened and when it happened are
     # input values rather than cell text — assert the value, not the rendering.

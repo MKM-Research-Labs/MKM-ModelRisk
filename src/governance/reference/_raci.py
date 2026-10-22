@@ -26,45 +26,22 @@ from src.governance.reference._store import get_reference_lists, load
 from src.governance.reference.commands import add_option
 
 
-def _roles_in_use(config) -> list[str]:
-    """Every role a model or Product RACI entry already carries, first seen first.
-
-    The role was free text before the list existed, so the estate holds words of its
-    own. Each becomes an entry storing exactly that word: it stays pickable and can be
-    renamed in Admin, rather than surviving only as a value nobody can choose again.
-    """
-    from src.governance.model_inventory import list_models  # lazy: import cycle
-    from src.governance.product import list_products
-    records = (list_models(config=config, include_retired=True)
-               + list_products(config=config))
-    seen: dict[str, None] = {}
-    for record in records:
-        for entry in (record.get("data") or {}).get("raci_roles") or ():
-            role = str(entry.get("role") or "").strip() if isinstance(entry, dict) else ""
-            if role:
-                seen.setdefault(role)
-    return list(seen)
-
-
 def ensure_default_raci_roles(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
     """Seed the RACI role list on first run; return how many were added.
 
-    The four roles Products were scaffolded with before the list existed, each marked
-    with its accountability, then any other role already on record, unmarked. Every
-    stored value equals the word the estate carries, so nothing has to migrate. Seeds
-    a vacuum, never reconciles a list somebody has since curated.
+    The four roles every model already carries, each marked with its accountability
+    and stored as exactly that word, so nothing on record has to migrate. A one-off
+    role held by a single record keeps displaying; an administrator adds it here if
+    it should be offered. Seeds a vacuum, never reconciles a curated list.
     """
     collections, _ = load(config)
     if collections.get(RACI_ROLE_LIST):
         return 0
-    rows = [{"label": role, "value": role, "raci": raci} for raci, role in DEFAULT_RACI]
-    shipped = {role for _raci, role in DEFAULT_RACI}
-    rows += [{"label": role, "value": role}
-             for role in _roles_in_use(config) if role not in shipped]
-    for fields in rows:
-        add_option(list_name=RACI_ROLE_LIST, fields=fields, actor=actor,
+    for raci, role in DEFAULT_RACI:
+        add_option(list_name=RACI_ROLE_LIST,
+                   fields={"label": role, "value": role, "raci": raci}, actor=actor,
                    reason="Seed the RACI roles on first run", config=config)
-    return len(rows)
+    return len(DEFAULT_RACI)
 
 
 def raci_seed_items(config=None) -> list[dict]:
