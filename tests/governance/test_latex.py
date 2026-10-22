@@ -62,10 +62,10 @@ def test_classification_is_settings_driven():
 
 def test_classification_falls_back_to_the_configured_default(monkeypatch):
     # Nothing recorded (a fresh install, or the settings unreadable): the document
-    # carries whatever config names, and config ships naming nothing -- a banner an
-    # institution did not choose is worse than no banner.
+    # carries whatever config names, and config ships the MKM banner.
     monkeypatch.setattr(wording, "_settings_fields", lambda settings=None: {})
-    assert DEFAULT_CLASSIFICATION == ""
+    assert DEFAULT_CLASSIFICATION == "CONFIDENTIAL — PROPRIETARY"
+    assert DEFAULT_CLASSIFICATION in preamble("X")
     monkeypatch.setattr(wording, "DEFAULT_CLASSIFICATION", "OFFICIAL-SENSITIVE")
     assert "OFFICIAL-SENSITIVE" in preamble("X")
 

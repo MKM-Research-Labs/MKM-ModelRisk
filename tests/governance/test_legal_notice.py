@@ -74,12 +74,13 @@ def test_meeting_pack_carries_the_notice(filed_notice):
     assert PHRASE in build_pack_tex(meeting, SETTINGS)
 
 
-def test_no_notice_is_shipped_for_an_adopter_to_publish_unread():
-    """The platform is MIT-licensed and says nothing about the contents of the
-    documents it generates; the notice speaks to the models and methodology a
-    document describes. Shipping wording for that would have every adopter
-    publishing a claim it did not write, so there is none to ship."""
-    assert DEFAULT_LEGAL_NOTICE == ()
+def test_the_shipped_notice_is_mkms_own():
+    """The notice speaks to the models and methodology a document describes, and
+    ships asserting MKM Research Labs' rights over them; an institution asserting its
+    own files it in Admin > Settings. Emptied once without being asked for, which took
+    the notice off every document -- this is the guard against that happening again."""
+    assert DEFAULT_LEGAL_NOTICE[0] == "PROPRIETARY AND CONFIDENTIAL"
+    assert any("MKM Research Labs" in paragraph for paragraph in DEFAULT_LEGAL_NOTICE)
 
 
 def test_straight_quotes_become_latex_quote_pairs():
@@ -106,8 +107,8 @@ def test_notice_is_dropped_when_the_setting_is_saved_empty():
     assert "Legal notice" not in title_page("T", "S")
 
 
-def test_no_notice_is_invented_when_nothing_is_recorded(monkeypatch):
+def test_the_shipped_notice_is_printed_when_nothing_is_recorded(monkeypatch):
     """Nothing recorded (a fresh install, or the settings unreadable): the document
-    carries no notice, rather than one the institution never wrote."""
+    still carries the shipped notice rather than going out with none."""
     monkeypatch.setattr(wording, "_settings_fields", lambda settings=None: {})
-    assert "Legal notice" not in title_page("T", "S")
+    assert "PROPRIETARY AND CONFIDENTIAL" in title_page("T", "S")
