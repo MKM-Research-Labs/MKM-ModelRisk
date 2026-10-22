@@ -34,6 +34,7 @@ from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_
                                           VALIDATION_STATUS_LIST)
 from config.governance._ai import AI_REFERENCE_LISTS, AI_REFERENCE_SPECS
 from config.governance._ml import ML_REFERENCE_LISTS, ML_REFERENCE_SPECS
+from config.governance._raci import RACI_REFERENCE_LISTS, RACI_REFERENCE_SPECS
 from config.governance._questions_common import (COMMON_REFERENCE_LISTS,
                                                  COMMON_REFERENCE_SPECS)
 from config.governance._standing_agenda import STANDING_AGENDA_ROLES
@@ -108,7 +109,7 @@ REFERENCE_LISTS = (
     MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
     STANDING_AGENDA_LIST,
 ) + tuple(STATUS_VOCABULARIES) + COMMON_REFERENCE_LISTS + ML_REFERENCE_LISTS \
-  + AI_REFERENCE_LISTS
+  + AI_REFERENCE_LISTS + RACI_REFERENCE_LISTS
 
 # What a model type means to a Product's bindings. A Product binds one analytics
 # engine and one market-data source, and it picks each from the inventory filtered
@@ -294,5 +295,6 @@ REFERENCE_SPECS.update({
 # vocabulary can evolve without disturbing this one (see _ml.py).
 REFERENCE_SPECS.update(COMMON_REFERENCE_SPECS)
 REFERENCE_SPECS.update(ML_REFERENCE_SPECS)
-# The foundation-model list and the AI questionnaire, folded in the same way.
+# The foundation-model list and the AI questionnaire, and the RACI roles (_raci.py).
 REFERENCE_SPECS.update(AI_REFERENCE_SPECS)
+REFERENCE_SPECS.update(RACI_REFERENCE_SPECS)

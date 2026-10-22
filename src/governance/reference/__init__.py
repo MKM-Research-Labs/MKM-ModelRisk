@@ -34,6 +34,7 @@ from src.governance.reference.commands import (add_option,
                                                ensure_default_standing_agenda,
                                                move_option, remove_option,
                                                update_option)
+from src.governance.reference._raci import ensure_default_raci_roles, raci_seed_items
 
 __all__ = ["get_reference_lists", "live_choice_values", "model_type_roles",
            "reject_unknown_references", "reject_unknown_values",
@@ -42,7 +43,8 @@ __all__ = ["get_reference_lists", "live_choice_values", "model_type_roles",
            "ensure_default_estimators",
            "ensure_default_ml_application_questions",
            "ensure_default_ml_training_vocabularies",
-           "ensure_default_model_types", "ensure_default_reference_lists",
+           "ensure_default_model_types", "ensure_default_raci_roles",
+           "ensure_default_reference_lists", "raci_seed_items",
            "ensure_default_review_questions",
            "ensure_default_status_vocabularies",
            "ensure_default_standing_agenda", "move_option", "remove_option",
