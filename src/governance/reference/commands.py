@@ -195,7 +195,7 @@ def ensure_default_common_questions(*, actor: str = SYSTEM_ACTOR, config=None) -
     """Seed the shared questionnaire on a fresh install; return how many.
 
     The five questions asked of any application of a model, whatever produced it. Seeded
-    like the ML list rather than left to the shipped fallback the AI list relies on, so
+    like the ML and AI lists rather than left to the shipped fallback, so
     an administrator can see and edit them on day one — they are the questions most
     likely to need an institution's own wording, because they are the ones asked of
     everything.

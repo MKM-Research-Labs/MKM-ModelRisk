@@ -34,11 +34,12 @@ from src.governance.reference.commands import (add_option,
                                                ensure_default_standing_agenda,
                                                move_option, remove_option,
                                                update_option)
+from src.governance.reference._ai_questions import ensure_default_ai_system_questions
 from src.governance.reference._raci import ensure_default_raci_roles, raci_seed_items
 
 __all__ = ["get_reference_lists", "live_choice_values", "model_type_roles",
            "reject_unknown_references", "reject_unknown_values",
-           "add_option",
+           "add_option", "ensure_default_ai_system_questions",
            "ensure_default_common_questions",
            "ensure_default_estimators",
            "ensure_default_ml_application_questions",

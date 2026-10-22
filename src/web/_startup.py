@@ -99,7 +99,8 @@ def bootstrap(config=None) -> None:
     replay behind it would likewise run once per worker.
     """
     from src.database import run_migrations
-    from src.governance.reference import (ensure_default_common_questions,
+    from src.governance.reference import (ensure_default_ai_system_questions,
+                                          ensure_default_common_questions,
                                           ensure_default_estimators,
                                           ensure_default_ml_application_questions,
                                           ensure_default_ml_training_vocabularies,
@@ -131,6 +132,9 @@ def bootstrap(config=None) -> None:
     # it. Seeded so an administrator can see and reword them on day one — they are the
     # ones most likely to need the institution's own wording.
     ensure_default_common_questions()
+    # The AI questionnaire, seeded like the two above so Admin > AI Review shows the
+    # questions AI Systems are actually asked rather than "None yet".
+    ensure_default_ai_system_questions()
     reconcile_read_models(config)
 
 
