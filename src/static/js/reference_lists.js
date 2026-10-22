@@ -19,8 +19,8 @@
 // SOFTWARE.
 // The reference data an adopter maintains, rendered and edited in place.
 //
-// Two kinds of list, drawn the same way: the controlled vocabularies (lifecycle
-// stages, validation statuses, learning tasks, encodings) and the reference registers
+// Two kinds of list, drawn the same way: the controlled vocabularies (validation
+// statuses, RACI roles, learning tasks, encodings) and the reference registers
 // (people, divisions, vendors, data sources).
 //
 // Renaming an entry here must change what every screen displays without changing what
@@ -32,37 +32,48 @@
 
 Object.assign(Reference, {
 
-  // The status vocabularies, in the order a record meets them. Each is an ordinary
-  // reference list; what they have in common is the two columns, so they are shown
-  // together rather than as six tabs nobody would find.
-  _VOCABULARIES: ["lifecycle_stage", "version_lifecycle", "validation_status",
-                  "impact_level", "priority_level", "remediation_status", "vq_status"],
+  // Every vocabulary on the one Static data tab, in three groups: the status words a
+  // record carries, the roles its RACI is assigned to, and the enumerations an ML
+  // Application's training is typed against. One tab because they are one kind of
+  // thing; grouped because "which words are these" is the first thing an administrator
+  // needs to know. Each list is an ordinary reference list with the same two columns.
+  //
+  // The lifecycle stages are not here: they are ratified per division on their own
+  // tab, and the old admin list for them edited a label nothing reads any more.
+  _VOCABULARY_GROUPS: [
+    ["Status", "The words the console shows for a record's status, in the order a record " +
+      "meets them.",
+     ["version_lifecycle", "validation_status", "impact_level", "priority_level",
+      "remediation_status", "vq_status"]],
+    ["RACI", "", ["raci_role"]],
+    ["ML Training", "The enumerations an ML Application's Training tab is typed against " +
+      "\u2014 the learning task, how the data was split, how it was scaled, what it was " +
+      "scored on. Typed rather than free text so the estate can be asked which models " +
+      "were fitted a particular way; admin-managed so you can add what you actually fit.",
+     ["learning_task", "missing_data_treatment", "categorical_encoding",
+      "scaling_method", "scaler_fit_point", "split_method",
+      "cross_validation_method", "search_method", "determinism",
+      "primary_metric", "naive_baseline"]],
+  ],
 
-  // The enumerations a train is typed against. Held here rather than in code so an
-  // institution that fits something we never listed can say so — the same rule as
-  // every other vocabulary on this platform.
-  _ML_VOCABULARIES: ["learning_task", "missing_data_treatment", "categorical_encoding",
-                     "scaling_method", "scaler_fit_point", "split_method",
-                     "cross_validation_method", "search_method", "determinism",
-                     "primary_metric", "naive_baseline"],
-
-  _renderVocabularies(container, res, keys, blurb) {
-    keys = keys || this._VOCABULARIES;
+  _renderVocabularies(container, res) {
+    const groups = this._VOCABULARY_GROUPS;
     container.innerHTML =
-      '<p class="muted">' + (blurb ||
-        "The words the console shows for a record's status. ") +
-      "<b>Shown as</b> is yours to change; <b>stored as</b> is the word the records " +
-      "themselves carry and the code matches on, fixed once an entry exists. Renaming " +
-      "therefore changes every screen without moving anything on record.</p>" +
-      keys.map((key) => '<div id="voc-' + key + '"></div>').join("");
-    keys.forEach((key) => {
+      '<p class="muted"><b>Shown as</b> is yours to change; <b>stored as</b> is the word ' +
+      "the records themselves carry and the code matches on, fixed once an entry exists. " +
+      "Renaming therefore changes every screen without moving anything on record.</p>" +
+      groups.map(([title, blurb, keys]) =>
+        '<h3 class="vocab-group">' + title + "</h3>" +
+        (blurb ? '<p class="muted">' + blurb + "</p>" : "") +
+        keys.map((key) => '<div id="voc-' + key + '"></div>').join("")).join("");
+    groups.forEach(([, , keys]) => keys.forEach((key) => {
       const spec = res.collections.find((c) => c.key === key);
       if (!spec) return;
-      // Each list says what it governs. The shared blurb above explains the two
-      // columns; this says which words these are.
+      // Each list says what it governs. The blurbs above explain the columns and the
+      // group; this says which words these are.
       this._renderList(document.getElementById("voc-" + key), spec,
                        res.data[key] || [], spec.hint || "");
-    });
+    }));
   },
 
   // A plain reference list rendered as a table with a working add form and

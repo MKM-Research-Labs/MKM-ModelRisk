@@ -18,92 +18,69 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// Admin tab: sub-tabs for each reference section. There is a single company per
-// instance (no list / no "add another") — the Company tab edits the institution
-// name + logo, stored on the MRC settings. The simple lists (Division,
-// Line of Business, Calc Agent, People) render through _renderList with working inline
-// edit/remove; MRC is a drill-in.
+// Admin tab: its sub-tabs, grouped by the KIND of thing each one holds, because the
+// kind decides how it behaves -- who may change it, whether a change reaches records
+// already made, and whether it is words or entries with properties. The tab bar was
+// one row of two dozen tabs in the order they were added, and several lists of the same
+// kind had ended up on separate tabs (and three on none at all).
+//
+// There is a single company per instance (no list / no "add another") — the Company
+// tab edits the institution name + logo, stored on the MRC settings. The flat lists
+// render through _renderList with working inline edit/remove; MRC is a drill-in.
 const Reference = {
   _tab: "company",
-  _TABS: [
-    ["company", "Company"], ["division", "Division"], ["line_of_business", "Line of Business"],
-    ["mrc", "MRC"], ["calculating_agent", "Calc Agent"], ["data_source", "Data Source"],
-    ["people", "People"],
-    // model_type (and codebase) are admin-managed and already exposed by
-    // /api/reference; they were just missing from the tab bar, so the type field's
-    // reference list could not be maintained from the UI. Vendor sits with it —
-    // both classify the model itself (its type and who supplies it).
-    ["model_type", "Model Type"], ["vendor", "Vendor"],
-    // The off-the-shelf ML engines an ML Application is built on. Beside Model Type
-    // and Vendor because it is the same kind of thing: what a record is classified
-    // as, and who supplies it.
-    ["estimator", "Estimator"],
-    // The features an ML Application is fitted on. Its own tab, beside Estimator,
-    // because it is the same kind of thing: a register of entries with properties,
-    // not a vocabulary of words.
-    ["feature", "Feature"],
-    // The per-division risk policy: dimensions, ratings and the generated grids.
-    ["risk", "Risk"],
-    // How a division carves its estate up by function -- what a record is FOR, as
-    // against Model Type above, which is what it IS. MRC-ratified like the two
-    // policies, so it sits with them rather than among the flat lists.
-    ["functional_groups", "Functional Groups"],
-    // The stages a record moves through: the institution's catalogue, and each
-    // division's choice from it. MRC-ratified at both layers, so it sits with the
-    // policies rather than among the flat lists — which is where it used to be, as an
-    // admin list that edited a label and nothing else.
-    ["lifecycle_stages", "Lifecycle Stages"],
-    // The questionnaire every review works through. Its own tab rather than a row
-    // among the reference lists: it is the institution's own standard, and the
-    // review workflow is built around it.
-    ["review_questions", "Model Review"],
-    // The running order every meeting is seeded with. Beside the questionnaire
-    // because they are the same kind of thing: a standard the institution sets,
-    // copied onto each record it applies to.
-    // The three questionnaires an APPLICATION of a model is asked, in the order a
-    // record is asked them: the five shared questions first, then whichever
-    // type-specific set applies. Grouped here rather than scattered, because "which
-    // list is this question on" is the first thing an administrator editing them
-    // needs to know.
-    //
-    // Common sits apart from Model Review above it: a model answers the institution's
-    // own review questionnaire, while an ML Application and an AI System both answer
-    // these five and then their own.
-    ["common_questions", "Common (AI/ML)"],
-    // The ML questionnaire, deliberately separate from the AI one: the two processes
-    // ask different things, and the sets move apart. What they SHARE is above.
-    ["ml_application_questions", "ML Review"],
-    // The AI questionnaire, which had no tab at all — the list was reachable only
-    // through the shipped fallback, so an institution could not reword the questions
-    // its own AI Systems are asked.
-    ["ai_system_questions", "AI Review"],
-    // The enumerations the Training tab is typed against. One tab, not eleven —
-    // the same reasoning as the status vocabularies below: shown together rather
-    // than as eleven tabs nobody would find.
-    ["ml_training", "ML Training"],
-    // What a division's ML review actually asks for. Beside the two lists it governs
-    // -- the questions and the training vocabularies -- because it is the tab that
-    // decides how much of them anybody is shown.
-    ["ml_review_policy", "ML Review Policy"],
-    ["standing_agenda", "Agenda"],
-    // The roles a Product's RACI is assigned to. A vocabulary in shape (stored as /
-    // shown as) but its own tab, because it carries which accountability a new
-    // Product is scaffolded with, and that is what an administrator comes here for.
-    ["raci_role", "RACI"],
-    // Every status vocabulary on one tab: shown-as is the institution's to change,
-    // stored-as is what the records already hold and never moves.
-    ["vocabulary", "Vocabulary"],
-    // Institution-specific wording that is not a reference list — what the
-    // generated PDFs say (classification, author, legal notice).
-    ["misc", "Misc"],
+  _SECTIONS: [
+    // Who the institution is and how it is organised: the org tree, its committees and
+    // its people. People carry an org unit, which is what seats them on a committee.
+    ["Organisation", [
+      ["company", "Company"], ["division", "Division"], ["line_of_business", "Line of Business"],
+      ["mrc", "MRC"], ["people", "People"],
+    ]],
+    // Entries a record links to, each with properties of its own: what a model IS
+    // (type, vendor, codebase), the platform and feeds it runs on, and the ML and AI
+    // components an application is built from. Codebase, Foundation Model and Market
+    // were admin-managed and served by /api/reference but had no tab, so they could
+    // not be maintained from the console at all.
+    ["Registers", [
+      ["model_type", "Model Type"], ["vendor", "Vendor"], ["codebase", "Codebase"],
+      ["calculating_agent", "Calc Agent"], ["data_source", "Data Source"],
+      ["estimator", "Estimator"], ["feature", "Feature"],
+      ["foundation_model", "Foundation Model"], ["market", "Market"],
+    ]],
+    // Words in a fixed set and nothing else -- the status words, the RACI roles and the
+    // ML training enumerations -- on ONE tab, because they are one kind of thing: shown-as
+    // is the institution's to change, stored-as is what records hold and never moves.
+    ["Static data", [["vocabulary", "Vocabulary"]]],
+    // Per-division and MRC-ratified, so a change is proposed and approved rather than
+    // simply saved: the risk policy, the functional groups, the lifecycle stages and
+    // what an ML review asks for.
+    ["Policies", [
+      ["risk", "Risk"], ["functional_groups", "Functional Groups"],
+      ["lifecycle_stages", "Lifecycle Stages"], ["ml_review_policy", "ML Review Policy"],
+    ]],
+    // Standards copied onto each record when it is made, so editing one changes the
+    // NEXT record and never rewrites one already held: the review questionnaires (the
+    // model's own; then the five every ML Application and AI System answers, and each
+    // one's own set) and the running order every meeting is seeded with.
+    ["Templates", [
+      ["review_questions", "Model Review"], ["common_questions", "Common (AI/ML)"],
+      ["ml_application_questions", "ML Review"], ["ai_system_questions", "AI Review"],
+      ["standing_agenda", "Agenda"],
+    ]],
+    // Institution-specific wording that is not a list — what the generated PDFs say
+    // (classification, author, legal notice).
+    ["Settings", [["misc", "Misc"]]],
   ],
 
   async render() {
     const el = document.getElementById("tab-reference");
-    const bar = this._TABS.map(([k, label]) =>
-      '<button class="dtab' + (k === this._tab ? " active" : "") + '" data-atab="' + k + '">' +
-      label + "</button>").join("");
-    el.innerHTML = '<div class="card"><div class="dtabs">' + bar + '</div><div id="admin-body"></div></div>';
+    const bar = this._SECTIONS.map(([title, tabs]) =>
+      '<div class="admin-section"><span class="admin-section-label">' + title + "</span>" +
+      tabs.map(([k, label]) =>
+        '<button class="dtab' + (k === this._tab ? " active" : "") + '" data-atab="' + k +
+        '">' + label + "</button>").join("") + "</div>").join("");
+    el.innerHTML = '<div class="card"><div class="dtabs admin-tabs">' + bar +
+      '</div><div id="admin-body"></div></div>';
     el.querySelectorAll("[data-atab]").forEach((btn) => {
       btn.onclick = () => { this._tab = btn.getAttribute("data-atab"); this.render(); };
     });
@@ -146,14 +123,6 @@ const Reference = {
     }
     const res = await App.get("/api/reference");
     if (this._tab === "vocabulary") { this._renderVocabularies(container, res); return; }
-    if (this._tab === "ml_training") {
-      this._renderVocabularies(container, res, this._ML_VOCABULARIES,
-        "The enumerations an ML Application's Training tab is typed against \u2014 the " +
-        "learning task, how the data was split, how it was scaled, what it was scored " +
-        "on. Typed rather than free text so the estate can be asked which models were " +
-        "fitted a particular way; admin-managed so you can add what you actually fit. ");
-      return;
-    }
     const spec = res.collections.find((c) => c.key === this._tab);
     // MRC committees are entities with a drill-in detail (fields + per-committee
     // Terms of Reference); the scope field reacts to the committee's level.
@@ -207,7 +176,19 @@ const Reference = {
         "rewrites an answer already given.");
       return;
     }
-    // A list whose config says what it governs says so here too (the RACI roles).
-    this._renderList(container, spec, res.data[this._tab] || [], spec.hint || "");
+    // A list whose config says what it governs says so here too; the registers that
+    // gained a tab without a hint of their own say it here.
+    this._renderList(container, spec, res.data[this._tab] || [],
+                     spec.hint || this._INTROS[this._tab] || "");
+  },
+
+  _INTROS: {
+    codebase: "Where each model's code lives. A codebase carries its repository, so the " +
+      "two travel together and cannot disagree.",
+    foundation_model: "The foundation models your AI Systems are built on, with the " +
+      "versions available for each. Ships empty: which models you actually run is yours " +
+      "to state.",
+    market: "Where an AI System is placed on the market or used \u2014 what decides which " +
+      "regulatory regimes apply to it. Until you add one, the shipped markets are offered.",
   },
 };

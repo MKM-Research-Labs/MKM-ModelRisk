@@ -15,6 +15,13 @@
 .dtab { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: var(--space-4) var(--space-6); cursor: pointer; font: inherit; font-size: var(--size-sm); }
 .dtab:hover { color: var(--text); }
 .dtab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+/* Admin's tab bar, one row per kind of list, each row led by the kind's name. */
+.admin-tabs { flex-direction: column; gap: 0; }
+.admin-section { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1); }
+.admin-section-label { flex: none; width: 110px; font-size: var(--size-xs); font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+/* A group of vocabularies (Status, RACI, ML Training): above the lists' own headers,
+   so it must beat .card h3's small caps. */
+.card h3.vocab-group { font-size: var(--size-lg); color: var(--text); text-transform: none; letter-spacing: 0; margin: var(--space-9) 0 var(--space-2); }
 .dh-dates { display: flex; flex-wrap: wrap; gap: var(--space-9); margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--rule); }
 .datechip { font-size: var(--size-xs); }
 .progress { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; margin: var(--space-2) 0 var(--space-6); }
