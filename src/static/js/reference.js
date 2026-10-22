@@ -89,7 +89,7 @@ const Reference = {
     // The roles a Product's RACI is assigned to. A vocabulary in shape (stored as /
     // shown as) but its own tab, because it carries which accountability a new
     // Product is scaffolded with, and that is what an administrator comes here for.
-    ["raci_role", "RACI Roles"],
+    ["raci_role", "RACI"],
     // Every status vocabulary on one tab: shown-as is the institution's to change,
     // stored-as is what the records already hold and never moves.
     ["vocabulary", "Vocabulary"],

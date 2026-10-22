@@ -85,7 +85,7 @@ def test_registration_seeds_the_four_raci_accountabilities():
     raci = get_product("Product-0001")["data"]["raci_roles"]
     assert [r["raci"] for r in raci] == ["Responsible", "Accountable", "Consulted", "Informed"]
     assert [r["role"] for r in raci] == [
-        "Model user", "Model owner", "Model Risk Committee", "Senior management"]
+        "Operations Lead", "Model Owner", "Independent Validator", "MRC"]
     assert [r["item_id"] for r in raci] == ["RC-001", "RC-002", "RC-003", "RC-004"]
 
 

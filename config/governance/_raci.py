@@ -24,8 +24,8 @@ accountabilities -- Responsible, Accountable, Consulted, Informed -- ARE the met
 fifth would not be RACI. The roles that hold them are not: one institution's
 "Model user" is another's "Front Office", so the roles are an admin list.
 
-The list is a status vocabulary with one extra column. ``value`` is what a Product's
-RACI entry stores, ``label`` is what a screen shows, and ``raci`` is the
+The list is a status vocabulary with one extra column. ``value`` is what a model's or
+a Product's RACI entry stores, ``label`` is what a screen shows, and ``raci`` is the
 accountability a new Product is scaffolded with that role for. Renaming a role edits
 its label and moves nothing on record; removing one stops it being offered, while
 the entries that already carry it go on displaying the word they hold.
@@ -40,20 +40,22 @@ RACI_ROLE_LIST = "raci_role"
 # models in production (the RACI operating model, held at the product level).
 VALID_RACI_CODES = ("Responsible", "Accountable", "Consulted", "Informed")
 
-# What the role list ships with: (raci code, role). A product's RACI is complete only
-# with all four, so registration scaffolds one entry per role marked with an
-# accountability -- the way a model's SR 26-2 questions are seeded on registration.
-# These are the SEED, not the vocabulary: once the list exists, registration reads it.
+# What the role list ships with: (raci code, role) -- the four every model in the
+# estate already carries, so the list starts as the words on record. A product's RACI
+# is complete only with all four, so registration scaffolds one entry per role marked
+# with an accountability -- the way a model's SR 26-2 questions are seeded on
+# registration. These are the SEED, not the vocabulary: once the list exists,
+# registration reads it.
 DEFAULT_RACI = (
-    ("Responsible", "Model user"),
-    ("Accountable", "Model owner"),
-    ("Consulted", "Model Risk Committee"),
-    ("Informed", "Senior management"),
+    ("Responsible", "Operations Lead"),
+    ("Accountable", "Model Owner"),
+    ("Consulted", "Independent Validator"),
+    ("Informed", "MRC"),
 )
 
 _RACI_ROLE_SPEC = status_vocabulary_spec(
-    "RACI roles", "RR",
-    "The roles a Product's RACI operating model is assigned to. <b>Seeded as</b> is "
+    "RACI", "RR",
+    "The roles a model's or Product's RACI is assigned to. <b>Seeded as</b> is "
     "the accountability a newly registered Product is given this role for; leave it "
     "blank for a role that is offered but not scaffolded.")
 _RACI_ROLE_SPEC["fields"].append(
