@@ -139,6 +139,17 @@ STYLING_ASSET_DIRS = ("src/static", "src/templates")
 # the reported backlog is empty. A colour typed into any of them now fails the audit.
 STYLING_GATED_SUFFIXES = (".css", ".html", ".js")
 
+# --- Coding rule R11: screens use the shared layout vocabulary ---------------------
+# Where the console's screens are built. Templates are the page shell (its h1/h2 are
+# the shell's own), so only the JavaScript that draws each screen is scanned.
+LAYOUT_ASSET_DIRS = ("src/static/js",)
+LAYOUT_STYLESHEET_DIR = "src/static/css"
+# The whole heading vocabulary: the page shell's title, a card's title and a modal's
+# title. Anything inside a card is a ``.section-header``, not a heading.
+LAYOUT_HEADING_SELECTORS = (".brand h1", ".card h3", ".modal h2")
+# The heading tags a screen may build: a modal title and a card title.
+LAYOUT_SCREEN_HEADINGS = ("h2", "h3")
+
 # Package trees scanned for the R4 ``__init__.py`` inventory. Broader than
 # SOURCE_DIRS so the inventory lists every first-party package initialiser —
 # including the audit suite and the bundled packages/ — not just the app source.

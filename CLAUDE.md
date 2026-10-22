@@ -256,6 +256,10 @@ Full text in `docs/rules/coding_rules.md`.
   Use the named helpers (`append_event`, `read_stream`, `read_view`, …).
 - **R9** — test against a restored backup, never the live database (§1).
 
+- **R11** — screens use the shared layout: tabs top down as stacked plain `dtabs` rows,
+  headings only as a card's `<h3>` / a modal's `<h2>` with `.section-header` inside a
+  card, no screen-local styles. Copy the nearest screen that already does it.
+
 **Authorship is gated (permissions P1).** Against a protected database, a change must be
 authored by somebody in Admin → People — matched on name or email — or the request is
 refused with 403. `system` and `ingest:*` pass; an empty People list stands the rule down.

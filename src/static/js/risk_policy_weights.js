@@ -35,7 +35,7 @@ const RiskPolicyWeights = {
     if (!host || !catalogue) return;
     const audit = policy.audit || (policy.audit = {});
     host.innerHTML =
-      '<h4 style="margin-top:var(--space-9)">Criticality weights</h4>' +
+      '<div class="section-header" style="margin-top:var(--space-9)">Criticality weights</div>' +
       '<p class="muted" style="font-size:var(--size-xs)">How much each missing item counts ' +
       "before escalation, from " + catalogue.min.toFixed(2) + " to " +
       catalogue.max.toFixed(2) + ". Blank means the firm-wide value. Anything set here " +
