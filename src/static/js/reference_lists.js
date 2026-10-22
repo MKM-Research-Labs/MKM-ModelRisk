@@ -32,7 +32,7 @@
 
 Object.assign(Reference, {
 
-  // Every vocabulary on the one Static data tab, in three groups: the status words a
+  // Every vocabulary on the one Static data tab, in three groups (a row of sub-tabs): the status words a
   // record carries, the roles its RACI is assigned to, and the enumerations an ML
   // Application's training is typed against. One tab because they are one kind of
   // thing; grouped because "which words are these" is the first thing an administrator
@@ -56,24 +56,36 @@ Object.assign(Reference, {
       "primary_metric", "naive_baseline"]],
   ],
 
+  // Which group of the Vocabulary tab is open: a row of its own, like any other
+  // second level on this console, rather than three headed pages run together.
+  _vocabGroup: "Status",
+
   _renderVocabularies(container, res) {
     const groups = this._VOCABULARY_GROUPS;
+    const [title, blurb, keys] = groups.find(([t]) => t === this._vocabGroup) || groups[0];
     container.innerHTML =
+      '<div class="dtabs">' + groups.map(([t]) =>
+        '<button class="dtab' + (t === title ? " active" : "") + '" data-vgroup="' + t + '">' +
+        t + "</button>").join("") + "</div>" +
       '<p class="muted"><b>Shown as</b> is yours to change; <b>stored as</b> is the word ' +
       "the records themselves carry and the code matches on, fixed once an entry exists. " +
-      "Renaming therefore changes every screen without moving anything on record.</p>" +
-      groups.map(([title, blurb, keys]) =>
-        '<h3 class="vocab-group">' + title + "</h3>" +
-        (blurb ? '<p class="muted">' + blurb + "</p>" : "") +
-        keys.map((key) => '<div id="voc-' + key + '"></div>').join("")).join("");
-    groups.forEach(([, , keys]) => keys.forEach((key) => {
+      "Renaming therefore changes every screen without moving anything on record." +
+      (blurb ? " " + blurb : "") + "</p>" +
+      keys.map((key) => '<div id="voc-' + key + '"></div>').join("");
+    container.querySelectorAll("[data-vgroup]").forEach((btn) => {
+      btn.onclick = () => {
+        this._vocabGroup = btn.getAttribute("data-vgroup");
+        this._renderVocabularies(container, res);
+      };
+    });
+    keys.forEach((key) => {
       const spec = res.collections.find((c) => c.key === key);
       if (!spec) return;
-      // Each list says what it governs. The blurbs above explain the columns and the
-      // group; this says which words these are.
+      // Each list says what it governs. The paragraph above explains the columns and
+      // the group; this says which words these are.
       this._renderList(document.getElementById("voc-" + key), spec,
                        res.data[key] || [], spec.hint || "");
-    }));
+    });
   },
 
   // A plain reference list rendered as a table with a working add form and
