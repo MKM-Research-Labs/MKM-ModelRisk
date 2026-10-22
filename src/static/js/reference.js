@@ -74,15 +74,34 @@ const Reference = {
 
   async render() {
     const el = document.getElementById("tab-reference");
-    const bar = this._SECTIONS.map(([title, tabs]) =>
-      '<div class="admin-section"><span class="admin-section-label">' + title + "</span>" +
-      tabs.map(([k, label]) =>
-        '<button class="dtab' + (k === this._tab ? " active" : "") + '" data-atab="' + k +
-        '">' + label + "</button>").join("") + "</div>").join("");
-    el.innerHTML = '<div class="card"><div class="dtabs admin-tabs">' + bar +
-      '</div><div id="admin-body"></div></div>';
+    // Top down, as every other two-level screen does it (a model's review stages, the
+    // org navigator): the sections across the top, then the open section's lists in a
+    // row of their own beneath. A section holding one list is that list's tab, with no
+    // second row to repeat it. ``data-holds`` names what a section holds, so a caller
+    // that knows only the list (the e2e helpers) can find its way in.
+    const open = this._SECTIONS.find(([, tabs]) => tabs.some(([k]) => k === this._tab)) ||
+      this._SECTIONS[0];
+    const tab = (active, attr, label) =>
+      '<button class="dtab' + (active ? " active" : "") + '" ' + attr + ">" + label + "</button>";
+    const top = this._SECTIONS.map(([title, tabs]) => tabs.length === 1
+      ? tab(tabs[0][0] === this._tab, 'data-atab="' + tabs[0][0] + '"', title)
+      : tab(open[0] === title, 'data-asec="' + title + '" data-holds="' +
+            tabs.map(([k]) => k).join(" ") + '"', title)).join("");
+    const second = open[1].length > 1
+      ? '<div class="dtabs">' + open[1].map(([k, label]) =>
+          tab(k === this._tab, 'data-atab="' + k + '"', label)).join("") + "</div>"
+      : "";
+    el.innerHTML = '<div class="card"><div class="dtabs">' + top + "</div>" + second +
+      '<div id="admin-body"></div></div>';
     el.querySelectorAll("[data-atab]").forEach((btn) => {
       btn.onclick = () => { this._tab = btn.getAttribute("data-atab"); this.render(); };
+    });
+    // Opening a section opens its first list.
+    el.querySelectorAll("[data-asec]").forEach((btn) => {
+      btn.onclick = () => {
+        this._tab = btn.getAttribute("data-holds").split(" ")[0];
+        this.render();
+      };
     });
     await this._renderBody(document.getElementById("admin-body"));
   },
