@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Record the Wolfram benchmarks on GH-001, PR-001 and SI-001; re-issue PR-001's document.
+"""Record each model's Wolfram benchmark on its record; re-issue PR-001's document.
 
 Both benchmarks are filed (scripts.attach_wolfram_benchmark). This records what
 they established:
@@ -93,6 +93,18 @@ VQ_RATIONALE = {
         "and that IntensityDistribution is not used by the production storm generator. "
         "Outstanding: no benchmark against an alternative method or observed storm data, "
         "and the calibration the document describes (MLE body, Hill tail) has no code."),
+    "MKM-DE-001": (
+        "Partially addressed. The delta engine was benchmarked on 2026-10-26 against "
+        "Wolfram Engine 15.0 and a 50-digit mpmath implementation of its documented "
+        "formulae (MKM-DE-001_wolfram_benchmark.pdf, Docs > Benchmark): over 120 cases "
+        "the risky annuity matches to 6e-16 and FS01, the spread change and the annuity "
+        "to within their rounding; Wolfram agrees with the reference to 5e-25 and "
+        "confirms the 1 bp bump is within 3e-4 bp of the exact gradient. It found MTM "
+        "off by up to GBP 3.40 on GBP 10m (the annuity is rounded before use), FS01 "
+        "blind on the 2 bp spread floor, and three documentation claims not met "
+        "(FS01 linear in h, yield sensitivity, the s7.2 hand calculation). Outstanding: "
+        "no benchmark against an alternative risk measure (e.g. analytic or "
+        "full-revaluation sensitivities across the book)."),
 }
 
 # PR-001's re-issued documentation: files under MODEL_DOCS_DIR/<model>/, and the

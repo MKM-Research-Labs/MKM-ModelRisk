@@ -58,6 +58,8 @@ BENCHMARKS = {
                    "Wolfram oracle benchmark - PRS Analytical Pricing Model"),
     "MKM-SI-001": ("docs/models/storm_intensity_benchmark/MKM-SI-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark - Storm Intensity Distribution"),
+    "MKM-DE-001": ("docs/models/delta_engine_benchmark/MKM-DE-001_wolfram_benchmark.pdf",
+                   "Wolfram oracle benchmark - Delta Engine"),
 }
 
 
