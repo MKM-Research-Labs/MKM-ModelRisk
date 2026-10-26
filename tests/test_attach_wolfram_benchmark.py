@@ -32,6 +32,8 @@ from pathlib import Path
 import pytest
 
 from scripts import attach_wolfram_benchmark as attach
+from src.governance.documents import add_document
+from src.governance.model_inventory.commands import AGGREGATE_TYPE
 from src.governance.model_inventory import get_model, rebuild_inventory_view, register_model
 
 
@@ -42,7 +44,7 @@ def _register(*ids):
 
 
 def _fake_output(tmp_path):
-    for relpath, _ in attach.BENCHMARKS.values():
+    for relpath, *_ in attach.BENCHMARKS.values():
         p = tmp_path / relpath
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(b"%PDF-1.4 benchmark\n%%EOF")
@@ -58,8 +60,28 @@ def test_it_files_each_pdf_as_a_benchmark_test(tmp_path):
     _register()
     result = attach.apply(phys_root=_fake_output(tmp_path))
     assert sorted(m for m, _ in result["attached"]) == sorted(attach.BENCHMARKS)
-    for model_id, (relpath, _) in attach.BENCHMARKS.items():
-        assert _docs(model_id) == {Path(relpath).name: "Benchmark Test"}
+    for model_id in attach.BENCHMARKS:
+        assert _docs(model_id) == {_stored(model_id): "Benchmark Test"}
+
+
+def _stored(model_id):
+    relpath, _, *versioned = attach.BENCHMARKS[model_id]
+    return versioned[0] if versioned else Path(relpath).name
+
+
+def test_a_new_version_retires_the_earlier_filing(tmp_path):
+    _register()
+    root = _fake_output(tmp_path)
+    versioned = next(m for m, b in attach.BENCHMARKS.items() if len(b) == 3)
+    relpath = attach.BENCHMARKS[versioned][0]
+    add_document(aggregate_type=AGGREGATE_TYPE, aggregate_id=versioned,
+                 scope=f"model/{versioned}", category="Benchmark Test",
+                 filename=Path(relpath).name, data=b"%PDF-1.4 v0.1\n%%EOF",
+                 description="v0.1", actor="test")
+    rebuild_inventory_view()
+    attach.apply([versioned], phys_root=root)
+    assert _docs(versioned) == {Path(relpath).name: "History", _stored(versioned): "Benchmark Test"}
+    assert attach.apply([versioned], phys_root=root)["attached"] == []
 
 
 def test_one_model_can_be_filed_alone(tmp_path):
@@ -93,7 +115,7 @@ def test_it_refuses_an_unregistered_or_unknown_model(tmp_path):
 
 
 def test_the_real_spec_points_at_the_generated_benchmarks():
-    assert {rel for rel, _ in attach.BENCHMARKS.values()} == {
+    assert {rel for rel, *_ in attach.BENCHMARKS.values()} == {
         "docs/models/gev_hazard_benchmark/MKM-GH-001_wolfram_benchmark.pdf",
         "docs/models/prs_pricing_benchmark/MKM-PR-001_wolfram_benchmark.pdf",
         "docs/models/storm_intensity_benchmark/MKM-SI-001_wolfram_benchmark.pdf",

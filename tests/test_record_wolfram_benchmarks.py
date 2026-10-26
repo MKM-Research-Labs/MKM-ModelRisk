@@ -21,9 +21,9 @@
 """Recording the Wolfram benchmarks (``scripts.record_wolfram_benchmarks``).
 
 The properties worth protecting: both models end with benchmark_tests = Yes and
-VQ-008 Partially Addressed with the benchmark rationale; PR-001's v3.1 PDF and
-.tex are filed as Core Documentation and the v1.1 PDF moves to History, keeping
-its id; a re-run changes nothing; and a missing model or file writes nothing.
+VQ-008 Partially Addressed with the benchmark rationale; each re-issued document
+(PR-001 v3.1, DE-001 v1.1) is filed as Core Documentation and the document it
+supersedes moves to History, keeping its id; a re-run changes nothing; and a missing model or file writes nothing.
 """
 from __future__ import annotations
 
@@ -35,22 +35,24 @@ from src.governance.model_inventory import get_model, rebuild_inventory_view, re
 from src.governance.model_inventory.commands import AGGREGATE_TYPE
 
 
-def _register(with_v11=True):
+def _register(with_superseded=True):
     for model_id in record.VQ_RATIONALE:
         register_model(model_id=model_id, name=f"Model {model_id}", actor="test")
-    if with_v11:
-        add_document(aggregate_type=AGGREGATE_TYPE, aggregate_id=record.REISSUE_MODEL,
-                     scope=f"model/{record.REISSUE_MODEL}", category="Core Documentation",
-                     filename=record.SUPERSEDED, data=b"%PDF-1.4 v1.1\n%%EOF",
-                     description="PRS Pricing Model v1.1", actor="test")
+    if with_superseded:
+        for model_id, spec in record.REISSUES.items():
+            add_document(aggregate_type=AGGREGATE_TYPE, aggregate_id=model_id,
+                         scope=f"model/{model_id}", category="Core Documentation",
+                         filename=spec["superseded"], data=b"%PDF-1.4 old\n%%EOF",
+                         description="superseded", actor="test")
     rebuild_inventory_view()
 
 
 def _docs_dir(tmp_path):
-    d = tmp_path / record.REISSUE_MODEL
-    d.mkdir()
-    for name, _ in record.REISSUE_FILES:
-        (d / name).write_bytes(b"%PDF-1.4 v3.1\n%%EOF")
+    for model_id, spec in record.REISSUES.items():
+        d = tmp_path / model_id
+        d.mkdir()
+        for name, _ in spec["files"]:
+            (d / name).write_bytes(b"%PDF-1.4 new\n%%EOF")
     return tmp_path
 
 
@@ -72,16 +74,17 @@ def test_both_models_record_the_benchmark(tmp_path):
         assert _vq(model_id)["rationale"] == rationale
 
 
-def test_v31_is_filed_and_v11_moves_to_history(tmp_path):
+def test_reissues_are_filed_and_superseded_documents_move_to_history(tmp_path):
     _register()
-    v11 = next(d for d in _data(record.REISSUE_MODEL)["documents"]
-               if d["original_name"] == record.SUPERSEDED)
+    old = {m: next(d for d in _data(m)["documents"] if d["original_name"] == spec["superseded"])
+           for m, spec in record.REISSUES.items()}
     record.apply(docs_dir=_docs_dir(tmp_path))
-    docs = {d["original_name"]: d for d in _data(record.REISSUE_MODEL)["documents"]}
-    assert docs[record.SUPERSEDED]["category"] == "History"
-    assert docs[record.SUPERSEDED]["item_id"] == v11["item_id"]
-    for name, _ in record.REISSUE_FILES:
-        assert docs[name]["category"] == "Core Documentation"
+    for model_id, spec in record.REISSUES.items():
+        docs = {d["original_name"]: d for d in _data(model_id)["documents"]}
+        assert docs[spec["superseded"]]["category"] == "History"
+        assert docs[spec["superseded"]]["item_id"] == old[model_id]["item_id"]
+        for name, _ in spec["files"]:
+            assert docs[name]["category"] == "Core Documentation"
 
 
 def test_it_is_idempotent(tmp_path):
@@ -94,8 +97,8 @@ def test_it_is_idempotent(tmp_path):
 def test_a_missing_file_writes_nothing(tmp_path):
     _register()
     root = _docs_dir(tmp_path)
-    (root / record.REISSUE_MODEL / record.REISSUE_FILES[1][0]).unlink()
-    with pytest.raises(FileNotFoundError, match="prs_pricing_v3.1.tex"):
+    (root / "MKM-DE-001" / record.REISSUES["MKM-DE-001"]["files"][1][0]).unlink()
+    with pytest.raises(FileNotFoundError, match="delta_engine_v1.1.tex"):
         record.apply(docs_dir=root)
     assert _data("MKM-GH-001").get("benchmark_tests") != "Yes"
 
@@ -108,6 +111,7 @@ def test_an_unregistered_model_writes_nothing(tmp_path):
     assert _data("MKM-GH-001").get("benchmark_tests") != "Yes"
 
 
-def test_the_real_v31_documents_are_in_the_repo():
-    for name, _ in record.REISSUE_FILES:
-        assert (record.MODEL_DOCS_DIR / record.REISSUE_MODEL / name).is_file()
+def test_the_real_reissued_documents_are_in_the_repo():
+    for model_id, spec in record.REISSUES.items():
+        for name, _ in spec["files"]:
+            assert (record.MODEL_DOCS_DIR / model_id / name).is_file()

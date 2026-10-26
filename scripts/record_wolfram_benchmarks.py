@@ -28,11 +28,11 @@ they established:
   rationale that cites the benchmark and says what is still outstanding. On
   GH-001 it replaces a status that read Addressed over a rationale saying no
   benchmark existed;
-* PR-001's model documentation re-issued as v3.1 -- the latest source (v3.0,
-  recovered from PhysicalRisk) with the discretisation and discounting
-  limitations corrected against its benchmark. The PDF and its .tex are filed as
-  Core Documentation, and the stale v1.1 ``prs_pricing.pdf`` moves to History:
-  a metadata change, so it keeps its id and file.
+* model documentation re-issued where a benchmark found it wrong (``REISSUES``):
+  PR-001 as v3.1 and DE-001 as v1.1, each the latest source recovered from
+  PhysicalRisk and corrected against its benchmark. The PDF and its .tex are
+  filed as Core Documentation, and the superseded document moves to History: a
+  metadata change, so it keeps its id and file.
 
 Idempotent: a field already at its value, a question already at its status and
 rationale, a document already filed, and a document already in History are left
@@ -96,25 +96,30 @@ VQ_RATIONALE = {
     "MKM-DE-001": (
         "Partially addressed. The delta engine was benchmarked on 2026-10-26 against "
         "Wolfram Engine 15.0 and a 50-digit mpmath implementation of its documented "
-        "formulae (MKM-DE-001_wolfram_benchmark.pdf, Docs > Benchmark): over 120 cases "
-        "the risky annuity matches to 6e-16 and FS01, the spread change and the annuity "
-        "to within their rounding; Wolfram agrees with the reference to 5e-25 and "
-        "confirms the 1 bp bump is within 3e-4 bp of the exact gradient. It found MTM "
-        "off by up to GBP 3.40 on GBP 10m (the annuity is rounded before use), FS01 "
-        "blind on the 2 bp spread floor, and three documentation claims not met "
-        "(FS01 linear in h, yield sensitivity, the s7.2 hand calculation). Outstanding: "
-        "no benchmark against an alternative risk measure (e.g. analytic or "
+        "formulae (MKM-DE-001_wolfram_benchmark_v0.2.pdf, Docs > Benchmark): over 120 "
+        "cases the risky annuity matches to 6e-16 and FS01, the spread change, the "
+        "annuity, MTM and the hazard sensitivity to within their rounding; Wolfram agrees "
+        "with the reference to 5e-25 and the 1 bp bump is within 3e-4 bp of the exact "
+        "gradient. Benchmark v0.1 found MTM off by up to GBP 3.40 on GBP 10m and FS01 "
+        "silent on the 2 bp spread floor; both are fixed, and the three documentation "
+        "errors it found are corrected in model documentation v1.1, whose claims all "
+        "hold. Outstanding: no benchmark against an alternative risk measure (e.g. "
         "full-revaluation sensitivities across the book)."),
 }
 
-# PR-001's re-issued documentation: files under MODEL_DOCS_DIR/<model>/, and the
-# superseded document it retires to History.
-REISSUE_MODEL = "MKM-PR-001"
-REISSUE_FILES = (
-    ("prs_pricing_v3.1.pdf", "PRS Pricing Model v3.1 (19-Oct-2026)"),
-    ("prs_pricing_v3.1.tex", "PRS Pricing Model v3.1 (19-Oct-2026) - LaTeX source"),
-)
-SUPERSEDED = "prs_pricing.pdf"
+# Re-issued model documentation: for each model, the files under
+# MODEL_DOCS_DIR/<model>/ filed as Core Documentation, and the superseded document
+# retired to History.
+REISSUES = {
+    "MKM-PR-001": {
+        "files": (("prs_pricing_v3.1.pdf", "PRS Pricing Model v3.1 (19-Oct-2026)"),
+                  ("prs_pricing_v3.1.tex", "PRS Pricing Model v3.1 (19-Oct-2026) - LaTeX source")),
+        "superseded": "prs_pricing.pdf", "version": "v3.1"},
+    "MKM-DE-001": {
+        "files": (("delta_engine_v1.1.pdf", "Delta Engine Model v1.1 (26-Oct-2026)"),
+                  ("delta_engine_v1.1.tex", "Delta Engine Model v1.1 (26-Oct-2026) - LaTeX source")),
+        "superseded": "delta_engine.pdf", "version": "v1.1"},
+}
 
 
 def _record_benchmark(model_id: str, data: dict, config) -> list[str]:
@@ -138,33 +143,33 @@ def _record_benchmark(model_id: str, data: dict, config) -> list[str]:
     return done
 
 
-def _reissue(data: dict, docs_dir: Path, config) -> list[str]:
-    done = []
+def _reissue(model_id: str, data: dict, docs_dir: Path, config) -> list[str]:
+    spec, done = REISSUES[model_id], []
     documents = data.get("documents") or []
     have = {d.get("original_name") or d.get("filename") for d in documents}
-    for name, description in REISSUE_FILES:
+    for name, description in spec["files"]:
         if name in have:
             continue
         add_document(
-            aggregate_type=MODEL_AGGREGATE, aggregate_id=REISSUE_MODEL,
-            scope=f"model/{REISSUE_MODEL}", category=CORE_DOC_CATEGORY, filename=name,
-            data=(docs_dir / REISSUE_MODEL / name).read_bytes(), description=description,
+            aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
+            scope=f"model/{model_id}", category=CORE_DOC_CATEGORY, filename=name,
+            data=(docs_dir / model_id / name).read_bytes(), description=description,
             actor=ACTOR, config=config)
         done.append(name)
     for d in documents:
-        if (d.get("original_name") == SUPERSEDED
+        if (d.get("original_name") == spec["superseded"]
                 and d.get("category") == CORE_DOC_CATEGORY):
             update_document(
-                aggregate_type=MODEL_AGGREGATE, aggregate_id=REISSUE_MODEL,
+                aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
                 item_id=d["item_id"], fields={"category": HISTORY_DOC_CATEGORY},
                 actor=ACTOR, config=config,
-                reason="Superseded by model documentation v3.1")
-            done.append(f"{SUPERSEDED} -> {HISTORY_DOC_CATEGORY}")
+                reason=f"Superseded by model documentation {spec['version']}")
+            done.append(f"{spec['superseded']} -> {HISTORY_DOC_CATEGORY}")
     return done
 
 
 def apply(docs_dir: Path = MODEL_DOCS_DIR, config=None) -> dict:
-    """Record both benchmarks and re-issue PR-001's document; return what changed.
+    """Record every benchmark and re-issue the documents; return what changed.
 
     Every model and file is checked before anything is written.
     """
@@ -172,12 +177,14 @@ def apply(docs_dir: Path = MODEL_DOCS_DIR, config=None) -> dict:
     absent = [m for m, rec in models.items() if rec is None]
     if absent:
         raise RuntimeError(f"Not registered: {', '.join(absent)}.")
-    missing = [n for n, _ in REISSUE_FILES if not (docs_dir / REISSUE_MODEL / n).is_file()]
+    missing = [f"{m}/{n}" for m, spec in REISSUES.items() for n, _ in spec["files"]
+               if not (docs_dir / m / n).is_file()]
     if missing:
-        raise FileNotFoundError(f"Not found under {docs_dir / REISSUE_MODEL}: {', '.join(missing)}")
+        raise FileNotFoundError(f"Not found under {docs_dir}: {', '.join(missing)}")
 
     changed = {m: _record_benchmark(m, rec["data"], config) for m, rec in models.items()}
-    changed[REISSUE_MODEL] += _reissue(models[REISSUE_MODEL]["data"], docs_dir, config)
+    for model_id in REISSUES:
+        changed[model_id] += _reissue(model_id, models[model_id]["data"], docs_dir, config)
     rebuild_inventory_view(config=config)
     return changed
 
