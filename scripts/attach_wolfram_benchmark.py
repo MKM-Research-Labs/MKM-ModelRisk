@@ -27,8 +27,9 @@ which the Docs tab lists on its own Benchmark panel; the CSVs beside it stay in
 PhysicalRisk, where the numbers behind the PDF can be regenerated.
 
 Idempotent: a document whose stored name is already attached is skipped, so the
-script is safe to re-run. A REGENERATED benchmark is therefore not re-filed
-under the same name -- file it as a new version deliberately.
+script is safe to re-run. A REGENERATED benchmark is filed as a new version: its
+entry names a versioned stored name, and the earlier filing of the same PDF
+(stored under the PDF's own name) moves from Benchmark to History, keeping its id.
 
 The benchmarks are read from ``PRODUCER_ROOT``, by default the PhysicalRisk
 checkout beside this one. Run from a worktree, "beside" is the worktrees
@@ -41,9 +42,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from config.governance._documents import BENCHMARK_DOC_CATEGORY
+from config.governance._documents import BENCHMARK_DOC_CATEGORY, HISTORY_DOC_CATEGORY
 from config.paths import PRODUCER_ROOT as PHYS_ROOT
-from src.governance.documents import add_document
+from src.governance.documents import add_document, update_document
 from src.governance.model_inventory import get_model, rebuild_inventory_view
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 
@@ -59,8 +60,11 @@ BENCHMARKS = {
     "MKM-SI-001": ("docs/models/storm_intensity_benchmark/MKM-SI-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark - Storm Intensity Distribution"),
     "MKM-DE-001": ("docs/models/delta_engine_benchmark/MKM-DE-001_wolfram_benchmark.pdf",
-                   "Wolfram oracle benchmark - Delta Engine"),
+                   "Wolfram oracle benchmark v0.2 - Delta Engine, after the MTM and floor fixes",
+                   "MKM-DE-001_wolfram_benchmark_v0.2.pdf"),
 }
+# A third item, where present, is the versioned name to file under; the filing
+# under the PDF's own name is then an earlier version, retired to History.
 
 
 def apply(model_ids=None, benchmarks=BENCHMARKS, phys_root: Path = PHYS_ROOT,
@@ -79,25 +83,31 @@ def apply(model_ids=None, benchmarks=BENCHMARKS, phys_root: Path = PHYS_ROOT,
     if absent:
         raise RuntimeError(f"Not registered: {', '.join(absent)}.")
     missing = [benchmarks[m][0] for m in ids if not Path(phys_root, benchmarks[m][0]).is_file()]
+    attached = []
     if missing:
         raise FileNotFoundError(
             f"Benchmark output not found under {phys_root}: {', '.join(missing)}. "
             "Run python -m tools.wolfram_oracle <model> in PhysicalRisk, or set PRODUCER_ROOT.")
 
-    attached = []
     for model_id in ids:
-        relpath, description = benchmarks[model_id]
-        stored_name = Path(relpath).name
-        have = {(d.get("original_name") or d.get("filename"))
-                for d in (models[model_id]["data"].get("documents") or [])}
-        if stored_name in have:
-            continue
-        add_document(
-            aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
-            scope=f"model/{model_id}", category=BENCHMARK_DOC_CATEGORY, filename=stored_name,
-            data=Path(phys_root, relpath).read_bytes(), description=description,
-            actor=ACTOR, config=config)
-        attached.append((model_id, stored_name))
+        relpath, description, *versioned = benchmarks[model_id]
+        stored_name = versioned[0] if versioned else Path(relpath).name
+        documents = models[model_id]["data"].get("documents") or []
+        if stored_name not in {d.get("original_name") or d.get("filename") for d in documents}:
+            add_document(
+                aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
+                scope=f"model/{model_id}", category=BENCHMARK_DOC_CATEGORY, filename=stored_name,
+                data=Path(phys_root, relpath).read_bytes(), description=description,
+                actor=ACTOR, config=config)
+            attached.append((model_id, stored_name))
+        for d in documents if versioned else ():
+            if (d.get("original_name") == Path(relpath).name
+                    and d.get("category") == BENCHMARK_DOC_CATEGORY):
+                update_document(
+                    aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id, item_id=d["item_id"],
+                    fields={"category": HISTORY_DOC_CATEGORY}, actor=ACTOR, config=config,
+                    reason=f"Superseded by {stored_name}")
+                attached.append((model_id, f"{Path(relpath).name} -> {HISTORY_DOC_CATEGORY}"))
 
     rebuild_inventory_view(config=config)
     return {"attached": attached}
