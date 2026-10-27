@@ -174,7 +174,7 @@ INIT_INVENTORY_DIRS = ("config", "src", "scripts", "audit", "packages")
 # the wider list all along, which is how the omission stayed invisible: the two
 # constants sat adjacent and disagreed.
 REPO_SCAN_DIRS = ("config", "src", "scripts", "docs", "audit", "packages",
-                  "modelrisk")
+                  "modelrisk", "wolfram")
 
 # Web assets (JS/CSS) are audited for over-length separately from Python, and share
 # the source line limit. They were reported rather than gated so that a long vendored
