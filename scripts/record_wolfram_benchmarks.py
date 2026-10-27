@@ -105,6 +105,19 @@ VQ_RATIONALE = {
         "errors it found are corrected in model documentation v1.1, whose claims all "
         "hold. Outstanding: no benchmark against an alternative risk measure (e.g. "
         "full-revaluation sensitivities across the book)."),
+    "MKM-EF-001": (
+        "Partially addressed. The frequency model was benchmarked on 2026-10-26 against "
+        "Wolfram Engine 15.0 and a 50-digit mpmath implementation of model document v2.3 "
+        "(MKM-EF-001_wolfram_benchmark.pdf, Docs > Benchmark): over 161 cases the annual "
+        "probability, tenor probability, compound-Poisson AAL and its standard error, the "
+        "dispersion test and both families' log-likelihoods match to better than 1e-12, "
+        "Wolfram agrees with the reference to 5e-30, and the Negative Binomial fit "
+        "reaches the likelihood maximum. It found that the hazard builder's term "
+        "structure compounds annual probabilities as intensities, understating the "
+        "probability of a flood within the tenor by 0.1-17.3%, and that annualisation "
+        "loses about 1e-10 relative precision below lambda*p = 1e-4. Outstanding: the "
+        "calibration of lambda from gauge records, which the document leaves open, and "
+        "the Monte Carlo year simulation's draws, which only its reconciliation gate checks."),
 }
 
 # Re-issued model documentation: for each model, the files under
