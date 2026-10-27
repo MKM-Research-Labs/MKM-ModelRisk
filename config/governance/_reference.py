@@ -34,6 +34,7 @@ from config.governance._inventory import (LIFECYCLE_STAGE_LIST, VALID_LIFECYCLE_
                                           VALIDATION_STATUS_LIST)
 from config.governance._ai import AI_REFERENCE_LISTS, AI_REFERENCE_SPECS
 from config.governance._ml import ML_REFERENCE_LISTS, ML_REFERENCE_SPECS
+from config.governance._numerical_methods import NUMERICAL_REFERENCE_LISTS, NUMERICAL_REFERENCE_SPECS
 from config.governance._raci import RACI_REFERENCE_LISTS, RACI_REFERENCE_SPECS
 from config.governance._questions_common import (COMMON_REFERENCE_LISTS,
                                                  COMMON_REFERENCE_SPECS)
@@ -109,7 +110,7 @@ REFERENCE_LISTS = (
     MODEL_TYPE_LIST, VENDOR_LIST, CODEBASE_LIST, "people", REVIEW_QUESTION_LIST,
     STANDING_AGENDA_LIST,
 ) + tuple(STATUS_VOCABULARIES) + COMMON_REFERENCE_LISTS + ML_REFERENCE_LISTS \
-  + AI_REFERENCE_LISTS + RACI_REFERENCE_LISTS
+  + AI_REFERENCE_LISTS + RACI_REFERENCE_LISTS + NUMERICAL_REFERENCE_LISTS
 
 # What a model type means to a Product's bindings. A Product binds one analytics
 # engine and one market-data source, and it picks each from the inventory filtered
@@ -291,10 +292,9 @@ REFERENCE_SPECS.update({
     for name, (label, prefix, _words, hint) in STATUS_VOCABULARIES.items()
 })
 
-# The Estimator menu and the ML questionnaire, kept in their own module so the ML
-# vocabulary can evolve without disturbing this one (see _ml.py).
-REFERENCE_SPECS.update(COMMON_REFERENCE_SPECS)
-REFERENCE_SPECS.update(ML_REFERENCE_SPECS)
-# The foundation-model list and the AI questionnaire, and the RACI roles (_raci.py).
-REFERENCE_SPECS.update(AI_REFERENCE_SPECS)
-REFERENCE_SPECS.update(RACI_REFERENCE_SPECS)
+# Lists kept in their own modules so each vocabulary can evolve without disturbing
+# this one: the shared questions, the Estimator menu and ML questionnaire (_ml.py),
+# the foundation models and AI questionnaire, the RACI roles, the numerical methods.
+for _specs in (COMMON_REFERENCE_SPECS, ML_REFERENCE_SPECS, AI_REFERENCE_SPECS,
+               RACI_REFERENCE_SPECS, NUMERICAL_REFERENCE_SPECS):
+    REFERENCE_SPECS.update(_specs)

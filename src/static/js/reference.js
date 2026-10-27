@@ -44,6 +44,7 @@ const Reference = {
     ["Registers", [
       ["model_type", "Model Type"], ["vendor", "Vendor"], ["codebase", "Codebase"],
       ["calculating_agent", "Calc Agent"], ["data_source", "Data Source"],
+      ["numerical_method", "Numerical Method"],
       ["estimator", "Estimator"], ["feature", "Feature"],
       ["foundation_model", "Foundation Model"], ["market", "Market"],
     ]],
@@ -207,6 +208,10 @@ const Reference = {
     foundation_model: "The foundation models your AI Systems are built on, with the " +
       "versions available for each. Ships empty: which models you actually run is yours " +
       "to state.",
+    numerical_method: "The off-the-shelf numerical methods a model can name as ones it is " +
+      "built with. For reference only: a method is not governed in its own right, and " +
+      "linking one to a model scores, classifies and reviews nothing. Trim it to the " +
+      "methods your estate actually uses.",
     market: "Where an AI System is placed on the market or used \u2014 what decides which " +
       "regulatory regimes apply to it. Until you add one, the shipped markets are offered.",
   },

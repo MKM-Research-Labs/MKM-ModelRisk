@@ -23,6 +23,8 @@ from config.governance._assessments import (  # noqa: F401 (re-export)
     MONITORING_COLLECTION,
     VALID_EVALUATION_KINDS, VALID_EVALUATION_VERDICTS)
 from config.governance._inventory import VALID_RAG_RATINGS
+from config.governance._numerical_methods import (NUMERICAL_METHODS_COLLECTION,
+                                                  NUMERICAL_METHODS_SPEC)
 from config.governance._signoff_collections import (  # noqa: F401 (re-export)
     SIGNOFF_COLLECTION_SPECS, SIGNOFF_COLLECTIONS, SIGNOFF_HISTORY_COLLECTION,
     SIGNOFF_REQUESTS_COLLECTION, VALID_SIGNOFF_KINDS, VALID_SIGNOFF_OUTCOME,
@@ -193,6 +195,9 @@ COLLECTION_SPECS = {
          "reference": "data_source", "strict_reference": True, "required": True},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
+    # The off-the-shelf numerical methods the model is built with, for reference
+    # only -- see _numerical_methods.py for why they are not governed in their own right.
+    NUMERICAL_METHODS_COLLECTION: NUMERICAL_METHODS_SPEC,
     # The field lineage of a model-to-model handoff: one item per field that
     # crosses the edge, stated as a *pair* — the provider's (giver's) field mapped
     # to the consumer's (receiver's) field, so the interoperability template's
