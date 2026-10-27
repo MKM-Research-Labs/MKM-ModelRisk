@@ -25,6 +25,7 @@ import pytest
 from config.governance import (DEFAULT_DATA_SOURCES, DEFAULT_MODEL_TYPES,
                                DEFAULT_VENDORS, ML_TRAINING_VOCABULARIES,
                                MODEL_TYPE_LIST, REFERENCE_LISTS)
+from config.governance._numerical_methods import DEFAULT_NUMERICAL_METHODS
 
 from src.governance.errors import DomainError
 from src.governance.reference import (add_option, ensure_default_ml_training_vocabularies,
@@ -96,7 +97,8 @@ def test_ensure_default_reference_lists_seeds_and_is_idempotent():
     # platform's author in an adopter's inventory. Bare values, unlike data sources:
     # the same loop seeds both, and it takes either shape.
     assert [o["value"] for o in lists["vendor"]] == ["In-house", "Other"]
-    assert added == len(DEFAULT_DATA_SOURCES) + len(DEFAULT_VENDORS)
+    assert added == len(DEFAULT_DATA_SOURCES) + len(DEFAULT_VENDORS) \
+        + len(DEFAULT_NUMERICAL_METHODS)
     # Seeds a vacuum only — a second run adds nothing and never repopulates a
     # list an adopter has since curated.
     assert ensure_default_reference_lists() == 0

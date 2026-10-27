@@ -71,6 +71,7 @@ LAYOUTS: dict[str, Any] = {
     "validation_questions": "blocks",
     "remediation_steps": (0.42, 0.15, 0.10, 0.13, 0.20),
     "dependencies": (0.15, 0.20, 0.65),
+    "numerical_methods": (0.35, 0.25, 0.40),
     "version_history": (0.09, 0.12, 0.40, 0.15, 0.14, 0.10),
     "change_history": (0.09, 0.12, 0.15, 0.14, 0.50),
     "signoff_history": "blocks",
@@ -87,6 +88,8 @@ COLLECTIONS = [
     ("model_weaknesses", None),
     ("remediation_steps", "Remediation plan"),
     ("dependencies", None),
+    # Reference only: what the model is built with, not something it is judged on.
+    ("numerical_methods", None),
     ("version_history", "Version history"),
     ("signoff_history", "Model Risk Committee sign-off history"),
 ]
