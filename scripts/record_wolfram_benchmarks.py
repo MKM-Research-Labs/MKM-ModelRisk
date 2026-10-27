@@ -120,17 +120,16 @@ VQ_RATIONALE = {
         "the Monte Carlo year simulation's draws, which only its reconciliation gate checks."),
     "MKM-MP-001": (
         "Partially addressed. The pricer was benchmarked on 2026-10-27 against Wolfram "
-        "Engine 15.0 and a 50-digit mpmath implementation of model document v1.1 "
-        "(MKM-MP-001_wolfram_benchmark.pdf, Docs > Benchmark): over 360 loans the payment, "
-        "spread, expected cashflows, expected losses and fair value match Eqs. 1-24 to "
-        "6e-14, and Wolfram agrees with the reference to 4e-30. It confirmed that the "
-        "fair value counts expected loss twice: Eq. 19's default recovery is already net "
-        "of the loss and Eq. 24 subtracts PV(EL) again, understating fair value by up to "
-        "34.8% of par; Wolfram's independent pathwise valuation equals PV(CF) alone. It "
-        "also found the recovery measured a month late (up to 0.97% of par), the s6.1 "
-        "payment sensitivity understated, the zero-income fallback unreachable, and "
-        "production discounting at a risk-free rate rather than the coupon. Outstanding: "
-        "the fair-value fix, and no benchmark against an alternative credit model."),
+        "Engine 15.0 and a 50-digit mpmath implementation of its documented formulae "
+        "(MKM-MP-001_wolfram_benchmark_v0.2.pdf, Docs > Benchmark): over 360 loans the "
+        "payment, spread, expected cashflows, expected losses and fair value match Eqs. "
+        "1-24 to 6e-14, and the fair value equals Wolfram's independent pathwise "
+        "valuation (agreement 3e-30). Benchmark v0.1 found the fair value counting "
+        "expected loss twice (understated by up to 34.6% of par) and the recovery taken "
+        "a month late; both are fixed, and the documentation errors it found are "
+        "corrected in model documentation v1.3, whose claims all hold. Outstanding: no "
+        "benchmark against an alternative credit model or observed default and "
+        "recovery data."),
 }
 
 # Re-issued model documentation: for each model, the files under
@@ -145,6 +144,10 @@ REISSUES = {
         "files": (("delta_engine_v1.1.pdf", "Delta Engine Model v1.1 (26-Oct-2026)"),
                   ("delta_engine_v1.1.tex", "Delta Engine Model v1.1 (26-Oct-2026) - LaTeX source")),
         "superseded": "delta_engine.pdf", "version": "v1.1"},
+    "MKM-MP-001": {
+        "files": (("mortgage_pricer_v1.3.pdf", "Mortgage Pricing Model v1.3 (27-Oct-2026)"),
+                  ("mortgage_pricer_v1.3.tex", "Mortgage Pricing Model v1.3 (27-Oct-2026) - LaTeX source")),
+        "superseded": "mortgage_pricer.pdf", "version": "v1.3"},
 }
 
 
