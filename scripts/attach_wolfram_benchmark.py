@@ -64,6 +64,8 @@ BENCHMARKS = {
                    "MKM-DE-001_wolfram_benchmark_v0.2.pdf"),
     "MKM-EF-001": ("docs/models/event_frequency_benchmark/MKM-EF-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark - Event Frequency Model"),
+    "MKM-MP-001": ("docs/models/mortgage_pricing_benchmark/MKM-MP-001_wolfram_benchmark.pdf",
+                   "Wolfram oracle benchmark - Mortgage Pricing Model"),
 }
 # A third item, where present, is the versioned name to file under; the filing
 # under the PDF's own name is then an earlier version, retired to History.

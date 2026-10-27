@@ -118,6 +118,19 @@ VQ_RATIONALE = {
         "loses about 1e-10 relative precision below lambda*p = 1e-4. Outstanding: the "
         "calibration of lambda from gauge records, which the document leaves open, and "
         "the Monte Carlo year simulation's draws, which only its reconciliation gate checks."),
+    "MKM-MP-001": (
+        "Partially addressed. The pricer was benchmarked on 2026-10-27 against Wolfram "
+        "Engine 15.0 and a 50-digit mpmath implementation of model document v1.1 "
+        "(MKM-MP-001_wolfram_benchmark.pdf, Docs > Benchmark): over 360 loans the payment, "
+        "spread, expected cashflows, expected losses and fair value match Eqs. 1-24 to "
+        "6e-14, and Wolfram agrees with the reference to 4e-30. It confirmed that the "
+        "fair value counts expected loss twice: Eq. 19's default recovery is already net "
+        "of the loss and Eq. 24 subtracts PV(EL) again, understating fair value by up to "
+        "34.8% of par; Wolfram's independent pathwise valuation equals PV(CF) alone. It "
+        "also found the recovery measured a month late (up to 0.97% of par), the s6.1 "
+        "payment sensitivity understated, the zero-income fallback unreachable, and "
+        "production discounting at a risk-free rate rather than the coupon. Outstanding: "
+        "the fair-value fix, and no benchmark against an alternative credit model."),
 }
 
 # Re-issued model documentation: for each model, the files under
