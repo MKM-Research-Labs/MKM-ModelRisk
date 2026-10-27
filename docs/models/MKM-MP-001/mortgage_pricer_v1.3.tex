@@ -1,0 +1,887 @@
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+%
+% MKM-MP-001 Mortgage Pricing Model -- model documentation v1.3, the document of record
+% filed on the model as Core Documentation. Recovered from PhysicalRisk (removed from
+% that repo with the other per-model docs in 527b5a348) and corrected in v1.3 after the
+% Wolfram benchmark (MKM-MP-001_wolfram_benchmark v0.1) found the fair value counting
+% the expected loss twice. The sensitivity tables it once input are inlined.
+%
+% Build: it inputs the house header, which lives in PhysicalRisk. Copy
+% PhysicalRisk/docs/models/shared beside this folder as ../shared, then run
+% pdflatex three times (the third settles "Page n of N").
+\documentclass[11pt,a4paper]{article}
+\newcommand{\doctitle}{Mortgage Pricing Model}
+\newcommand{\docsubtitle}{Amortisation, Credit Risk, and Flood-Adjusted Expected Loss}
+\newcommand{\docversion}{1.3}
+\newcommand{\docdate}{27-October-2026}
+\newcommand{\docauthor}{David K Kelly}
+\input{../shared/mkm_header}
+% T1 so underscores in code identifiers print as underscores.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% The shared history table sets every column to its natural width, so a long entry runs
+% off the page. Wrap the description here, for this document only.
+\renewcommand{\mkmhistorypage}[1]{%
+    \section{Document History}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{l|l|p{10cm}|l}
+            \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+            \hline
+            #1
+        \end{tabular}
+    \end{table}
+}
+\begin{document}
+% Long code paths and identifiers cannot hyphenate; let the spacing stretch instead.
+\sloppy
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+% ===================================================================
+% 1. EXECUTIVE SUMMARY
+% ===================================================================
+\mkmexecsummary
+
+This document provides the complete mathematical specification, implementation details,
+and validation framework for the MKM Mortgage Pricing Model. The model prices individual
+residential mortgages on a risk-adjusted basis by combining standard amortisation
+mechanics with a credit-risk overlay derived from borrower affordability, loan-to-value
+(LTV) ratios, and property-level flood hazard rates.
+
+The core pricing engine computes the present value of the lender's expected cashflows ---
+each payment while the borrower survives, and the recovery in the month of default ---
+where default probabilities are implied from a hazard-rate framework calibrated
+to affordability-based credit spreads. Loss given default (LGD) is determined by the
+shortfall between the outstanding balance and the recoverable property value after
+application of a recovery haircut.
+
+\textbf{Key outputs:} Fair value of mortgage, credit spread, discount to par, expected
+loss profile, and survival probability term structure.
+
+\textbf{Key risk:} The model is a downstream consumer of the property hazard curve and
+PRS pricing models. Flood-adjusted hazard rates feed directly into the survival
+probability calculation; mis-specification of upstream flood frequencies therefore
+propagates into mortgage valuation and portfolio-level expected loss aggregates.
+
+% ===================================================================
+% 2. MODEL PURPOSE AND SCOPE
+% ===================================================================
+\mkmpurpose
+
+\subsection{Purpose}
+
+The Mortgage Pricing Model serves three primary functions within the MKM Physical Risk
+platform:
+\begin{itemize}[nosep]
+    \item \textbf{Individual mortgage valuation} --- compute the risk-adjusted fair value
+          of a single residential mortgage, accounting for credit risk and flood exposure.
+    \item \textbf{Credit spread determination} --- derive an implied credit spread from
+          borrower affordability metrics and loan characteristics, enabling comparison
+          with market-observed spreads.
+    \item \textbf{Portfolio-level aggregation} --- batch-price a portfolio of mortgages
+          and compute aggregate risk metrics (total expected loss, average credit spread,
+          high-risk counts) for regulatory reporting and risk management.
+\end{itemize}
+
+\subsection{Scope}
+
+\begin{itemize}[nosep]
+    \item \textbf{In scope:} Amortising mortgage cashflow generation; affordability-based
+          credit spread interpolation; LTV-based risk adjustment; hazard-rate default
+          modelling; LGD calculation; expected loss present value; portfolio aggregation.
+    \item \textbf{Out of scope:} Prepayment modelling; interest-rate term structure
+          dynamics; stochastic recovery rates; securitisation tranche structuring;
+          operational risk charges.
+    \item \textbf{Upstream dependencies:} Property valuation model (property value),
+          property hazard curve model (flood hazard rates), borrower income data.
+    \item \textbf{Downstream consumers:} Portfolio flood risk model, risk reporting
+          engine, PRS pricing model (basis risk analysis).
+\end{itemize}
+
+\subsection{Regulatory Context}
+
+The model is designed to support compliance with:
+\begin{itemize}[nosep]
+    \item PRA SS1/23 --- Model Risk Management principles for internal models.
+    \item IFRS 9 --- Expected credit loss estimation for financial instruments.
+    \item EBA Guidelines on loan origination and monitoring --- affordability assessment.
+\end{itemize}
+
+% ===================================================================
+% 3. MATHEMATICAL FRAMEWORK
+% ===================================================================
+\mkmframework
+
+\subsection{Amortisation Schedule}
+
+The model assumes a standard fully-amortising repayment mortgage with fixed monthly
+instalments. Given principal $P$, monthly interest rate $r = r_{\text{annual}} / 12$,
+and total number of monthly payments $n = T \times 12$ (where $T$ is the term in years),
+the monthly payment $M$ is:
+
+\begin{equation}
+\label{eq:monthly_payment}
+M = \frac{P \, r \, (1 + r)^{n}}{(1 + r)^{n} - 1}
+\end{equation}
+
+In the degenerate case $r = 0$, the payment reduces to $M = P / n$.
+
+The outstanding balance at the end of period $i$ is computed recursively:
+\begin{align}
+I_i &= B_{i-1} \cdot r \label{eq:interest} \\
+\Pi_i &= M - I_i \label{eq:principal} \\
+B_i &= \max\!\bigl(0,\; B_{i-1} - \Pi_i\bigr) \label{eq:balance}
+\end{align}
+
+\noindent where $B_0 = P$ is the initial loan amount, $I_i$ is the interest component of
+payment $i$, and $\Pi_i$ is the principal repayment component.
+
+For mortgages with a remaining term shorter than the original maturity, the payment is
+recalculated over the remaining number of periods $n' = T_{\text{current}} \times 12$
+using the current outstanding balance:
+
+\begin{equation}
+\label{eq:monthly_payment_remaining}
+M = \frac{B_0 \cdot r}{1 - (1 + r)^{-n'}}
+\end{equation}
+
+\subsection{Credit Spread Model}
+\label{sec:credit_spread}
+
+The credit spread is derived from the borrower's affordability ratio, which measures the
+proportion of after-tax income consumed by total housing costs.
+
+\subsubsection{Affordability Ratio}
+
+\begin{equation}
+\label{eq:affordability}
+\alpha = \frac{A_{\text{mortgage}} + \iota \cdot V}{Y \cdot (1 - \tau)}
+\end{equation}
+
+\noindent where:
+\begin{itemize}[nosep]
+    \item $A_{\text{mortgage}} = 12 \cdot M$ is the annual mortgage payment,
+    \item $\iota$ is the annual insurance rate (as a proportion of property value $V$),
+    \item $Y$ is the gross annual income,
+    \item $\tau$ is the income tax rate (default 20\%).
+\end{itemize}
+
+The affordability ratio is clamped to the interval $[0.1,\; 1.0]$ before interpolation.
+
+\subsubsection{Base Credit Spread Interpolation}
+
+The base credit spread $s_{\text{base}}(\alpha)$ is obtained via linear interpolation
+over a set of ten calibration nodes:
+
+\begin{table}[H]
+    \centering
+    \caption{Credit spread calibration schedule}
+    \label{tab:credit_spread_schedule}
+    \begin{tabular}{@{}lcccccccccc@{}}
+        \toprule
+        $\alpha$ & 0.10 & 0.20 & 0.30 & 0.40 & 0.50 & 0.60 & 0.70 & 0.80 & 0.90 & 1.00 \\
+        \midrule
+        $s_{\text{base}}$ (bps) & 50 & 100 & 200 & 300 & 500 & 800 & 1200 & 1800 & 2500 & 3500 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\noindent The interpolation uses \texttt{scipy.interpolate.interp1d} with
+\texttt{kind='linear'}. The affordability ratio is clamped to the node range before it
+is interpolated, so the schedule is never extrapolated. The spread schedule is monotonically increasing and convex,
+reflecting the non-linear increase in default risk as affordability deteriorates.
+
+\subsubsection{Term Structure Adjustment}
+
+A multiplicative term factor adjusts the base spread for the position of the remaining
+term relative to the midpoint of the original maturity:
+
+\begin{equation}
+\label{eq:term_factor}
+\phi = 1 + \frac{T_{\text{current}} - T_{\text{original}} / 2}{100}
+\end{equation}
+
+\noindent The final credit spread is:
+
+\begin{equation}
+\label{eq:final_spread}
+s = \max\!\bigl(0.001,\; s_{\text{base}}(\alpha) \cdot \phi\bigr)
+\end{equation}
+
+\noindent enforcing a floor of 10 basis points. For mortgages in the first half of
+their original term, $\phi < 1$ and the spread is reduced; for those in the second half,
+$\phi > 1$ and the spread is increased, reflecting the empirical observation that
+default risk is concentrated in the later amortisation periods when equity cushions are
+thinner relative to remaining obligations.
+
+\subsubsection{Missing Income}
+
+Gross annual income is floored at \pounds1 before the spread is computed
+(Table~\ref{tab:validation}). Zero or missing income therefore gives an affordability
+ratio above 1, which is clamped to 1, and the loan prices at the top of the schedule:
+3500 basis points, scaled by the term, LTV and flood factors --- the most distressed
+borrower the schedule describes.
+
+\subsection{Loan-to-Value Risk Adjustment}
+\label{sec:ltv}
+
+An LTV-based multiplicative risk adjustment factor $\rho$ is applied to capture the
+additional risk from high-leverage loans:
+
+\begin{equation}
+\label{eq:ltv_factor}
+\rho(\text{LTV}) =
+\begin{cases}
+1.0 & \text{if } \text{LTV} \leq 0.80 \\
+1.1 & \text{if } 0.80 < \text{LTV} \leq 0.90 \\
+1.3 & \text{if } 0.90 < \text{LTV} \leq 0.95 \\
+1.5 & \text{if } \text{LTV} > 0.95
+\end{cases}
+\end{equation}
+
+\noindent where:
+\begin{equation}
+\text{LTV} = \frac{B_0}{V}
+\end{equation}
+
+\noindent The final credit spread after LTV adjustment is:
+
+\begin{equation}
+\label{eq:ltv_adjusted_spread}
+s_{\text{adj}} = s \cdot \rho(\text{LTV})
+\end{equation}
+
+\noindent The step-function form is a deliberate simplification reflecting regulatory LTV
+bands commonly used in UK mortgage lending (the 80\%, 90\%, and 95\% thresholds
+correspond to standard product tiers).
+
+\subsection{Flood Risk Adjustment}
+\label{sec:flood_risk}
+
+A categorical flood risk multiplier $\psi$ is applied to the credit spread after LTV
+adjustment. The multiplier captures the additional default risk arising from flood
+exposure at the property level. Calibration is derived from the \texttt{RiskAssessor}
+value-at-risk percentages (1\%, 5\%, 15\%, 35\%, 60\%), scaled into spread adjustment
+factors:
+
+\begin{equation}
+\label{eq:flood_factor}
+\psi(\text{flood risk}) =
+\begin{cases}
+1.00 & \text{Very Low} \\
+1.05 & \text{Low} \\
+1.20 & \text{Medium} \\
+1.40 & \text{High} \\
+1.75 & \text{Very High}
+\end{cases}
+\end{equation}
+
+\noindent The final credit spread after all risk adjustments is:
+
+\begin{equation}
+\label{eq:final_adjusted_spread}
+s_{\text{final}} = s_{\text{base}}(\alpha) \cdot \phi \cdot \rho(\text{LTV}) \cdot \psi(\text{flood risk})
+\end{equation}
+
+\noindent where $\phi$ is the term factor (Equation~\eqref{eq:term_factor}),
+$\rho$ is the LTV factor (Equation~\eqref{eq:ltv_factor}), and $\psi$ is the
+flood risk factor. When no flood risk category is provided, $\psi = 1.0$.
+
+\subsection{Default and Survival Probabilities}
+\label{sec:hazard}
+
+The model employs a reduced-form hazard-rate framework in which the instantaneous default
+intensity is derived from the credit spread. For each monthly period $i$, the conditional
+default probability (hazard rate) is:
+
+\begin{equation}
+\label{eq:hazard_rate}
+h_i = 1 - \exp\!\left(-\frac{s_i}{12}\right)
+\end{equation}
+
+\noindent where $s_i$ is the credit spread applicable to period $i$. In the current
+implementation, $s_i$ is constant across all periods (flat term structure), but the
+framework supports period-varying spreads to incorporate flood-adjusted hazard rates from
+the upstream property hazard curve model.
+
+The survival probability to the end of period $i$ is computed recursively:
+
+\begin{align}
+S_0 &= 1 \label{eq:surv_init} \\
+S_i &= S_{i-1} \cdot (1 - h_i) \label{eq:surv_recurse}
+\end{align}
+
+\noindent The marginal (unconditional) probability of default occurring in period $i$ is:
+
+\begin{equation}
+\label{eq:default_prob}
+\text{PD}_i = \max\!\bigl(0,\; S_{i-1} - S_i\bigr)
+\end{equation}
+
+\subsection{Loss Given Default}
+\label{sec:lgd}
+
+The loss given default in period $i$ is the shortfall between the balance owed when the
+period began --- the exposure at default --- and the recoverable value of the property:
+
+\begin{equation}
+\label{eq:lgd}
+\text{LGD}_i = \max\!\bigl(0,\; B_{i-1} - (1 - \delta) \cdot V\bigr)
+\end{equation}
+
+\noindent where $\delta \in [0, 0.95]$ is the recovery haircut, representing the
+proportional loss of property value in a forced-sale scenario. The recovery value
+$(1 - \delta) \cdot V$ is held constant across the life of the mortgage (i.e.\ no
+property price appreciation or depreciation is modelled). A haircut cap of 95\% is
+enforced to prevent near-total-loss assumptions.
+
+\subsection{Expected Cashflows and Expected Losses}
+
+For each period $i$, the expected cashflow comprises two components:
+
+\begin{equation}
+\label{eq:expected_cf}
+\text{CF}_i^{\text{exp}} = M \cdot S_i + (B_{i-1} - \text{LGD}_i) \cdot \text{PD}_i
+\end{equation}
+
+\noindent The first term is the full monthly payment received with probability equal to
+the survival probability. The second term is the partial recovery received in the event
+of default: the lender recovers $B_{i-1} - \text{LGD}_i = \min\bigl(B_{i-1}, (1-\delta)V\bigr)$
+(the outstanding balance less the loss, which is never more than the property fetches)
+multiplied by the probability of default in that period. The expected cashflow is
+therefore already net of the expected loss.
+
+The expected loss for period $i$ is:
+
+\begin{equation}
+\label{eq:expected_loss}
+\text{EL}_i = \text{LGD}_i \cdot \text{PD}_i
+\end{equation}
+
+\subsection{Present Value and Fair Value}
+\label{sec:pv}
+
+Cashflows and losses are discounted at a rate $r_{\text{disc}}$: the contractual
+mortgage rate by default, or a risk-free rate when the caller supplies one, as the loan
+calculator does. The discount factor for period $i$ is:
+
+\begin{equation}
+\label{eq:discount_factor}
+D_i = \left(1 + \frac{r_{\text{disc}}}{12}\right)^{-i}
+\end{equation}
+
+The present value of expected cashflows and expected losses are:
+
+\begin{align}
+\text{PV}_{\text{CF}} &= \sum_{i=1}^{n} \text{CF}_i^{\text{exp}} \cdot D_i \label{eq:pv_cf} \\
+\text{PV}_{\text{EL}} &= \sum_{i=1}^{n} \text{EL}_i \cdot D_i \label{eq:pv_el}
+\end{align}
+
+The risk-adjusted fair value of the mortgage is the present value of the expected
+cashflows:
+
+\begin{equation}
+\label{eq:fair_value}
+\text{FV} = \text{PV}_{\text{CF}}
+\end{equation}
+
+\noindent It is the expectation, over the month of default, of the payments received
+before it and the recovery received in it. $\text{PV}_{\text{EL}}$ is reported as the
+expected credit loss; it is already inside $\text{PV}_{\text{CF}}$, through the
+recovery, and is not deducted again. (Versions up to 1.2 set
+$\text{FV} = \text{PV}_{\text{CF}} - \text{PV}_{\text{EL}}$, counting the loss twice, and
+took the loss on the closing balance $B_i$.)
+
+The discount to par quantifies the credit value adjustment when $r_{\text{disc}}$ is the
+contractual rate; at a lower risk-free rate it also carries the
+coupon's margin over that rate:
+
+\begin{align}
+\Delta_{\text{par}} &= B_0 - \text{FV} \label{eq:discount_abs} \\
+\Delta_{\%} &= \frac{\Delta_{\text{par}}}{B_0} \times 100 \label{eq:discount_pct}
+\end{align}
+
+\subsection{Portfolio Aggregation}
+\label{sec:portfolio}
+
+For a portfolio of $N$ mortgages, the following aggregate metrics are computed from
+the set of individual pricing results $\{R_1, R_2, \ldots, R_N\}$ (excluding any
+results flagged with pricing errors):
+
+\begin{align}
+\text{Total Value} &= \sum_{j=1}^{N} \text{FV}_j \label{eq:port_value} \\
+\overline{\text{FV}} &= \frac{1}{N} \sum_{j=1}^{N} \text{FV}_j \label{eq:avg_value} \\
+\overline{s} &= \frac{1}{N} \sum_{j=1}^{N} s_j \label{eq:avg_spread} \\
+\tilde{s} &= \text{median}\!\bigl(\{s_j\}_{j=1}^{N}\bigr) \label{eq:med_spread} \\
+\overline{\Delta}_{\%} &= \frac{1}{N} \sum_{j=1}^{N} \Delta_{\%,j} \label{eq:avg_disc} \\
+\text{Total Discount} &= \sum_{j=1}^{N} \Delta_{\text{par},j} \label{eq:tot_disc} \\
+\overline{\text{LTV}} &= \frac{1}{N} \sum_{j=1}^{N} \text{LTV}_j \label{eq:avg_ltv} \\
+N_{\text{high-risk}} &= \bigl|\{j : s_j > 0.10\}\bigr| \label{eq:high_risk}
+\end{align}
+
+\noindent A mortgage is classified as ``high-risk'' when its credit spread exceeds
+1000 basis points (10\%). The error count tracks mortgages for which the pricing engine
+returned a fallback result due to exceptions.
+
+% ===================================================================
+% 4. INPUT PARAMETERS AND CALIBRATION
+% ===================================================================
+\mkminputs
+
+\subsection{Model Inputs}
+
+Table~\ref{tab:inputs} summarises the input parameters required by the pricing engine.
+
+\begin{table}[H]
+    \centering
+    \caption{Input parameters for the Mortgage Pricing Model}
+    \label{tab:inputs}
+    \begin{tabular}{@{}llll@{}}
+        \toprule
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Units} & \textbf{Description} \\
+        \midrule
+        Loan amount         & $B_0$                    & GBP     & Outstanding mortgage balance \\
+        Property value      & $V$                      & GBP     & Current market value of property \\
+        Interest rate       & $r_{\text{annual}}$      & Decimal & Annual contractual interest rate \\
+        Original maturity   & $T_{\text{original}}$    & Years   & Original mortgage term \\
+        Current term        & $T_{\text{current}}$     & Years   & Remaining term to maturity \\
+        Gross annual income & $Y$                      & GBP     & Borrower's gross annual income \\
+        Insurance rate      & $\iota$                  & Decimal & Annual insurance as proportion of $V$ \\
+        Recovery haircut    & $\delta$                 & Decimal & Forced-sale loss proportion \\
+        Tax rate            & $\tau$                   & Decimal & Income tax rate (default 0.20) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Input Validation and Bounds}
+
+The model applies the following validation rules to all inputs before computation:
+
+\begin{table}[H]
+    \centering
+    \caption{Input validation bounds}
+    \label{tab:validation}
+    \begin{tabular}{@{}lll@{}}
+        \toprule
+        \textbf{Parameter} & \textbf{Constraint} & \textbf{Rationale} \\
+        \midrule
+        $B_0$                 & $\geq 1$          & Prevents division by zero in discount calculation \\
+        $V$                   & $\geq 1$          & Prevents division by zero in LTV calculation \\
+        $Y$                   & $\geq 1$          & Missing income prices at the top of the schedule (Section~\ref{sec:credit_spread}) \\
+        $r_{\text{annual}}$   & $\geq 0.001$      & Floor of 0.1\% to ensure meaningful discounting \\
+        $\iota$               & $\geq 0$          & Insurance rate cannot be negative \\
+        $T_{\text{original}}$ & $\geq 1$          & Minimum one-year term \\
+        $T_{\text{current}}$  & $[0.5,\; T_{\text{original}}]$ & Minimum six months; cannot exceed original \\
+        $\delta$              & $[0,\; 0.95]$     & Recovery haircut capped at 95\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Calibration}
+
+\subsubsection{Credit Spread Schedule}
+
+The credit spread calibration nodes (Table~\ref{tab:credit_spread_schedule}) are derived
+from historical UK mortgage default rates segmented by debt-service ratio, sourced from
+Council of Mortgage Lenders (CML) data and cross-referenced with Bank of England
+Financial Stability Reports. The schedule is reviewed annually and updated when
+cumulative default experience deviates by more than 20\% from implied spreads.
+
+\subsubsection{Recovery Haircut}
+
+The default recovery haircut should be calibrated to observed forced-sale discounts in
+the relevant property market. For UK residential property, a typical range is
+$\delta \in [0.15, 0.35]$, reflecting 15--35\% discount relative to open-market value.
+The example configuration uses $\delta = 0.25$ (25\% haircut).
+
+\subsubsection{Tax Rate}
+
+The default tax rate of $\tau = 0.20$ corresponds to the UK basic rate of income tax.
+This parameter should be overridden for higher-rate taxpayers or when modelling
+portfolios in different tax jurisdictions.
+
+% ===================================================================
+% 5. IMPLEMENTATION DETAILS
+% ===================================================================
+\mkmimplementation
+
+\subsection{Software Architecture}
+
+The model is implemented in the Python package \texttt{src/models/loan/pricer/}
+(\texttt{engine.py}, \texttt{\_pricing.py}, \texttt{credit.py}), with the portfolio
+aggregation in \texttt{src/models/loan/portfolio.py}, and comprises:
+
+\begin{itemize}[nosep]
+    \item \texttt{LoanPricer} class --- pricing engine initialised with an optional
+          tax rate (default 20\%). The credit spread interpolation function is constructed
+          at initialisation.
+    \item \texttt{calculate\_monthly\_payment()} --- static method; computes $M$ per
+          Equation~\eqref{eq:monthly_payment}. Takes principal, annual interest rate
+          (decimal), and term in years.
+    \item \texttt{calculate\_total\_cost()} --- static method; computes $M \times n$
+          (undiscounted).
+    \item \texttt{calculate\_credit\_spread()} --- implements the affordability-based
+          spread model (Section~\ref{sec:credit_spread}).
+    \item \texttt{calculate\_loan\_to\_value\_impact()} --- returns $\rho(\text{LTV})$
+          per Equation~\eqref{eq:ltv_factor}. Called by \texttt{price\_loan()} to
+          adjust the credit spread (Equation~\eqref{eq:ltv_adjusted_spread}).
+    \item \texttt{price\_loan()} --- full pricing pipeline returning a dictionary
+          of results including fair value, cashflow arrays, and risk metrics. Errors
+          propagate to the caller rather than returning fallback values.
+    \item \texttt{batch\_price\_loans()} --- iterates over a portfolio list,
+          calling \texttt{price\_loan()} for each entry with error isolation.
+    \item \texttt{calculate\_portfolio\_metrics()} --- module-level function computing
+          aggregate statistics from batch results.
+\end{itemize}
+
+\subsection{Dependencies}
+
+\begin{itemize}[nosep]
+    \item \texttt{numpy} --- array operations for balance, hazard, and cashflow vectors.
+    \item \texttt{scipy.interpolate.interp1d} --- linear interpolation of the credit
+          spread schedule.
+\end{itemize}
+
+\subsection{Numerical Considerations}
+
+\begin{enumerate}[nosep]
+    \item \textbf{Vectorisation:} The outstanding balance, hazard rates, survival
+          probabilities, and LGD arrays are pre-allocated as NumPy arrays of length
+          $n+1$. Expected cashflows and losses use arrays of length $n$. Discount
+          factors are computed as a single vectorised operation over the period index
+          array.
+    \item \textbf{Balance recursion:} The amortisation schedule is computed via a
+          sequential loop (period $i$ depends on $B_{i-1}$). This is an inherently
+          serial computation; however, for typical mortgage terms (up to 360 periods)
+          the overhead is negligible.
+    \item \textbf{Discount rate:} By default the contractual mortgage rate is the
+          discount rate, so the present value of the contractual cashflows equals the
+          principal at inception (par) and the discount to par is the credit value
+          adjustment. The loan calculator supplies a risk-free rate instead; a coupon
+          above it then values a riskless loan above par.
+    \item \textbf{Error handling:} The \texttt{price\_loan()} method performs input
+          validation and clamping but allows exceptions to propagate to the caller.
+          The \texttt{batch\_price\_loans()} method provides error isolation at the
+          portfolio level, recording errors per mortgage without halting the batch.
+\end{enumerate}
+
+\subsection{Computational Complexity}
+
+For a single mortgage with $n$ monthly periods:
+\begin{itemize}[nosep]
+    \item Time complexity: $O(n)$ --- single pass through the amortisation schedule
+          and a single vectorised discount-factor computation.
+    \item Space complexity: $O(n)$ --- storage for balance, hazard, survival, LGD,
+          cashflow, and loss arrays.
+    \item For a portfolio of $N$ mortgages: $O(N \cdot n)$ total, fully parallelisable
+          across mortgages (currently sequential).
+\end{itemize}
+
+% ===================================================================
+% 6. SENSITIVITY ANALYSIS
+% ===================================================================
+\mkmsensitivity
+
+The following parameters have the greatest influence on the model's fair value output.
+
+% Auto-generated by generate_sensitivity.py
+% Do not edit manually — regenerate with: python docs/models/generate_sensitivity.py
+
+\begin{table}[H]
+    \centering
+    \caption{LTV risk multiplier by loan-to-value ratio (property value = \pounds300{,}000).}
+    \label{tab:sens_ltv}
+    \begin{tabular}{rrr}
+        \toprule
+        \textbf{LTV} & \textbf{Loan (\pounds)} & \textbf{Risk Multiplier} \\
+        \midrule
+        50\% & 150{,}000.0 & 1.00 \\
+        60\% & 180{,}000.0 & 1.00 \\
+        70\% & 210{,}000.0 & 1.00 \\
+        80\% & 240{,}000.0 & 1.00 \\
+        85\% & 255{,}000.0 & 1.10 \\
+        90\% & 270{,}000.0 & 1.10 \\
+        95\% & 285{,}000.0 & 1.30 \\
+        100\% & 300{,}000.0 & 1.50 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Mortgage value (\pounds) by interest rate and insurance rate (loan=\pounds200k, income=\pounds50k, 20yr remaining).}
+    \label{tab:sens_mortgage_value}
+    \begin{tabular}{rrrrr}
+        \toprule
+        \textbf{Interest rate} & \textbf{Ins=0.2\%} & \textbf{Ins=0.5\%} & \textbf{Ins=1.0\%} & \textbf{Ins=2.0\%} \\
+        \midrule
+        2\% & 199{,}937.0 & 199{,}931.0 & 199{,}922.0 & 199{,}895.0 \\
+        3\% & 199{,}898.0 & 199{,}890.0 & 199{,}875.0 & 199{,}831.0 \\
+        4\% & 199{,}855.0 & 199{,}844.0 & 199{,}814.0 & 199{,}757.0 \\
+        5\% & 199{,}802.0 & 199{,}780.0 & 199{,}746.0 & 199{,}671.0 \\
+        6\% & 199{,}733.0 & 199{,}709.0 & 199{,}670.0 & 199{,}578.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Credit spread and mortgage value by gross annual income (loan=\pounds200k, rate=4\%, 20yr remaining).}
+    \label{tab:sens_affordability}
+    \begin{tabular}{rrr}
+        \toprule
+        \textbf{Income} & \textbf{Spread (\%)} & \textbf{Mortgage Value (\pounds)} \\
+        \midrule
+        \pounds30{,}000 & 11.5 & 199{,}631.0 \\
+        \pounds40{,}000 & 5.42 & 199{,}769.0 \\
+        \pounds50{,}000 & 3.25 & 199{,}844.0 \\
+        \pounds60{,}000 & 2.52 & 199{,}874.0 \\
+        \pounds80{,}000 & 1.62 & 199{,}915.0 \\
+        \pounds100{,}000 & 1.08 & 199{,}941.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Credit spread and mortgage value by flood risk category (loan=\pounds200k, rate=4\%, income=\pounds50k).}
+    \label{tab:sens_flood_risk}
+    \begin{tabular}{lrrr}
+        \toprule
+        \textbf{Flood Risk} & \textbf{Multiplier} & \textbf{Spread (\%)} & \textbf{Mortgage Value (\pounds)} \\
+        \midrule
+        Very Low & 1.00 & 3.25 & 199{,}844.0 \\
+        Low & 1.05 & 3.41 & 199{,}838.0 \\
+        Medium & 1.20 & 3.90 & 199{,}820.0 \\
+        High & 1.40 & 4.55 & 199{,}797.0 \\
+        Very High & 1.75 & 5.68 & 199{,}761.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Interest Rate Sensitivity}
+
+The monthly payment $M$ is convex in $r$, and the discount factors $D_i$ decrease with
+$r$. An increase in the contractual rate simultaneously raises cashflows and increases
+discounting. The net effect on fair value depends on the magnitude of the credit spread
+relative to the base rate.
+
+\textbf{Expected behaviour:}
+\begin{itemize}[nosep]
+    \item A 100 bps increase in $r_{\text{annual}}$ increases $M$ by approximately 8--12\%
+          for a 25-year term (more at low rates).
+    \item The discount-to-par typically increases with $r$ because higher payments
+          worsen affordability, raising $s$ and hence expected losses.
+\end{itemize}
+
+\subsection{Affordability Ratio Sensitivity}
+
+The credit spread schedule is highly non-linear: moving from $\alpha = 0.3$ (200 bps) to
+$\alpha = 0.5$ (500 bps) represents a 150\% increase, whilst moving from $\alpha = 0.7$
+(1200 bps) to $\alpha = 0.9$ (2500 bps) represents a 108\% increase. The model is
+therefore most sensitive to affordability deterioration in the mid-range
+$\alpha \in [0.3, 0.6]$, where marginal changes produce the largest absolute spread
+movements.
+
+\subsection{Recovery Haircut Sensitivity}
+
+The LGD calculation is directly proportional to $\delta$. For a mortgage at 80\% LTV
+with $V = \text{\pounds}500{,}000$ and $B_0 = \text{\pounds}400{,}000$:
+\begin{itemize}[nosep]
+    \item $\delta = 0.15$: Recovery $= \text{\pounds}425{,}000$, LGD $= 0$ (fully covered).
+    \item $\delta = 0.25$: Recovery $= \text{\pounds}375{,}000$, LGD $= \text{\pounds}25{,}000$.
+    \item $\delta = 0.40$: Recovery $= \text{\pounds}300{,}000$, LGD $= \text{\pounds}100{,}000$.
+\end{itemize}
+
+\noindent The sensitivity is amplified at high LTV ratios, where the equity cushion is
+insufficient to absorb the haircut.
+
+\subsection{Term Structure Sensitivity}
+
+The term factor $\phi$ has a modest effect: for a 30-year original term with 25 years
+remaining, $\phi = 1 + (25 - 15)/100 = 1.10$, a 10\% uplift to the base spread.
+Conversely, a mortgage with only 5 years remaining gives $\phi = 1 + (5 - 15)/100 = 0.90$,
+a 10\% reduction. This factor is intentionally conservative to avoid over-fitting to
+maturity effects.
+
+% ===================================================================
+% 7. VALIDATION AND BACKTESTING
+% ===================================================================
+\mkmvalidation
+
+\subsection{Unit Testing}
+
+The model is covered by the test suite in \texttt{tests/}. Key test cases include:
+
+\begin{itemize}[nosep]
+    \item \textbf{Monthly payment:} Verified against standard financial calculator
+          results for representative loan parameters (tolerance $< \text{\pounds}0.01$).
+    \item \textbf{Zero-rate degenerate case:} Confirms $M = P/n$ when $r = 0$.
+    \item \textbf{Credit spread bounds:} Verifies the floor at 10 bps and that
+          missing income prices at the top of the schedule.
+    \item \textbf{Fair value:} Verifies that the fair value equals the expected present
+          value computed path by path over the month of default, and that the recovery
+          never exceeds the recoverable value.
+    \item \textbf{Balance convergence:} Confirms $B_n = 0$ (within floating-point
+          tolerance) at the end of the amortisation schedule.
+    \item \textbf{Survival monotonicity:} Verifies $S_i \geq S_{i+1} \geq 0$ for all $i$.
+    \item \textbf{LTV risk factor:} Confirms correct step-function thresholds.
+    \item \textbf{Batch pricing:} Verifies error isolation (one failed mortgage does not
+          prevent others from pricing).
+    \item \textbf{Portfolio metrics:} Verifies aggregation formulae against hand-computed
+          values.
+\end{itemize}
+
+\subsection{Analytical Benchmarks}
+
+\subsubsection{Par Recovery}
+
+For a risk-free mortgage ($s = 0$, $\delta = 0$), the fair value must equal the loan
+amount (par). This can be verified analytically: with $h_i = 0$ for all $i$, we have
+$S_i = 1$, $\text{PD}_i = 0$, and $\text{EL}_i = 0$, so $\text{FV} = \text{PV}_{\text{CF}} = B_0$.
+
+\subsubsection{Maximum Loss Bound}
+
+The total undiscounted expected loss is bounded above by the loan amount:
+
+\begin{equation}
+\sum_{i=1}^{n} \text{EL}_i \leq B_0
+\end{equation}
+
+\noindent This holds because $\sum \text{PD}_i \leq 1$ and $\text{LGD}_i \leq B_{i-1} \leq B_0$.
+
+\subsubsection{Wolfram Benchmark}
+
+The fair value, its expected cashflows and losses, the payment and the spread are
+benchmarked against Wolfram Engine and a 50-digit implementation of this document
+(\texttt{MKM-MP-001\_wolfram\_benchmark}, filed on the model under Benchmark). Wolfram
+values each loan independently, as an expectation over a geometric default month.
+
+\subsection{Backtesting Protocol}
+
+For ongoing model validation, the following backtesting programme is recommended:
+
+\begin{enumerate}[nosep]
+    \item \textbf{Monthly:} Compare model-implied credit spreads against market CDS
+          spreads for listed UK mortgage-backed securities.
+    \item \textbf{Quarterly:} Compare cumulative default predictions against observed
+          portfolio arrears data.
+    \item \textbf{Annually:} Re-calibrate the credit spread schedule using updated
+          CML/FCA default statistics. Assess recovery haircut calibration against
+          realised forced-sale outcomes.
+\end{enumerate}
+
+% ===================================================================
+% 8. MODEL LIMITATIONS AND KNOWN WEAKNESSES
+% ===================================================================
+\mkmlimitations
+
+\begin{enumerate}[nosep]
+    \item \textbf{Flat credit spread term structure:} The current implementation applies
+          a constant credit spread across all periods. In reality, default risk varies
+          over the life of a mortgage (typically higher in early years, lower as equity
+          builds). A time-varying spread schedule would improve accuracy.
+
+    \item \textbf{Deterministic recovery:} The recovery value is fixed at
+          $(1 - \delta) \cdot V$ throughout the mortgage term. This ignores property
+          price volatility, which is material for long-dated mortgages. A stochastic
+          property value model would capture procyclical recovery risk.
+
+    \item \textbf{No prepayment modelling:} The model assumes no voluntary prepayment.
+          In practice, UK mortgage borrowers frequently remortgage at product maturity
+          (typically every 2--5 years). Prepayment shortens effective duration and
+          reduces expected loss.
+
+    \item \textbf{Step-function LTV adjustment:} The discrete LTV risk bands
+          (Equation~\eqref{eq:ltv_factor}) create discontinuities at the 80\%, 90\%,
+          and 95\% thresholds. A continuous function (e.g.\ logistic or power-law)
+          would be more robust.
+
+    \item \textbf{Linear spread interpolation:} The credit spread function uses linear
+          interpolation with boundary clamping. For affordability ratios outside
+          $[0.1, 1.0]$, spreads are clamped to the nearest boundary value (50~bps
+          or 3500~bps respectively).
+
+    \item \textbf{Single discount rate:} Cashflows are discounted at one flat rate ---
+          the contractual rate, or a supplied risk-free rate --- with no term structure.
+          At the contractual rate the time value of money and credit compensation are
+          conflated; at a risk-free rate the coupon's margin is valued but not
+          decomposed.
+
+    \item \textbf{No correlation modelling:} Portfolio aggregation treats mortgages as
+          independent. In practice, systemic flood events or economic downturns create
+          correlated defaults. The portfolio expected loss is therefore likely
+          understated in tail scenarios.
+
+    \item \textbf{Error propagation:} The \texttt{price\_loan()} method raises
+          exceptions on invalid inputs rather than returning fallback values.
+          Downstream consumers must handle exceptions or use
+          \texttt{batch\_price\_loans()} which provides per-mortgage error
+          isolation.
+
+    \item \textbf{Insurance rate held constant:} The model does not account for
+          potential withdrawal of flood insurance cover or premium increases following
+          flood events, which would worsen affordability dynamically.
+\end{enumerate}
+
+% ===================================================================
+% 9. GOVERNANCE VALIDATION QUESTIONS
+% ===================================================================
+\mkmgovernance
+
+\mkmvqitem{1}{Ronseal Test}{Does the model do what it says on the tin?}
+Yes. The model prices individual residential mortgages on a risk-adjusted basis by combining: (i)~standard amortisation cashflow generation, (ii)~affordability-based credit spread interpolation with LTV adjustment, (iii)~hazard-rate default modelling with survival probability term structure, and (iv)~LGD calculation from recoverable property value. Outputs include fair value, credit spread, discount to par, expected loss profile, and portfolio-level aggregation metrics. All stated outputs are produced.
+
+\mkmvqitem{2}{Accuracy and Stability}{Does the model provide timely, accurate and stable results?}
+The amortisation schedule is exact (closed-form annuity formula). Credit spread interpolation uses linear interpolation on a calibrated affordability grid, producing monotonically increasing spreads in LTV and debt-to-income ratio. The hazard rate framework is deterministic for given inputs. Expected loss PV computation uses standard discounted cashflow mechanics. Results are stable and reproducible: identical inputs produce identical fair values. Portfolio batch pricing (1,000 mortgages) completes in under 2 seconds.
+
+\mkmvqitem{3}{Resource Usage}{Does the model consume excessive computational resources?}
+No. Each mortgage is priced in $O(T)$ time where $T$ is the mortgage term in months (typically 300 for a 25-year mortgage). The computation involves a single forward pass through the amortisation schedule with hazard rate overlay. Memory usage is proportional to the number of mortgages in the portfolio. Full portfolio pricing with 5,000 mortgages completes in under 10 seconds. No iterative solving or optimisation is required.
+
+\mkmvqitem{4}{Override Controls}{Are there controls over manual overrides?}
+The credit spread grid and affordability thresholds are defined as class-level constants and are not overridable at runtime. The recovery haircut rate (used in LGD calculation) is set at invocation and logged. No mechanism exists for manual override of computed expected losses or fair values. All configuration is version-controlled. The MRC may apply a risk rating override via the governance dashboard, but this does not affect computational outputs.
+
+\mkmvqitem{5}{Output Consumption}{How is the output consumed for risk decision-making?}
+Fair values and expected loss profiles are used for: (a)~individual mortgage pricing and credit risk assessment; (b)~portfolio-level expected loss aggregation for IFRS~9 provisioning; (c)~credit spread comparison with market-observed spreads for model validation; (d)~stress testing under elevated hazard rate scenarios; (e)~risk reporting to the MRC showing portfolio credit quality distribution. High-risk mortgage counts (credit spread above 10\%, Section~\ref{sec:portfolio}) trigger underwriting review.
+
+\mkmvqitem{6}{Model Chaining}{Is the model's output used as input to another model?}
+Yes. Upstream dependencies: Property Valuation Engine (MKM-PROP-001) for property values, Property Hazard Curve module for flood-adjusted hazard rates, and borrower income data from the portfolio CDM. Downstream consumers: Portfolio Flood Risk Model for aggregate loss estimation, risk reporting engine for MRC dashboards, and PRS pricing model for basis risk analysis. The model also indirectly depends on the GEV Hazard Curve Model (MKM-HAZARD-001) via the property hazard curves.
+
+\mkmvqitem{7}{Weaknesses}{Does the model have weaknesses and limitations of use?}
+Yes; the principal limitations are documented in Section~8. Key weaknesses: (i)~no prepayment modelling (mortgages are assumed to run to maturity); (ii)~flat interest rate term structure (no yield curve dynamics); (iii)~deterministic recovery rate (no stochastic LGD); (iv)~credit spread grid is calibrated to a specific market context and may not generalise to other jurisdictions; (v)~flood hazard is the only physical risk factor considered (no wind, subsidence, or coastal erosion).
+
+\mkmvqitem{8}{Monitoring}{What type of monitoring is required?}
+Monitoring should include: (a)~quarterly comparison of model credit spreads against market-observed mortgage pricing; (b)~annual review of the affordability grid calibration against updated ONS income and expenditure data; (c)~LGD backtesting against observed recovery rates on defaulted mortgages; (d)~expected loss backtesting against IFRS~9 provisions; (e)~stress testing of portfolio expected loss under extreme hazard rate scenarios; (f)~tracking of high-risk mortgage count trends over time.
+
+\mkmvqitem{9}{Overall Risk}{Is the overall model risk acceptable?}
+Conditionally acceptable. As a Tier~2 model with direct impact on mortgage pricing and provisioning, the model carries significant risk from its upstream dependencies (property hazard curves propagate flood frequency uncertainty). The no-prepayment assumption introduces a known upward bias in expected loss for performing loans. The deterministic recovery rate simplification is conservative (fixed haircut). Overall, the model risk is manageable given the compensating controls (credit spread benchmarking, LGD backtesting, MRC oversight) and the identification of prepayment modelling as a priority remediation item.
+
+\clearpage
+
+% ===================================================================
+% 10. CHANGE HISTORY
+% ===================================================================
+\mkmchangelog
+
+All material changes to the model methodology, calibration, or implementation are
+recorded in the document history table. Changes are classified as:
+
+\begin{itemize}[nosep]
+    \item \textbf{Material} --- changes to mathematical formulae, calibration data, or
+          model scope that affect output values.
+    \item \textbf{Non-material} --- documentation corrections, code refactoring without
+          output changes, or commentary updates.
+\end{itemize}
+
+\noindent The model owner is responsible for maintaining this log and ensuring that all
+material changes trigger a re-validation cycle.
+
+\mkmhistorypage{13-Feb-2026 & 1.0 & Initial documentation & D. Kelly \\
+18-Feb-2026 & 1.1 & Added Section 9: Governance Validation Questions (Chapter 5) & D. Kelly \\
+26-Feb-2026 & 1.2 & Added Delta Engine model to inventory; updated models in scope & D. Kelly \\
+27-Oct-2026 & 1.3 & Fair value is the PV of expected cashflows, no longer less the expected loss as well (Eq.~\ref{eq:fair_value}); LGD on the opening balance (Eq.~\ref{eq:lgd}); discounting at a supplied risk-free rate; missing income, payment sensitivity, package names and high-risk definition corrected, after the Wolfram benchmark & D. Kelly \\}
+
+\end{document}
