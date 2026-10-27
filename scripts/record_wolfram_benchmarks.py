@@ -106,18 +106,19 @@ VQ_RATIONALE = {
         "hold. Outstanding: no benchmark against an alternative risk measure (e.g. "
         "full-revaluation sensitivities across the book)."),
     "MKM-EF-001": (
-        "Partially addressed. The frequency model was benchmarked on 2026-10-26 against "
-        "Wolfram Engine 15.0 and a 50-digit mpmath implementation of model document v2.3 "
-        "(MKM-EF-001_wolfram_benchmark.pdf, Docs > Benchmark): over 161 cases the annual "
-        "probability, tenor probability, compound-Poisson AAL and its standard error, the "
-        "dispersion test and both families' log-likelihoods match to better than 1e-12, "
-        "Wolfram agrees with the reference to 5e-30, and the Negative Binomial fit "
-        "reaches the likelihood maximum. It found that the hazard builder's term "
-        "structure compounds annual probabilities as intensities, understating the "
-        "probability of a flood within the tenor by 0.1-17.3%, and that annualisation "
-        "loses about 1e-10 relative precision below lambda*p = 1e-4. Outstanding: the "
-        "calibration of lambda from gauge records, which the document leaves open, and "
-        "the Monte Carlo year simulation's draws, which only its reconciliation gate checks."),
+        "Partially addressed. The frequency model was benchmarked on 2026-10-27 against "
+        "Wolfram Engine 15.0 and a 50-digit mpmath implementation of model document v2.4 "
+        "(MKM-EF-001_wolfram_benchmark_v0.2.pdf, Docs > Benchmark): over 161 cases the "
+        "annual probability, tenor probability and term structure, compound-Poisson AAL "
+        "and its standard error, the dispersion test and both families' log-likelihoods "
+        "match to better than 1e-12, Wolfram agrees with the reference to 5e-30, and the "
+        "Negative Binomial fit reaches the likelihood maximum. Benchmark v0.1 found the "
+        "term structure compounding annual probabilities as intensities (understating "
+        "the tenor probability by 0.1-17.3%) and 1 - exp(-x) losing precision at small "
+        "lambda*p; both are fixed, and model documentation v2.4 specifies them. "
+        "Outstanding: the calibration of lambda from gauge records, which the document "
+        "leaves open, and the Monte Carlo year simulation's draws, which only its "
+        "reconciliation gate checks."),
     "MKM-MP-001": (
         "Partially addressed. The pricer was benchmarked on 2026-10-27 against Wolfram "
         "Engine 15.0 and a 50-digit mpmath implementation of its documented formulae "
@@ -148,6 +149,10 @@ REISSUES = {
         "files": (("mortgage_pricer_v1.3.pdf", "Mortgage Pricing Model v1.3 (27-Oct-2026)"),
                   ("mortgage_pricer_v1.3.tex", "Mortgage Pricing Model v1.3 (27-Oct-2026) - LaTeX source")),
         "superseded": "mortgage_pricer.pdf", "version": "v1.3"},
+    "MKM-EF-001": {
+        "files": (("event_frequency_v2.4.pdf", "Event Frequency Model v2.4 (27-Oct-2026)"),
+                  ("event_frequency_v2.4.tex", "Event Frequency Model v2.4 (27-Oct-2026) - LaTeX source")),
+        "superseded": "event_frequency.pdf", "version": "v2.4"},
 }
 
 
