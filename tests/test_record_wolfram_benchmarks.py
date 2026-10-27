@@ -22,7 +22,8 @@
 
 The properties worth protecting: both models end with benchmark_tests = Yes and
 VQ-008 Partially Addressed with the benchmark rationale; each re-issued document
-(PR-001 v3.1, DE-001 v1.1, MP-001 v1.3) is filed as Core Documentation and the document it
+(PR-001 v3.1, DE-001 v1.1, MP-001 v1.3, EF-001
+v2.4) is filed as Core Documentation and the document it
 supersedes moves to History, keeping its id; a re-run changes nothing; and a missing model or file writes nothing.
 """
 from __future__ import annotations
