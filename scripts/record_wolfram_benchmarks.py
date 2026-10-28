@@ -131,6 +131,19 @@ VQ_RATIONALE = {
         "corrected in model documentation v1.3, whose claims all hold. Outstanding: no "
         "benchmark against an alternative credit model or observed default and "
         "recovery data."),
+    "MKM-FIRE-001": (
+        "Partially addressed. The credit was benchmarked on 2026-10-27 against Wolfram "
+        "Engine 15.0 and a 50-digit mpmath implementation of model document v0.40 "
+        "(MKM-FIRE-001_wolfram_benchmark.pdf, Docs > Benchmark), which computes the "
+        "containment rate, loss frequency and fire spread exactly rather than by Monte "
+        "Carlo. Model C matches its documented formulae to 2e-16 over 90 assets; the code "
+        "reproduces all 212 figures in the document's Tables 1-12 at the generator's seed, "
+        "each within 2.54 standard errors of the exact credit; Wolfram agrees with the "
+        "reference to 4e-31. Findings: the production spread (1,000 draws) has a 44 bp "
+        "standard error at the reach cliff but is quoted to 0.1 bp; the cliff is 197.5 bp, "
+        "not 203; the tall non-combustible residual is 0.003 bp, not single-digit bps; and "
+        "three documentation corrections. Outstanding: calibration of every seed parameter "
+        "(FIRE-R1) and benchmarking against historical fire-loss data (FIRE-R2)."),
 }
 
 # Re-issued model documentation: for each model, the files under
