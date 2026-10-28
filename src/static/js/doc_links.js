@@ -64,9 +64,22 @@ const DocLinks = {
     return (categories || []).reduce((total, c) => total + self.visible(docs, c).length, 0);
   },
 
+  // A document filed as a link (it carries `url`) is stored as a ".url" shortcut so
+  // the packs carry it like any other file; the console shows its title without the
+  // suffix and opens the address itself.
+  isLink(doc) { return !!(doc && doc.url); },
+
+  name(doc) {
+    const n = String((doc && doc.original_name) || "");
+    return this.isLink(doc) ? n.replace(/\.url$/i, "") : n;
+  },
+
   // "View" opens the document in a new tab, for the formats a browser renders;
-  // anything else is download-only.
+  // anything else is download-only. A link has neither: it opens where it lives.
   actions(base, id, doc) {
+    if (this.isLink(doc)) {
+      return '<a href="' + esc(doc.url) + '" target="_blank" rel="noopener noreferrer">Open link</a>';
+    }
     const url = base + esc(id) + "/documents/" + esc(doc.item_id) + "/download";
     const view = this._inline.indexOf(this._ext(doc.original_name)) < 0 ? "" :
       '<a href="' + url + '?inline=1" target="_blank" rel="noopener">View</a> ';

@@ -47,3 +47,14 @@ INLINE_VIEW_EXTENSIONS = frozenset({"pdf", "png", "jpg", "jpeg", "txt"})
 # generated document is stored beside its PDF as the auditable original and can be
 # replaced by re-uploading it, but listing both doubles every row for no reader.
 HIDDEN_DOC_EXTENSIONS = frozenset({"tex"})
+
+# A document filed as a link rather than a file. Much documentation lives somewhere
+# else — a wiki page, a shared drive, a vendor portal — and is governance evidence
+# just the same. It is stored as a standard Internet Shortcut file (``.url``) beside
+# the uploaded ones, so every pack, tabling list and completeness check that walks a
+# record's files sees it as one more file, and the link opens from inside a pack.
+# Only web schemes are accepted: the address is rendered as a link in the console,
+# and ``javascript:`` or ``file:`` there would be an injection, not a document.
+LINK_DOC_EXTENSION = "url"
+LINK_DOC_SCHEMES = frozenset({"http", "https"})
+MAX_LINK_LENGTH = 2048
