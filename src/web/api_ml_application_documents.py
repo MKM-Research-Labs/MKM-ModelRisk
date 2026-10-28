@@ -34,8 +34,8 @@ from datetime import date, datetime, timezone
 
 from flask import Response, jsonify, request
 
-from config.governance import DOC_CATEGORIES, HISTORY_DOC_CATEGORY
-from src.files import UploadError, upload_path
+from config.governance import HISTORY_DOC_CATEGORY
+from src.files import upload_path
 from src.governance.documents import (add_document, find_document,
                                       ml_application_scope, remove_document)
 from src.governance.ml_application import get_ml_application, rebuild_ml_application_view
@@ -43,6 +43,7 @@ from src.governance.ml_application.commands import AGGREGATE_TYPE as ML_AGGREGAT
 from src.governance.ml_application.document import render_ml_application_document_pdf
 from src.governance.mrc.pack import TectonicNotFound
 from src.governance.mrc_settings import get_settings
+from src.web._document_upload import file_document
 from src.web._ml_scope import scoped
 from src.web._helpers import request_actor, send_document
 from src.web.api_ml_application import ml_application_bp
@@ -53,19 +54,10 @@ def upload_document(ml_application_id: str):
     """Supporting Documentation: upload a categorised file against the record."""
     if get_ml_application(ml_application_id) is None:
         return jsonify({"error": "ML Application not found"}), 404
-    category = request.form.get("category")
-    if category not in DOC_CATEGORIES:
-        return jsonify({"error": "invalid category"}), 400
-    file = request.files.get("file")
-    if file is None:
-        return jsonify({"error": "no file provided"}), 400
-    try:
-        add_document(aggregate_type=ML_AGGREGATE, aggregate_id=ml_application_id,
-                     scope=ml_application_scope(ml_application_id), category=category,
-                     filename=file.filename, data=file.read(),
-                     description=request.form.get("description", ""), actor=request_actor())
-    except UploadError as exc:
-        return jsonify({"error": str(exc)}), 400
+    error = file_document(aggregate_type=ML_AGGREGATE, aggregate_id=ml_application_id,
+                          scope=ml_application_scope(ml_application_id))
+    if error:
+        return error
     rebuild_ml_application_view()
     return jsonify(scoped(get_ml_application(ml_application_id))), 201
 

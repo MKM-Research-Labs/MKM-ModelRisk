@@ -22,13 +22,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import request, send_file
+from flask import redirect, request, send_file
 
 from config.files import HIDDEN_DOC_EXTENSIONS, INLINE_VIEW_EXTENSIONS
 from config.governance import (DOC_CATEGORIES, DOC_TAB_CATEGORIES, DOC_TAB_GROUPS, REFERENCE_SPECS,
                                REVIEW_DOC_CATEGORIES, TESTING_DOC_CATEGORIES)
 from src.command import CommandContext, context_from_headers
-from src.files import extension
+from src.files import UploadError, extension
+from src.governance.document_links import clean_link
 from src.governance.ml_application import list_ml_applications
 from src.governance.model_inventory import list_models
 from src.governance.reference import get_reference_lists
@@ -55,7 +56,18 @@ def send_document(path, doc: dict, *, inline: bool = False):
     """Serve an uploaded document, inline (opened in a browser tab) only when the
     caller asked for it AND the extension is one we are willing to render in this
     origin. An uploaded file shown inline executes as this application, so the
-    allow-list is the security boundary, not the query parameter."""
+    allow-list is the security boundary, not the query parameter.
+
+    A document filed as a link opens the address it records, so every "View" and
+    "Download" in the console — and every committee paper that points here — reaches
+    the document itself rather than its shortcut file. The address is re-checked on
+    the way out; one that fails is served as the shortcut, never redirected to.
+    """
+    if doc.get("url"):
+        try:
+            return redirect(clean_link(doc["url"]))
+        except UploadError:
+            pass
     viewable = extension(doc.get("original_name", "")) in INLINE_VIEW_EXTENSIONS
     return send_file(str(path), as_attachment=not (inline and viewable),
                      download_name=doc["original_name"])

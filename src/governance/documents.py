@@ -30,7 +30,7 @@ from datetime import datetime, timezone
 from src.database import append_event, read_stream
 from src.governance import collections as coll
 from src.governance.errors import DomainError
-from src.files import save_upload
+from src.files import save_upload, store_generated
 
 DOCUMENTS = "documents"
 
@@ -131,7 +131,8 @@ def find_document(aggregate_type: str, aggregate_id: str, item_id: str, config=N
 
 def add_document(
     *, aggregate_type: str, aggregate_id: str, scope: str, filename: str, data: bytes,
-    description: str, actor: str, category: str = "", model_types=None, config=None,
+    description: str, actor: str, category: str = "", model_types=None, url: str = "",
+    config=None,
 ) -> dict:
     """Store the file on disk and record its metadata against the aggregate.
 
@@ -139,13 +140,17 @@ def add_document(
     model types it relates to (a list of labels). It is orthogonal to ``category``
     — the per-model tab a document lives under — which remains forbidden on the
     external Documents area.
+
+    ``url`` marks a document filed as a link (see ``document_links.add_link``, the
+    only caller that should pass it): ``data`` is then the shortcut file the app
+    wrote, not an upload, so the upload allow-list does not apply to it.
     """
     if aggregate_type == GOVERNANCE_DOCUMENTS_AGGREGATE and (category or "").strip():
         raise DomainError(
             "the top-level Documents area is external-only; a categorised document "
             f"({category!r}) belongs on its model or product, not here"
         )
-    meta = save_upload(scope, filename, data)
+    meta = (store_generated if url else save_upload)(scope, filename, data)
     documents, version = _fold(aggregate_type, aggregate_id, config)
     payload = {
         "collection": DOCUMENTS, "item_id": coll.next_item_id(documents, "DOC"),
@@ -154,10 +159,12 @@ def add_document(
         "model_types": clean_tags(model_types),
         "size": len(data), "uploaded_at": datetime.now(timezone.utc).isoformat(),
     }
+    if url:
+        payload["url"] = url
     append_event(
         aggregate_type=aggregate_type, aggregate_id=aggregate_id,
         event_type=coll.EVENT_ITEM_ADDED, payload=payload, actor=actor,
-        reason="Upload document", expected_version=version, config=config,
+        reason="Link document" if url else "Upload document", expected_version=version, config=config,
     )
     return payload
 
