@@ -122,4 +122,5 @@ def test_the_real_spec_points_at_the_generated_benchmarks():
         "docs/models/delta_engine_benchmark/MKM-DE-001_wolfram_benchmark.pdf",
         "docs/models/event_frequency_benchmark/MKM-EF-001_wolfram_benchmark.pdf",
         "docs/models/mortgage_pricing_benchmark/MKM-MP-001_wolfram_benchmark.pdf",
+        "docs/models/fire_resilience_benchmark/MKM-FIRE-001_wolfram_benchmark.pdf",
     }
