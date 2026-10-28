@@ -67,6 +67,8 @@ BENCHMARKS = {
                    "MKM-EF-001_wolfram_benchmark_v0.2.pdf"),
     "MKM-FIRE-001": ("docs/models/fire_resilience_benchmark/MKM-FIRE-001_wolfram_benchmark.pdf",
                      "Wolfram oracle benchmark - Building Fire-Resilience Credit Model"),
+    "MKM-SEIS-001": ("docs/models/seismic_resilience_benchmark/MKM-SEIS-001_wolfram_benchmark.pdf",
+                     "Wolfram oracle benchmark - Building Seismic-Resilience Credit Model"),
     "MKM-MP-001": ("docs/models/mortgage_pricing_benchmark/MKM-MP-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark v0.2 - Mortgage Pricing Model, after the fair-value fix",
                    "MKM-MP-001_wolfram_benchmark_v0.2.pdf"),
