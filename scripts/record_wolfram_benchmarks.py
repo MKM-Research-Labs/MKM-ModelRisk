@@ -144,6 +144,20 @@ VQ_RATIONALE = {
         "not 203; the tall non-combustible residual is 0.003 bp, not single-digit bps; and "
         "three documentation corrections. Outstanding: calibration of every seed parameter "
         "(FIRE-R1) and benchmarking against historical fire-loss data (FIRE-R2)."),
+    "MKM-SEIS-001": (
+        "Partially addressed. The credit was benchmarked on 2026-10-28 against Wolfram "
+        "Engine 15.0 and a 50-digit mpmath implementation of model document v0.10 "
+        "(MKM-SEIS-001_wolfram_benchmark.pdf, Docs > Benchmark), which computes the "
+        "no-collapse rate, loss frequency and seismic spread exactly by integrating over "
+        "the magnitude law. Model C, the GMPE median and the occurrence rate match the "
+        "reference to 6e-16; the code reproduces all 131 figures in the document's "
+        "Tables 3-10 at the generator's seed, each within 1.94 standard errors of the "
+        "exact credit; all six Table 2 gates hold exactly; Wolfram agrees to 5e-31. "
+        "Findings: at 20,000 draws a 1 bp spread carries a 70% standard error, so the "
+        "stability claim of s9.6 fails; the production spread at 10,000 draws carries up "
+        "to 5.6 bp of error; Table 18's mean losses are medians; the GMPE form is "
+        "undocumented. Outstanding: calibration (SEIS-R1) and GMPE benchmarking against "
+        "an independent model (SEIS-R2)."),
 }
 
 # Re-issued model documentation: for each model, the files under
