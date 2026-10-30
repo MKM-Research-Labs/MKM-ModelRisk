@@ -18,57 +18,66 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-"""Attach the stress testing guide to MKM-FC-001's ModelRisk record.
+"""File MKM-FC-001's model documentation v2.2 on its ModelRisk record.
 
-The guide is generated in PhysicalRisk
-(``docs/models/stress_testing/stress_testing_guide.pdf``) and carries the GBM
-challenger comparison. It is filed under Analysis, beside the model document
-rather than replacing it: its results are illustrative, not sign-off evidence.
+The document is generated in PhysicalRisk
+(``docs/models/flood_classifier/flood_classifier.pdf``) and now carries the GBM
+challenger comparison, whose results are illustrative, not sign-off evidence.
+It is filed under Core Documentation, and the earlier filing moves to History,
+keeping its id.
 
 Idempotent: a document whose stored name is already attached is skipped, so the
-script is safe to re-run. A later version of the guide gets a new stored name.
+script is safe to re-run.
 
-Run as:  python -m scripts.attach_fc001_guide
+Run as:  python -m scripts.attach_fc001_doc
 """
 from __future__ import annotations
 
 from pathlib import Path
 
+from config.governance._documents import HISTORY_DOC_CATEGORY
 from config.paths import PRODUCER_ROOT as PHYS_ROOT
-from src.governance.documents import add_document
+from src.governance.documents import add_document, update_document
 from src.governance.model_inventory import get_model, rebuild_inventory_view
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 
-ACTOR = "attach_fc001_guide"
+ACTOR = "attach_fc001_doc"
 MODEL_ID = "MKM-FC-001"
-CATEGORY = "Analysis"
-SOURCE = "docs/models/stress_testing/stress_testing_guide.pdf"
-STORED_NAME = "stress_testing_guide_v1.2.pdf"
-DESCRIPTION = ("Stress Testing Guide v1.2 - GBM challenger comparison "
-               "(illustrative results, outcome escalate)")
+CATEGORY = "Core Documentation"
+SOURCE = "docs/models/flood_classifier/flood_classifier.pdf"
+EARLIER_NAME = "flood_classifier.pdf"
+STORED_NAME = "flood_classifier_v2.2.pdf"
+DESCRIPTION = ("Flood Probability Classifier Documentation v2.2 - adds the GBM "
+               "challenger comparison (illustrative results, outcome escalate)")
 
 
 def apply(phys_root: Path = PHYS_ROOT, config=None) -> dict:
-    """Attach the guide to MKM-FC-001 unless it is already present.
+    """File v2.2 unless present, and retire the earlier filing to History.
 
-    Returns a summary of what was attached.
+    Returns a summary of what changed.
     """
     model = get_model(MODEL_ID, config=config)
     if model is None:
         raise RuntimeError(f"{MODEL_ID} is not registered.")
 
-    have = {(d.get("original_name") or d.get("filename"))
-            for d in (model["data"].get("documents") or [])}
-    if STORED_NAME in have:
-        return {"attached": []}
-
-    add_document(
-        aggregate_type=MODEL_AGGREGATE, aggregate_id=MODEL_ID,
-        scope=f"model/{MODEL_ID}", category=CATEGORY, filename=STORED_NAME,
-        data=Path(phys_root, SOURCE).read_bytes(), description=DESCRIPTION,
-        actor=ACTOR, config=config)
+    documents = model["data"].get("documents") or []
+    changed = []
+    if STORED_NAME not in {d.get("original_name") or d.get("filename") for d in documents}:
+        add_document(
+            aggregate_type=MODEL_AGGREGATE, aggregate_id=MODEL_ID,
+            scope=f"model/{MODEL_ID}", category=CATEGORY, filename=STORED_NAME,
+            data=Path(phys_root, SOURCE).read_bytes(), description=DESCRIPTION,
+            actor=ACTOR, config=config)
+        changed.append((CATEGORY, STORED_NAME))
+    for d in documents:
+        if d.get("original_name") == EARLIER_NAME and d.get("category") == CATEGORY:
+            update_document(
+                aggregate_type=MODEL_AGGREGATE, aggregate_id=MODEL_ID, item_id=d["item_id"],
+                fields={"category": HISTORY_DOC_CATEGORY}, actor=ACTOR, config=config,
+                reason=f"Superseded by {STORED_NAME}")
+            changed.append((HISTORY_DOC_CATEGORY, EARLIER_NAME))
     rebuild_inventory_view(config=config)
-    return {"attached": [(CATEGORY, STORED_NAME)]}
+    return {"attached": changed}
 
 
 def main() -> int:
