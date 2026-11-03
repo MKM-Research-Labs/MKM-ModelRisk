@@ -127,9 +127,12 @@ def test_it_closes_the_audited_gaps(tmp_path):
     complete.apply(phys_root=root)
     closed = before - _gaps()
     assert closed >= {"description", "materiality_rationale", "complexity_rationale",
-                      "vendor", "next_review_date", "peer_reviewer", "data_sources", "evaluations", "raci_roles",
-                      "fairness_assessments", "version_history",
-                      "Analysis", "Convergence", "Calibration"}
+                      "vendor", "next_review_date", "peer_reviewer", "data_sources", "raci_roles",
+                      "version_history", "Analysis"}
+    # Evaluations, fairness and the ML training documents are filed too, but a model
+    # is no longer scored on them (config/governance/_audit_scope.py): they were never
+    # gaps, so there is nothing for the script to close.
+    assert not before & {"evaluations", "fairness_assessments", "Convergence", "Calibration"}
 
 
 def test_the_validation_questions_stay_a_partial_gap(tmp_path):
