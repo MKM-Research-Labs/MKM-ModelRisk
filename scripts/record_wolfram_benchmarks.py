@@ -180,7 +180,8 @@ VQ_RATIONALE = {
         "errors from the exact expected loss; Wolfram agrees to 4e-31. All 15 of the "
         "document's claims hold, including 70 printed figures. v0.1 found the filed v1.1 "
         "no longer described the model (retention length 2 km against the code's 10 km; "
-        "removed equations; wrong Table 9 and curve-shift figures); v2.0 replaces it. "
+        "removed equations; wrong Table 9 and curve-shift figures) and is kept in History as "
+        "evidence of the check; v2.0 replaces v1.1. "
         "Outstanding: review of the 10 km retention length against observed inundation "
         "(v2.0 Q9) and the empirical curve and velocity validation (s7.1-7.2)."),
 }
