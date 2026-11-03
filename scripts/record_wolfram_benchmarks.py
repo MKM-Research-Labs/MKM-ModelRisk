@@ -171,6 +171,19 @@ VQ_RATIONALE = {
         "regeneration is not reproducible; the alert-day and lag-1 diagnostics of s7.1 "
         "cannot pass as stated; the spring-neap phase restarts each 1 January. "
         "Outstanding: the backtest against NRFA gauge records (s7.4)."),
+    "MKM-DD-001": (
+        "Partially addressed. The model was benchmarked on 2026-11-03 against Wolfram Engine "
+        "15.0 and a 50-digit implementation of model documentation v2.0 "
+        "(MKM-DD-001_wolfram_benchmark.pdf v0.2, Docs > Benchmark). The curve, Manning, "
+        "slope, travel time, retention, haversine, IDW and correlation agree to 3e-16, the "
+        "hydrograph to the millimetre, and the portfolio Monte Carlo mean is 1.82 standard "
+        "errors from the exact expected loss; Wolfram agrees to 4e-31. All 15 of the "
+        "document's claims hold, including 70 printed figures. v0.1 found the filed v1.1 "
+        "no longer described the model (retention length 2 km against the code's 10 km; "
+        "removed equations; wrong Table 9 and curve-shift figures) and is kept in History as "
+        "evidence of the check; v2.0 replaces v1.1. "
+        "Outstanding: review of the 10 km retention length against observed inundation "
+        "(v2.0 Q9) and the empirical curve and velocity validation (s7.1-7.2)."),
 }
 
 # Re-issued model documentation: for each model, the files under
@@ -193,6 +206,10 @@ REISSUES = {
         "files": (("event_frequency_v2.4.pdf", "Event Frequency Model v2.4 (27-Oct-2026)"),
                   ("event_frequency_v2.4.tex", "Event Frequency Model v2.4 (27-Oct-2026) - LaTeX source")),
         "superseded": "event_frequency.pdf", "version": "v2.4"},
+    "MKM-DD-001": {
+        "files": (("flood_risk_v2.0.pdf", "Depth-Damage Curve Model v2.0 (03-Nov-2026)"),
+                  ("flood_risk_v2.0.tex", "Depth-Damage Curve Model v2.0 (03-Nov-2026) - LaTeX source")),
+        "superseded": "flood_risk.pdf", "version": "v2.0"},
 }
 
 

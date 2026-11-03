@@ -30,6 +30,8 @@ Idempotent: a document whose stored name is already attached is skipped, so the
 script is safe to re-run. A REGENERATED benchmark is filed as a new version: its
 entry names a versioned stored name, and the earlier filing of the same PDF
 (stored under the PDF's own name) moves from Benchmark to History, keeping its id.
+A first issue superseded before it was filed is kept as evidence of checking: it is
+read from the producer's git history and filed straight to History (ORIGINALS).
 
 The benchmarks are read from ``PRODUCER_ROOT``, by default the PhysicalRisk
 checkout beside this one. Run from a worktree, "beside" is the worktrees
@@ -39,6 +41,7 @@ Run as:  python -m scripts.attach_wolfram_benchmark [MODEL_ID ...]   (default: a
 """
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
@@ -71,6 +74,8 @@ BENCHMARKS = {
                      "Wolfram oracle benchmark - Building Seismic-Resilience Credit Model"),
     "MKM-GHD-001": ("docs/models/gauge_historical_benchmark/MKM-GHD-001_wolfram_benchmark.pdf",
                     "Wolfram oracle benchmark - Gauge Historical Daily Synthetic Generation Model"),
+    "MKM-DD-001": ("docs/models/depth_damage_benchmark/MKM-DD-001_wolfram_benchmark.pdf",
+                   "Wolfram oracle benchmark v0.2 - Depth-Damage Curve Model, against documentation v2.0"),
     "MKM-MP-001": ("docs/models/mortgage_pricing_benchmark/MKM-MP-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark v0.2 - Mortgage Pricing Model, after the fair-value fix",
                    "MKM-MP-001_wolfram_benchmark_v0.2.pdf"),
@@ -78,9 +83,28 @@ BENCHMARKS = {
 # A third item, where present, is the versioned name to file under; the filing
 # under the PDF's own name is then an earlier version, retired to History.
 
+# Originals kept as evidence of checking: a first issue that was superseded before
+# it was filed, read from the producer's git history at the commit that issued it
+# and filed straight to History under a versioned name, beside the current one.
+# Model -> (commit, PDF path at that commit, stored name, description).
+ORIGINALS = {
+    "MKM-DD-001": ("23363b89aad7ee2faaaa22ece6e591cc212af2b0",
+                   "docs/models/depth_damage_benchmark/MKM-DD-001_wolfram_benchmark.pdf",
+                   "MKM-DD-001_wolfram_benchmark_v0.1.pdf",
+                   "Wolfram oracle benchmark v0.1 - Depth-Damage Curve Model, against the filed "
+                   "documentation v1.1; found it no longer described the model (superseded by v0.2)"),
+}
+
+
+def _original_bytes(phys_root, commit: str, relpath: str) -> bytes:
+    """A file as the producer committed it."""
+    out = subprocess.run(["git", "-C", str(phys_root), "show", f"{commit}:{relpath}"],
+                         capture_output=True, check=True)
+    return out.stdout
+
 
 def apply(model_ids=None, benchmarks=BENCHMARKS, phys_root: Path = PHYS_ROOT,
-          config=None) -> dict:
+          config=None, originals=None) -> dict:
     """Attach each named model's benchmark (all by default), skipping any present.
 
     Every model and every source file is checked before anything is written, so
@@ -100,11 +124,21 @@ def apply(model_ids=None, benchmarks=BENCHMARKS, phys_root: Path = PHYS_ROOT,
         raise FileNotFoundError(
             f"Benchmark output not found under {phys_root}: {', '.join(missing)}. "
             "Run python -m tools.wolfram_oracle <model> in PhysicalRisk, or set PRODUCER_ROOT.")
+    originals = ORIGINALS if originals is None else originals
+    kept = {m: _original_bytes(phys_root, c, rel) for m, (c, rel, _, _) in originals.items() if m in ids}
 
     for model_id in ids:
         relpath, description, *versioned = benchmarks[model_id]
         stored_name = versioned[0] if versioned else Path(relpath).name
         documents = models[model_id]["data"].get("documents") or []
+        if model_id in kept:
+            _, _, name, desc = originals[model_id]
+            if name not in {d.get("original_name") or d.get("filename") for d in documents}:
+                add_document(
+                    aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
+                    scope=f"model/{model_id}", category=HISTORY_DOC_CATEGORY, filename=name,
+                    data=kept[model_id], description=desc, actor=ACTOR, config=config)
+                attached.append((model_id, f"{name} -> {HISTORY_DOC_CATEGORY}"))
         if stored_name not in {d.get("original_name") or d.get("filename") for d in documents}:
             add_document(
                 aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,

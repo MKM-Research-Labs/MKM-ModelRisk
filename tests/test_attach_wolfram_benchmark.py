@@ -27,6 +27,7 @@ anything is written.
 """
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -35,6 +36,15 @@ from scripts import attach_wolfram_benchmark as attach
 from src.governance.documents import add_document
 from src.governance.model_inventory.commands import AGGREGATE_TYPE
 from src.governance.model_inventory import get_model, rebuild_inventory_view, register_model
+
+
+REAL_ORIGINALS = dict(attach.ORIGINALS)
+
+
+@pytest.fixture(autouse=True)
+def _no_originals(monkeypatch):
+    """The fake producer roots are not git repositories; originals are tested alone."""
+    monkeypatch.setattr(attach, "ORIGINALS", {})
 
 
 def _register(*ids):
@@ -125,4 +135,29 @@ def test_the_real_spec_points_at_the_generated_benchmarks():
         "docs/models/fire_resilience_benchmark/MKM-FIRE-001_wolfram_benchmark.pdf",
         "docs/models/seismic_resilience_benchmark/MKM-SEIS-001_wolfram_benchmark.pdf",
         "docs/models/gauge_historical_benchmark/MKM-GHD-001_wolfram_benchmark.pdf",
+        "docs/models/depth_damage_benchmark/MKM-DD-001_wolfram_benchmark.pdf",
     }
+
+
+def test_an_original_is_read_from_git_and_kept_in_history(tmp_path):
+    rel = attach.BENCHMARKS["MKM-DD-001"][0]
+    root = _fake_output(tmp_path)
+    git = lambda *a: subprocess.run(["git", "-C", str(root), *a], check=True, capture_output=True)
+    git("init", "-q")
+    (root / rel).write_bytes(b"%PDF-1.4 first issue\n%%EOF")
+    git("add", rel)
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "v0.1")
+    sha = subprocess.run(["git", "-C", str(root), "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    (root / rel).write_bytes(b"%PDF-1.4 second issue\n%%EOF")
+    _register("MKM-DD-001")
+    originals = {"MKM-DD-001": (sha, rel, "MKM-DD-001_wolfram_benchmark_v0.1.pdf", "v0.1")}
+    attach.apply(["MKM-DD-001"], phys_root=root, originals=originals)
+    assert _docs("MKM-DD-001") == {"MKM-DD-001_wolfram_benchmark_v0.1.pdf": "History",
+                                   Path(rel).name: "Benchmark Test"}
+    assert attach.apply(["MKM-DD-001"], phys_root=root, originals=originals)["attached"] == []
+
+
+def test_the_real_originals_name_committed_files():
+    assert REAL_ORIGINALS
+    for commit, rel, name, _ in REAL_ORIGINALS.values():
+        assert len(commit) == 40 and rel.endswith(".pdf") and "_v0." in name
