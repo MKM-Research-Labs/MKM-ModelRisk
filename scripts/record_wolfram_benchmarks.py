@@ -158,6 +158,19 @@ VQ_RATIONALE = {
         "to 5.6 bp of error; Table 18's mean losses are medians; the GMPE form is "
         "undocumented. Outstanding: calibration (SEIS-R1) and GMPE benchmarking against "
         "an independent model (SEIS-R2)."),
+    "MKM-GHD-001": (
+        "Partially addressed. The generator was benchmarked on 2026-10-28 against Wolfram "
+        "Engine 15.0 and an exact implementation of model document v1.0 "
+        "(MKM-GHD-001_wolfram_benchmark.pdf, Docs > Benchmark), which computes the expected "
+        "days above each flood threshold, the mean level and the January and July "
+        "departures in closed form. Over six gauges and 200 generated 50-year series each, "
+        "every statistic is within 2.03 standard errors of its exact expectation; Wolfram "
+        "derives the tail integral symbolically and agrees to 4.9e-10. Findings: n3 is a "
+        "5-year count spread over 50 years, so severe frequency is understated tenfold; the "
+        "hash() seed differs per process and the series ends at the run date, so "
+        "regeneration is not reproducible; the alert-day and lag-1 diagnostics of s7.1 "
+        "cannot pass as stated; the spring-neap phase restarts each 1 January. "
+        "Outstanding: the backtest against NRFA gauge records (s7.4)."),
 }
 
 # Re-issued model documentation: for each model, the files under
