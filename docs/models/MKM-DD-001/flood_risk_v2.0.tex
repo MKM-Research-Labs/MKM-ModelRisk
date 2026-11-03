@@ -1,0 +1,614 @@
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+%
+% MKM-DD-001 Depth-Damage Curve Model -- model documentation v2.0, the document of record
+% filed on the model as Core Documentation. It supersedes the filed v1.1 (18-Feb-2026),
+% whose source reached v1.4 (26-Mar-2026, removed from PhysicalRisk with the other
+% per-model docs in 527b5a348) without being filed. Rewritten after the Wolfram benchmark
+% (MKM-DD-001_wolfram_benchmark v0.1) found the code had moved past both: v2.0 documents
+% what src/models/floodrisk/ computes. Its sensitivity tables are inlined, generated
+% from the code in the house generator's format.
+%
+% Build: it inputs the house header, which lives in PhysicalRisk. Copy
+% PhysicalRisk/docs/models/shared beside this folder as ../shared, then run
+% pdflatex three times (the third settles "Page n of N").
+\documentclass[11pt,a4paper]{article}
+
+\newcommand{\doctitle}{Depth-Damage Curve Model}
+\newcommand{\docsubtitle}{Depth-Damage, Velocity, Attenuation and Spatial Functions of the Flood Risk Suite}
+\newcommand{\docversion}{2.0}
+\newcommand{\docdate}{03-November-2026}
+\newcommand{\docauthor}{David K Kelly}
+
+\input{../shared/mkm_header}
+% T1 so the underscores in code identifiers print as underscores.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% The shared history table sets every column to its natural width; wrap the description.
+\renewcommand{\mkmhistorypage}[1]{%
+    \section{Document History}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{l|l|p{9cm}|l}
+            \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+            \hline
+            #1
+        \end{tabular}
+    \end{table}
+}
+
+\begin{document}
+% Long code paths and identifiers cannot hyphenate; let the spacing stretch instead.
+\sloppy
+
+\mkmtitlepage
+\mkmlegalpage
+
+\tableofcontents
+\clearpage
+
+% ===================================================================
+\mkmexecsummary
+% ===================================================================
+
+This document presents the mathematical framework, calibration and validation of the
+Depth-Damage Curve Model (MKM-DD-001), the functions in \texttt{src/models/floodrisk/}
+that turn a flood at a gauge into damage at a property. It documents what the code
+computes as of package version 2.1, and supersedes v1.1 of this document (filed as
+\emph{Flood Risk Model}), which still described the property-type factor and the
+distance-decayed depth calculation removed from the code in May 2026.
+
+The model comprises:
+\begin{enumerate}[nosep]
+    \item \textbf{The depth-damage curve} --- a UK-calibrated piecewise-linear
+          vulnerability curve from depth above floor level to damage ratio (\S\ref{sec:dd}).
+    \item \textbf{The flood threshold} --- the property's height above its reference gauge
+          plus its floor level (\S\ref{sec:threshold}).
+    \item \textbf{The velocity functions} --- Manning's equation, ground slope, travel time,
+          exponential retention with distance, and the single-peak property hydrograph
+          (\S\ref{sec:velocity}).
+    \item \textbf{The spatial functions} --- the haversine distance, inverse-distance
+          weighting and an exponential correlation matrix (\S\ref{sec:spatial}).
+    \item \textbf{Portfolio analytics} --- a correlated Monte Carlo of portfolio loss with
+          VaR, ES, HHI and clustering (\S\ref{sec:portfolio}).
+\end{enumerate}
+
+\noindent The curve, the threshold and the velocity functions are what production uses:
+the Property Flood Response model (MKM-PF-001) calls them for every property and storm,
+and the hazard curve builder applies the curve to gauge levels. The spatial functions
+other than the haversine, and the portfolio analytics, have no caller in production.
+
+\textbf{Key sensitivity:} the damage curve scales expected loss one for one. A 10\%
+shift of the curve moves a property's expected loss by exactly 10\% while its shocked
+damage ratio cannot reach 1, which holds for damage ratios up to about 0.6; above that
+the clip at 1 absorbs part of the shift (Table~\ref{tab:sens_shift}). The portfolio
+figure therefore depends on the portfolio's mix of damage ratios.
+
+% ===================================================================
+\mkmpurpose
+% ===================================================================
+
+\subsection{Purpose}
+The model quantifies the physical impact of fluvial flooding on a property: how deep the
+water stands above its floor, when it arrives, and what fraction of reinstatement cost it
+causes. Those damage ratios feed PRS pricing and the property flood timeseries.
+
+\subsection{Scope}
+\begin{itemize}[nosep]
+    \item \textbf{In scope:} the depth-damage curve; the flood threshold; Manning velocity,
+          slope, travel time and retention; the single-peak property hydrograph; the
+          haversine, IDW and correlation functions; the portfolio Monte Carlo and its
+          metrics.
+    \item \textbf{Out of scope:} how a storm's gauge response is chosen and propagated to
+          a property, including the bankfull offset and terrain scaling (MKM-PF-001); the
+          compound per-pulse hydrograph (\texttt{floodrisk/hydrograph/}, MKM-HG-001); GEV
+          hazard curve fitting; PRS pricing.
+    \item \textbf{Upstream:} gauge responses and timeseries; property elevation and floor
+          level.
+    \item \textbf{Downstream:} MKM-PF-001 (property flood response); the hazard curve
+          builder (\texttt{src/models/hazard/builder.py}, \texttt{terrain\_grid.py}).
+\end{itemize}
+
+% ===================================================================
+\mkmframework
+% ===================================================================
+
+\subsection{Depth-Damage Curve}
+\label{sec:dd}
+
+The curve maps depth $d$ above the finished floor (metres) to a damage ratio
+$\delta\in[0,1]$, the fraction of reinstatement cost incurred, through ten control points
+calibrated against UK flood damage survey data:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lcccccccccc}
+    \toprule
+    \textbf{Depth (m)} & 0 & 0.05 & 0.5 & 1.0 & 1.5 & 2.0 & 3.0 & 4.0 & 5.0 & 6.0 \\
+    \midrule
+    \textbf{Damage ratio} & 0 & 0.05 & 0.25 & 0.40 & 0.50 & 0.60 & 0.75 & 0.85 & 0.95 & 1.0 \\
+    \bottomrule
+\end{tabular}
+\caption{UK-calibrated depth-damage control points}
+\label{tab:dd_control}
+\end{table}
+
+Between adjacent control points $d_i\le d<d_{i+1}$,
+\begin{equation}
+    \delta(d) = \delta_i + \frac{d - d_i}{d_{i+1} - d_i} \, (\delta_{i+1} - \delta_i),
+    \label{eq:dd}
+\end{equation}
+with $\delta(d)=0$ for $d\le0$ and $\delta(d)=1$ for $d\ge6$\,m.
+\texttt{scalar\_depth\_damage} evaluates it with a plain loop over the control points
+(\texttt{DEPTH\_POINTS}, \texttt{DAMAGE\_POINTS} in \texttt{config/damage.py}).
+
+\paragraph{No property-type factor.} Earlier versions scaled the curve by 1.2 for
+commercial and 0.9 for industrial property. The code no longer does; the factors remain
+in config as \texttt{PROPERTY\_TYPE\_DAMAGE\_FACTORS} but nothing reads them.
+
+\paragraph{The degree-5 curve.} \texttt{bri\_depth\_damage} evaluates a degree-5
+polynomial through the origin, the least-squares fit to Table~\ref{tab:dd_control}
+($R^2=0.999244$, RMSE 0.009368, largest error 0.020388 at 0.05\,m, increasing on
+$[0,6]$), on the depth less the floor level and a signed BRI stilt. It is implemented for
+the BRI models and has no caller in production; the curve of record is
+Eq.~\eqref{eq:dd}.
+
+\subsection{Flood Threshold}
+\label{sec:threshold}
+
+A property floods when water at it rises above its height above the reference gauge plus
+its floor level (\texttt{relative\_elevation}):
+\begin{equation}
+    h_{\mathrm{thr}} = \max(0,\ e_{\mathrm{prop}} - e_{\mathrm{gauge}}) + f,
+    \label{eq:threshold}
+\end{equation}
+with ground elevations $e$ in metres AOD and floor level $f$ in metres. The depth at the
+property is the water above that threshold, and the damage ratio is
+$\delta(\max(0,\ \text{water} - h_{\mathrm{thr}}))$.
+
+\paragraph{Removed in v2.0.} Versions 1.x derived depth from the flood WSE, the property's
+elevation and a linear decay over 25\,km from a Thames reference point (their
+Eqs.~5--6), capped at 5\,m. The code replaced that with the nearest-gauge propagation of
+MKM-PF-001 and Eq.~\eqref{eq:threshold}; \texttt{FLOOD\_MAX\_DISTANCE\_M} remains in
+config, unread.
+
+\subsection{Velocity, Retention and the Property Hydrograph}
+\label{sec:velocity}
+
+\subsubsection{Manning's Equation}
+For wide, shallow overbank flow the hydraulic radius is approximated by the depth $h$:
+\begin{equation}
+    v = \frac{1}{n}\, h^{2/3} S^{1/2},
+    \label{eq:manning}
+\end{equation}
+with $v=0$ when $h\le0$ or $n\le0$, and the slope taken as $\max(|S|,\,0.001)$.
+
+\subsubsection{Ground Slope}
+\begin{equation}
+    S = \max\!\left(\frac{|e_{\mathrm{gauge}} - e_{\mathrm{prop}}|}{d},\ 0.001\right),
+    \label{eq:slope}
+\end{equation}
+and $S=0.001$ when $d\le0$.
+
+\subsubsection{Travel Time}
+\begin{equation}
+    t = \frac{d}{3600\, v}\ \text{hours},
+    \label{eq:travel}
+\end{equation}
+infinite when $v=0$.
+
+\subsubsection{Retention with Distance}
+The share of the flood signal that reaches a property at distance $d$ from the river:
+\begin{equation}
+    a(d) = e^{-d/\ell},\qquad \ell = 10{,}000\ \text{m},
+    \label{eq:retention}
+\end{equation}
+with $a=1$ for $d\le0$ and $a=0$ for $\ell\le0$. At 600\,m a property retains 94\% of the
+signal, at 2\,km 82\%, at 5\,km 61\%. There is no near-field bypass: v1.4's rule that
+$a=1$ within 2\,km has been removed. (v1.1 gave $\ell=2{,}000$\,m.)
+
+\subsubsection{Property Hydrograph}
+\texttt{build\_property\_hydrograph} turns the gauge's hourly series into the property's.
+With gauge base $W_b$ (its minimum), peak $W_p$ at hour $t_p$, travel time $t_r$ and the
+property's peak WSE $W^{*}$:
+\begin{itemize}[nosep]
+\item before the flood front arrives, $t<t_r$, the property sits at $W_b$ with no depth;
+\item on the rising limb, $t\le t_p+t_r$, the gauge is sampled at the nearest hour to
+      $t-t_r$;
+\item on the recession, at the nearest hour to $t_p+(t-t_p-t_r)/\gamma$, $\gamma=1.5$;
+\end{itemize}
+and the property's level and depth are
+\begin{equation}
+    W(t) = W_b + (W^{*} - W_b)\, \frac{W_{\mathrm{gauge}}(\cdot) - W_b}{W_p - W_b},\qquad
+    d(t) = \max\bigl(0,\ W(t) - e_{\mathrm{prop}} - f\bigr),
+    \label{eq:hydrograph}
+\end{equation}
+both reported to the millimetre. Retention is \emph{not} applied here: the caller
+(MKM-PF-001) applies $a(d)$ to the water above bankfull before computing $W^{*}$, so the
+hydrograph scales by it once. v1.x's Eq.~15 multiplied by $a$ again.
+
+\subsection{Spatial Functions}
+\label{sec:spatial}
+
+\subsubsection{Haversine Distance}
+\begin{equation}
+    d = 2R\,\operatorname{atan2}\!\left(\sqrt{a},\ \sqrt{1-a}\right),\quad
+    a = \sin^2\frac{\Delta\varphi}{2} + \cos\varphi_1\cos\varphi_2\sin^2\frac{\Delta\lambda}{2},
+    \label{eq:haversine}
+\end{equation}
+with $R=6{,}371{,}000$\,m. This is the one spatial function production calls; it is
+used across the property, gauge and seismic code.
+
+\subsubsection{Inverse-Distance Weighting}
+Given gauges at distances $d_i$ with water surface elevations $W_i$,
+$\hat W=\sum_i w_iW_i/\sum_iw_i$ with $w_i=d_i^{-p}$, $p=2$; the first gauge closer than
+1\,m returns its own $W_i$. Production replaced IDW with the single nearest gauge in
+package v2.1; the function is retained.
+
+\subsubsection{Correlation Matrix}
+For properties at (longitude, latitude) in degrees, with Euclidean separation
+$d^{\deg}_{ij}$ converted at 111\,km per degree,
+\begin{equation}
+    \rho_{ij} = \rho_0 \exp\!\left(-\frac{111\, d^{\deg}_{ij}}{L/1000}\right),\quad i\ne j,
+    \qquad \rho_{ii}=1.
+    \label{eq:corr}
+\end{equation}
+The degree conversion takes no account of latitude: at 51.5$^\circ$N it overstates
+east--west separation by 61\%. The matrix is positive definite.
+
+\subsection{Portfolio Analytics}
+\label{sec:portfolio}
+
+\texttt{risk\_analytics} simulates portfolio loss under correlated shocks. It has no
+caller in production; it is documented because it is part of the package.
+
+\paragraph{Monte Carlo.} With damage ratios $\delta_j$, values $V_j$ and correlation
+matrix $\Sigma$, it draws $M=1{,}000$ shock vectors $z\sim N(0,\Sigma)$ with NumPy's
+legacy generator (seed 42), which factorises $\Sigma$ by singular-value decomposition,
+and sets
+\begin{equation}
+    L^{(m)} = \sum_j V_j\, \mathrm{clip}\bigl(\delta_j(1+0.2z_j^{(m)}),\,0,\,1\bigr).
+    \label{eq:mc}
+\end{equation}
+VaR$_\alpha$ is the $\alpha$ percentile of the draws (NumPy's linear interpolation) and
+ES$_\alpha$ the mean of the draws at or above it, for $\alpha=95,99$.
+
+\paragraph{The expected loss, exactly.} Each shocked ratio $X_j=\delta_j(1+0.2z_j)$ is
+normal with mean $\delta_j$ and deviation $0.2\delta_j$, so
+\begin{equation}
+    \mathbb{E}\,\mathrm{clip}(X_j,0,1) = \delta_j\bigl[\Phi(\beta_j)-\Phi(-5)\bigr]
+    + 0.2\delta_j\bigl[\varphi(-5)-\varphi(\beta_j)\bigr] + 1-\Phi(\beta_j),\quad
+    \beta_j = \frac{1-\delta_j}{0.2\,\delta_j},
+    \label{eq:el}
+\end{equation}
+and the expected portfolio loss is $\sum_jV_j\,\mathbb{E}\,\mathrm{clip}(X_j,0,1)$ whatever
+the correlation. The Monte Carlo mean estimates it.
+
+\paragraph{Concentration.} The Herfindahl--Hirschman index of losses
+$\ell_j=V_j\delta_j$ is $\sum_js_j^2$ with $s_j=\ell_j/\sum_k\ell_k$; it is $1/N$ for an
+equal portfolio. Grid concentration aggregates by 1\,km cells (1$^\circ\approx$111\,km),
+and KMeans ($K=5$, ten initialisations, seed 42) clusters properties on standardised
+depth, damage, position and $\ln(1+V)$.
+
+% ===================================================================
+\mkminputs
+% ===================================================================
+
+\subsection{Model Parameters}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{llll}
+    \toprule
+    \textbf{Parameter} & \textbf{Symbol} & \textbf{Default} & \textbf{Where} \\
+    \midrule
+    Manning's roughness & $n$ & 0.04 & \texttt{DEFAULT\_ROUGHNESS} \\
+    Minimum slope & $S_{\min}$ & 0.001 & \texttt{MIN\_SLOPE} \\
+    Retention length & $\ell$ & 10{,}000\,m & \texttt{DEFAULT\_RETENTION\_LENGTH} \\
+    Recession factor & $\gamma$ & 1.5 & \texttt{DEFAULT\_RECESSION\_FACTOR} \\
+    Earth radius & $R$ & 6{,}371{,}000\,m & \texttt{haversine\_distance} \\
+    IDW power, minimum distance & $p$, $d_{\min}$ & 2, 1\,m & \texttt{idw\_interpolate\_from\_gauges} \\
+    Correlation length, base & $L$, $\rho_0$ & caller's & \texttt{build\_correlation\_matrix} \\
+    Monte Carlo draws, seed & $M$ & 1{,}000, 42 & \texttt{simulate\_portfolio\_impact} \\
+    Shock dispersion & --- & 0.2 & \texttt{simulate\_portfolio\_impact} \\
+    KMeans clusters, restarts & $K$ & 5, 10 & \texttt{analyze\_risk\_clusters} \\
+    \bottomrule
+\end{tabular}
+\caption{Model parameters (\texttt{config/models/\_flood.py}, \texttt{config/damage.py})}
+\label{tab:params}
+\end{table}
+
+\subsection{Depth-Damage Calibration}
+The control points of Table~\ref{tab:dd_control} follow the Multi-Coloured Manual
+(Penning-Rowsell et al., 2013), chosen to capture minimal damage below 0.05\,m
+(below-floor wetting), rapid escalation from 0.05 to 1.0\,m (electrics, ground-floor
+contents, plaster), and saturation above 3\,m as the structure approaches total loss.
+
+\subsection{Manning's Roughness}
+The default $n=0.04$ represents a suburban floodplain with mixed land cover (Chow, 1959):
+smooth concrete 0.012, short grass 0.025, urban and suburban 0.035--0.050, dense
+vegetation 0.070--0.100.
+
+\subsection{Retention Length}
+$\ell=10{,}000$\,m was chosen so that properties within a few kilometres of the river
+keep most of the flood signal (82\% at 2\,km), with the terrain scaling of MKM-PF-001
+shortening or lengthening the effective distance by land cover. It is an expert
+judgement, not fitted to observed inundation extents.
+
+% ===================================================================
+\mkmimplementation
+% ===================================================================
+
+\subsection{Module Architecture}
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lp{95mm}}
+    \toprule
+    \textbf{Module} & \textbf{Responsibility} \\
+    \midrule
+    \texttt{depth\_damage.py} & \texttt{scalar\_depth\_damage} (Eq.~\ref{eq:dd}); the BRI
+        polynomial, stilt and floor uplift; \texttt{is\_prs\_flood} \\
+    \texttt{elevation.py} & \texttt{relative\_elevation} (Eq.~\ref{eq:threshold}) \\
+    \texttt{velocity.py} & Manning, slope, travel time, retention and the property
+        hydrograph (Eqs.~\ref{eq:manning}--\ref{eq:hydrograph}) \\
+    \texttt{spatial.py} & haversine, IDW, correlation matrix, KDTree, nearest point on
+        a polyline \\
+    \texttt{risk\_analytics.py} & Monte Carlo, VaR, ES, HHI, grid concentration, KMeans \\
+    \texttt{hydrograph/} & the compound per-pulse hydrograph (MKM-HG-001; out of scope) \\
+    \bottomrule
+\end{tabular}
+\caption{Modules of \texttt{src/models/floodrisk/} (package version 2.1)}
+\label{tab:modules}
+\end{table}
+
+\subsection{How Production Uses It}
+For each property and storm, MKM-PF-001 takes the controlling gauge's peak, subtracts
+bankfull, scales by the retention $a(d)$ of Eq.~\eqref{eq:retention}, compares the
+result with the threshold of Eq.~\eqref{eq:threshold}, computes the travel time from
+Eqs.~\eqref{eq:manning}--\eqref{eq:travel}, builds the hydrograph of
+Eq.~\eqref{eq:hydrograph}, and applies the curve of Eq.~\eqref{eq:dd} to the peak depth.
+The hazard curve builder applies Eq.~\eqref{eq:dd} to the gauge level above the severe
+threshold.
+
+\subsection{Numerical Considerations}
+\begin{itemize}[nosep]
+    \item \textbf{Slope floor:} $S_{\min}=0.001$ keeps Manning's velocity finite on flat ground.
+    \item \textbf{Zero velocity:} the travel time is infinite; MKM-PF-001 then uses 0.
+    \item \textbf{Damage clipping:} shocked ratios are clipped to $[0,1]$.
+    \item \textbf{Shock draws:} the legacy \texttt{np.random.multivariate\_normal} factorises
+          by SVD, which tolerates a semi-definite matrix.
+    \item \textbf{Reproducibility:} the Monte Carlo reseeds NumPy's global generator with
+          42 on every call.
+\end{itemize}
+
+% ===================================================================
+\mkmsensitivity
+% ===================================================================
+
+Tables~\ref{tab:sens_dd}--\ref{tab:sens_ret} are generated from the code; each value is
+rounded and then printed by size (two places from 1 up, four below).
+
+\begin{table}[H]
+    \centering
+    \caption{Depth-damage function: damage ratio by flood depth.}
+    \label{tab:sens_dd}
+    \begin{tabular}{rr}
+        \toprule
+        \textbf{Depth (m)} & \textbf{Damage ratio} \\
+        \midrule
+        0.0000 & 0.0000 \\ 0.0500 & 0.0500 \\ 0.1000 & 0.0722 \\ 0.2500 & 0.1389 \\
+        0.5000 & 0.2500 \\ 0.7500 & 0.3250 \\ 1.00 & 0.4000 \\ 1.50 & 0.5000 \\
+        2.00 & 0.6000 \\ 3.00 & 0.7500 \\ 4.00 & 0.8500 \\ 5.00 & 0.9500 \\ 6.00 & 1.00 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Manning's velocity (m/s) by roughness coefficient ($S=0.005$).}
+    \label{tab:sens_manning}
+    \begin{tabular}{rrrr}
+        \toprule
+        \textbf{Manning's $n$} & \textbf{$v$ at $d=0.5$m} & \textbf{$v$ at $d=1.0$m} & \textbf{$v$ at $d=2.0$m} \\
+        \midrule
+        0.0200 & 2.23 & 3.54 & 5.61 \\
+        0.0300 & 1.49 & 2.36 & 3.74 \\
+        0.0400 & 1.11 & 1.77 & 2.81 \\
+        0.0500 & 0.8910 & 1.41 & 2.25 \\
+        0.0600 & 0.7420 & 1.18 & 1.87 \\
+        0.0800 & 0.5570 & 0.8840 & 1.40 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Retention factor by distance and characteristic length.}
+    \label{tab:sens_ret}
+    \begin{tabular}{rrrrr}
+        \toprule
+        \textbf{Distance (m)} & \textbf{$\ell=3000$m} & \textbf{$\ell=5000$m} & \textbf{$\ell=10000$m} & \textbf{$\ell=20000$m} \\
+        \midrule
+        0 & 1.00 & 1.00 & 1.00 & 1.00 \\
+        500 & 0.8465 & 0.9048 & 0.9512 & 0.9753 \\
+        1000 & 0.7165 & 0.8187 & 0.9048 & 0.9512 \\
+        2000 & 0.5134 & 0.6703 & 0.8187 & 0.9048 \\
+        5000 & 0.1889 & 0.3679 & 0.6065 & 0.7788 \\
+        10000 & 0.0357 & 0.1353 & 0.3679 & 0.6065 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Depth-Damage Curve Shift}
+Scaling every damage ratio by $1\pm10\%$ and taking the exact expected loss of
+Eq.~\eqref{eq:el} gives, for a single property:
+
+\begin{table}[H]
+    \centering
+    \caption{Expected loss after a $\pm$10\% curve shift, relative to the base curve.}
+    \label{tab:sens_shift}
+    \begin{tabular}{rrr}
+        \toprule
+        \textbf{Damage ratio $\delta$} & \textbf{+10\%} & \textbf{$-$10\%} \\
+        \midrule
+        0.1--0.5 & 1.1000 & 0.9000 \\
+        0.6 & 1.0997 & 0.9000 \\
+        0.7 & 1.0947 & 0.9009 \\
+        0.8 & 1.0785 & 0.9074 \\
+        0.9 & 1.0559 & 0.9228 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\noindent Below $\delta\approx0.6$ the shocked ratio almost never reaches 1 and the loss
+moves exactly with the curve. A portfolio's response is the value-weighted mix of these
+rows; v1.x's ``$\pm$8\%'' corresponds to a portfolio dominated by damage ratios near 0.8.
+
+\subsection{Manning's Roughness}
+At depth 1\,m and slope 0.003, over a 3\,km flow path:
+
+\begin{table}[H]
+    \centering
+    \caption{Velocity and travel time by roughness ($d=1$\,m, $S=0.003$, 3\,km).}
+    \label{tab:sens_rough}
+    \begin{tabular}{rrr}
+        \toprule
+        \textbf{$n$} & \textbf{Velocity (m/s)} & \textbf{Travel time (h)} \\
+        \midrule
+        0.025 & 2.19 & 0.38 \\
+        0.040 & 1.37 & 0.61 \\
+        0.060 & 0.9130 & 0.91 \\
+        0.100 & 0.5480 & 1.52 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\noindent Travel time scales with $n$. v1.x printed velocities of 0.64, 0.40, 0.27 and
+0.16\,m/s for this case, which Eq.~\eqref{eq:manning} does not give.
+
+\subsection{Retention Length}
+At 2\,km from the river a property retains 0.37 of the signal with $\ell=2{,}000$\,m,
+0.67 with 5{,}000\,m and 0.82 with the default 10{,}000\,m. Halving $\ell$ squares the
+retention at a given distance, so the flooded footprint is sensitive to it; that is why
+$\ell$ is a governed parameter.
+
+\subsection{Portfolio Sensitivities}
+The correlation length and Monte Carlo sample size sensitivities of v1.x (its Tables~11
+and~12) were computed on a portfolio the document did not specify, and are withdrawn. The
+Monte Carlo mean estimates Eq.~\eqref{eq:el}, so its sampling error can be judged against
+that exactly for any portfolio.
+
+% ===================================================================
+\mkmvalidation
+% ===================================================================
+
+\subsection{Depth-Damage Curve Validation}
+As reported in v1.x: the curve lies within the Multi-Coloured Manual's 25th--75th
+percentile band for residential property at every depth; against Environment Agency
+post-event surveys (summer 2007, winter 2013/14) its mean absolute error is 6\% in
+damage ratio over 340 properties; and 5-fold cross-validation on the MCM data gives an
+RMSE of 0.07.
+
+\subsection{Velocity Validation}
+As reported in v1.x: against TUFLOW 2D outputs on three Thames floodplain transects,
+Manning's velocity is within 18\% on average, overestimating in complex urban terrain;
+travel times are within $\pm$30 minutes over 2\,km. The overestimate is conservative,
+bringing the flood front earlier.
+
+\subsection{Implementation Benchmark}
+The Wolfram oracle benchmark (\texttt{MKM-DD-001\_wolfram\_benchmark}) verifies the code
+against Eqs.~\eqref{eq:dd}--\eqref{eq:el} at 50 digits and through an independent Wolfram
+Engine evaluation, and reproduces every printed figure in
+Tables~\ref{tab:sens_dd}--\ref{tab:sens_rough}.
+
+% ===================================================================
+\mkmlimitations
+% ===================================================================
+
+\begin{enumerate}
+    \item \textbf{Fluvial only.} Surface water, groundwater, coastal and sewer flooding
+          are not modelled.
+    \item \textbf{Static curve.} Damage depends on depth alone, not on duration,
+          velocity, contamination or warning time.
+    \item \textbf{Piecewise-linear curve.} It may understate damage between 0.05 and
+          0.5\,m, where escalation is nonlinear.
+    \item \textbf{Shallow-flow velocity.} $R_h\approx h$ holds only for wide, shallow
+          overbank flow.
+    \item \textbf{Isotropic retention.} Eq.~\eqref{eq:retention} decays with distance
+          alone, ignoring preferential flow paths; $\ell$ is expert judgement.
+    \item \textbf{Gaussian dependence.} The Monte Carlo's normal shocks are symmetric and
+          may understate joint tail losses; the 0.2 dispersion is uncalibrated.
+    \item \textbf{Degree conversion.} Eq.~\eqref{eq:corr} and the grid concentration use
+          1$^\circ\approx$111\,km in both directions, overstating east--west distance by
+          61\% at 51.5$^\circ$N.
+    \item \textbf{No flood defences} and \textbf{single events only}.
+    \item \textbf{Unused code.} IDW, the KDTree, the correlation matrix, the portfolio
+          analytics and the BRI polynomial have no production caller, and the property-type
+          factors and 25\,km decay radius sit unread in config.
+\end{enumerate}
+
+% ===================================================================
+\mkmgovernance
+% ===================================================================
+
+\subsection{Q1 --- Ronseal Test}
+Yes, for what production uses: the curve, the threshold and the velocity functions turn
+a flood at a gauge into depth, timing and damage at a property. The portfolio analytics
+do what they say but are not used.
+
+\subsection{Q2 --- Accuracy and Stability}
+The code computes its documented formulae to rounding error (\S7.3); the curve is
+validated against MCM and EA data and the velocity against TUFLOW (\S7.1--7.2). The
+functions are deterministic; the Monte Carlo is seeded.
+
+\subsection{Q3 --- Resource Usage}
+The production functions are scalar and cheap. The correlation matrix is $N\times N$:
+800\,MB for 10{,}000 properties.
+
+\subsection{Q4 --- Override Controls}
+No manual overrides. Parameters are version-controlled constants in \texttt{config/};
+changes go through code review.
+
+\subsection{Q5 --- Output Consumption}
+Damage ratios and flood depths feed the property flood timeseries and PRS pricing
+through MKM-PF-001, and the hazard curves through the hazard builder.
+
+\subsection{Q6 --- Model Chaining}
+Yes: MKM-PF-001 and the hazard curve builder consume it; it consumes gauge responses
+and property elevations.
+
+\subsection{Q7 --- Weaknesses}
+See \S8; the most material are the static curve, the expert-judged retention length
+and fluvial-only coverage.
+
+\subsection{Q8 --- Monitoring}
+Annual review of the curve against EA and MCM data; review of $\ell$ against observed
+inundation extents when available; re-running the implementation benchmark on any
+change to \texttt{src/models/floodrisk/}.
+
+\subsection{Q9 --- Overall Risk}
+Acceptable, conditional on the review of $\ell$: the curve is the most material
+component and is validated, while the retention length directly sets which properties
+flood and is not yet fitted to data.
+
+% ===================================================================
+\mkmchangelog
+% ===================================================================
+
+\begin{itemize}[nosep]
+    \item \textbf{v2.0:} documents package v2.1: the property-type factor and the
+          distance-decayed depth removed; the flood threshold of
+          Eq.~\eqref{eq:threshold}; $\ell=10{,}000$\,m with no near-field bypass;
+          retention applied once, by the caller; SVD shocks; the exact expected loss;
+          the curve-shift, roughness and retention tables regenerated from the code;
+          v1.x's correlation and sample-size tables withdrawn; the degree conversion
+          error corrected to 61\%.
+\end{itemize}
+
+\mkmhistorypage{13-Feb-2026 & 1.0 & Initial documentation & D. Kelly \\
+18-Feb-2026 & 1.1 & Added Section 9: Governance Validation Questions & D. Kelly \\
+26-Feb-2026 & 1.2 & Delta Engine added to inventory; models in scope updated (not filed) & D. Kelly \\
+26-Mar-2026 & 1.4 & Nearest-gauge propagation; retention length 10 km with a 2 km near-field bypass (not filed) & D. Kelly \\
+03-Nov-2026 & 2.0 & Rewritten to the code (package v2.1) after the Wolfram benchmark & David K Kelly \\}
+
+\end{document}
