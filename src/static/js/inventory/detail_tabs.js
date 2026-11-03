@@ -31,15 +31,8 @@ Object.assign(Detail, {
     const d = this._model.data || {};
     const box = document.getElementById("dt-content");
     if (this._tab === "overview") {
-      // Numerical methods sit beside the methodology they implement. Reference only:
-      // nothing scores, classifies or reviews them (config/governance/_numerical_methods).
-      box.innerHTML = this._overview(d) +
-        '<p class="muted" style="font-size:var(--size-sm);margin-top:var(--space-8)">The off-the-shelf ' +
-        "numerical methods this model is built with, for reference. They are not governed in their " +
-        "own right; how this model sets them (bump size, path count, tolerance) belongs in its assumptions.</p>" +
-        this._collSection("numerical_methods", d);
+      box.innerHTML = this._overview(d);
       this._bindEdits();
-      this._bindCollections(["numerical_methods"]);
       return;
     }
     if (this._tab === "connections") {
@@ -55,9 +48,17 @@ Object.assign(Detail, {
         this._collSection("dependencies", d) +
         '<p class="muted" style="font-size:var(--size-sm);margin-top:var(--space-8)">The feeds this model pulls its inputs ' +
         "from. Any model that draws on the same source is linked to it above.</p>" +
-        this._collSection("data_sources", d);
+        this._collSection("data_sources", d) +
+        // Last: what the model is built WITH, after what it is connected TO. Reference
+        // only -- nothing scores, classifies or reviews them
+        // (config/governance/_numerical_methods). Kept off Overview, which says what
+        // the model is rather than listing its parts.
+        '<p class="muted" style="font-size:var(--size-sm);margin-top:var(--space-8)">The off-the-shelf ' +
+        "numerical methods this model is built with, for reference. They are not governed in their " +
+        "own right; how this model sets them (bump size, path count, tolerance) belongs in its assumptions.</p>" +
+        this._collSection("numerical_methods", d);
       Neighbourhood.render(this._id, "nbhd-host");
-      this._bindCollections(["dependencies", "data_sources"]);
+      this._bindCollections(["dependencies", "data_sources", "numerical_methods"]);
       return;
     }
     if (this._tab === "risk") {
