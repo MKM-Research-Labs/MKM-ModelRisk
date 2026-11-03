@@ -58,8 +58,9 @@ What this record deliberately does NOT carry:
 ``estimator`` / ``training_runs``  Nobody in the firm fitted this. Provenance is the
                                    provider and the version, not a train.
 ``validation_questions``           It has its own questionnaire, seeded from its own
-                                   admin list -- not one of the ten ML questions is
-                                   answerable about a model the firm did not train.
+                                   admin list -- not one of the seven ML-specific
+                                   questions is answerable about a model the firm
+                                   did not train.
 ``dependencies``                   Phase 3, with the Product binding.
 """
 from __future__ import annotations

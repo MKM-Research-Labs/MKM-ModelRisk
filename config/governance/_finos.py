@@ -29,10 +29,10 @@ of rows. FINOS is TWO catalogues, and they are different kinds of statement:
 ``FINOS_RISK_CATALOGUE``        Exposures a deployer carries. AIR-OP-004 is true of
                                 every LLM in an estate whether or not anybody has
                                 written it down. Evidenced from the RECORD.
-``FINOS_MITIGATION_CATALOGUE``  Controls the institution runs, largely outside this
-                                platform. Evidenced from a FILED DOCUMENT -- the
-                                firm's own description of how it implements the
-                                control, tagged with the references it covers.
+``FINOS_MITIGATION_CATALOGUE``  Controls the institution runs. Only the ones this
+                                platform evidences from the RECORD are listed; the
+                                rest run outside it, and the shelf that once took a
+                                filed description of them was withdrawn.
 
 They enter ``FRAMEWORK_COVERAGE`` as two separate entries rather than as one
 framework with a catalogue dimension. The report already renders one table per
@@ -58,12 +58,6 @@ from __future__ import annotations
 
 FINOS_RISKS = "FINOS AIGF -- Risk catalogue"
 FINOS_MITIGATIONS = "FINOS AIGF -- Mitigation catalogue"
-
-# The probe every mitigation row uses unless the platform evidences it from the
-# record itself. It reads the FINOS shelf and asks whether any filed document names
-# this row's reference -- so it is the one probe here that depends on which row it
-# is being run for (``REF_PROBES`` in src.governance.completeness.framework).
-EVIDENCE_PROBE = "finos_evidence"
 
 # (reference, title, probe, note) -- the same four-tuple the other frameworks use,
 # so nothing in the counting has to know which framework a row came from.
@@ -149,62 +143,18 @@ FINOS_RISK_CATALOGUE = (
      "No licensing, training-provenance or output-ownership record."),
 )
 
-# Every mitigation is evidenced by a document on the FINOS shelf naming it, with one
-# exception: system acceptance testing is a thing this platform already holds against
-# the record itself, and reporting it as unevidenced because nobody had also written a
-# paper about it would be the register disowning its own evidence.
+# Only the mitigations the platform evidences from the register. The catalogue's
+# other mitigations are controls run outside this platform, and they were once
+# evidenced by a document filed on a FINOS artefact shelf. That shelf was withdrawn
+# (2026-10-20): listing those rows with nothing that could ever evidence them would
+# print a table of permanent gaps that no action on the register could close.
 FINOS_MITIGATION_CATALOGUE = (
-    # --- Preventative ---
-    ("AIR-PREV-002", "Data Filtering From External Knowledge Bases", EVIDENCE_PROBE, ""),
-    ("AIR-PREV-003", "User/App/Model Firewalling/Filtering", EVIDENCE_PROBE, ""),
     ("AIR-PREV-005", "System Acceptance Testing", "acceptance",
      "Unit, integration and benchmark testing recorded against the record, with the "
-     "evidence filed under the Testing categories. The one mitigation the platform "
-     "evidences from the register rather than from a filed description."),
-    ("AIR-PREV-006", "Data Quality & Classification/Sensitivity", EVIDENCE_PROBE,
-     "The platform holds the feeds a record draws on, but not their sensitivity "
-     "classification, so the filed description carries this on its own."),
-    ("AIR-PREV-007", "Legal and Contractual Frameworks for AI Systems", EVIDENCE_PROBE,
-     "Artefact shelves already hold policies and terms of reference; contracts and "
-     "supplier due diligence are not modelled, so this is the filed description."),
-    ("AIR-PREV-008", "Quality of Service (QoS) and DDoS Prevention for AI Systems",
-     EVIDENCE_PROBE, ""),
-    ("AIR-PREV-010", "AI Model Version Pinning", EVIDENCE_PROBE,
-     "A pinned version belongs on the record as well as in a description; there is "
-     "no field for one until an AI System record exists."),
-    ("AIR-PREV-012", "Role-Based Access Control for AI Data", EVIDENCE_PROBE, ""),
-    ("AIR-PREV-014", "Encryption of AI Data at Rest", EVIDENCE_PROBE, ""),
-    ("AIR-PREV-017", "AI Firewall Implementation and Management", EVIDENCE_PROBE, ""),
-    ("AIR-PREV-018", "Agent Authority Least Privilege Framework", EVIDENCE_PROBE, ""),
-    ("AIR-PREV-019", "Tool Chain Validation and Sanitization", EVIDENCE_PROBE, ""),
-    ("AIR-PREV-020", "MCP Server Security Governance", EVIDENCE_PROBE, ""),
-    ("AIR-PREV-022", "Multi-Agent Isolation and Segmentation", EVIDENCE_PROBE, ""),
-    ("AIR-PREV-023", "Agentic System Credential Protection Framework", EVIDENCE_PROBE, ""),
-    # --- Detective ---
-    ("AIR-DET-001", "AI Data Leakage Prevention and Detection", EVIDENCE_PROBE, ""),
-    ("AIR-DET-004", "AI System Observability", EVIDENCE_PROBE,
-     "Operational failure events are recorded against a record after the fact. "
-     "Runtime telemetry is not something the platform sees."),
-    ("AIR-DET-009", "AI System Alerting and Denial of Wallet (DoW) / Spend Monitoring",
-     EVIDENCE_PROBE, ""),
-    ("AIR-DET-011", "Human Feedback Loop for AI Systems", EVIDENCE_PROBE,
-     "The challenge thread is attributed, append-only human feedback -- but on the "
-     "governance record, not on the system's outputs. Counting it here would be "
-     "answering a different question than the one asked."),
-    ("AIR-DET-013", "Providing Citations and Source Traceability for AI-Generated "
-     "Information", EVIDENCE_PROBE, ""),
+     "evidence filed under the Testing categories."),
     ("AIR-DET-015", "Using Large Language Models for Automated Evaluation "
      "(LLM-as-a-Judge)", "judged",
-     "A judge evaluation recorded against the record, with what it returned. The "
-     "second mitigation evidenced from the register rather than from a filed "
-     "description -- reporting it unevidenced because nobody had also written a "
-     "paper about it would be the register disowning evidence it holds."),
-    ("AIR-DET-016", "Preserving Source Data Access Controls in AI Systems",
-     EVIDENCE_PROBE, ""),
-    ("AIR-DET-021", "Agent Decision Audit and Explainability", EVIDENCE_PROBE,
-     "The platform keeps exactly the attributed, append-only log this asks for, "
-     "over governance events. The mechanism transfers; the subject does not exist "
-     "yet."),
+     "A judge evaluation recorded against the record, with what it returned."),
 )
 
 # Printed under each FINOS table, before its rows. The other frameworks share one
@@ -218,12 +168,9 @@ FINOS_RISK_NOTE = (
     "counted, it is counted over the models and ML Applications on the register."
 )
 FINOS_MITIGATION_NOTE = (
-    "These are controls the institution runs, most of them outside this platform. "
-    "A row is evidenced by a document filed on the FINOS shelf naming its "
-    "reference, and the evidence names that document and the date it was filed. "
-    "That is a record that the control has been DESCRIBED, which is what a "
-    "governance register can attest; it is not a statement that the control was "
-    "found to be operating."
+    "These are the mitigations the register itself evidences, counted over the "
+    "records on it. The catalogue's other mitigations are controls the institution "
+    "runs outside this platform, and are not reported here."
 )
 
 # Keyed by framework name, for the general FRAMEWORK_NOTES mechanism next door. The
@@ -236,14 +183,5 @@ FINOS_NOTES = {FINOS_RISKS: FINOS_RISK_NOTE, FINOS_MITIGATIONS: FINOS_MITIGATION
 FINOS_COVERAGE = ((FINOS_RISKS, FINOS_RISK_CATALOGUE),
                   (FINOS_MITIGATIONS, FINOS_MITIGATION_CATALOGUE))
 
-# What a document on the FINOS shelf can be tagged with, ready for the upload form.
-# Derived here rather than in the API so the picker and the coverage table cannot
-# come to disagree about which references exist: edit the catalogue above and both
-# follow. Only mitigations -- a risk is an exposure, and no filed paper evidences one.
-FINOS_MITIGATION_REFS = tuple(
-    {"ref": ref, "title": title} for ref, title, _probe, _note in
-    FINOS_MITIGATION_CATALOGUE)
-
 __all__ = ["FINOS_RISKS", "FINOS_MITIGATIONS", "FINOS_RISK_CATALOGUE",
-           "FINOS_MITIGATION_CATALOGUE", "FINOS_COVERAGE", "FINOS_NOTES",
-           "FINOS_MITIGATION_REFS", "EVIDENCE_PROBE"]
+           "FINOS_MITIGATION_CATALOGUE", "FINOS_COVERAGE", "FINOS_NOTES"]

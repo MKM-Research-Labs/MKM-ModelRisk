@@ -34,6 +34,8 @@ from config.governance import (DATA_SOURCE_LIST, DEFAULT_DATA_SOURCES,
                                STANDING_AGENDA, STANDING_AGENDA_LIST,
                                STATUS_VOCABULARIES,
                                VENDOR_LIST)
+from config.governance._numerical_methods import (DEFAULT_NUMERICAL_METHODS,
+                                                  NUMERICAL_METHOD_LIST)
 from config.identity import SYSTEM_ACTOR
 from src.database import Event, append_event
 from src.governance import collections as coll
@@ -134,6 +136,7 @@ def ensure_default_model_types(*, actor: str = SYSTEM_ACTOR, config=None) -> int
 _DEFAULT_SIMPLE_LISTS = {
     DATA_SOURCE_LIST: DEFAULT_DATA_SOURCES,
     VENDOR_LIST: DEFAULT_VENDORS,
+    NUMERICAL_METHOD_LIST: DEFAULT_NUMERICAL_METHODS,
 }
 
 
@@ -195,7 +198,7 @@ def ensure_default_common_questions(*, actor: str = SYSTEM_ACTOR, config=None) -
     """Seed the shared questionnaire on a fresh install; return how many.
 
     The five questions asked of any application of a model, whatever produced it. Seeded
-    like the ML list rather than left to the shipped fallback the AI list relies on, so
+    like the ML and AI lists rather than left to the shipped fallback, so
     an administrator can see and edit them on day one — they are the questions most
     likely to need an institution's own wording, because they are the ones asked of
     everything.
@@ -271,7 +274,7 @@ def ensure_default_status_vocabularies(*, actor: str = SYSTEM_ACTOR, config=None
 
 
 def ensure_default_reference_lists(*, actor: str = SYSTEM_ACTOR, config=None) -> int:
-    """Seed the simple admin lists (data source, vendor); return how many added.
+    """Seed the simple admin lists (data source, vendor, numerical method); return how many.
 
     Same rule as ``ensure_default_model_types``: each list is seeded only while
     empty, so an adopter who has curated (renamed, pruned, or extended) a list

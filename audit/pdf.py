@@ -84,6 +84,7 @@ def _summary_table(report: dict) -> str:
              _result(report["undefined_tokens"])],
             ["R10", "Colour literals in asset types outside the gate",
              _reported(report["styling_backlog"])],
+            ["R11", "Screens use the shared headings and tab bars", _result(report["layout"])],
         ],
     )
 

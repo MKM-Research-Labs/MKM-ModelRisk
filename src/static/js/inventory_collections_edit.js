@@ -115,8 +115,10 @@ Object.assign(Collections, {
       const parts = sel.getAttribute("data-upd").split("|");
       sel.onchange = function () {
         const fields = {};
-        fields[parts[2]] = sel.value;
-        App.amend("Set " + parts[2] + ' = "' + sel.value + '" on ' + parts[1] + ".",
+        // A multi-select saves the whole list, not the first of it.
+        fields[parts[2]] = sel.multiple
+          ? [...sel.selectedOptions].map((o) => o.value) : sel.value;
+        App.amend("Set " + parts[2] + ' = "' + fields[parts[2]] + '" on ' + parts[1] + ".",
           "POST", base + parts[0] + "/" + parts[1], { fields: fields }, refresh);
       };
     });
@@ -151,7 +153,11 @@ Object.assign(Collections, {
       '<button class="btn small" id="ce-cancel">Cancel</button></div></td>';
     visible.forEach(function (f) {
       const el = document.getElementById("ce-" + f.key);
-      if (item[f.key] !== null && item[f.key] !== undefined) el.value = item[f.key];
+      const held = item[f.key];
+      if (held === null || held === undefined) return;
+      // A multi-select takes a list, and ``.value`` would select only one of it.
+      if (el.multiple) [...el.options].forEach((o) => { o.selected = [].concat(held).includes(o.value); });
+      else el.value = held;
     });
     document.getElementById("ce-cancel").onclick = refresh;
     document.getElementById("ce-save").onclick = function () {

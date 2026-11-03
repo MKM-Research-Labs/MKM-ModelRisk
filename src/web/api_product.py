@@ -23,7 +23,6 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from config.governance import (
-    DOC_CATEGORIES,
     PRODUCT_BINDINGS,
     PRODUCT_COMPONENTS,
     VALID_COMPONENT_KINDS,
@@ -32,9 +31,9 @@ from config.governance import (
     PRODUCT_REGISTER_FIELDS,
 )
 from src.command import dispatch
-from src.files import UploadError, upload_path
+from src.files import upload_path
 from src.governance.documents import (
-    add_document, find_document, product_scope as _product_scope, remove_document,
+    find_document, product_scope as _product_scope, remove_document,
 )
 from src.governance.model_handoff import annotate_links
 from src.governance.ml_application import list_ml_applications
@@ -52,6 +51,7 @@ from src.governance.product import (
     update_product_field,
 )
 from src.governance.product.commands import AGGREGATE_TYPE as PRODUCT_AGGREGATE
+from src.web._document_upload import file_document
 from src.web._helpers import (collection_field_specs, grouped_field_specs,
     context_from_request,
     json_body,
@@ -207,19 +207,10 @@ def upload_document(product_id: str):
     """Supporting Documentation: upload a categorised file against the Product."""
     if get_product(product_id) is None:
         return jsonify({"error": "Product not found"}), 404
-    category = request.form.get("category")
-    if category not in DOC_CATEGORIES:
-        return jsonify({"error": "invalid category"}), 400
-    file = request.files.get("file")
-    if file is None:
-        return jsonify({"error": "no file provided"}), 400
-    try:
-        add_document(
-            aggregate_type=PRODUCT_AGGREGATE, aggregate_id=product_id, scope=_product_scope(product_id),
-            category=category, filename=file.filename, data=file.read(),
-            description=request.form.get("description", ""), actor=request_actor())
-    except UploadError as exc:
-        return jsonify({"error": str(exc)}), 400
+    error = file_document(aggregate_type=PRODUCT_AGGREGATE, aggregate_id=product_id,
+                          scope=_product_scope(product_id))
+    if error:
+        return error
     rebuild_product_view()
     return jsonify(get_product(product_id)), 201
 

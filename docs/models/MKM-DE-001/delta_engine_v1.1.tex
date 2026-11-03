@@ -1,0 +1,343 @@
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+%
+% MKM-DE-001 Delta Engine -- model documentation v1.1, the document of record filed on
+% the model as Core Documentation. Recovered from PhysicalRisk (removed from that repo
+% with the other per-model docs in 527b5a348) and corrected in v1.1.
+%
+% Build: it inputs the house header, which lives in PhysicalRisk. Copy
+% PhysicalRisk/docs/models/shared beside this folder as ../shared, then run
+% pdflatex three times (the third settles "Page n of N").
+\documentclass[11pt,a4paper]{article}
+\newcommand{\doctitle}{Delta Engine Model}
+\newcommand{\docsubtitle}{PRS Trade Revaluation, FS01 Risk, and Mark-to-Market}
+\newcommand{\docversion}{1.1}
+\newcommand{\docdate}{26-October-2026}
+\newcommand{\docauthor}{David K Kelly}
+\input{../shared/mkm_header}
+% T1 so underscores in code identifiers print as underscores.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% The shared history table sets every column to its natural width, so a long entry runs
+% off the page. Wrap the description here, for this document only.
+\renewcommand{\mkmhistorypage}[1]{%
+    \section{Document History}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{l|l|p{10cm}|l}
+            \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+            \hline
+            #1
+        \end{tabular}
+        \label{tab:revision_history}
+    \end{table}
+    \clearpage
+}
+
+\begin{document}
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 1. EXECUTIVE SUMMARY
+% ---------------------------------------------------------------------------
+\mkmexecsummary
+
+This document describes the Delta Engine Model developed by MKM Research Labs for the real-time revaluation of Physical Risk Swap (PRS) trades on the trading desk. The model is the primary risk engine for the PRS market-making platform, computing mark-to-market (MTM) valuations, flood sensitivity (FS01) risk measures, and portfolio risk aggregation across gauge locations and tenor buckets.
+
+The engine consumes market state---yield curves and hazard term structures maintained by the trader---and computes three core outputs: (i)~fair PRS spreads via the analytical pricing model (MKM-PR-001), (ii)~FS01 (Flood Sensitivity 01), the P\&L impact of a 1\,bp parallel shift in the annual hazard rate at each gauge, and (iii)~mark-to-market as the difference between inception spread and current fair spread, weighted by the risky annuity and trade notional. Portfolio-level risk is aggregated into a gauge~$\times$~tenor risk grid for position management.
+
+The model has been implemented in Python as the \texttt{DeltaEngine} class and validated against hand-calculated examples using the analytical PRS pricing model.
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 2. MODEL PURPOSE AND SCOPE
+% ---------------------------------------------------------------------------
+\mkmpurpose
+
+\subsection{Objective}
+
+The Delta Engine serves as the real-time risk and revaluation engine for the PRS trading desk. Its primary objectives are:
+
+\begin{enumerate}[label=(\roman*)]
+    \item Compute the fair PRS spread for each open trade using the current market hazard term structure and yield curve.
+    \item Compute FS01 (Flood Sensitivity 01): the P\&L impact of a 1\,bp increase in the annual hazard rate, signed by trade direction (positive for protection buyers, negative for protection sellers).
+    \item Compute mark-to-market (MTM) for each trade as the present value of the spread differential between inception and current market.
+    \item Aggregate FS01 into a portfolio risk grid (gauge~$\times$~tenor) for position monitoring and limit management.
+    \item Support basis delta for property-level PRS trades where the property spread tracks the reference gauge.
+\end{enumerate}
+
+\subsection{Scope}
+
+The model is scoped to the revaluation of vanilla PRS trades (gauge-referenced and property-referenced) under deterministic market moves. Stochastic simulation (e.g.\ VaR via Monte Carlo) is outside scope. The engine assumes that the hazard term structure and yield curve are exogenous inputs maintained by the trader via the Market tab. The underlying analytical pricing is delegated to MKM-PR-001 (PRS Pricing Model); this model computes the \emph{differentials} needed for risk.
+
+The model consumes data from: (a)~the market state file containing yield curves and hazard term structures per gauge; (b)~PRS trade files in CDM format; and (c)~the PRS analytical pricing function \texttt{compute\_prs\_spread()}. Outputs feed the blotter display, the FS01 risk grid, the aggregate risk map, and end-of-day P\&L reports.
+
+\subsection{Regulatory Context}
+
+The Delta Engine supports compliance with PRA SS1/23 Section 3.4 (model risk in pricing and risk management), which requires firms to have robust revaluation processes for derivative instruments. The FS01 measure provides the first-order risk sensitivity required for position management, limit monitoring, and P\&L attribution. The model also supports the market risk P\&L decomposition required for internal risk reporting: new-trade P\&L versus market-move P\&L.
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 3. MATHEMATICAL FRAMEWORK
+% ---------------------------------------------------------------------------
+\mkmframework
+
+\subsection{Risky Annuity}
+
+The risky annuity is the present value of a unit coupon stream that terminates upon a flood event:
+\begin{equation}
+    A(\lambda, T) = \sum_{i=1}^{4T} \Delta t \cdot S(t_i) \cdot D(t_i)
+\end{equation}
+where $\Delta t = 0.25$ (quarterly payments), $t_i = i \cdot \Delta t$, $S(t) = e^{-\lambda t}$ is the survival probability under hazard rate $\lambda$, and $D(t) = e^{-r(t) \cdot t}$ is the discount factor using the yield curve rate $r(t)$.
+
+The hazard intensity $\lambda$ is derived from the annual hazard rate $h$:
+\begin{equation}
+    \lambda = -\ln(1 - h)
+\end{equation}
+
+\subsection{Fair Spread}
+
+The fair PRS spread is computed by the upstream PRS Pricing Model (MKM-PR-001):
+\begin{equation}
+    s^* = \frac{\text{Default Leg PV}}{\text{Premium Leg PV}}
+\end{equation}
+where the default leg PV is the expected loss from flood events and the premium leg PV is the risky annuity.
+
+\subsection{Mark-to-Market}
+
+For a trade with inception spread $s_0$ and current fair spread $s^*$:
+\begin{equation}
+    \text{MTM} = \delta \cdot (s^* - s_0) \cdot A(\lambda, T) \cdot N
+\end{equation}
+where $\delta = +1$ for a protection buyer (payer) and $\delta = -1$ for a protection seller (receiver), $A$ is the risky annuity, and $N$ is the notional.
+
+A positive MTM for a payer means flood risk has increased since inception (the market now charges more for protection than the trade's contracted spread).
+
+The annuity used for valuation is the unrounded value; the engine rounds it to six
+decimal places only for display. (Before v1.1 the rounded figure was used, which moved
+MTM by up to GBP\,3.40 on a GBP\,10m trade.)
+
+\subsection{FS01 --- Flood Sensitivity 01}
+
+FS01 measures the P\&L impact of a 1\,bp parallel shift in the annual hazard rate:
+\begin{equation}
+    \text{FS01} = \delta \cdot \frac{s^*(h + 1\text{bp}) - s^*(h)}{10{,}000} \cdot A(h, T) \cdot N
+\end{equation}
+
+The sign convention: positive FS01 indicates the position profits when flood risk increases (protection buyer), negative FS01 indicates the position profits when flood risk decreases (protection seller).
+
+\paragraph{The spread floor.} The fair spread is floored at 2\,bp. While it sits on the
+floor, a 1\,bp rise in $h$ does not move it, so FS01 is near zero: that is the correct
+P\&L sensitivity, since MTM does not move either, but it says nothing of the flood risk
+underneath. The engine therefore also reports \texttt{gauge\_at\_floor} and
+\texttt{gauge\_hazard\_delta\_bps}, the same bump applied to the unfloored spread. At
+$h=1$\,bp, for example, FS01 reflects a 0.008\,bp spread change while the hazard
+sensitivity is 1.0\,bp.
+
+\subsection{Basis Delta}
+
+For property-level trades, the property spread is assumed to track the reference gauge spread with a constant basis $b$:
+\begin{equation}
+    s_{\text{property}} = s_{\text{gauge}} - b
+\end{equation}
+
+Under this assumption, a 1\,bp bump to the gauge hazard rate produces the same spread change at the property level. The engine applies the assumption directly: the basis delta \emph{is} the gauge delta, and the basis value supplied with the trade is not used in the calculation. It would differ only if the basis components (distance, elevation, depth-damage, correlation, data quality) were modelled as sensitive to the gauge rate, which they are not.
+
+\subsection{Risk Grid Aggregation}
+
+The portfolio risk grid aggregates FS01 across two dimensions:
+\begin{equation}
+    \text{FS01}_{g,\tau} = \sum_{i \in \text{trades}(g,\tau)} \text{FS01}_i
+\end{equation}
+where $g$ indexes gauges (ordered west-to-east by longitude) and $\tau$ indexes tenor buckets. Row totals give net gauge exposure; column totals give net tenor exposure; the grand total gives net portfolio FS01.
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 4. INPUT PARAMETERS AND CALIBRATION
+% ---------------------------------------------------------------------------
+\mkminputs
+
+The Delta Engine does not have fitted parameters of its own. It consumes:
+
+\begin{itemize}
+    \item \textbf{Market yield curve:} humped term structure \{1Y: 3.5\%, 2Y: 4.0\%, 3Y: 4.3\%, 4Y: 4.5\%, 5Y: 4.0\%, 6Y: 4.0\%\} stored in \texttt{market\_state.json}. Rates are continuously compounded.
+    \item \textbf{Hazard term structure:} per-gauge, per-trigger (alert/warning/severe), 1Y--5Y hazard rates. Initialised from GEV-derived base rates with a default slope of $h(t) = h_0 \cdot (1 + 0.05t)$. Editable by the trader via the Market tab.
+    \item \textbf{Trade parameters:} notional, inception spread, tenor, direction (payer/receiver), gauge ID, trigger level, recovery rate. Read from CDM-format PRS trade files.
+    \item \textbf{Bump size:} 1\,bp ($10^{-4}$) for numerical delta computation.
+\end{itemize}
+
+\emph{Calibration:} The engine is calibration-free. All market parameters are maintained by the trader. The analytical pricing function (MKM-PR-001) provides the spread calculation.
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 5. IMPLEMENTATION DETAILS
+% ---------------------------------------------------------------------------
+\mkmimplementation
+
+\subsection{Architecture}
+
+The Delta Engine is the \texttt{src/models/trading/delta\_engine} package: the \texttt{DeltaEngine} class in \texttt{engine.py}, and the pricing functions (risky annuity, gauge and basis delta, MTM) in \texttt{pricer.py}. It depends on:
+\begin{itemize}
+    \item \texttt{MarketStateManager} --- loads/persists market state (yield curve, hazard term structures, gauge adjustments)
+    \item \texttt{compute\_prs\_spread()} from \texttt{models.hazard.prs\_analytical} --- analytical fair spread
+    \item \texttt{interpolate\_yield\_rate()} --- linear interpolation on the yield curve for tenor-matched discounting
+\end{itemize}
+
+\subsection{Key Methods}
+
+\begin{itemize}
+    \item \texttt{enrich\_trade(trade, market\_state)}: enriches a single CDM trade record with fair spread, MTM, FS01, basis delta, gauge name, counterparty, and remaining tenor. Returns a flat dictionary suitable for blotter display.
+    \item \texttt{revalue\_all(trades, market\_state)}: batch revaluation of all trades.
+    \item \texttt{build\_risk\_grid(enriched\_trades, gauge\_locations)}: aggregates FS01 into a gauge~$\times$~tenor matrix, sorted by longitude.
+\end{itemize}
+
+\subsection{Yield Curve Interpolation}
+
+The engine uses \texttt{interpolate\_yield\_rate(curve, t)} for tenor-matched discounting within the risky annuity calculation. For sub-annual periods ($t < 1$), the function returns the 1Y rate. For inter-tenor points, linear interpolation is used. Beyond the longest tenor, the curve is flat-extrapolated.
+
+\subsection{P\&L Decomposition}
+
+The P\&L Engine (the \texttt{src/models/trading/pnl\_engine} package) uses the Delta Engine's revaluation output to decompose daily P\&L into:
+\begin{itemize}
+    \item \textbf{New trade P\&L:} MTM at inception (typically small, reflecting bid-ask).
+    \item \textbf{Market move P\&L:} change in MTM from hazard curve and yield curve movements.
+    \item \textbf{Running P\&L:} cumulative MTM from inception.
+\end{itemize}
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 6. SENSITIVITY ANALYSIS
+% ---------------------------------------------------------------------------
+\mkmsensitivity
+
+Key sensitivities of the Delta Engine outputs:
+
+\begin{enumerate}
+    \item \textbf{Hazard rate level:} FS01 is nearly independent of the hazard rate. A 1\,bp rise in $h$ raises the fair spread by about 1\,bp at any level ($\mathrm{d}s/\mathrm{d}h\approx10^4$), so FS01 $\approx10^{-4}A\,N$ follows the risky annuity, which falls slowly as $h$ rises: FS01 at 500\,bp is 0.94 times FS01 at 50\,bp for a 5-year trade. (v1.0 said FS01 scaled approximately linearly with $h$; corrected against the Wolfram benchmark.) At very high rates ($>$1000\,bps), convexity causes FS01 to understate the true P\&L for large moves.
+    \item \textbf{Tenor:} Longer-tenor trades have higher FS01 due to the larger risky annuity. A 5Y trade has approximately 4.5x the FS01 of a 1Y trade.
+    \item \textbf{Yield curve:} A 100\,bp parallel rise in the yield curve lowers FS01 by 0.4\% (1-year) to 2.4\% (5-year) through the discount factor channel (v1.0 said 3--5\%; corrected against the Wolfram benchmark). The effect is second-order relative to hazard rate sensitivity.
+    \item \textbf{Recovery rate:} Fixed at 0\% for all current trades (physical risk has no recovery). If recovery were nonzero, FS01 would decrease proportionally.
+    \item \textbf{Bump size:} The 1\,bp numerical bump is small enough that finite-difference error is negligible ($<$0.01\,bp spread difference versus analytical gradient).
+\end{enumerate}
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 7. VALIDATION AND BACKTESTING
+% ---------------------------------------------------------------------------
+\mkmvalidation
+
+\subsection{Unit Tests}
+
+61 tests in \texttt{tests/models/trading/} cover:
+\begin{itemize}
+    \item Risky annuity calculation: zero hazard rate, positive rate, yield curve interpolation
+    \item Gauge delta: sign convention, scaling with notional, payer vs receiver
+    \item Basis delta: property trades, constant basis assumption
+    \item MTM: sign by direction, spread differential, annuity weighting
+    \item Risk grid: aggregation, tenor bucketing, gauge ordering by longitude
+    \item Book generator: Thames Central trades, CDM validation, yield curve usage
+\end{itemize}
+
+\subsection{Hand-Calculation Verification}
+
+The risky annuity for a 3Y PRS with 200\,bps hazard rate and 4\% flat discount rate is verified against the closed-form sum:
+\begin{equation}
+    A = \sum_{i=1}^{12} 0.25 \cdot e^{-0.02020 \cdot 0.25i} \cdot e^{-0.04 \cdot 0.25i} = 2.724084
+\end{equation}
+where $\lambda = -\ln(1 - 0.02) = 0.020203$. (v1.0 gave $\lambda\approx0.02015$ and $A\approx2.738$; both are corrected here, and the model has always computed 2.724084.)
+
+\subsection{Independent Benchmark (Wolfram)}
+
+The engine's pricing functions were benchmarked on 26~October~2026 against a 50-digit
+\texttt{mpmath} implementation of this document's formulae and Wolfram Engine~15.0,
+which sums the legs exactly and differentiates the spread symbolically, over 120 cases
+(annual hazard rates $10^{-4}$ to 0.5, tenors 1--10 years, a flat 3\% curve and the
+book curve). The risky annuity agrees to $6\times10^{-16}$, and FS01, the spread change
+and the displayed annuity agree to within the rounding the engine applies; the 1\,bp
+bump is within $3\times10^{-4}$\,bp of the exact gradient. The benchmark is filed on the
+model record (Docs $\rightarrow$ Benchmark); its findings are reflected in
+Sections~3.3, 3.4, 3.5 and~6 of this version.
+
+\subsection{Cross-Validation with PRS Pricing Model}
+
+The fair spread computed by the Delta Engine's call to \texttt{compute\_prs\_spread()} is verified to match the standalone PRS pricing model output for identical inputs.
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 8. MODEL LIMITATIONS AND KNOWN WEAKNESSES
+% ---------------------------------------------------------------------------
+\mkmlimitations
+
+\begin{enumerate}
+    \item \textbf{Spread floor:} while the fair spread is on the 2\,bp floor, FS01 is near zero; the hazard sensitivity is reported beside it (Section~3.4), but risk limits set on FS01 alone will not see these positions.
+    \item \textbf{First-order risk only:} FS01 is a linear approximation. For large hazard rate moves ($>$50\,bps), the actual P\&L will differ from $\text{FS01} \times \Delta h$ due to convexity. Gamma (second-order sensitivity) is not computed.
+    \item \textbf{No cross-gamma:} The model does not compute cross-sensitivities between gauges. Portfolio risk assumes independent gauge moves.
+    \item \textbf{Constant basis assumption:} Basis delta assumes the gauge-to-property basis is insensitive to small gauge rate changes. This may not hold for extreme rate environments.
+    \item \textbf{No term structure slope risk:} FS01 bumps the hazard rate in parallel across all tenors. Non-parallel moves (steepening, flattening) are not captured.
+    \item \textbf{Deterministic yield curve:} Interest rate risk is not separately measured. A yield curve DV01 could be added.
+    \item \textbf{No jump risk:} The model assumes continuous hazard rate changes. Sudden catastrophic events (e.g.\ levee breach) producing discrete jumps in hazard rate are not modelled.
+\end{enumerate}
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 9. GOVERNANCE VALIDATION QUESTIONS
+% ---------------------------------------------------------------------------
+\mkmgovernance
+
+\mkmvqitem{1}{Ronseal Test}{Does the model do what it says on the tin?}
+
+Yes. The Delta Engine computes FS01 (flood sensitivity), mark-to-market, and risk grid aggregation for PRS trades. These are standard risk measures analogous to DV01 in interest rate swaps, adapted for the flood hazard rate domain.
+
+\mkmvqitem{2}{Methodology}{Is the methodology appropriate?}
+
+The numerical bump-and-reprice approach for delta calculation is standard practice in derivatives risk engines. The 1\,bp bump size is consistent with convention. The risky annuity framework mirrors credit default swap pricing, which is appropriate given the structural similarity between PRS and CDS.
+
+\mkmvqitem{3}{Alternative Methods}{Have alternatives been considered?}
+
+Analytical delta (closed-form derivative of spread w.r.t.\ hazard rate) was considered but rejected in favour of numerical delta for consistency with the pricing model's discrete-time implementation. The numerical approach also naturally captures any nonlinearity in the pricing function.
+
+\mkmvqitem{4}{Assumptions}{Are the assumptions reasonable?}
+
+The constant-basis assumption for property trades is reasonable for small rate moves but may break down in stress scenarios. The quarterly payment frequency matches market convention for credit derivatives.
+
+\mkmvqitem{5}{Data Quality}{Does the model require high-quality data?}
+
+The model requires accurate trade parameters from CDM files (notional, spread, tenor, direction) and consistent market state (hazard term structures, yield curve). Trade data quality is enforced by CDM validation at booking.
+
+\mkmvqitem{6}{Model Chaining}{Is the model's output used as input to another model?}
+
+Yes. Delta Engine output feeds: (a)~the P\&L Engine for daily P\&L decomposition, (b)~the EOD report generator for end-of-day risk snapshots, and (c)~the blotter and risk grid displays in the trading desk UI.
+
+\mkmvqitem{7}{Weaknesses}{Does the model have weaknesses and limitations of use?}
+
+Yes. First-order sensitivity only (no gamma/convexity), parallel bump only (no curve risk), no cross-gauge correlation, constant basis assumption. These are documented in Section 8.
+
+\mkmvqitem{8}{Monitoring}{What type of monitoring is required?}
+
+P\&L explain: verify that daily P\&L is consistent with FS01 $\times$ hazard rate moves. If the unexplained residual exceeds 10\% of daily P\&L, investigate convexity or basis effects. Back-test FS01 predictions against actual revaluation P\&L.
+
+\mkmvqitem{9}{Overall Risk}{Is the overall model risk acceptable?}
+
+The model risk is \textbf{Medium}. The engine uses well-established techniques (bump-and-reprice, risky annuity) and inherits its pricing accuracy from MKM-PR-001. The main risk is from the limitations noted: first-order approximation and constant basis. These are mitigated by the small position sizes typical of the current portfolio and the availability of full revaluation for P\&L verification.
+
+\clearpage
+
+% ---------------------------------------------------------------------------
+% 10. CHANGE HISTORY
+% ---------------------------------------------------------------------------
+\mkmchangelog
+
+\mkmhistorypage{26-Feb-2026 & 1.0 & Initial documentation of Delta Engine Model & D. Kelly \\
+26-Oct-2026 & 1.1 & Corrected against the Wolfram oracle benchmark: FS01 against hazard rate and yields, the hand-calculated annuity, basis delta, package paths; MTM now uses the unrounded annuity; spread-floor flag and hazard sensitivity; added Independent Benchmark & D. Kelly \\}
+
+\end{document}

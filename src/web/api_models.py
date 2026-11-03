@@ -24,11 +24,10 @@ from datetime import date
 
 from flask import Blueprint, jsonify, request
 
-from config.governance import (COLLECTION_SPECS, DOC_CATEGORIES, MODEL_FIELD_SPECS,
+from config.governance import (COLLECTION_SPECS, MODEL_FIELD_SPECS,
                                REGISTER_FIELDS, VALID_REVIEW_TRIGGERS)
-from src.files import UploadError, upload_path
-from src.governance.documents import (add_document, find_document, model_scope,
-                                      remove_document)
+from src.files import upload_path
+from src.governance.documents import find_document, model_scope, remove_document
 from src.governance.model_handoff import annotate_links, annotate_neighbourhood
 from src.governance.model_inventory.commands import AGGREGATE_TYPE as MODEL_AGGREGATE
 from src.governance.model_inventory.risk import compute_risk_rating
@@ -46,6 +45,7 @@ from src.governance.model_inventory import (
     update_collection_item,
     update_model_field,
 )
+from src.web._document_upload import file_document
 from src.web._owner_ratification import set_model_field
 from src.web._review_stages import review_specs
 from src.web._signoff_subject import MODEL_SUBJECT
@@ -94,20 +94,10 @@ def model_mrc(model_id: str):
 def upload_document(model_id: str):
     if get_model(model_id) is None:
         return jsonify({"error": "model not found"}), 404
-    category = request.form.get("category")
-    if category not in DOC_CATEGORIES:
-        return jsonify({"error": "invalid category"}), 400
-    file = request.files.get("file")
-    if file is None:
-        return jsonify({"error": "no file provided"}), 400
-    try:
-        add_document(
-            aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id, scope=model_scope(model_id),
-            category=category, filename=file.filename, data=file.read(),
-            description=request.form.get("description", ""), actor=request_actor(),
-        )
-    except UploadError as exc:
-        return jsonify({"error": str(exc)}), 400
+    error = file_document(aggregate_type=MODEL_AGGREGATE, aggregate_id=model_id,
+                          scope=model_scope(model_id))
+    if error:
+        return error
     rebuild_inventory_view()
     return jsonify(get_model(model_id)), 201
 

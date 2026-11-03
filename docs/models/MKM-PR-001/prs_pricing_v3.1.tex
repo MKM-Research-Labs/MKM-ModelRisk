@@ -1,0 +1,1359 @@
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+%
+% MKM-PR-001 PRS Pricing Model -- model documentation v3.1, the document of record
+% filed on the model as Core Documentation. Recovered from PhysicalRisk (removed from
+% that repo with the other per-model docs in 527b5a348) and corrected in v3.1.
+%
+% Build: it inputs the house header, which lives in PhysicalRisk. Copy
+% PhysicalRisk/docs/models/shared beside this folder as ../shared, then run
+% pdflatex three times (the third settles "Page n of N").
+\documentclass[11pt,a4paper]{article}
+\newcommand{\doctitle}{PRS Pricing Model}
+\newcommand{\docsubtitle}{Physical Risk Swap Fair Spread and Basis Calculation}
+\newcommand{\docversion}{3.1}
+\newcommand{\docdate}{19-October-2026}
+\newcommand{\docauthor}{David K Kelly}
+\input{../shared/mkm_header}
+% The shared history table sets every column to its natural width, so a long entry runs
+% off the page. Wrap the description here, for this document only.
+\renewcommand{\mkmhistorypage}[1]{%
+    \section{Document History}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{l|l|p{10cm}|l}
+            \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+            \hline
+            #1
+        \end{tabular}
+        \label{tab:revision_history}
+    \end{table}
+    \clearpage
+}
+\begin{document}
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+% ===================================================================
+% 1. EXECUTIVE SUMMARY
+% ===================================================================
+\mkmexecsummary
+
+The Physical Risk Swap (PRS) is a credit-derivative-like instrument that transfers
+physical flood risk from a protection buyer (e.g.\ a mortgage lender or property owner)
+to a protection seller (e.g.\ a reinsurer or capital markets investor). The PRS pays out
+upon the occurrence of a defined flood trigger event at a reference gauge or property
+location, in exchange for a periodic premium (the ``spread'').
+
+This document describes the analytical pricing model implemented in the MKM PhysicalRisk
+platform. The model computes fair PRS spreads using a CDS-equivalent quarterly pricing
+framework, where the annual flood hazard rate derived from the upstream GEV hazard curve
+model is converted to a continuous-time Poisson intensity. Fair spreads are calculated as
+the ratio of the protection leg present value to the risky annuity, expressed in basis
+points.
+
+Property-level PRS pricing is derived from full flood simulation rather than a
+parametric formula. The gauge flood signal is propagated to each property via an
+exponential retention model that attenuates the water surface elevation with distance.
+The property floods only when the propagated water level exceeds its elevation plus
+floor level. The resulting property-level hazard rate is fitted via GEV and priced
+through the same CDS framework. The basis (gauge spread minus property spread) is
+therefore an emergent quantity driven by three physical factors:
+
+\begin{enumerate}[nosep]
+    \item \textbf{Distance}: exponential attenuation of the flood signal ($e^{-d/L}$,
+          $L = 3{,}000$\,m),
+    \item \textbf{Elevation}: the property's height above the gauge raises the flood
+          threshold, and
+    \item \textbf{Terrain}: the Environment Agency flood zone classification of the
+          property location, captured implicitly through the flood simulation boundary
+          conditions.
+\end{enumerate}
+
+Spread decomposition into distance and elevation components is achieved via two
+synthetic simulation horizons (SHD and SHE), enabling attribution of the total basis
+to its physical drivers.
+
+The model supports two pricing paths: a lightweight analytical implementation with no
+external dependencies, and an alternative QuantLib-based implementation using the ISDA
+CDS engine for cross-validation. Both paths produce consistent results to within
+rounding tolerance for flat hazard rate inputs.
+
+The model additionally prices the property PRS as a \textbf{flood-or-wind union}
+using a coupled storm--typhoon event set. Each event carries one storm sequence
+and one tropical cyclone, paired 1:1 by a shared event identifier, and the pricer
+emits four peril outcomes --- flood-only, wind-only, flood-or-wind (the headline),
+and flood-and-wind --- that obey an inclusion--exclusion identity at the property
+node. The wind leg is a binary damage-onset trigger against a BRI-adjusted wind
+threshold, so a building's resilience governs how readily it counts. This
+multi-peril extension is described in Section~\ref{sec:multiperil}; the underlying
+storm--typhoon coupling is specified in the companion
+\texttt{storm\_typhoon\_coupling} document.
+
+\textbf{Key risk:} The model assumes a constant (flat) hazard rate over the contract
+tenor. Time-varying hazard rates arising from climate change trends are not captured.
+The spread decomposition is path-dependent (distance-first vs elevation-first ordering
+yields different component magnitudes). The wind-coupling strength parameter
+$\beta$ is a provisional expert prior pending calibration.
+
+
+% ===================================================================
+% 2. MODEL PURPOSE AND SCOPE
+% ===================================================================
+\mkmpurpose
+
+\subsection{Purpose}
+
+The PRS pricing model serves three primary functions within the PhysicalRisk platform:
+
+\begin{itemize}[nosep]
+    \item \textbf{Gauge-level PRS pricing}: Compute the fair annual spread (in basis
+          points) for a PRS contract referencing a specific river gauge, given the
+          gauge's annual flood hazard rate, a chosen trigger level, and contract
+          parameters (tenor, recovery rate, risk-free rate).
+    \item \textbf{Property-level PRS pricing}: Compute property-level PRS spreads from
+          simulated property flood hazard rates, where the basis versus the gauge
+          emerges from physical flood propagation (distance attenuation and elevation
+          thresholds).
+    \item \textbf{Basis analysis}: Decompose the gauge--property spread difference into
+          distance and elevation components via synthetic simulation horizons (SHD/SHE)
+          for risk management and hedging purposes.
+\end{itemize}
+
+\subsection{Scope}
+
+The model prices single-name PRS contracts with the following characteristics:
+
+\begin{itemize}[nosep]
+    \item Quarterly premium payments (CDS-standard schedule).
+    \item Single trigger event (flood occurrence at a defined severity level); the
+          property PRS optionally extends to a flood-or-wind union trigger
+          (Section~\ref{sec:multiperil}).
+    \item Zero recovery rate (100\% loss given default).
+    \item Flat risk-free discount curve.
+    \item Tenors of 1 to 30 years (typically 5 years).
+\end{itemize}
+
+The model does not price:
+\begin{itemize}[nosep]
+    \item Portfolio or index PRS tranches,
+    \item Contracts with variable or stochastic recovery,
+    \item Contracts with counterparty credit risk adjustment (CVA/DVA),
+    \item Contracts with non-standard payment frequencies.
+\end{itemize}
+
+\subsection{Trigger Levels}
+
+Three trigger levels are supported, corresponding to Environment Agency flood warning
+severity classifications:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{llp{7cm}}
+        \toprule
+        \textbf{Trigger} & \textbf{Depth Threshold} & \textbf{Description} \\
+        \midrule
+        \texttt{any\_flood} & $>0$\,m   & Any flood event above zero depth \\
+        \texttt{moderate}   & $>0.5$\,m & Moderate flooding; water ingress to ground floor \\
+        \texttt{severe}     & $>1.0$\,m & Severe flooding; significant structural damage \\
+        \bottomrule
+    \end{tabular}
+    \caption{PRS trigger level definitions.}
+    \label{tab:trigger_levels}
+\end{table}
+
+
+% ===================================================================
+% 3. MATHEMATICAL FRAMEWORK
+% ===================================================================
+\mkmframework
+
+\subsection{Analytical Pricing (prs\_analytical.py)}
+\label{sec:analytical}
+
+The analytical pricing model follows a standard CDS pricing framework adapted for
+physical flood risk. The key insight is that flood occurrence can be modelled as a
+Poisson point process, where the survival function takes the same exponential form as
+in reduced-form credit models.
+
+\subsubsection{Hazard Rate Conversion}
+
+The upstream GEV hazard curve model provides an annual flood probability
+$\lambda_{\text{annual}} \in (0,1)$, representing the probability of at least one flood
+event exceeding the trigger threshold in any given year. This is converted to a
+continuous-time Poisson intensity $\lambda$ via:
+
+\begin{equation}
+    \lambda = -\ln\!\big(1 - \lambda_{\text{annual}}\big)
+    \label{eq:hazard_conversion}
+\end{equation}
+
+This transformation ensures consistency between the discrete annual probability and the
+continuous-time survival function. For small $\lambda_{\text{annual}}$, the approximation
+$\lambda \approx \lambda_{\text{annual}}$ holds, but the exact transformation is used
+throughout.
+
+To prevent numerical overflow, $\lambda_{\text{annual}}$ is capped at 0.999 before
+conversion.
+
+\subsubsection{Survival and Discount Functions}
+
+Under the constant hazard rate assumption, the survival probability at time $t$ is:
+
+\begin{equation}
+    S(t) = \exp(-\lambda\, t)
+    \label{eq:survival}
+\end{equation}
+
+The risk-free discount factor at time $t$ under continuous compounding is:
+
+\begin{equation}
+    D(t) = \exp(-r\, t)
+    \label{eq:discount}
+\end{equation}
+
+\noindent where $r$ is the risk-free rate (default $r = 0.03$).
+
+\subsubsection{Quarterly Discretisation}
+
+The contract is discretised into quarterly periods of length $\Delta t = 0.25$ years.
+For a contract of tenor $T$ years, the number of periods is $n = 4T$, and the $i$-th
+payment date is $t_i = i \cdot \Delta t$ for $i = 1, \ldots, n$.
+
+\subsubsection{Risky Annuity (Premium Leg)}
+
+The risky annuity represents the expected present value of receiving 1\,bp per annum,
+paid quarterly, conditional on no trigger event having occurred:
+
+\begin{equation}
+    A = \sum_{i=1}^{n} \Delta t \cdot S(t_i) \cdot D(t_i)
+    \label{eq:risky_annuity}
+\end{equation}
+
+This is the denominator in the fair spread calculation and represents the ``price''
+of the premium leg per unit of spread.
+
+\subsubsection{Protection Leg}
+
+The protection leg represents the expected present value of receiving $(1 - R)$ upon
+a trigger event, where $R$ is the recovery rate. The probability of a trigger event
+occurring in the interval $(t_{i-1}, t_i]$ is $S(t_{i-1}) - S(t_i)$, and the payment
+is assumed to occur at the midpoint of the interval:
+
+\begin{equation}
+    P = \sum_{i=1}^{n} (1 - R) \cdot \big[S(t_{i-1}) - S(t_i)\big] \cdot D\!\left(t_i - \tfrac{\Delta t}{2}\right)
+    \label{eq:protection_leg}
+\end{equation}
+
+\noindent where $t_0 = 0$ and $S(t_0) = 1$.
+
+\subsubsection{Fair Spread}
+
+The fair spread is the premium rate $s^*$ that equates the present value of the premium
+leg and the protection leg:
+
+\begin{equation}
+    s^* \cdot A = P \quad \implies \quad s^* = \frac{P}{A}
+    \label{eq:fair_spread}
+\end{equation}
+
+The result is converted to basis points by multiplying by 10{,}000:
+
+\begin{equation}
+    s^*_{\text{bps}} = \frac{P}{A} \times 10{,}000
+    \label{eq:spread_bps}
+\end{equation}
+
+A floor is applied to ensure the spread does not fall below the minimum PRS spread:
+
+\begin{equation}
+    s_{\text{final}} = \max\!\big(s^*_{\text{bps}},\; s_{\text{min}}\big)
+    \label{eq:spread_floor}
+\end{equation}
+
+\noindent where $s_{\text{min}} = 2$\,bp (the \texttt{MIN\_PRS\_SPREAD\_BPS} parameter,
+calibrated to the FloodRE minimum insurance rate).
+
+\subsubsection{Fallback Pricing}
+
+If the risky annuity $A \leq 0$ (which can occur for extremely high hazard rates where
+survival probability is negligible), the model falls back to a simple linear
+approximation:
+
+\begin{equation}
+    s_{\text{fallback}} = \lambda_{\text{annual}} \times 10{,}000 \text{ bps}
+\end{equation}
+
+\subsection{Recovery Rate}
+
+The recovery rate is hardcoded at $R = 0$ for all trigger levels, corresponding to
+100\% loss given default ($\text{LGD} = 1 - R = 1$). Upon a trigger event the full
+notional is paid out by the protection seller. No partial recovery is modelled.
+
+\subsection{Data-Driven Basis}
+\label{sec:basis}
+
+Property-level PRS spreads are not computed by adding a parametric adjustment to gauge
+spreads. Instead, each property has its own simulated flood history (from the upstream
+property time-series module), its own GEV-fitted hazard rate, and its own fair spread
+from the CDS pricing framework above. The basis is therefore an \emph{observed}
+quantity:
+
+\begin{equation}
+    B = s_{\text{gauge}} - s_{\text{property}}
+    \label{eq:basis_def}
+\end{equation}
+
+\noindent where $s_{\text{gauge}}$ and $s_{\text{property}}$ are the fair spreads at
+a given tenor and trigger level. A positive basis indicates the property is safer than
+the gauge (lower hazard rate); a negative basis indicates higher property risk.
+
+The basis is driven by three physical mechanisms in the flood simulation, described
+below.
+
+\subsubsection{Distance Effect: Retention Model}
+
+The gauge flood signal (water surface elevation, WSE) is attenuated as it propagates
+laterally from the river to the property location. The retention model uses pure
+exponential decay:
+
+\begin{equation}
+    \text{retention}(d) = \exp\!\left(-\frac{d}{L}\right)
+    \label{eq:retention}
+\end{equation}
+
+\noindent where $d$ is the horizontal distance from the gauge to the property (metres)
+and $L = 3{,}000$\,m is the characteristic retention length (e-folding distance). At
+$d = L$ the retention factor is $1/e \approx 0.37$.
+
+The attenuated WSE at the property is:
+
+\begin{equation}
+    \text{WSE}_{\text{prop}} = \text{WSE}_{\text{gauge}} \times \text{retention}(d)
+    \label{eq:wse_prop}
+\end{equation}
+
+Greater distance reduces the number and severity of floods at the property, lowering
+the property hazard rate and spread, and producing a positive basis.
+
+Reference values:
+\begin{itemize}[nosep]
+    \item At 200\,m: retention $\approx$ 0.94
+    \item At 1\,km: retention $\approx$ 0.72
+    \item At 3\,km: retention $\approx$ 0.37
+    \item At 5\,km: retention $\approx$ 0.19
+\end{itemize}
+
+\subsubsection{Elevation Effect}
+
+Properties elevated above their reference gauge benefit from a higher flood threshold.
+A flood event reaches the property only when the propagated WSE exceeds the property
+ground elevation plus the floor level:
+
+\begin{equation}
+    d_{\text{flood}} = \max\!\big(0,\; \text{WSE}_{\text{prop}} - (h_{\text{prop}} - h_{\text{gauge}}) - h_{\text{floor}}\big)
+    \label{eq:flood_depth}
+\end{equation}
+
+\noindent where $h_{\text{prop}}$ is the property ground elevation (mAOD),
+$h_{\text{gauge}}$ is the gauge elevation, and $h_{\text{floor}}$ is the floor step
+height. A higher elevation differential means fewer flood events exceed the threshold,
+reducing the property hazard rate and producing a positive basis.
+
+The elevation effect interacts with the distance effect: a property that is both far
+from the gauge and at higher elevation benefits from both attenuation and a higher
+threshold.
+
+\subsubsection{Terrain: EA Flood Zone}
+
+The Environment Agency flood zone classification (Zone~1, Zone~2, Zone~3, Zone~3a,
+Zone~3b, Enhanced Defence) characterises the baseline flood risk at a location. In the
+current model, terrain effects are captured \emph{implicitly} through the flood
+simulation boundary conditions rather than as a parametric basis component. Properties
+in higher-risk flood zones will tend to have higher simulated flood frequencies and
+therefore higher spreads.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lp{9cm}}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{Risk Context} \\
+        \midrule
+        Zone 3b            & Functional floodplain --- highest risk \\
+        Zone 3a / Zone 3   & High probability (1 in 100 year or greater) \\
+        Zone 2             & Medium probability (1 in 100 to 1 in 1{,}000 year) \\
+        Zone 1             & Low probability ($<$1 in 1{,}000 year) \\
+        Enhanced Defence   & Behind formal flood defences --- reduced risk \\
+        \bottomrule
+    \end{tabular}
+    \caption{EA flood zone classifications and risk context.}
+    \label{tab:terrain_context}
+\end{table}
+
+\subsection{Spread Decomposition via Synthetic Horizons}
+\label{sec:decomposition}
+
+To attribute the total basis to its physical components, the system generates two
+synthetic simulation variants alongside the normal property run:
+
+\begin{description}[nosep]
+    \item[SHD (Synthetic Horizon --- Distance zero):] The property is simulated as if
+        co-located with the gauge ($d = 0$, full retention), but at its true elevation.
+        Output file: \texttt{propertyshd.json}.
+    \item[SHE (Synthetic Horizon --- Elevation zero):] The property is simulated at its
+        true distance but with its elevation set equal to the gauge elevation
+        ($\Delta h = 0$). Output file: \texttt{propertyshe.json}.
+\end{description}
+
+Let $s_G$, $s_P$, $s_{\text{SHD}}$, $s_{\text{SHE}}$ denote the 5-year any-flood
+spreads for the gauge, property, SHD synthetic, and SHE synthetic respectively.
+
+\subsubsection{Distance-First Decomposition}
+
+\begin{align}
+    \text{Distance effect} &= s_{\text{SHE}} - s_G \label{eq:dist_first_d} \\
+    \text{Elevation effect} &= s_P - s_{\text{SHE}} \label{eq:dist_first_e}
+\end{align}
+
+\subsubsection{Elevation-First Decomposition}
+
+\begin{align}
+    \text{Elevation effect} &= s_{\text{SHD}} - s_G \label{eq:elev_first_e} \\
+    \text{Distance effect} &= s_P - s_{\text{SHD}} \label{eq:elev_first_d}
+\end{align}
+
+Both paths satisfy the identity:
+
+\begin{equation}
+    \text{Distance effect} + \text{Elevation effect} = s_P - s_G = -B
+    \label{eq:decomp_identity}
+\end{equation}
+
+\noindent The two paths yield different component magnitudes because distance and
+elevation effects interact non-linearly in the flood simulation. The decomposition is
+presented as two paths to provide bounds on each component's contribution.
+
+\subsection{QuantLib Pricing (prs\_with\_hazard\_curve.py)}
+\label{sec:quantlib}
+
+An alternative pricing path is provided using the QuantLib library's CDS framework.
+This serves as an independent cross-validation of the analytical model.
+
+\subsubsection{Curve Construction}
+
+The QuantLib path supports two modes:
+
+\begin{enumerate}[nosep]
+    \item \textbf{Term structure mode}: A survival probability term structure is loaded
+          from the hazard curve output. An implied constant hazard rate is extracted from
+          the terminal survival probability:
+          \begin{equation}
+              \hat{\lambda} = \frac{-\ln S(T)}{T}
+          \end{equation}
+          and used to construct a \texttt{FlatHazardRate} curve (required for ISDA CDS
+          engine compatibility).
+    \item \textbf{Flat hazard mode}: A \texttt{FlatHazardRate} curve is constructed
+          directly from the annual hazard rate $\lambda_{\text{annual}}$.
+\end{enumerate}
+
+\subsubsection{CDS Instrument Construction}
+
+The QuantLib CDS is constructed with:
+\begin{itemize}[nosep]
+    \item TwentiethIMM date generation,
+    \item TARGET calendar,
+    \item Actual/360 day count for the premium leg,
+    \item Actual/365~Fixed for the hazard and discount curves,
+    \item Running spread set to 100\,bp (reference; fair spread derived from NPV).
+\end{itemize}
+
+
+\subsection{Multi-Peril Extension: Flood-or-Wind Union}
+\label{sec:multiperil}
+
+The pricing described above is \textbf{flood-only}. The platform additionally
+prices the property PRS as a combination of \textbf{flood \emph{or} wind} loss,
+driven by a coupled storm--typhoon event set in which each event carries one
+storm sequence and one tropical cyclone, paired 1:1 by a shared
+\texttt{event\_id}. The generation-layer coupling (the directed, asymmetric
+severity dependence that ties wind strength to storm severity) is specified in
+the companion document \texttt{storm\_typhoon\_coupling/coupling\_spec.md}
+(\texttt{MKM-TC-001} provides the underlying tropical-cyclone wind field).
+This subsection documents the \emph{pricing} consequences only.
+
+\subsubsection{Binary Wind Trigger}
+
+PRS is a \textbf{frequency / event-count} payout, not a loss-amount payout. The
+wind leg is therefore a binary damage-onset trigger, \texttt{is\_prs\_wind}, and
+\emph{not} the continuous wind-damage ratio (the latter is the insurance-loss
+view served separately by the wind-impact route and is deliberately excluded
+from the spread). For a given event and property,
+\begin{equation}
+    \texttt{is\_prs\_wind} \;=\; \mathbb{1}\!\left[\, v^{\text{peak}}_{\text{sus}}
+    \;\ge\; v_{50}^{\text{eff}} \,\right],
+    \label{eq:is_prs_wind}
+\end{equation}
+where $v^{\text{peak}}_{\text{sus}}$ is the property's peak sustained wind for
+the event and $v_{50}^{\text{eff}} = v_{50} + \Delta_{\text{BRI}}$ is the
+\textbf{BRI-adjusted effective damage threshold}: the operational
+damage-onset threshold $v_{50}$ shifted by the building's resilience
+(\texttt{bri\_v50\_shift}). A resilient (high-BRI) building carries a higher
+effective threshold and so fires less readily than a low-BRI building exposed to
+the same wind. The threshold resolves the \emph{Minor} (damage-onset, $\approx
+200$\,km/h) CDM field in preference to the \emph{Major} (catastrophic,
+$250$\,km/h) field, since PRS counts the onset of damage rather than
+catastrophic damage. When no effective threshold is recorded (legacy damage
+rows) the raw $v_{50}$ is used as a fallback.
+
+\subsubsection{Four Peril Outcomes}
+
+Over the 1:1-paired event set, let $F$ be the set of events that trigger the
+flood leg (\texttt{is\_prs\_flood}) and $W$ the set that trigger the wind leg
+(\eqref{eq:is_prs_wind}). The pricer emits four peril outcomes at the
+property node, each priced through the same frequency-to-spread conversion as
+the flood-only spread:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Outcome} & \textbf{Event set} & \textbf{Field} \\
+        \midrule
+        Flood only      & $F$            & \texttt{flood\_only} \\
+        Wind only       & $W$            & \texttt{wind\_only} \\
+        Flood OR wind   & $F \cup W$     & \texttt{flood\_or\_wind} (the headline) \\
+        Flood AND wind  & $F \cap W$     & \texttt{flood\_and\_wind} \\
+        \bottomrule
+    \end{tabular}
+    \caption{The four PRS peril outcomes emitted at the property node.}
+    \label{tab:peril_outcomes}
+\end{table}
+
+\noindent The union deduplicates events that trigger both legs, so wind inherits
+the flood frequency basis (one event set, one denominator). The four counts obey
+the inclusion--exclusion identity
+\begin{equation}
+    |F \cup W| \;=\; |F| + |W| - |F \cap W|,
+    \qquad |F \cap W| \le \min(|F|, |W|),
+    \label{eq:inclusion_exclusion}
+\end{equation}
+which the implementation asserts. Wind is applied per-property straight from the
+typhoon roll and has \textbf{no gauge\,$\to$\,SHE\,$\to$\,SHD transmission
+geometry}; the four outcomes therefore branch at the property/BRI node, while
+the geographic basis spine (\S\ref{sec:decomposition}) stays flood-only.
+Catchments without a tropical-cyclone stage emit no peril block and price exactly
+as the flood-only model (byte-identical fallback).
+
+\subsubsection{Tradeable Peril Scenarios}
+
+The four outcomes are surfaced as separately-priceable PRS scenarios. The
+flood leg of each can be anchored either on the raw asset flood or on the
+\textbf{BRI-resilient} flood floor (the level at which the book actually trades):
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Scenario} & \textbf{Definition} & \textbf{Flood anchor} \\
+        \midrule
+        \texttt{win} & wind only ($W$)                         & --- \\
+        \texttt{fow} & flood OR wind ($F \cup W$)              & raw asset \\
+        \texttt{faw} & flood AND wind ($F \cap W$)             & raw asset \\
+        \texttt{bow} & BRI-flood OR wind                       & BRI-resilient floor \\
+        \texttt{baw} & BRI-flood AND wind                      & BRI-resilient floor \\
+        \bottomrule
+    \end{tabular}
+    \caption{Tradeable peril scenarios. \texttt{bow}/\texttt{baw} mirror
+    \texttt{fow}/\texttt{faw} but anchor the flood leg on the BRI-resilient floor,
+    so inclusion--exclusion holds as $\texttt{bow} = \texttt{bri} + \texttt{wind}
+    - \texttt{baw}$.}
+    \label{tab:peril_scenarios}
+\end{table}
+
+\noindent Each scenario has its own peril timeseries and hazard curve, generated
+by the \texttt{windhazard} pipeline stage, exposed through the property and
+commercial hazard-curve routes, and selectable in the loan-pricer coupon
+builder. In the pricer basis waterfall these appear as WIN / FAW / FOW rows
+beneath the BRI-resilient row, with FOW reporting the wind uplift
+(\texttt{fow}\,$-$\,flood spread).
+
+
+% ===================================================================
+% 4. INPUT PARAMETERS AND CALIBRATION
+% ===================================================================
+\mkminputs
+
+\subsection{Core Pricing Parameters}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Default} & \textbf{Description} \\
+        \midrule
+        Annual hazard rate      & $\lambda_{\text{annual}}$ & --- & From GEV hazard model \\
+        Tenor                   & $T$             & 5 years  & Contract maturity \\
+        Recovery rate           & $R$             & 0.0      & Zero recovery (full LGD) \\
+        Risk-free rate          & $r$             & 0.03     & Continuous annual rate \\
+        Minimum spread          & $s_{\text{min}}$& 2.0\,bp  & FloodRE floor \\
+        Quarterly period        & $\Delta t$      & 0.25     & Fixed quarterly \\
+        \bottomrule
+    \end{tabular}
+    \caption{Core pricing parameters.}
+    \label{tab:pricing_params}
+\end{table}
+
+\subsection{Basis and Propagation Parameters}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lllp{5.5cm}}
+        \toprule
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Value} & \textbf{Description} \\
+        \midrule
+        Retention length        & $L$                     & 3{,}000\,m    & E-folding distance for WSE attenuation. At $d = L$, retention $= 1/e \approx 0.37$. \\
+        Manning's roughness     & $n$                     & 0.04          & Urban floodplain roughness coefficient \\
+        Minimum slope           & $S_{\text{min}}$        & 0.001         & Floor to prevent velocity instability \\
+        Recession factor        & ---                     & 1.5           & Recession limb is 1.5$\times$ slower than rising limb \\
+        \bottomrule
+    \end{tabular}
+    \caption{Basis and flood propagation parameters.}
+    \label{tab:basis_params}
+\end{table}
+
+\subsection{Basis Input Data}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{llp{7cm}}
+        \toprule
+        \textbf{Input} & \textbf{Units} & \textbf{Source} \\
+        \midrule
+        \texttt{distance\_m}        & metres  & Haversine distance from property to gauge \\
+        \texttt{gauge\_elevation\_m} & mAOD   & Gauge station elevation (from gauge CDM) \\
+        \texttt{prop\_elevation}     & mAOD   & Property ground elevation (from property CDM) \\
+        \texttt{propertyhc.json}     & ---    & Property hazard curves (normal simulation) \\
+        \texttt{propertyshd.json}    & ---    & SHD synthetic horizon (distance zeroed) \\
+        \texttt{propertyshe.json}    & ---    & SHE synthetic horizon (elevation zeroed) \\
+        \bottomrule
+    \end{tabular}
+    \caption{Basis calculation input data.}
+    \label{tab:basis_inputs}
+\end{table}
+
+\subsection{Calibration}
+
+The model parameters are calibrated as follows:
+
+\begin{itemize}[nosep]
+    \item \textbf{Hazard rate}: Derived from the GEV hazard curve model (see separate
+          documentation). Not a free parameter of this model.
+    \item \textbf{Recovery rate}: Hardcoded at zero (full loss given default). No recovery
+          is assumed upon trigger event.
+    \item \textbf{Risk-free rate}: Set to 3\% as a representative long-term UK gilt rate.
+          Not dynamically calibrated to market curves.
+    \item \textbf{Minimum spread}: Calibrated to the FloodRE Levy 2 minimum insurance
+          premium rate.
+    \item \textbf{Retention length}: Set to 3{,}000\,m based on Thames corridor hydraulic
+          calibration. Controls the rate of flood signal attenuation with distance.
+    \item \textbf{Basis}: Emergent from full flood simulation; not independently
+          calibrated. Depends on the upstream hazard, propagation, and property
+          simulation modules.
+\end{itemize}
+
+
+% ===================================================================
+% 5. IMPLEMENTATION DETAILS
+% ===================================================================
+\mkmimplementation
+
+\subsection{Source Files}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lp{9cm}}
+        \toprule
+        \textbf{File} & \textbf{Responsibility} \\
+        \midrule
+        \texttt{src/models/hazard/prs\_analytical.py} & Analytical PRS pricing (CDS-equivalent quarterly computation). No external dependencies beyond the Python standard library. \\
+        \texttt{src/models/prs/prshc.py}              & QuantLib-based PRS pricing using the ISDA CDS engine. Requires QuantLib-Python. \\
+        \texttt{src/models/floodrisk/velocity.py}     & Retention model (\texttt{compute\_retention}), Manning's velocity, travel time, slope computation. \\
+        \texttt{src/port/src/property/hc/generator.py} & Property hazard curve generation, SHD/SHE spread decomposition (\texttt{attach\_spread\_decomposition}). \\
+        \texttt{src/port/src/property/hc/pricing.py}  & Property-level PRS pricing and empirical basis computation. \\
+        \texttt{src/port/src/property/ts/flood/propagation.py} & Gauge-to-property flood propagation with mode overrides (normal/shd/she). \\
+        \bottomrule
+    \end{tabular}
+    \caption{Source file inventory.}
+    \label{tab:source_files}
+\end{table}
+
+\subsection{Two Pricing Paths}
+
+The system provides two independent pricing implementations:
+
+\begin{description}
+    \item[Analytical path] (\texttt{compute\_prs\_spread}): A pure Python implementation
+        that computes the risky annuity and protection leg via explicit summation over
+        quarterly periods. This is the primary production path, used for all portfolio-level
+        pricing and report generation. It has no dependency on QuantLib.
+    \item[QuantLib path] (\texttt{price\_prs}): A QuantLib-based implementation that
+        constructs a \texttt{CreditDefaultSwap} instrument and prices it using the
+        \texttt{IsdaCdsEngine}. This path is used for model validation and produces
+        additional outputs (NPV, premium leg NPV, protection leg NPV, fair upfront).
+\end{description}
+
+\subsection{Key Implementation Details}
+
+\subsubsection{Hazard Rate Clamping}
+
+The annual hazard rate is clamped to $[0, 0.999]$ before conversion to the continuous
+rate. A rate of zero returns a spread of 0\,bp immediately (no floor applied, as a
+zero hazard rate means no risk). The upper clamp prevents $\ln(0)$ in
+Equation~\eqref{eq:hazard_conversion}.
+
+\subsubsection{Synthetic Horizon Modes}
+
+The flood propagation module (\texttt{propagation.py}) accepts a \texttt{mode} parameter:
+
+\begin{itemize}[nosep]
+    \item \texttt{mode="normal"}: standard propagation using actual distance and elevation.
+    \item \texttt{mode="shd"}: sets property elevation equal to gauge elevation
+          ($\Delta h = 0$), isolating the distance effect.
+    \item \texttt{mode="she"}: sets distance to zero (full retention), isolating the
+          elevation effect.
+\end{itemize}
+
+\subsubsection{QuantLib Date Conventions}
+
+The QuantLib implementation uses \texttt{ql.Date.todaysDate()} as the evaluation date,
+TARGET calendar, Actual/360 day count for the premium leg, and Actual/365 Fixed for
+the hazard and discount curves. The schedule is generated with TwentiethIMM date
+generation, following standard CDS market conventions.
+
+
+% ===================================================================
+% 6. SENSITIVITY ANALYSIS
+% ===================================================================
+\mkmsensitivity
+
+This section analyses the sensitivity of the PRS fair spread to each key input
+parameter.
+
+\subsection{Hazard Rate Sensitivity}
+
+The fair spread is monotonically increasing in the annual hazard rate. For typical UK
+flood probabilities ($\lambda_{\text{annual}} \in [0.001, 0.10]$), the relationship is
+approximately linear for low hazard rates and becomes concave for higher rates due to
+the survival probability declining faster.
+
+% --- sensitivity_tables.tex, inlined so this file is complete ---
+% Auto-generated by sensitivity generator
+% Do not edit manually --- regenerate with: python -m docs.models.sensitivities.generate_all
+
+\begin{table}[H]
+    \centering
+    \caption{PRS spread sensitivity to annual hazard rate ($T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_hazard}
+    \begin{tabular}{rrr}
+        \toprule
+        \textbf{$\lambda_{\text{annual}}$} & \textbf{$\lambda$ (continuous)} & \textbf{Spread (bp)} \\
+        \midrule
+        0.0010 & 0.0010 & 10.0 \\
+        0.0050 & 0.0050 & 50.3 \\
+        0.0100 & 0.0100 & 101.0 \\
+        0.0200 & 0.0202 & 203.3 \\
+        0.0500 & 0.0513 & 518.2 \\
+        0.1000 & 0.1054 & 1{,}071.6 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{PRS spread sensitivity to risk-free rate ($\lambda_{\text{annual}}=0.01$, $R=0$, $T=5$yr).}
+    \label{tab:sens_rfr}
+    \begin{tabular}{rr}
+        \toprule
+        \textbf{$r$} & \textbf{Spread (bp)} \\
+        \midrule
+        0.0000 & 100.6 \\
+        0.0100 & 100.8 \\
+        0.0300 & 101.0 \\
+        0.0500 & 101.3 \\
+        0.1000 & 101.9 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{PRS spread sensitivity to tenor ($\lambda_{\text{annual}}=0.01$, $R=0$, $r=0.03$).}
+    \label{tab:sens_tenor}
+    \begin{tabular}{rr}
+        \toprule
+        \textbf{Tenor (yr)} & \textbf{Spread (bp)} \\
+        \midrule
+        1 & 101.0 \\
+        2 & 101.0 \\
+        3 & 101.0 \\
+        5 & 101.0 \\
+        7 & 101.0 \\
+        10 & 101.0 \\
+        20 & 101.0 \\
+        30 & 101.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Property spread by distance from gauge (gauge spread $\approx 300$\,bp, $T=5$yr, $R=0$, $r=0.03$, $L=3{,}000$\,m).}
+    \label{tab:sens_distance}
+    \begin{tabular}{rrrr}
+        \toprule
+        \textbf{Distance (m)} & \textbf{Retention} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        0 & 1.00 & 300.0 & 0.0000 \\
+        200 & 0.9355 & 280.3 & 19.7 \\
+        500 & 0.8465 & 253.2 & 46.8 \\
+        1000 & 0.7165 & 213.8 & 86.2 \\
+        2000 & 0.5134 & 152.6 & 147.4 \\
+        3000 & 0.3679 & 109.1 & 190.9 \\
+        5000 & 0.1889 & 55.8 & 244.2 \\
+        8000 & 0.0695 & 20.5 & 279.5 \\
+        12000 & 0.0183 & 5.40 & 294.6 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Property spread by elevation above gauge (gauge spread $\approx 300$\,bp, $d=0$, $T=5$yr, $h_{\text{scale}}=2.0$\,m).}
+    \label{tab:sens_elevation}
+    \begin{tabular}{rrr}
+        \toprule
+        \textbf{$\Delta h$ (m)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        0.0000 & 300.0 & 0.0000 \\
+        0.5000 & 232.7 & 67.3 \\
+        1.00 & 180.6 & 119.4 \\
+        1.50 & 140.3 & 159.7 \\
+        2.00 & 109.1 & 190.9 \\
+        3.00 & 66.0 & 234.0 \\
+        5.00 & 24.2 & 275.8 \\
+        10.0 & 2.00 & 298.0 \\
+        15.0 & 2.00 & 298.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Property spread (bp) by distance and elevation (gauge $\approx 300$\,bp, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_combined}
+    \begin{tabular}{rrrrrr}
+        \toprule
+        \textbf{Distance (m)} & \textbf{$\Delta h = 0$\,m} & \textbf{$\Delta h = 1$\,m} & \textbf{$\Delta h = 2$\,m} & \textbf{$\Delta h = 5$\,m} & \textbf{$\Delta h = 10$\,m} \\
+        \midrule
+        0 & 300.0 & 180.6 & 109.1 & 24.2 & 2.00 \\
+        500 & 253.2 & 152.6 & 92.2 & 20.5 & 2.00 \\
+        1000 & 213.8 & 129.0 & 78.0 & 17.3 & 2.00 \\
+        3000 & 109.1 & 66.0 & 40.0 & 8.90 & 2.00 \\
+        5000 & 55.8 & 33.8 & 20.5 & 4.60 & 2.00 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=500$\,m, $\Delta h=0.5$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_a}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 337.8 & 180.3 \\
+        Zone 3a & 0.0200 & 203.3 & 133.4 & 69.9 \\
+        Zone 3 & 0.0200 & 203.3 & 133.4 & 69.9 \\
+        Zone 2 & 0.0050 & 50.3 & 33.2 & 17.2 \\
+        Zone 1 & 0.0010 & 10.0 & 6.60 & 3.40 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=500$\,m, $\Delta h=1.0$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_b}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 261.9 & 256.3 \\
+        Zone 3a & 0.0200 & 203.3 & 103.7 & 99.6 \\
+        Zone 3 & 0.0200 & 203.3 & 103.7 & 99.6 \\
+        Zone 2 & 0.0050 & 50.3 & 25.8 & 24.5 \\
+        Zone 1 & 0.0010 & 10.0 & 5.20 & 4.90 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=500$\,m, $\Delta h=1.5$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_c}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 203.2 & 315.0 \\
+        Zone 3a & 0.0200 & 203.3 & 80.7 & 122.6 \\
+        Zone 3 & 0.0200 & 203.3 & 80.7 & 122.6 \\
+        Zone 2 & 0.0050 & 50.3 & 20.1 & 30.3 \\
+        Zone 1 & 0.0010 & 10.0 & 4.00 & 6.00 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=500$\,m, $\Delta h=2.0$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_d}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 157.8 & 360.3 \\
+        Zone 3a & 0.0200 & 203.3 & 62.8 & 140.5 \\
+        Zone 3 & 0.0200 & 203.3 & 62.8 & 140.5 \\
+        Zone 2 & 0.0050 & 50.3 & 15.6 & 34.7 \\
+        Zone 1 & 0.0010 & 10.0 & 3.10 & 6.90 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=500$\,m, $\Delta h=2.5$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_e}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 122.6 & 395.5 \\
+        Zone 3a & 0.0200 & 203.3 & 48.8 & 154.5 \\
+        Zone 3 & 0.0200 & 203.3 & 48.8 & 154.5 \\
+        Zone 2 & 0.0050 & 50.3 & 12.2 & 38.2 \\
+        Zone 1 & 0.0010 & 10.0 & 2.40 & 7.60 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=250$\,m, $\Delta h=1.0$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_dist_a}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 285.1 & 233.1 \\
+        Zone 3a & 0.0200 & 203.3 & 112.8 & 90.5 \\
+        Zone 3 & 0.0200 & 203.3 & 112.8 & 90.5 \\
+        Zone 2 & 0.0050 & 50.3 & 28.1 & 22.3 \\
+        Zone 1 & 0.0010 & 10.0 & 5.60 & 4.40 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=500$\,m, $\Delta h=1.0$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_dist_b}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 261.9 & 256.3 \\
+        Zone 3a & 0.0200 & 203.3 & 103.7 & 99.6 \\
+        Zone 3 & 0.0200 & 203.3 & 103.7 & 99.6 \\
+        Zone 2 & 0.0050 & 50.3 & 25.8 & 24.5 \\
+        Zone 1 & 0.0010 & 10.0 & 5.20 & 4.90 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=750$\,m, $\Delta h=1.0$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_dist_c}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 240.6 & 277.5 \\
+        Zone 3a & 0.0200 & 203.3 & 95.4 & 107.9 \\
+        Zone 3 & 0.0200 & 203.3 & 95.4 & 107.9 \\
+        Zone 2 & 0.0050 & 50.3 & 23.7 & 26.6 \\
+        Zone 1 & 0.0010 & 10.0 & 4.70 & 5.30 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=1000$\,m, $\Delta h=1.0$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_dist_d}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 221.1 & 297.0 \\
+        Zone 3a & 0.0200 & 203.3 & 87.7 & 115.6 \\
+        Zone 3 & 0.0200 & 203.3 & 87.7 & 115.6 \\
+        Zone 2 & 0.0050 & 50.3 & 21.8 & 28.5 \\
+        Zone 1 & 0.0010 & 10.0 & 4.40 & 5.70 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge and property spreads by EA flood zone ($d=1500$\,m, $\Delta h=1.0$\,m, $T=5$yr, $R=0$, $r=0.03$).}
+    \label{tab:sens_terrain_dist_e}
+    \begin{tabular}{lrrrr}
+        \toprule
+        \textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Gauge Spread (bp)} & \textbf{Property Spread (bp)} & \textbf{Basis (bp)} \\
+        \midrule
+        Zone 3b & 0.0500 & 518.2 & 186.8 & 331.4 \\
+        Zone 3a & 0.0200 & 203.3 & 74.2 & 129.1 \\
+        Zone 3 & 0.0200 & 203.3 & 74.2 & 129.1 \\
+        Zone 2 & 0.0050 & 50.3 & 18.5 & 31.9 \\
+        Zone 1 & 0.0010 & 10.0 & 3.70 & 6.40 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+% --- end sensitivity_tables.tex ---
+
+\subsection{Recovery Rate Sensitivity}
+
+The fair spread is proportional to $(1-R)$ in the protection leg numerator. A higher
+recovery rate reduces the spread linearly. For a fixed hazard rate of
+$\lambda_{\text{annual}} = 0.01$:
+
+\begin{equation}
+    \frac{\partial s^*}{\partial R} = -\frac{1}{A} \sum_{i=1}^{n} \big[S(t_{i-1}) - S(t_i)\big] \cdot D\!\left(t_i - \tfrac{\Delta t}{2}\right) < 0
+\end{equation}
+
+\subsection{Risk-Free Rate Sensitivity}
+
+An increase in the risk-free rate $r$ reduces both the risky annuity and the protection
+leg PV via higher discount factors. The net effect on the spread ratio $P/A$ is
+typically small and slightly positive (spread increases with $r$), as the annuity
+decreases faster than the protection leg.
+
+\subsection{Tenor Sensitivity}
+
+Longer tenors produce marginally higher spreads for a given hazard rate, as the
+conditional default probability per period is constant but the accumulated survival
+probability decreases. However, under a flat hazard curve, the fair spread converges
+rapidly and is largely tenor-insensitive for tenors beyond 3--5 years.
+
+\subsection{Distance Sensitivity}
+
+The property spread decreases with distance from the gauge due to exponential
+attenuation of the flood signal via the retention model
+(Equation~\eqref{eq:retention}). Table~\ref{tab:sens_distance} shows the property
+spread for a gauge at approximately 300\,bp, with the retention length $L = 3{,}000$\,m.
+
+At 1\,km from the gauge, the property spread drops to approximately 214\,bp
+(retention $\approx 0.72$). At 3\,km (one e-folding length) the spread falls to
+approximately 109\,bp. Beyond 5\,km the property spread approaches the 2\,bp floor.
+
+\subsection{Elevation Sensitivity}
+
+The property spread decreases as the property elevation increases above the gauge,
+because a higher flood threshold reduces the fraction of gauge floods that also flood
+the property. Table~\ref{tab:sens_elevation} shows the property spread at distance
+zero for increasing elevation differentials, using a characteristic depth scale of
+2.0\,m (Thames corridor calibration).
+
+At 2\,m above the gauge the spread falls to approximately 109\,bp; at 5\,m above it
+drops to approximately 24\,bp. Beyond 10\,m of elevation the spread reaches the floor.
+
+\subsection{Combined Distance and Elevation Sensitivity}
+
+Table~\ref{tab:sens_combined} presents a matrix of property spreads across distance
+and elevation combinations. The two effects are multiplicative: the property flood
+probability scales as $\text{retention}(d) \times \exp(-\Delta h / h_{\text{scale}})$,
+so the combined effect compounds. For example, a property 1\,km from the gauge and
+2\,m above it has a spread of approximately 78\,bp, compared to 300\,bp at the gauge.
+
+\subsection{Terrain Sensitivity (EA Flood Zone)}
+
+The EA flood zone classification determines the baseline gauge hazard rate: properties
+in higher-risk zones are served by gauges with higher annual flood probabilities.
+Tables~\ref{tab:sens_terrain_a}--\ref{tab:sens_terrain_e} show the gauge spread and
+resulting property spread for representative hazard rates per zone at a fixed distance
+of 500\,m, across five elevation offsets from 0.5\,m to 2.5\,m above gauge.
+
+At 0.5\,m above gauge (Table~\ref{tab:sens_terrain_a}), Zone~3b basis is 180\,bp;
+at 2.5\,m (Table~\ref{tab:sens_terrain_e}) the same zone widens to 396\,bp as the
+elevation decay reduces the property spread. Zone~1 basis ranges from 3.4\,bp at
+0.5\,m to 7.6\,bp at 2.5\,m. The terrain effect is thus the dominant driver of
+absolute spread levels, while distance and elevation determine the basis within a
+given zone.
+
+\subsubsection{EA Flood Zone Hazard Rates}
+
+The following representative annual hazard rates are used per EA zone (midpoint of
+published EA probability ranges):
+
+\begin{center}
+\begin{tabular}{lrl}
+\toprule
+\textbf{EA Flood Zone} & \textbf{$\lambda_{\text{annual}}$} & \textbf{Description} \\
+\midrule
+Zone 3b & 0.050 & Functional floodplain \\
+Zone 3a & 0.020 & High ($>$1 in 100) \\
+Zone 3  & 0.020 & High (generic) \\
+Zone 2  & 0.005 & 1 in 100 to 1 in 1{,}000 \\
+Zone 1  & 0.001 & $<$1 in 1{,}000 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection{Interactive Terrain Repricing}
+
+The terrain effect is implemented as a \textbf{relative spread delta}:
+\begin{equation}
+    \Delta_{\text{terrain}} = S(z_{\text{selected}}, d, h) - S(z_{\text{actual}}, d, h)
+    \label{eq:terrain_delta}
+\end{equation}
+where $S(z, d, h)$ is the property spread at zone $z$, distance $d$, and elevation
+$h$, computed by bilinear interpolation from a pre-computed grid. The grid is a dense
+$(z \times d \times h)$ lookup with 21 distance points (0--5{,}000\,m in 250\,m steps)
+and 11 elevation points (0--5\,m in 0.5\,m steps).
+
+The baseline is the property's actual assigned zone. When the user selects a different
+zone via the UI dropdown, $\Delta_{\text{terrain}}$ is applied additively to the
+property spread. The waterfall decomposition becomes:
+\begin{equation}
+    s_{\text{property}}^{\text{adj}} = s_{\text{gauge}} + \Delta_{\text{terrain}}
+    + \Delta_{\text{distance}} + \Delta_{\text{elevation}}
+\end{equation}
+
+\subsection{Terrain Sensitivity by Distance}
+
+Tables~\ref{tab:sens_terrain_dist_a}--\ref{tab:sens_terrain_dist_e} hold the elevation
+fixed at 1.0\,m above gauge and vary the distance from 250\,m to 1{,}500\,m. For
+Zone~3b, basis widens from 233\,bp at 250\,m to 331\,bp at 1{,}500\,m. The distance
+effect is more pronounced in higher-risk zones where the gauge spread is larger: Zone~1
+basis only moves from 4.4\,bp to 6.4\,bp over the same range.
+
+
+% ===================================================================
+% 7. VALIDATION AND BACKTESTING
+% ===================================================================
+\mkmvalidation
+
+\subsection{Cross-Validation: Analytical vs QuantLib}
+
+The primary validation approach is cross-validation between the two independent pricing
+paths. For flat hazard rate inputs, the analytical and QuantLib implementations are
+expected to agree to within 0.5\,bp for typical parameterisations.
+
+\textbf{Methodology}: For a grid of hazard rates $\lambda_{\text{annual}} \in \{0.001,
+0.005, 0.01, 0.02, 0.05, 0.10\}$, tenors $T \in \{1, 3, 5, 10\}$ years, and recovery
+$R = 0$, both pricing paths are evaluated and the
+absolute spread difference is recorded.
+
+\textbf{Expected result}: Differences arise from:
+\begin{itemize}[nosep]
+    \item Day count convention differences (Actual/365 vs Actual/360 on the premium leg),
+    \item Date generation differences (exact quarterly vs TwentiethIMM roll dates),
+    \item Accrual and settlement date flow handling in the ISDA engine.
+\end{itemize}
+
+These differences are expected to be small ($<1$\,bp) and do not represent model risk.
+
+\subsection{Independent Benchmark (Wolfram)}
+
+The analytical pricing path (\texttt{compute\_prs\_spread}) was benchmarked on
+19~October~2026 against two references that share none of its numerics: a 50-digit
+\texttt{mpmath} implementation of Equations~\eqref{eq:risky_annuity}--\eqref{eq:protection_leg}
+and the fair-spread formula as written in this document, and Wolfram Engine~15.0
+evaluating the same quarterly sums exactly, with the book's yield curve as a piecewise
+function. Over 160 cases (annual probabilities $10^{-4}$ to the 0.999 cap; tenors 1, 3,
+5 and 10 years; recoveries 0 and 0.4; a flat 3\% rate and the book curve) the model
+agrees with the documented formula to $2.4\times10^{-15}$ relative, and Wolfram agrees
+with the 50-digit reference to $4.0\times10^{-30}$. The zero rule, the 2\,bp floor, the
+0.999 cap and the curve interpolation behave as documented. The benchmark is filed on the
+model record as \texttt{MKM-PR-001\_wolfram\_benchmark.pdf} (Docs $\rightarrow$ Benchmark);
+its findings on discretisation and discounting are reflected in
+Sections~\ref{sec:disc_error} and~\ref{sec:discounting}.
+
+\subsection{Spread Decomposition Validation}
+
+The data-driven basis and SHD/SHE decomposition are validated through the following
+checks:
+
+\begin{itemize}[nosep]
+    \item \textbf{Monotonicity}: Property spread is non-increasing with distance
+          (holding elevation constant).
+    \item \textbf{Monotonicity}: Property spread is non-increasing with elevation
+          differential (holding distance constant).
+    \item \textbf{Decomposition identity}: For each property,
+          $\text{distance\_effect} + \text{elevation\_effect} = s_P - s_G$ for both
+          the distance-first and elevation-first paths.
+    \item \textbf{Sign consistency}: Distance effect and elevation effect are both
+          non-positive (property is generally safer than gauge).
+    \item \textbf{Range}: For typical Thames catchment properties, total basis falls
+          within $[0, s_G]$\,bp (property cannot be riskier than the gauge under
+          the single-gauge propagation model).
+\end{itemize}
+
+\subsection{Comparison with FloodRE Indicative Rates}
+
+As an external benchmark, the model's property-level PRS spreads are compared against
+FloodRE Levy 2 indicative insurance premium rates for properties in equivalent flood
+zones. The PRS spread is expected to be of similar order of magnitude to the FloodRE
+rate, adjusted for differences in:
+
+\begin{itemize}[nosep]
+    \item Contract structure (swap vs insurance),
+    \item Loss given default assumptions,
+    \item Expense loading (FloodRE includes administrative costs; PRS does not).
+\end{itemize}
+
+Exact numerical agreement is not expected. The comparison serves as a reasonableness
+check only.
+
+
+% ===================================================================
+% 8. MODEL LIMITATIONS AND KNOWN WEAKNESSES
+% ===================================================================
+\mkmlimitations
+
+\subsection{Constant Hazard Rate Assumption}
+
+The analytical model assumes a constant (time-homogeneous) hazard rate over the full
+contract tenor. This means:
+
+\begin{itemize}[nosep]
+    \item \textbf{No climate trend}: The hazard rate does not increase over time to
+          reflect projected increases in flood frequency due to climate change. For
+          longer tenors ($>5$ years), this may understate the true fair spread.
+    \item \textbf{No seasonality}: Flood risk is not adjusted for seasonal variation
+          (winter vs summer). The annual hazard rate is an average over the full year.
+    \item \textbf{No term structure}: The QuantLib path supports a piecewise survival
+          curve, but the analytical path does not.
+\end{itemize}
+
+\subsection{No Counterparty Credit Risk}
+
+The model prices the PRS on a risk-free basis with no credit valuation adjustment
+(CVA) or debit valuation adjustment (DVA). In practice, the protection seller's
+creditworthiness affects the true economic value of the contract.
+
+\subsection{Quarterly Discretisation Error}\label{sec:disc_error}
+
+In continuous time, with a constant hazard rate, both legs integrate the same
+$S(t)D(t)$, so the fair spread is exactly $10^4(1-R)\lambda$\,bp whatever the discount
+curve and tenor. The quarterly scheme prices above this. The premium is paid in arrears
+with no accrued premium on a trigger, and the protection is paid at the period midpoint;
+both raise the spread. On a flat curve the sums cancel to the closed form
+\begin{equation}
+  s = 10^4\,(1-R)\,\frac{e^{\lambda\Delta t}-1}{\Delta t}\,e^{r\Delta t/2},
+  \qquad \frac{s}{10^4(1-R)\lambda} \approx 1 + \frac{(\lambda + r)\,\Delta t}{2},
+\end{equation}
+so the overstatement is a near-constant fraction of the spread at every tenor. For a
+5-year PRS with $R=0$ and a flat 3\% rate it is $+0.50$\,bp at
+$\lambda_{\text{annual}}=1\%$, $+1.27$\,bp at 2\%, $+5.2$\,bp at 5\%, $+18$\,bp at
+10\% and $+72$\,bp at 20\%. At UK flood probabilities the effect is about a basis
+point; it is not confined to high hazard rates, and above them it is far larger than
+the 2--3\,bp this section previously stated (corrected in v3.1 against the MKM-PR-001
+Wolfram oracle benchmark v0.1, 19~October~2026).
+
+\subsection{Risk-Free Discounting}\label{sec:discounting}
+
+The book discounts on a term structure, not a flat rate: \texttt{DEFAULT\_YIELD\_CURVE}
+(\texttt{config.port}), interpolated linearly between whole-year points and held flat
+beyond them. The analytical engine still accepts a flat rate (default 3\%) where no
+curve is given. Against a flat 3\% curve, the book curve changes the 5-year fair spread
+by under 1\,bp for annual probabilities below 0.10, by 1.4\,bp at 0.10, 3.1\,bp at 0.20
+and 9.3\,bp at 0.5 (MKM-PR-001 Wolfram oracle benchmark v0.1). The curve itself is a
+fixed configuration, not market-calibrated; keeping it current is a monitoring matter.
+
+\subsection{Decomposition Path Dependence}
+
+The SHD/SHE spread decomposition yields different distance and elevation component
+magnitudes depending on the order of attribution (distance-first vs elevation-first).
+This arises because the two effects interact non-linearly in the flood simulation:
+a property that is both far from the gauge and at high elevation has a compound
+reduction in flood probability that cannot be uniquely attributed to either factor.
+Both paths are presented to provide bounds on each component.
+
+\subsection{No Correlation Modelling}
+
+The model prices single-name PRS contracts independently. It does not model spatial
+correlation of flood events across multiple properties or gauges, which would be
+required for portfolio-level risk aggregation or tranche pricing.
+
+\subsection{Recovery Rate Assumptions}
+
+The recovery rate is fixed at $R = 0$ (zero recovery, full loss given default) for all
+trigger levels and does not vary with property value, flood depth, or construction
+standards. This is a conservative assumption that maximises the fair spread for a given
+hazard rate.
+
+
+% ===================================================================
+% 9. GOVERNANCE VALIDATION QUESTIONS
+% ===================================================================
+\mkmgovernance
+
+\mkmvqitem{1}{Ronseal Test}{Does the model do what it says on the tin?}
+Yes. The model prices Physical Risk Swap contracts by computing fair annual spreads in basis points using a CDS-equivalent quarterly premium framework. It delivers: (i)~gauge-level PRS pricing from hazard curve term structures, (ii)~property-level pricing from simulated property flood hazard rates, (iii)~basis decomposition into distance and elevation components via SHD/SHE synthetic horizons. Both the analytical and QuantLib pricing paths produce consistent results.
+
+\mkmvqitem{2}{Accuracy and Stability}{Does the model provide timely, accurate and stable results?}
+The analytical pricing engine produces identical results to the QuantLib ISDA CDS engine to within rounding tolerance for flat hazard rate inputs. The data-driven basis is derived directly from simulated property hazard rates, avoiding parametric approximation errors. Spreads are monotonically increasing in hazard rate, ensuring economic consistency. Sensitivity analysis confirms stable behaviour across the full range of input parameters. Pricing completes in under 1\,ms per contract (analytical path) or under 10\,ms (QuantLib path).
+
+\mkmvqitem{3}{Resource Usage}{Does the model consume excessive computational resources?}
+No. The analytical pricing path is $O(1)$ per contract with no external dependencies. The QuantLib path requires the QuantLib library but remains lightweight ($O(N_{\text{periods}})$ per contract where $N_{\text{periods}}$ is the number of quarterly payment dates). Full portfolio pricing (1,000 contracts) completes in under 1 second on either path. Memory usage is negligible. The SHD/SHE synthetic horizons require two additional simulation runs per portfolio, adding proportional but bounded overhead.
+
+\mkmvqitem{4}{Override Controls}{Are there controls over manual overrides?}
+The model does not support manual override of computed fair spreads. Contract parameters (tenor, recovery rate, risk-free rate, trigger level) are specified at invocation and are not modifiable post-computation. The MRC can apply a risk rating override via the governance dashboard, but this affects the model's governance status, not its computational outputs. Propagation parameters (retention length, Manning's roughness) are defined as fixed constants; changes require code modification.
+
+\mkmvqitem{5}{Output Consumption}{How is the output consumed for risk decision-making?}
+PRS spreads are the primary output used for: (a)~swap pricing and quotation in the Physical Risk market; (b)~mortgage credit risk adjustment via flood-adjusted hazard rates; (c)~basis risk analysis for hedging effectiveness assessment; (d)~stress testing via scenario-dependent hazard curves. Results are displayed in the PRS pricing panel of the interactive governance dashboard and exported in PDF property reports.
+
+\mkmvqitem{6}{Model Chaining}{Is the model's output used as input to another model?}
+Yes. Downstream, PRS spreads feed the Mortgage Credit Risk Pricer (MKM-MORT-001) for flood-adjusted expected loss calculation. Basis analysis outputs inform hedging strategy decisions. Upstream, the model consumes term structures from the GEV Hazard Curve Model (MKM-HAZARD-001) and property-level hazard rates from the Property Hazard Curve module. The flood propagation model provides the gauge-to-property attenuation via the retention model.
+
+\mkmvqitem{7}{Weaknesses}{Does the model have weaknesses and limitations of use?}
+Yes; the principal weaknesses are documented in Section~8. Key limitations: (i)~flat hazard rate assumption over the contract tenor (no time-varying climate risk); (ii)~SHD/SHE spread decomposition is path-dependent (distance-first vs elevation-first yield different component magnitudes); (iii)~quarterly premium schedule is CDS-standard and may not match bespoke contract terms; (iv)~the recovery rate is treated as a fixed constant rather than a stochastic variable. The model prices single-name contracts only; portfolio-level PRS structuring is out of scope.
+
+\mkmvqitem{8}{Monitoring}{What type of monitoring is required?}
+The following monitoring is recommended: (a)~quarterly comparison of model spreads against any available market transaction data; (b)~annual review of retention model calibration ($L = 3{,}000$\,m) against property flood loss experience; (c)~cross-validation between analytical and QuantLib pricing paths following library updates; (d)~sensitivity analysis of spread to recovery rate and risk-free rate assumptions; (e)~stress testing of spreads under all five intensity scenario families; (f)~verification that SHD/SHE decomposition identities hold across the portfolio.
+
+\mkmvqitem{9}{Overall Risk}{Is the overall model risk acceptable?}
+Conditionally acceptable. As a Tier~1 model with direct pricing impact, the PRS Pricing Engine carries significant model risk. The flat hazard rate assumption is the primary concern: under climate change scenarios, hazard rates are likely to increase over multi-year tenors, leading to underpriced protection. This is partially mitigated by conservative scenario selection and the retention model safety margin. The path-dependent decomposition is a known limitation accepted by the MRC pending future enhancement.
+
+\clearpage
+
+% ===================================================================
+% 10. CHANGE HISTORY
+% ===================================================================
+\mkmchangelog
+
+\mkmhistorypage{13-Feb-2026 & 1.0 & Initial documentation & D. Kelly \\
+18-Feb-2026 & 1.1 & Added Section 9: Governance Validation Questions (Chapter 5) & D. Kelly \\
+26-Feb-2026 & 1.2 & Added Delta Engine model to inventory; updated models in scope & D. Kelly \\
+01-Apr-2026 & 2.0 & Complete rewrite: data-driven basis replaces 5-component waterfall; SHD/SHE spread decomposition; distance/elevation/combined sensitivity tables; removed composition and construction year components & D. Kelly \\
+05-Jun-2026 & 3.0 & Added Section~3.4 Multi-Peril Extension: flood-or-wind union pricing over the coupled storm--typhoon event set; binary BRI-adjusted wind trigger (\texttt{is\_prs\_wind}); four peril outcomes with inclusion--exclusion; win/faw/fow/bow/baw tradeable scenarios & D. Kelly \\
+19-Oct-2026 & 3.1 & Corrected discretisation and discounting limitations against the Wolfram oracle benchmark; added Independent Benchmark (Wolfram) & D. Kelly \\}
+
+
+\end{document}

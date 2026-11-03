@@ -140,6 +140,10 @@ def open_review_stage(page: Page, stage: str) -> None:
 def open_admin_subtab(page: Page, atab: str) -> None:
     """Open the Admin tab and switch to one of its sub-tabs."""
     page.click(".tab[data-tab='reference']")
+    # Admin is two rows: the sections, then the open section's lists. Open the
+    # section holding this list first, unless the list is already on screen.
+    if not page.locator(f"[data-atab='{atab}']").count():
+        page.click(f"[data-holds~='{atab}']")
     page.click(f"[data-atab='{atab}']")
     # Scope to the admin sub-tabs — the persistent region-nav bar also renders
     # `.dtab.active` buttons, so match only tabs carrying a data-atab.

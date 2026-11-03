@@ -73,12 +73,27 @@ const Collections = {
     if (f.type === "choice" && !retired) {
       // Stores the value, shows its label where the spec gives one (a stress case's
       // expected response); every other register shows exactly what it stores.
+      // A value the list no longer offers (a RACI role since removed in Admin) is kept
+      // as an option, so the row still shows what it holds rather than a blank.
       const shown = f.option_labels || {};
-      const opts = ["", ...f.options]
+      const held = item[f.key];
+      const legacy = held && !f.options.includes(held) ? [held] : [];
+      const opts = ["", ...legacy, ...f.options]
         .map((o) => '<option value="' + esc(o) + '"' + (o === item[f.key] ? " selected" : "") +
           ">" + esc(shown[o] || o) + "</option>")
         .join("");
       return '<td><select style="width:100%" data-upd="' + c.key + "|" +
+        esc(item.item_id) + "|" + f.key + '">' + opts + "</select></td>";
+    }
+    if (f.type === "multichoice" && !retired) {
+      // Several at once (the roles an event was reported to). Values the list no
+      // longer offers stay selectable, so a save does not quietly drop them.
+      const held = Array.isArray(item[f.key]) ? item[f.key] : [];
+      const shown = f.option_labels || {};
+      const opts = [...held.filter((v) => !f.options.includes(v)), ...f.options]
+        .map((o) => '<option value="' + esc(o) + '"' + (held.includes(o) ? " selected" : "") +
+          ">" + esc(shown[o] || o) + "</option>").join("");
+      return '<td><select multiple size="3" style="width:100%" data-upd="' + c.key + "|" +
         esc(item.item_id) + "|" + f.key + '">' + opts + "</select></td>";
     }
     if (f.type === "date" && !retired) {

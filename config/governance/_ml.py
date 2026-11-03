@@ -94,10 +94,12 @@ DEFAULT_ESTIMATORS = (
     {"value": "Logit", "source": "statsmodels", "notes": "Logistic regression with inference diagnostics."},
 )
 
-# The ML questionnaire seeded on a fresh install. Ten rather than nine: SR 26-2 has
-# nine because SR 26-2 has nine, and padding or truncating a questionnaire an
-# assessor reads closely is worse than an uneven count. An adopter rewords these,
-# drops what does not apply and adds its own, exactly as with the SR 26-2 set.
+# The ML questionnaire seeded on a fresh install: these seven, asked after the five
+# common questions (_questions_common.py), so twelve in all. Twelve rather than
+# nine: SR 26-2 has nine because SR 26-2 has nine, and padding or truncating a
+# questionnaire an assessor reads closely is worse than an uneven count. An adopter
+# rewords these, drops what does not apply and adds its own, exactly as with the
+# SR 26-2 set.
 #
 # On performance: the question deliberately says "against which metric" rather than
 # naming one. Area under the curve is a CLASSIFICATION metric; a regression model

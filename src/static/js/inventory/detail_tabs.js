@@ -30,7 +30,18 @@ Object.assign(Detail, {
   _renderContent() {
     const d = this._model.data || {};
     const box = document.getElementById("dt-content");
-    if (this._tab === "overview") { box.innerHTML = this._overview(d); this._bindEdits(); return; }
+    if (this._tab === "overview") {
+      // Numerical methods sit beside the methodology they implement. Reference only:
+      // nothing scores, classifies or reviews them (config/governance/_numerical_methods).
+      box.innerHTML = this._overview(d) +
+        '<p class="muted" style="font-size:var(--size-sm);margin-top:var(--space-8)">The off-the-shelf ' +
+        "numerical methods this model is built with, for reference. They are not governed in their " +
+        "own right; how this model sets them (bump size, path count, tolerance) belongs in its assumptions.</p>" +
+        this._collSection("numerical_methods", d);
+      this._bindEdits();
+      this._bindCollections(["numerical_methods"]);
+      return;
+    }
     if (this._tab === "connections") {
       box.innerHTML =
         '<p class="muted" style="font-size:var(--size-sm);margin-bottom:var(--space-5)">This model\'s neighbourhood: ' +

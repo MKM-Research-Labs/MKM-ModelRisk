@@ -65,6 +65,13 @@ def reject_unknown_references(
                 f"{key} must be one of: {', '.join(str(a) for a in allowed)}")
 
 
+def _closed_multichoice(field: dict[str, Any]) -> bool:
+    """A multi-pick from a vocabulary (an event's Informed roles). Checked here; a
+    multi-pick from a register (an action's owners) stays open, as it always was."""
+    return (field.get("type") == "multichoice"
+            and bool(REFERENCE_SPECS.get(field["reference"], {}).get("value_key")))
+
+
 def reject_unknown_values(specs: dict[str, Any], collection: str,
                           fields: dict[str, Any], config=None) -> None:
     """Reject a collection-item value that is not on its field's admin list.
@@ -82,8 +89,8 @@ def reject_unknown_values(specs: dict[str, Any], collection: str,
 
     spec = (specs or {}).get(collection) or {}
     checkable = [f for f in spec.get("fields", ())
-                 if f.get("type") == "choice" and f.get("reference")
-                 and f["key"] in fields and str(fields[f["key"]] or "").strip()]
+                 if f.get("reference") and f["key"] in fields and fields[f["key"]]
+                 and (f.get("type") == "choice" or _closed_multichoice(f))]
     if not checkable:
         return
     lists = get_reference_lists(config)
@@ -92,7 +99,9 @@ def reject_unknown_values(specs: dict[str, Any], collection: str,
         list_spec = REFERENCE_SPECS.get(list_name, {})
         key = list_spec.get("value_key") or list_spec.get("display", "value")
         allowed = [item.get(key) for item in lists.get(list_name, ())]
-        if allowed and fields[field["key"]] not in allowed:
+        held = fields[field["key"]]
+        picked = held if isinstance(held, list) else [held]
+        if allowed and any(str(v).strip() and v not in allowed for v in picked):
             raise DomainError(
                 f"{field['label']} must be one of: "
                 f"{', '.join(str(a) for a in allowed)}")

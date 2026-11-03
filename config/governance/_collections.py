@@ -23,6 +23,8 @@ from config.governance._assessments import (  # noqa: F401 (re-export)
     MONITORING_COLLECTION,
     VALID_EVALUATION_KINDS, VALID_EVALUATION_VERDICTS)
 from config.governance._inventory import VALID_RAG_RATINGS
+from config.governance._numerical_methods import (NUMERICAL_METHODS_COLLECTION,
+                                                  NUMERICAL_METHODS_SPEC)
 from config.governance._signoff_collections import (  # noqa: F401 (re-export)
     SIGNOFF_COLLECTION_SPECS, SIGNOFF_COLLECTIONS, SIGNOFF_HISTORY_COLLECTION,
     SIGNOFF_REQUESTS_COLLECTION, VALID_SIGNOFF_KINDS, VALID_SIGNOFF_OUTCOME,
@@ -111,24 +113,10 @@ VERSION_LIFECYCLE_LIST = "version_lifecycle"
 VALID_VERSION_LIFECYCLE = (
     "New", "Being Enhanced", "No New Development", "Marked for Removal",
 )
-# Stakeholder-informed flags on an Operational Failure Event (W4b). Each is an
-# independent Yes/No because in practice an event may inform one and not the
-# other (e.g. internal noise that didn't reach the client).
-VALID_INFORMED = ("Yes", "No")
-# The four RACI accountabilities, defining who does what for a product's use of
-# models in production (the RACI operating model, held at the product level).
-VALID_RACI_CODES = ("Responsible", "Accountable", "Consulted", "Informed")
-# The RACI operating model seeded when a product is registered: one entry per
-# accountability, each with a standard governance role the adopter then edits. A
-# product's RACI is complete only with all four, so registration scaffolds them —
-# the way a model's nine SR 26-2 questions are seeded on registration. Pairs of
-# (raci code, default role).
-DEFAULT_RACI = (
-    ("Responsible", "Model user"),
-    ("Accountable", "Model owner"),
-    ("Consulted", "Model Risk Committee"),
-    ("Informed", "Senior management"),
-)
+# The RACI accountabilities and the roles that hold them live in ``_raci``: the
+# roles are an admin list, and DEFAULT_RACI is only what that list is seeded with.
+from config.governance._raci import (DEFAULT_RACI, RACI_ROLE_LIST,  # noqa: E402,F401
+                                     VALID_RACI_CODES)
 # An operational event's MRC review state. "Pending" = raised on the product,
 # awaiting a committee; "Received" = the MRC reviewed and formally received it.
 VALID_EVENT_REVIEW_STATUS = ("Pending", "Received")
@@ -207,6 +195,9 @@ COLLECTION_SPECS = {
          "reference": "data_source", "strict_reference": True, "required": True},
         {"key": "note", "label": "Note", "type": "text"},
     ]},
+    # The off-the-shelf numerical methods the model is built with, for reference
+    # only -- see _numerical_methods.py for why they are not governed in their own right.
+    NUMERICAL_METHODS_COLLECTION: NUMERICAL_METHODS_SPEC,
     # The field lineage of a model-to-model handoff: one item per field that
     # crosses the edge, stated as a *pair* — the provider's (giver's) field mapped
     # to the consumer's (receiver's) field, so the interoperability template's
@@ -222,23 +213,20 @@ COLLECTION_SPECS = {
         {"key": "note", "label": "Mapping / compatibility note", "type": "text"},
     ]},
     # W4b — Operational Failure Events: post-mortems of incidents touching the
-    # model, with RACI (Responsible / Accountable / Consulted / Informed). The
-    # Stakeholders leg ("Informed") is split into Client + Senior management so
-    # each can be toggled independently.
+    # model, with RACI (Responsible / Accountable / Consulted / Informed). R, A and C
+    # name the people who acted; "Informed" is which roles were told, picked from the
+    # admin RACI role list rather than a fixed pair of stakeholders. No ``options``
+    # on it: the shipped seed would refuse a role an institution added, so
+    # membership is checked against the live list (reference.reject_unknown_values).
     "operational_failure_events": {"label": "Events", "id_prefix": "EV", "fields": [
         {"key": "date", "label": "Event date", "type": "date", "required": True},
         {"key": "description", "label": "What happened", "type": "text", "required": True},
         {"key": "remediation", "label": "Remediation", "type": "text"},
-        {"key": "responsible", "label": "Responsible (Operational)",
-         "type": "text", "reference": "people"},
-        {"key": "accountable", "label": "Accountable (Model owner)",
-         "type": "text", "reference": "people"},
-        {"key": "consulted", "label": "Consulted (MRC)",
-         "type": "text", "reference": "people"},
-        {"key": "informed_client", "label": "Informed: Client",
-         "type": "choice", "options": VALID_INFORMED},
-        {"key": "informed_senior_mgmt", "label": "Informed: Senior management",
-         "type": "choice", "options": VALID_INFORMED},
+        {"key": "responsible", "label": "Responsible", "type": "text", "reference": "people"},
+        {"key": "accountable", "label": "Accountable", "type": "text", "reference": "people"},
+        {"key": "consulted", "label": "Consulted", "type": "text", "reference": "people"},
+        {"key": "informed", "label": "Informed", "type": "multichoice",
+         "reference": RACI_ROLE_LIST},
         # MRC review of the event (W4b feed-up). Set by the committee when it
         # receives the event at a meeting; not edited on the add form.
         {"key": "mrc_status", "label": "MRC status", "type": "choice",
@@ -251,7 +239,11 @@ COLLECTION_SPECS = {
     # the product level (a product uses models in production); the per-event R/A/C/I
     # on operational_failure_events records who acted on a specific incident.
     "raci_roles": {"label": "RACI roles", "id_prefix": "RC", "fields": [
-        {"key": "role", "label": "Role", "type": "text", "required": True},
+        # Picked from the admin RACI role list. The shipped roles stand in only while
+        # that list is empty; an entry recorded under a role since removed keeps it.
+        {"key": "role", "label": "Role", "type": "choice", "required": True,
+         "options": tuple(role for _code, role in DEFAULT_RACI),
+         "reference": RACI_ROLE_LIST},
         {"key": "raci", "label": "RACI", "type": "choice",
          "options": VALID_RACI_CODES, "required": True},
         {"key": "assigned_to", "label": "Assigned to", "type": "text", "reference": "people"},

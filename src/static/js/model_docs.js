@@ -82,15 +82,14 @@ const ModelDocs = {
     // A one-member group lists, and files into, its member — never its label.
     const items = DocLinks.visible(this._docs, members[0]);
     const rows = items.length ? items.map((d) =>
-      "<tr><td>" + esc(d.original_name) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +
-      esc(fmtTimestamp(d.uploaded_at)) + "</td><td>" + fmtSize(d.size) +
+      "<tr><td>" + esc(DocLinks.name(d)) + "</td><td>" + fieldDisplay(d.description) + "</td><td>" +
+      esc(fmtTimestamp(d.uploaded_at)) + "</td><td>" + (DocLinks.isLink(d) ? "Link" : fmtSize(d.size)) +
       '</td><td class="rowact">' + DocLinks.actions(this._base, this._id, d) +
       (this._retired ? "" : ' <button class="btn small danger" data-rmdoc="' + esc(d.item_id) + '">Delete</button>') +
       "</td></tr>").join("") : '<tr><td colspan="5" class="empty">No documents.</td></tr>';
     const upload = this._retired ? "" :
-      '<div class="row" style="align-items:center;margin-bottom:var(--space-5)"><input type="file" id="doc-file">' +
-      '<input id="doc-desc" placeholder="Description (optional)" style="flex:1">' +
-      '<button class="btn small primary" id="doc-upload">Upload</button></div>';
+      '<div class="row" style="align-items:center;margin-bottom:var(--space-5)">' +
+      DocUpload.html("doc", false) + "</div>";
     document.getElementById("docs-cat").innerHTML = upload +
       "<table><thead><tr><th>Name</th><th>Description</th><th>Uploaded</th><th>Size</th><th>Actions</th></tr></thead><tbody>" +
       rows + "</tbody></table>";
@@ -99,8 +98,10 @@ const ModelDocs = {
 
   _bind() {
     const self = this;
-    const upload = document.getElementById("doc-upload");
-    if (upload) upload.onclick = function () { self._upload(); };
+    DocUpload.bind("doc", function () {
+      DocUpload.submit("doc", self._base + self._id + "/documents",
+        self._members(self._cat)[0], self._refresh);
+    });
     document.querySelectorAll("[data-rmdoc]").forEach(function (el) {
       const iid = el.getAttribute("data-rmdoc");
       el.onclick = function () {
@@ -108,21 +109,5 @@ const ModelDocs = {
           self._base + self._id + "/documents/" + iid + "/delete", {}, self._refresh);
       };
     });
-  },
-
-  _upload() {
-    const fileInput = document.getElementById("doc-file");
-    if (!fileInput.files.length) { App.toast("Choose a file first", "error"); return; }
-    const form = new FormData();
-    form.append("file", fileInput.files[0]);
-    form.append("category", this._members(this._cat)[0]);
-    form.append("description", document.getElementById("doc-desc").value);
-    fetch(this._base + this._id + "/documents", {
-      method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
-    }).then(async (res) => {
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error || "upload failed"); }
-      App.toast("Document uploaded", "ok");
-      this._refresh();
-    }).catch((e) => App.toast(e.message, "error"));
   },
 };

@@ -83,10 +83,10 @@ DOCUMENT_SUBTITLE_SIZE = "25pt"
 DOCUMENT_BODY_FONT = ""
 
 # The classification banner stamped on the title page and page footer of every
-# generated document. Empty by default: a banner is the adopting institution's
-# own marking, and a fresh install stamping one it did not choose is worse than
-# stamping none. Set it in Admin > Misc.
-DEFAULT_CLASSIFICATION = ""
+# generated document. An institution sets its own in Admin > Settings; until it
+# does, documents carry this one. (Emptied on 2026-09-02 without being asked for, which
+# took the banner off every document; restored 2026-10-22.)
+DEFAULT_CLASSIFICATION = "CONFIDENTIAL — PROPRIETARY"
 
 # Fallback organisation name for document headers/title pages when the singleton
 # MRC settings ``org_name`` has not been set. Empty by default -- see the notice
@@ -94,20 +94,33 @@ DEFAULT_CLASSIFICATION = ""
 # the institution that produced it.
 DEFAULT_ORG = ""
 
-# "Prepared by" line on generated title pages. Empty by default, for the same
-# reason as the organisation name above; an adopter naming its platform or a
-# team here sets it in Admin > Misc.
-DEFAULT_AUTHOR = ""
+# "Prepared by" line on generated title pages. These documents are produced by the
+# platform rather than a named person, so the author is the system by default; an
+# institution naming a team instead sets it in Admin > Settings.
+DEFAULT_AUTHOR = "MKM-ModelRisk"
 
 # The legal notice printed on the title page of every generated document. It covers
 # the *contents* of the document -- the models, methodology and calculations it
 # describes -- and says nothing about the software that produced it, which is
 # MIT-licensed (see LICENSE).
 #
-# Empty by default. The notice asserts somebody's rights over their own model
-# documentation, and the only party who can assert those is the institution
-# generating the document -- so shipping one pre-written would have every adopter
-# publishing a claim written for someone else. An institution files its own in
-# Admin > Misc; paragraphs are one per entry here, separated by a blank line in
-# the setting.
-DEFAULT_LEGAL_NOTICE = ()
+# This wording asserts MKM Research Labs' rights; an institution asserting rights over
+# its own model documentation replaces it in Admin > Settings, as with the
+# classification banner. Paragraphs are one per entry here and separated by a blank
+# line in the setting. (Emptied 2026-09-02 unasked; restored 2026-10-22.)
+DEFAULT_LEGAL_NOTICE = (
+    "PROPRIETARY AND CONFIDENTIAL",
+    "This document, including all algorithms, models, methodology, formulas, "
+    "calculations, and intellectual concepts contained herein, constitutes the "
+    "exclusive intellectual property and confidential trade secrets of MKM Research "
+    'Labs ("MKM").',
+    "Any usage, reproduction, distribution, modification, or disclosure of this "
+    "document or any portion thereof, without the express prior written "
+    "authorisation from MKM Research Labs is strictly prohibited and constitutes an "
+    "infringement of intellectual property rights.",
+    'The document is provided on an "as is" basis. MKM Research Labs makes no '
+    "representations or warranties of any kind, express or implied, regarding its "
+    "accuracy, reliability, or suitability for any particular purpose.",
+    "All rights reserved. © 2021–2026 MKM Research Labs.",
+    "Governed by the laws of the United Kingdom.",
+)

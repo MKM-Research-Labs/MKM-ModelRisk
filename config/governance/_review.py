@@ -24,7 +24,7 @@ records the state of, not a property of a model — and because the workflow is
 about to grow the sign-off and its report.
 """
 # --- The review workflow -----------------------------------------------------
-# The review runs as five stages in the order the work happens. The reviewer gives
+# The review runs as seven stages in the order the work happens. The reviewer gives
 # each stage an interim approval, which moves the review on and sets the model's
 # review status — so "where is this review up to" is answered by the work done,
 # not by somebody remembering to update a dropdown.
@@ -70,7 +70,7 @@ REVIEW_QUESTION_COLLECTIONS = {
 
 # Second, what that stage is CALLED. "The nine questions" is a term of art for a
 # model -- it names SR 26-2's nine specifically -- and reusing the phrase for a
-# twelve-question AI questionnaire would be wrong rather than merely odd. The
+# thirteen-question AI questionnaire would be wrong rather than merely odd. The
 # stage key never changes; only its label does.
 REVIEW_QUESTION_STAGE_KEY = "questions"
 REVIEW_QUESTION_STAGE_LABELS = {
@@ -119,7 +119,8 @@ VALID_REVIEW_TRIGGERS = (
 # write-up, its sensitivities and its test evidence all go stale at once.
 NEW_VERSION_TRIGGER = "New version"
 
-# The reviewer's position on one of the nine questions. Distinct from the owner's
+# The reviewer's position on one review question -- one of a model's nine, or of the
+# questionnaire an ML Application or AI System carries. Distinct from the owner's
 # status: the owner says what the model does, the reviewer says whether that
 # answer stands. A question can be Addressed by its owner and Challenged by its
 # reviewer at the same time — that disagreement is the review doing its job, and

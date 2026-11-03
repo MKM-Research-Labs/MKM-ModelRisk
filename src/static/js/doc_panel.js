@@ -35,7 +35,7 @@ const DocPanel = {
     const items = DocLinks.visible(opts.docs, opts.category);
     const rows = items.length
       ? items.map((d) =>
-          '<div class="dp-doc">' + esc(d.original_name) + " " +
+          '<div class="dp-doc">' + esc(DocLinks.name(d)) + " " +
           DocLinks.actions(opts.base, opts.id, d) +
           (d.description ? ' <span class="muted">— ' + esc(d.description) + "</span>" : "") +
           (opts.retired ? "" : ' <button class="btn small danger" data-' + p + '-rm="' +
@@ -43,17 +43,15 @@ const DocPanel = {
       : '<div class="muted" style="font-size:var(--size-sm)">No documents.</div>';
     const upload = opts.retired ? "" :
       '<div class="row" style="align-items:center;margin-top:var(--space-3);gap:var(--space-3)">' +
-      '<input type="file" id="' + p + '-file" style="font-size:var(--size-sm)">' +
-      '<input id="' + p + '-desc" placeholder="Description (optional)" style="flex:1;font-size:var(--size-sm)">' +
-      '<button class="btn small primary" id="' + p + '-upload">Upload</button></div>';
+      DocUpload.html(p, true) + "</div>";
     return '<div class="dp-panel" style="margin:var(--space-2) 0 var(--space-6)">' + rows + upload + "</div>";
   },
 
   bind(opts) {
     const p = this._slug(opts.category);
-    const self = this;
-    const upload = document.getElementById(p + "-upload");
-    if (upload) upload.onclick = function () { self._upload(opts, p); };
+    DocUpload.bind(p, function () {
+      DocUpload.submit(p, opts.base + opts.id + "/documents", opts.category, opts.refresh);
+    });
     document.querySelectorAll("[data-" + p + "-rm]").forEach(function (el) {
       const iid = el.getAttribute("data-" + p + "-rm");
       el.onclick = function () {
@@ -61,21 +59,5 @@ const DocPanel = {
           opts.base + opts.id + "/documents/" + iid + "/delete", {}, opts.refresh);
       };
     });
-  },
-
-  _upload(opts, p) {
-    const fileInput = document.getElementById(p + "-file");
-    if (!fileInput.files.length) { App.toast("Choose a file first", "error"); return; }
-    const form = new FormData();
-    form.append("file", fileInput.files[0]);
-    form.append("category", opts.category);
-    form.append("description", document.getElementById(p + "-desc").value);
-    fetch(opts.base + opts.id + "/documents", {
-      method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
-    }).then(async (res) => {
-      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "upload failed"); }
-      App.toast("Document uploaded", "ok");
-      opts.refresh();
-    }).catch((e) => App.toast(e.message, "error"));
   },
 };

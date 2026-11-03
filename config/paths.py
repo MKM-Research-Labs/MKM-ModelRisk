@@ -46,6 +46,11 @@ STATIC_DIR = _REPO_ROOT / "src" / "static"
 # and the main checkout both have one, and a relative path finds the wrong tree.
 TEMPLATES_DIR = _REPO_ROOT / "src" / "templates"
 
+# Model documentation of record, one folder per model id. Per-model docs left
+# PhysicalRisk (its 527b5a348); a document recovered and re-issued here is kept as
+# its .tex and built .pdf, the pair filed on the model's record.
+MODEL_DOCS_DIR = _REPO_ROOT / "docs" / "models"
+
 # The internal-disk backup script the app runs on a timer (see model.py).
 BACKUP_SCRIPT = _REPO_ROOT / "scripts" / "backup_db.sh"
 

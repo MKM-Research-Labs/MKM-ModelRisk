@@ -19,40 +19,25 @@
 // SOFTWARE.
 
 // Artefacts panel of the Documents tab: what the institution ISSUES, filed per
-// division, plus a company-wide shelf and the FINOS shelf.
+// division, plus a company-wide shelf.
 //
-// Extracted from gov_docs.js when the FINOS shelf arrived. That file was already past
+// Extracted from gov_docs.js when it outgrew itself. That file was already past
 // the 300-line mark rule R2 held web files to — reported then, gated since
 // 2026-09-05 — and the panel is a
 // self-contained screen with its own state — the same split gov_vendor_docs.js
 // already makes, and the same load()/shell()/bind() interface.
-//
-// The FINOS shelf is the one that is not like the others. Its documents are the
-// institution's description of how it implements the FINOS mitigations, and the
-// completeness audit reads them: a document tagged AIR-PREV-017 is what turns that
-// row of the coverage table from Not evidenced into a citation. So this shelf, and
-// only this shelf, offers the reference picker.
 const GovArtefacts = {
   _artefacts: {},        // shelf -> [artefact]
-  _shelves: [],          // Company-wide, then one per division, then FINOS
+  _shelves: [],          // Company-wide, then one per division
   _kinds: [],
-  _finosShelf: "",
-  _finosRefs: [],        // [{ref, title}] — the mitigation catalogue
   _shelf: null,          // the open shelf
-  _picked: [],           // references ticked for the pending upload
 
   async load() {
     const art = await App.get("/api/artefacts");
     this._artefacts = art.artefacts || {};
     this._shelves = art.shelves || [];
     this._kinds = art.kinds || [];
-    this._finosShelf = art.finos_shelf || "";
-    this._finosRefs = art.finos_refs || [];
     if (!this._shelf || this._shelves.indexOf(this._shelf) < 0) this._shelf = this._shelves[0];
-  },
-
-  _isFinos() {
-    return this._shelf === this._finosShelf && !!this._finosShelf;
   },
 
   shell(panelTabs) {
@@ -64,7 +49,6 @@ const GovArtefacts = {
     return '<div class="card"><h3>Documents</h3>' + panelTabs +
       '<p class="muted" style="margin-top:var(--space-5)">' + this._blurb() + "</p>" + shelfTabs +
       '<div class="tiles" id="gd-tiles">' + this._tiles() + "</div>" +
-      this._refPicker() +
       '<div class="row" style="align-items:center;margin-top:var(--space-7)">' +
       '<input type="file" id="ga-file">' +
       '<select id="ga-kind">' + kindOpts + "</select>" +
@@ -73,31 +57,9 @@ const GovArtefacts = {
   },
 
   _blurb() {
-    if (this._isFinos()) {
-      return "How this institution implements the FINOS AI Governance Framework's " +
-             "mitigations. Tag a document with every mitigation it describes &mdash; one " +
-             "paper may cover many &mdash; and the completeness audit cites it against " +
-             "each of them. Untagged documents are filed but evidence nothing.";
-    }
     return "What this institution issues &mdash; terms of reference, committee " +
            "presentations, policies and guides. Filed per division; Company-wide holds " +
            "what belongs to the institution as a whole.";
-  },
-
-  // Ticked before choosing the file, so the reference list is read as part of
-  // describing the document rather than as an afterthought to uploading it.
-  _refPicker() {
-    if (!this._isFinos()) return "";
-    const boxes = this._finosRefs.map((r) => {
-      const on = this._picked.indexOf(r.ref) !== -1;
-      return '<label class="chip' + (on ? " on" : "") + '" title="' + esc(r.title) + '">' +
-        '<input type="checkbox" data-ga-ref="' + esc(r.ref) + '"' + (on ? " checked" : "") +
-        "> " + esc(r.ref) + "</label>";
-    }).join(" ");
-    return '<div style="margin-top:var(--space-7)"><div class="muted">Mitigations this ' +
-      "document describes</div>" +
-      '<div class="row" style="flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-3)">' +
-      boxes + "</div></div>";
   },
 
   bind(rerender) {
@@ -105,16 +67,6 @@ const GovArtefacts = {
     document.querySelectorAll("[data-gdshelf]").forEach((btn) => {
       btn.onclick = () => {
         this._shelf = btn.getAttribute("data-gdshelf");
-        this._picked = [];      // references belong to the shelf they were ticked on
-        rerender();
-      };
-    });
-    document.querySelectorAll("[data-ga-ref]").forEach((box) => {
-      box.onchange = () => {
-        const ref = box.getAttribute("data-ga-ref");
-        const at = this._picked.indexOf(ref);
-        if (box.checked && at === -1) this._picked.push(ref);
-        if (!box.checked && at !== -1) this._picked.splice(at, 1);
         rerender();
       };
     });
@@ -137,13 +89,11 @@ const GovArtefacts = {
     form.append("file", file.files[0]);
     form.append("kind", document.getElementById("ga-kind").value);
     form.append("description", document.getElementById("ga-desc").value);
-    this._picked.forEach((ref) => form.append("finos_refs", ref));
     fetch("/api/artefacts/" + encodeURIComponent(this._shelf), {
       method: "POST", headers: { "X-Auth-Request-User": App.actor() }, body: form,
     }).then(async (res) => {
       if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || "upload failed"); }
       App.toast("Artefact filed", "ok");
-      this._picked = [];
       this._rerender();
     }).catch((e) => App.toast(e.message, "error"));
   },

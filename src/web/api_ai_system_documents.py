@@ -33,12 +33,11 @@ from __future__ import annotations
 
 from flask import jsonify, request
 
-from config.governance import DOC_CATEGORIES
-from src.files import UploadError, upload_path
+from src.files import upload_path
 from src.governance.ai_system import get_ai_system, rebuild_ai_system_view
 from src.governance.ai_system.commands import AGGREGATE_TYPE as AI_AGGREGATE
-from src.governance.documents import (add_document, ai_system_scope, find_document,
-                                      remove_document)
+from src.governance.documents import ai_system_scope, find_document, remove_document
+from src.web._document_upload import file_document
 from src.web._helpers import request_actor, send_document
 from src.web.api_ai_system import ai_system_bp
 
@@ -48,20 +47,10 @@ def upload_document(ai_system_id: str):
     """Supporting Documentation: upload a categorised file against the record."""
     if get_ai_system(ai_system_id) is None:
         return jsonify({"error": "AI System not found"}), 404
-    category = request.form.get("category")
-    if category not in DOC_CATEGORIES:
-        return jsonify({"error": "invalid category"}), 400
-    file = request.files.get("file")
-    if file is None:
-        return jsonify({"error": "no file provided"}), 400
-    try:
-        add_document(aggregate_type=AI_AGGREGATE, aggregate_id=ai_system_id,
-                     scope=ai_system_scope(ai_system_id), category=category,
-                     filename=file.filename, data=file.read(),
-                     description=request.form.get("description", ""),
-                     actor=request_actor())
-    except UploadError as exc:
-        return jsonify({"error": str(exc)}), 400
+    error = file_document(aggregate_type=AI_AGGREGATE, aggregate_id=ai_system_id,
+                          scope=ai_system_scope(ai_system_id))
+    if error:
+        return error
     rebuild_ai_system_view()
     return jsonify(get_ai_system(ai_system_id)), 201
 

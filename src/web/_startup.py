@@ -99,11 +99,13 @@ def bootstrap(config=None) -> None:
     replay behind it would likewise run once per worker.
     """
     from src.database import run_migrations
-    from src.governance.reference import (ensure_default_common_questions,
+    from src.governance.reference import (ensure_default_ai_system_questions,
+                                          ensure_default_common_questions,
                                           ensure_default_estimators,
                                           ensure_default_ml_application_questions,
                                           ensure_default_ml_training_vocabularies,
                                           ensure_default_model_types,
+                                          ensure_default_raci_roles,
                                           ensure_default_reference_lists,
                                           ensure_default_review_questions,
                                           ensure_default_standing_agenda,
@@ -119,6 +121,8 @@ def bootstrap(config=None) -> None:
     ensure_default_review_questions()
     ensure_default_standing_agenda()
     ensure_default_status_vocabularies()
+    # The roles a Product's RACI is assigned to, and what a new one is scaffolded with.
+    ensure_default_raci_roles()
     # The Estimator menu and the ML Application questionnaire: the same "seed a
     # vacuum" rule, for the ML side of the estate.
     ensure_default_estimators()
@@ -128,6 +132,9 @@ def bootstrap(config=None) -> None:
     # it. Seeded so an administrator can see and reword them on day one — they are the
     # ones most likely to need the institution's own wording.
     ensure_default_common_questions()
+    # The AI questionnaire, seeded like the two above so Admin > AI Review shows the
+    # questions AI Systems are actually asked rather than "None yet".
+    ensure_default_ai_system_questions()
     reconcile_read_models(config)
 
 

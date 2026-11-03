@@ -134,10 +134,10 @@ const MlReviewPolicyEditor = {
       const on = mine.filter((it) => this._setting(it.item_id).in_use).length;
       const req = mine.filter((it) => this._setting(it.item_id).mandatory).length;
       return '<section class="card" style="margin-bottom:var(--space-4)">' +
-        '<h4 style="margin:0 0 var(--space-2)">' + esc(key) + ". " + esc(groups[key]) +
+        "<h3>" + esc(key) + ". " + esc(groups[key]) +
         '<span class="muted" style="font-weight:400;font-size:var(--size-xs);' +
         'margin-left:var(--space-3)">' + on + " of " + mine.length + " in use · " +
-        req + " mandatory</span></h4>" +
+        req + " mandatory</span></h3>" +
         '<table class="grid"><thead><tr><th style="width:55%">Item</th>' +
         '<th style="width:12%">In use</th><th style="width:14%">Mandatory</th>' +
         "</tr></thead><tbody>" +

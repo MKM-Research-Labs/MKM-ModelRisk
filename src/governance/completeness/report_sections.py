@@ -48,7 +48,7 @@ from config.governance import (
 from src.governance.completeness._method import appendix, method_section
 from src.governance.completeness.framework_report import framework_section
 from src.governance.completeness.review_programme import programme
-from src.governance.completeness.scan import (findings, finos_evidence,
+from src.governance.completeness.scan import (findings,
                                               ratified_divisions, scan,
                                               coverage_population, scoped_models)
 from src.governance.latex import (_para_table, _section, _subsection, front_matter,

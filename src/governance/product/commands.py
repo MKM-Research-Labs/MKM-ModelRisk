@@ -22,11 +22,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from config.governance import (DEFAULT_RACI, PRODUCT_COLLECTION_SPECS,
-                               PRODUCT_COMPONENTS, component_kind)
+from config.governance import (PRODUCT_COLLECTION_SPECS, PRODUCT_COMPONENTS,
+                               component_kind)
 from src.governance import collections as coll
 from src.governance.errors import DomainError
-from src.governance.reference import reject_unknown_values
+from src.governance.reference import raci_seed_items, reject_unknown_values
 from src.governance.seeding import seed_items
 from src.database import Event, append_event, read_stream
 from src.governance.product._rules import (
@@ -92,16 +92,16 @@ def _is_duplicate(name: str, components: frozenset, *, exclude_product_id: str,
 
 
 def _seed_raci(product_id, after_version, actor, config) -> None:
-    """Scaffold the four RACI accountabilities immediately after registration.
+    """Scaffold the RACI accountabilities immediately after registration.
 
     A product's RACI operating model is complete only with all of Responsible /
-    Accountable / Consulted / Informed, so registration seeds one entry per code
-    (each with a standard governance role the owner edits) — the same way a model's
-    nine SR 26-2 validation questions are seeded on registration.
+    Accountable / Consulted / Informed, so registration seeds one entry per role the
+    admin RACI role list marks with an accountability (which the owner then edits) —
+    the same way a model's SR 26-2 validation questions are seeded on registration.
     """
     seed_items(aggregate_type=AGGREGATE_TYPE, aggregate_id=product_id,
                collection="raci_roles", id_prefix="RC",
-               items=[{"role": role, "raci": raci} for raci, role in DEFAULT_RACI],
+               items=raci_seed_items(config),
                after_version=after_version, actor=actor,
                reason="Seed the four RACI accountabilities", config=config)
 

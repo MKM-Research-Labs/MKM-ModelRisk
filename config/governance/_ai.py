@@ -111,9 +111,10 @@ EU_AI_ACT_CLASSES = (UNASSESSED_EU_CLASS, "Minimal risk", "Limited risk",
                      "High risk (Annex III)", "Prohibited")
 
 # The questionnaire seeded on a fresh install, and the reason this record type earns
-# its own rather than borrowing the ML set: not one of the ten ML questions is
-# answerable about a foundation model nobody in the firm trained. These are written
-# against the FINOS risk catalogue, so that answering them is what moves those rows.
+# its own rather than borrowing the ML set: not one of the seven ML-specific
+# questions is answerable about a foundation model nobody in the firm trained.
+# These are written against the FINOS risk catalogue, so that answering them is
+# what moves those rows.
 AI_SYSTEM_QUESTIONS = (
     {"short_label": "Model Provenance",
      "question": "Which foundation model and version is in use, who provides it, and "

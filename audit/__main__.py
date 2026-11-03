@@ -37,6 +37,7 @@ from audit.init_files import init_file_findings, init_file_inventory
 from audit.json_files import json_file_findings
 from audit.large_files import large_source_files, large_test_files, large_web_files
 from audit.path_definitions import path_definition_findings
+from audit.layout import layout_findings
 from audit.styling import (colour_literal_findings, unconverted_colour_findings,
                            undefined_token_findings)
 from audit.pdf import (REPORTS, STANDALONE_REPORTS, render_audit_pdf,
@@ -89,6 +90,7 @@ def build_report() -> dict:
         "styling": colour_literal_findings(),
         "styling_backlog": unconverted_colour_findings(),
         "undefined_tokens": undefined_token_findings(),
+        "layout": layout_findings(),
     }
 
 
@@ -173,6 +175,8 @@ def main(argv=None) -> int:
                             lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     total += _print_section("R10 undefined design tokens", report["undefined_tokens"],
                             lambda f: f"{f['path']}:{f['line']}  {f['snippet']}")
+    total += _print_section("R11 layout outside the shared vocabulary", report["layout"],
+                            lambda f: f"{f['path']}:{f['line']}  {f['kind']}  {f['snippet']}")
     total += _print_section("R2 large web files (>300)", report["large_web_files"],
                             lambda f: f"{f['lines']:>4}  {f['path']}")
     # Reported (non-gating) sections — visibility only, not counted in ``total``.

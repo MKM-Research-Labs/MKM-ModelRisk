@@ -176,6 +176,9 @@ EXEMPT_COLLECTIONS = (
     # Written by the ingest pipe from the producing repo rather than typed by an
     # owner, so its absence is a pipeline finding, not a governance one.
     "field_lineage",
+    # Recorded for the documentation's sake, not governed: plenty of models use no
+    # off-the-shelf numerical method, so an empty list is no gap (_numerical_methods).
+    "numerical_methods",
     # --- The review workflow ---------------------------------------------
     # A review is a programme of work with its own timetable, not a field an
     # owner forgot to fill in. Scoring these would mark every model in the estate

@@ -110,9 +110,10 @@ function inputControl(id, spec, division) {
   // see what it means.
   if (spec.type === "multichoice") {
     const explain = spec.explanations || {};
+    const shown = spec.option_labels || {};
     const opts = (spec.options || []).map((o) =>
       '<option value="' + esc(o) + '"' +
-      (explain[o] ? ' title="' + esc(explain[o]) + '"' : "") + ">" + esc(o) +
+      (explain[o] ? ' title="' + esc(explain[o]) + '"' : "") + ">" + esc(shown[o] || o) +
       "</option>").join("");
     // A multi-select has no intrinsic width, so it collapsed to its content on a
     // narrow viewport — a roles picker too cramped to read.

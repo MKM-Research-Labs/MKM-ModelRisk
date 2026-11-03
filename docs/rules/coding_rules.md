@@ -286,10 +286,54 @@ report and the screen it came from cannot disagree. The scan is comment-aware an
 colours written without a `#`: both forms that escaped it for months (`{HTML}{1565C0}` in
 the preamble, a bare `"9E9E9E"` fallback in the risk-policy document) are now findings.
 
+
+---
+
+## R11 — Screens are built from the shared layout vocabulary
+
+**Rule.** A screen is composed from the console's existing layout pieces and adds none of
+its own. Specifically:
+
+- **Navigation is top down.** A tab bar is a plain `<div class="dtabs">` row of
+  `<button class="dtab">`. A second level is **another `dtabs` row beneath the first**
+  (a model's review stages, the org navigator, Admin's sections and their lists), and a
+  third level is a third row. Never a column of labels beside the tabs, never a modified
+  bar (`class="dtabs something"`). A level holding one item has no row of its own: that
+  item is the tab above.
+- **Headings are the three the console defines, and nothing else.** A page's brand
+  title (`.brand h1`, the shell's), a card's title (the `<h3>` opening a `.card`), and a
+  modal's title (`.modal h2`). Anything inside a card that needs a title is a
+  `<div class="section-header">`. No other heading tag, and no stylesheet rule that
+  styles a heading any other way.
+- **Prose is `<p class="muted">`**; a register or list is drawn by the shared renderer
+  (`Collections`, `Reference._renderList`), not a table built for one screen.
+- **A genuinely new pattern is a change to this rule.** It is added to the shared
+  stylesheet under a name for the pattern (not for the screen), recorded here, and the
+  audit's allow-list in `config/audit.py` is extended in the same commit.
+
+**Why.** A screen that invents its own heading or its own kind of tab bar looks fine
+alone and wrong beside every other screen, and nothing else catches it: its colours are
+tokens, so R10 is satisfied. On 2026-10-22 Admin was regrouped with its section names in
+a column down the side and its vocabularies under large headings, two styles no other
+screen used, and it took the user to spot it.
+
+**How to comply.** Copy the nearest screen that already does what you need: the Review
+tab for stacked tabs, any detail card for a title and its sections. If nothing does,
+that is the fourth bullet above, not a licence to style it locally.
+
+**Verified by.** The layout audit (`python -m audit`, `audit/layout.py`), gated at zero.
+It reads the console's JavaScript and stylesheets and finds three things: a heading tag
+a screen builds other than `h2`/`h3` (`LAYOUT_SCREEN_HEADINGS`), a stylesheet rule
+styling a heading beyond `LAYOUT_HEADING_SELECTORS`, and a tab bar carrying a modifier
+class. It has its own report PDF (`audit_r11_layout.pdf`) and a row in the compliance
+summary. The top-down ordering itself is checked by looking: verify on 5016 (R9).
+
 ---
 
 ## Change log
 
+- 2026-10-22 — Added R11 (screens are built from the shared layout vocabulary), with the
+  layout audit gating stray heading tags, heading styles and modified tab bars.
 - 2026-08-22 — Added R10 (visual parameters come from `config/theme`), with the styling
   audit gating colour literals in CSS/templates/Python and undefined token references.
   JavaScript literals are reported until step 5 of `docs/design/theme_config.md`.

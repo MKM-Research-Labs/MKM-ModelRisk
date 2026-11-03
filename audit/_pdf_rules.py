@@ -164,6 +164,12 @@ def _json_files_body(report: dict) -> str:
         lambda f: [f["path"], f["line"], f["kind"], f["snippet"]])
 
 
+def _layout_body(report: dict) -> str:
+    return _findings_section("R11 — Layout outside the shared vocabulary", report["layout"],
+                             ["File", "Line", "Kind", "Markup"],
+                             lambda f: [f["path"], f["line"], f["kind"], f["snippet"]])
+
+
 # One standalone report per audit function. ``body`` renders the rule's findings;
 # ``title``/``subtitle`` head the page; ``label`` names it in the Audit Reports tab.
 REPORTS = [
@@ -197,6 +203,9 @@ REPORTS = [
      "title": "R10 — Styling",
      "subtitle": "Colours live only in config/theme, and every token resolves",
      "body": _styling_body},
+    {"filename": "audit_r11_layout.pdf", "label": "R11 — Layout",
+     "title": "R11 — Layout",
+     "subtitle": "Screens use the shared headings and tab bars", "body": _layout_body},
 ]
 
 # Standalone evidence reports rendered next to the R1–R8 set but kept out of the
