@@ -57,6 +57,9 @@ from config.governance import (
     UNRATED_MULTIPLIER,
     UNTIERED_WEIGHT,
 )
+from config.governance._audit_scope import (MODEL_AUDIT_DOC_CATEGORIES,
+                                           MODEL_AUDIT_EXCLUDED_COLLECTIONS)
+from config.governance._documents import DOC_CATEGORIES
 from src.governance.completeness._method_departures import departures_table
 from src.governance.latex import _para_table, _section, _subsection
 
@@ -223,7 +226,11 @@ def appendix(rows=()) -> str:
                for name in sorted(EXEMPT_DOC_CATEGORIES)]
             + [[name, f"Reported within the {covering} pack; a second upload "
                       "restating it would close no gap"]
-               for name, covering in sorted(DOC_CATEGORY_SATISFIED_BY.items())],
+               for name, covering in sorted(DOC_CATEGORY_SATISFIED_BY.items())]
+            + [[f"{name} (models)", "Not scored on a model, whose screen has no panel "
+                                    "for it; still scored on ML Applications and AI Systems"]
+               for name in sorted(MODEL_AUDIT_EXCLUDED_COLLECTIONS) + sorted(
+                   c for c in DOC_CATEGORIES if c not in MODEL_AUDIT_DOC_CATEGORIES)],
             [0.35, 0.65], caption="Exclusions from scoring")),
         _subsection("Values treated as unrecorded", _para_table(
             ["Value", "Effect"],
