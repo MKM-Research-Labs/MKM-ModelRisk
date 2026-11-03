@@ -36,8 +36,10 @@ AS_OF = "2026-06-22"
 # The evidence a product's component models produce, which the product is therefore
 # not scored on holding a copy of.
 ANALYTICS_CATEGORIES = ("Sensitivity", "Analysis", "Test Results", "Unit Test",
-                        "Integration Test", "Benchmark Test", "Calibration",
-                        "Convergence", "Segment analysis")
+                        "Integration Test", "Benchmark Test")
+# ML training evidence: filed through an ML Application's training runs, so no model
+# can hold it -- demanded of neither a product nor a model (config/_audit_scope).
+TRAINING_CATEGORIES = ("Calibration", "Convergence", "Segment analysis")
 SETTINGS = {"fields": {"org_name": "MKM"}}
 
 
@@ -101,7 +103,7 @@ def test_product_is_not_scored_on_its_components_analytics_evidence(register):
     """
     rows = {r["entity_kind"]: r for r in scan(AS_OF)}
     demanded = {g["key"] for g in rows[PRODUCT_KIND]["gaps"] if g["kind"].startswith("document")}
-    assert not demanded & set(ANALYTICS_CATEGORIES), (
+    assert not demanded & set(ANALYTICS_CATEGORIES + TRAINING_CATEGORIES), (
         "a product should not be scored on its component models' evidence")
     assert "Core Documentation" in demanded, (
         "what the product itself IS is still the product's own obligation")
@@ -110,6 +112,17 @@ def test_product_is_not_scored_on_its_components_analytics_evidence(register):
     model_gaps = {g["key"] for g in rows[MODEL_KIND]["gaps"]}
     assert set(ANALYTICS_CATEGORIES) <= model_gaps, (
         "the model that produces the analytics is still asked to evidence them")
+
+
+def test_model_is_not_scored_on_what_its_screen_cannot_record(register):
+    """Fairness and Evaluations left the model screen, and training documents are
+    filed only through an ML Application: a model has no way to close those gaps,
+    so they are not raised against it. ML Applications are still scored on them."""
+    from config.governance._audit_scope import MODEL_AUDIT_EXCLUDED_COLLECTIONS
+    rows = {r["entity_kind"]: r for r in scan(AS_OF)}
+    model_gaps = {g["key"] for g in rows[MODEL_KIND]["gaps"]}
+    assert not model_gaps & set(MODEL_AUDIT_EXCLUDED_COLLECTIONS + TRAINING_CATEGORIES)
+    assert "validation_questions" in model_gaps, "the rest of the audit is unchanged"
 
 
 def test_product_scope_mirrors_the_model_one():

@@ -31,6 +31,8 @@ from typing import Any
 
 from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
                                           AI_SYSTEM_FIELD_SPECS)
+from config.governance._audit_scope import (MODEL_AUDIT_DOC_CATEGORIES,
+                                           MODEL_AUDIT_EXCLUDED_COLLECTIONS)
 from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS,
     COLLECTION_SPECS,
@@ -109,14 +111,18 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
     want_ml = None if ml_application_ids is None else set(ml_application_ids)
     want_ai = None if ai_system_ids is None else set(ai_system_ids)
     rows = []
+    # A model is scored only on what its screen lets it record (config/_audit_scope).
+    model_collections = {k: v for k, v in COLLECTION_SPECS.items()
+                         if k not in MODEL_AUDIT_EXCLUDED_COLLECTIONS}
     for model in list_models(config=config):
         if want_models is not None and model["model_id"] not in want_models:
             continue
         data = model.get("data") or {}
         rows.append(_audit(
             MODEL_KIND, model["model_id"], data.get("name"), data,
-            MODEL_FIELD_SPECS, COLLECTION_SPECS,
-            model_scope(model["model_id"]), as_of))
+            MODEL_FIELD_SPECS, model_collections,
+            model_scope(model["model_id"]), as_of,
+            doc_categories=MODEL_AUDIT_DOC_CATEGORIES))
     for product in list_products(config=config):
         if want_products is not None and product["product_id"] not in want_products:
             continue
