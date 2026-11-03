@@ -47,7 +47,7 @@ from config.governance import (
     ATTENTION_STATE_RESPONSE,
     RESPONSE_STATES,
 )
-from src.governance.attention import dashboard
+from src.governance.attention import dashboard, record_findings
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -77,3 +77,14 @@ def get_dashboard():
     payload = dashboard(as_of)
     payload["states"] = state_vocabulary()
     return jsonify(payload)
+
+
+@dashboard_bp.get("/api/findings/<entity_id>")
+def get_record_findings(entity_id: str):
+    """One record's open completeness findings with their deadlines.
+
+    What a past-deadline row on the dashboard is made of, for the record's own
+    Remediation stage: the same arithmetic, so the two quote the same dates.
+    """
+    as_of = (request.args.get("as_of") or "").strip() or None
+    return jsonify(record_findings(entity_id, as_of))

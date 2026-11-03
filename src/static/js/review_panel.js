@@ -158,13 +158,15 @@ const ReviewPanel = {
       return;
     }
     if (this._reviewStage === "remediation") {
-      box.innerHTML = '<div class="section-header">Remediation</div>' +
+      box.innerHTML = FindingDeadlines.html(this._rvPfx() + "findings") +
+        '<div class="section-header" style="margin-top:var(--space-8)">Remediation</div>' +
         '<p class="muted" style="font-size:var(--size-sm)">What the review found that has to be put ' +
         "right, and where each step has got to. The committee sees these before it signs the " +
         "review off.</p>" +
         this._rvColl("remediation_steps", d) +
         this._thread("remediation", d) + this._stageApproval("remediation", d);
       this._rvBindColls(["remediation_steps"]);
+      FindingDeadlines.load(this._rvEl("findings"), this._rvId());
       this._bindThread("remediation");
       this._bindStageApproval("remediation");
       return;

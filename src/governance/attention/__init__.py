@@ -42,8 +42,8 @@ from src.governance.attention._rules import (
     tally,
     worst,
 )
-from src.governance.attention.collect import (dashboard, observe, records,
-                                              unratified_divisions)
+from src.governance.attention.collect import (dashboard, observe, record_findings,
+                                              records, unratified_divisions)
 from src.governance.attention.history import ages, trend
 from src.governance.attention.position import direction, estate, operational
 from src.governance.attention.queue import build
@@ -52,7 +52,7 @@ from src.governance.attention.summary import breakdown, rows, verdict
 __all__ = [
     "ages", "below_standard", "breakdown", "build", "count_label", "dashboard",
     "days_overdue", "direction", "due_reason", "estate", "gap_reasons", "label_of",
-    "observe", "operational", "record_reasons", "records", "review_reason", "rows",
-    "state_label", "state_of", "tally", "trend", "unratified_divisions", "verdict",
-    "worst",
+    "observe", "operational", "record_findings", "record_reasons", "records",
+    "review_reason", "rows", "state_label", "state_of", "tally", "trend",
+    "unratified_divisions", "verdict", "worst",
 ]
