@@ -71,6 +71,8 @@ BENCHMARKS = {
                      "Wolfram oracle benchmark - Building Seismic-Resilience Credit Model"),
     "MKM-GHD-001": ("docs/models/gauge_historical_benchmark/MKM-GHD-001_wolfram_benchmark.pdf",
                     "Wolfram oracle benchmark - Gauge Historical Daily Synthetic Generation Model"),
+    "MKM-DD-001": ("docs/models/depth_damage_benchmark/MKM-DD-001_wolfram_benchmark.pdf",
+                   "Wolfram oracle benchmark v0.2 - Depth-Damage Curve Model, against documentation v2.0"),
     "MKM-MP-001": ("docs/models/mortgage_pricing_benchmark/MKM-MP-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark v0.2 - Mortgage Pricing Model, after the fair-value fix",
                    "MKM-MP-001_wolfram_benchmark_v0.2.pdf"),
