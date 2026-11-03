@@ -162,6 +162,8 @@ def rows(items: list[dict], cap: int = ATTENTION_QUEUE_CAP) -> dict[str, Any]:
         # The worst date in the group, so a collapsed row still says how bad it is.
         if item.get("days_over") is not None:
             row["days_over"] = max(row["days_over"] or 0, item["days_over"])
+        if item.get("due") and (row["due"] is None or item["due"] < row["due"]):
+            row["due"] = item["due"]
         row["records"] = len({(i.get("entity") or {}).get("id") for i in held[key]
                               if (i.get("entity") or {}).get("id")})
 

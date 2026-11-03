@@ -150,11 +150,16 @@ const Dashboard = {
     return (r.members || []).map((id) => byId[id]).filter(Boolean)
       .map((i) => {
         const e = i.entity || {};
-        return '<tr class="dash-member"><td></td><td colspan="4">' +
+        // Each member keeps its own date: the collapsed row shows the worst, and the
+        // owner chasing them needs to know which record is the one that is late.
+        return '<tr class="dash-member"><td></td><td colspan="2">' +
           "<b>" + esc(e.id || "") + "</b> " +
           '<span class="muted">' + esc(e.name || "") +
           (e.tier ? " · Tier " + esc(e.tier) : "") + "</span>" +
+          (i.detail ? '<br><span class="muted">' + esc(i.detail) + "</span>" : "") +
           (i.action ? '<br><span class="muted">' + esc(i.action) + "</span>" : "") +
+          "</td><td>" + esc(i.due || "—") + "</td><td>" +
+          (i.days_over > 0 ? esc(i.days_over) + " d" : "—") +
           "</td><td>" + (DASH_OPEN[e.kind]
             ? '<span class="edit-btn" data-dash-open="' + esc(i.id) + '">Open</span>' : "") +
           "</td></tr>";

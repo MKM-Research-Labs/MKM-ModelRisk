@@ -160,10 +160,21 @@ REASON_FROM_REVIEW_STATUS = {
     "Due Soon": REASON_REVIEW_DUE_SOON,
 }
 
+# Where one completeness finding stands against its band's deadline, as the record's
+# Remediation stage and the dashboard row word it. Keyed by the status the deadline
+# arithmetic returns (src.governance.attention.deadlines); "unobserved" is a finding
+# the daily observation has not yet seen, so it has no first-seen date to count from.
+FINDING_DEADLINE_LABELS = {
+    "overdue": "Overdue",
+    "due_soon": "Due soon",
+    "open": "Open",
+    "unobserved": "Not yet observed",
+}
+
 __all__ = [
     "ATTENTION_PRECEDENCE", "ATTENTION_QUEUE_CAP", "ATTENTION_STATES", "ATTENTION_STATE_CARD", "ATTENTION_STATE_LABELS",
     "ATTENTION_STATE_RESPONSE",
-    "COMING_DUE_DAYS", "REASON_BELOW_STANDARD", "REASON_COMMITTEE_ACTION_OPEN",
+    "COMING_DUE_DAYS", "FINDING_DEADLINE_LABELS", "REASON_BELOW_STANDARD", "REASON_COMMITTEE_ACTION_OPEN",
     "REASON_EVIDENCE_MISSING", "REASON_FINDING_OPEN", "REASON_FINDING_PAST_SLA",
     "REASON_FROM_GAP_KEY",
     "REASON_FROM_GAP_KIND", "REASON_FROM_REVIEW_STATUS", "REASON_POLICY_UNRATIFIED",

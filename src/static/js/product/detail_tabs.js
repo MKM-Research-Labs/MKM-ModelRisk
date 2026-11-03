@@ -111,6 +111,13 @@ Object.assign(ProductDetail, {
     const spec = this.collSpec(this._tab);
     // autosave=true: the product register tabs edit in place, saving on change.
     let html = Collections.render(d, { collections: [spec] }, this._product.retired, false, true);
+    // Remediation opens with what the audit finds missing and when each falls due
+    // (finding_deadlines.js), the same list a model's Remediation stage starts with.
+    const findings = this._tab === "remediation_steps";
+    if (findings) {
+      html = FindingDeadlines.html("p-findings") +
+        '<div class="section-header" style="margin-top:var(--space-8)">Remediation steps</div>' + html;
+    }
     const docCat = COLLECTION_DOC_CATEGORY[this._tab];
     // Refresh in place (no scroll) so an auto-saved edit does not jump the page.
     const refresh = () => this.show(this._id, this._tab, { scroll: false });
@@ -121,6 +128,7 @@ Object.assign(ProductDetail, {
     box.innerHTML = html;
     Collections.bind("/api/products/" + this._id + "/collections/", { collections: [spec] },
       this._product.retired, refresh, d);
+    if (findings) FindingDeadlines.load(document.getElementById("p-findings"), this._id);
     if (docCat) DocPanel.bind(docOpts);
   },
 

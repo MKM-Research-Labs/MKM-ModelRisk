@@ -34,7 +34,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from src.governance.attention import history, position, queue, summary
+from src.governance.attention import deadlines, history, position, queue, summary
 from src.governance.completeness.scan import (ML_APPLICATION_KIND, MODEL_KIND,
                                               PRODUCT_KIND, ratified_divisions, scan)
 from src.governance.ml_application.projection import list_ml_applications
@@ -118,6 +118,24 @@ def dashboard(as_of: str | None = None, config=None) -> dict[str, Any]:
         "direction": position.direction(audit_rows, trend=history.trend(config=config)),
         "items": items,
     }
+
+
+def record_findings(entity_id: str, as_of: str | None = None, config=None) -> dict:
+    """One record's open findings, each with when it was first seen and falls due.
+
+    The audit is scoped to the one id on every register rather than told the kind:
+    ids are unique across registers, and a caller that had to name the kind could
+    name the wrong one and be told, wrongly, that the record has nothing open.
+    """
+    as_of = as_of or date.today().isoformat()
+    only = [entity_id]
+    rows = scan(as_of, config=config, model_ids=only, product_ids=only,
+                ml_application_ids=only, ai_system_ids=only)
+    gaps = [g for row in rows for g in row.get("gaps") or []]
+    return {"as_of": as_of, "entity_id": entity_id,
+            "observed": bool(history.trend(config=config)),
+            "findings": deadlines.gap_deadlines(gaps, history.ages(as_of, config=config),
+                                                as_of)}
 
 
 def observe(as_of: str | None = None, config=None) -> dict:

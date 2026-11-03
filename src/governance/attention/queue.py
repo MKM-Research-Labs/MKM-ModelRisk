@@ -45,11 +45,12 @@ from config.governance import (
     ATTENTION_STATES,
     CLOSED_REMEDIATION_STATUS,
     REASON_COMMITTEE_ACTION_OPEN,
+    REASON_FINDING_PAST_SLA,
     REASON_POLICY_UNRATIFIED,
     REASON_REMEDIATION_DUE_SOON,
     REASON_REMEDIATION_OVERDUE,
 )
-from src.governance.attention import _rules
+from src.governance.attention import _rules, deadlines
 
 REMEDIATION_COLLECTION = "remediation_steps"
 
@@ -131,11 +132,16 @@ def _record_items(records, audit_by_id, as_of, ages=None) -> list[dict]:
         # in the Due column, where it would read as the deadline it is not.
         dated = _rules.review_reason(data, as_of) == reason
         due = data.get("next_review_date") if dated else None
+        when = {"due": due, "days_over": _rules.days_overdue(due, as_of) if dated else None,
+                "detail": ""}
+        # Past its deadline is a date too: the earliest of the late findings, so the
+        # row says when and which rather than only that something is late.
+        if reason == REASON_FINDING_PAST_SLA:
+            when = deadlines.overdue_summary(row.get("gaps"), ages, as_of)
         items.append(_item(
             item_id=f"{reason}:{record.get('kind')}:{record.get('id')}",
             reason=reason, entity=_entity(record), owner=_owner(data),
-            due=due, days_over=_rules.days_overdue(due, as_of) if dated else None,
-            action=_gap_action(row, reason),
+            action=_gap_action(row, reason), **when,
         ))
     return items
 
