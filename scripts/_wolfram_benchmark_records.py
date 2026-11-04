@@ -164,6 +164,21 @@ VQ_RATIONALE = {
         "Outstanding: near severe the model differs from the gauges' classifiers by "
         "0.041-0.066 on average, bias -0.034 to +0.025, and it has not been compared with "
         "observed floods."),
+    "MKM-SG-001": (
+        "Partially addressed. v1.3 was benchmarked on 2026-11-04 against Wolfram Engine 15.0 "
+        "(MKM-SG-001_wolfram_benchmark_v0.1.pdf, kept in History as evidence of the check). "
+        "The code computed its equations exactly, but 8 of the document's 16 claims did not "
+        "hold: the rise was tied to the fall, so a storm needed peak 56 to reach the flood "
+        "alert the calibration put at 40 and never reached severe; peak level trailed peak "
+        "intensity by 3.5-5 h, not 2; the run stopped at the storm's end; an input was "
+        "unread; and nothing in the platform imports the model, though v1.3 said it fed "
+        "gaugets/ and the hazard curves. v2.0 gives the rise its own 1-hour constant, runs "
+        "the recession, removes the unread input and states that nothing consumes the "
+        "output. Benchmark v0.2 (MKM-SG-001_wolfram_benchmark.pdf, Docs > Benchmark) passes "
+        "all 8 checks: the response agrees to 4e-14 m over 780 runs and Wolfram to 4.5e-31. "
+        "All 16 claims hold, including 169 printed figures and the storm bands 40.9, 68.2 "
+        "and 90.7. Outstanding: the parameters are uncalibrated and there is no backtest "
+        "against observed hydrographs (v2.0 Q9)."),
 }
 
 # Re-issued model documentation: for each model, the files under
@@ -194,4 +209,8 @@ REISSUES = {
         "files": (("flood_poly_v2.0.pdf", "Flood Polynomial Model v2.0 (03-Nov-2026)"),
                   ("flood_poly_v2.0.tex", "Flood Polynomial Model v2.0 (03-Nov-2026) - LaTeX source")),
         "superseded": "flood_poly.pdf", "version": "v2.0"},
+    "MKM-SG-001": {
+        "files": (("storm_gauge_v2.0.pdf", "Storm-Gauge Forward Model v2.0 (04-Nov-2026)"),
+                  ("storm_gauge_v2.0.tex", "Storm-Gauge Forward Model v2.0 (04-Nov-2026) - LaTeX source")),
+        "superseded": "storm_gauge.pdf", "version": "v2.0"},
 }
