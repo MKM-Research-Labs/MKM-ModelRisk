@@ -30,9 +30,12 @@ UPLOAD_DIR = Path(
 
 # ``tex`` is allowed so a generated document can be filed alongside its PDF: the
 # LaTeX source is the auditable original. Uploads are only ever stored and served
-# back, never compiled, so no LaTeX is executed on the server.
+# back, never compiled, so no LaTeX is executed on the server. ``pptx`` is allowed
+# because "Presentation" is an artefact kind and a committee deck is issued as one;
+# it is served as a download only (see INLINE_VIEW_EXTENSIONS).
 ALLOWED_UPLOAD_EXTENSIONS = frozenset(
-    {"pdf", "doc", "docx", "xls", "xlsx", "csv", "txt", "tex", "png", "jpg", "jpeg", "svg"}
+    {"pdf", "doc", "docx", "xls", "xlsx", "pptx", "csv", "txt", "tex", "png", "jpg",
+     "jpeg", "svg"}
 )
 IMAGE_EXTENSIONS = frozenset({"png", "jpg", "jpeg"})
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
