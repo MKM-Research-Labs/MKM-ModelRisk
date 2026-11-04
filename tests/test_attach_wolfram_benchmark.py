@@ -136,6 +136,7 @@ def test_the_real_spec_points_at_the_generated_benchmarks():
         "docs/models/seismic_resilience_benchmark/MKM-SEIS-001_wolfram_benchmark.pdf",
         "docs/models/gauge_historical_benchmark/MKM-GHD-001_wolfram_benchmark.pdf",
         "docs/models/depth_damage_benchmark/MKM-DD-001_wolfram_benchmark.pdf",
+        "docs/models/flood_poly_benchmark/MKM-FPO-001_wolfram_benchmark.pdf",
     }
 
 
