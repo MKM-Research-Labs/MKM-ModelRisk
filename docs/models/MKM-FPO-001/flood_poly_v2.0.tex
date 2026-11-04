@@ -1,0 +1,508 @@
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+%
+% MKM-FPO-001 Flood Polynomial Model -- model documentation v2.0, the document of record
+% filed on the model as Core Documentation. It supersedes v1.0 (28-Mar-2026). The Wolfram
+% benchmark of v1.0 (MKM-FPO-001_wolfram_benchmark v0.1) found the model fell as the water
+% rose and that none of the document's printed tables or accuracy claims held; v2.0 is a
+% new model, refitted, and this document describes it. Its tables are inlined, generated
+% from the code and the fit.
+%
+% Build: it inputs the house header, which lives in PhysicalRisk. Copy
+% PhysicalRisk/docs/models/shared beside this folder as ../shared, then run
+% pdflatex three times (the third settles "Page n of N").
+\documentclass[11pt,a4paper]{article}
+
+\newcommand{\doctitle}{Flood Polynomial Model}
+\newcommand{\docsubtitle}{MKM-FPO-001 --- A Closed-Form Surrogate for the Gauge Flood Classifiers}
+\newcommand{\docversion}{2.0}
+\newcommand{\docdate}{03-November-2026}
+\newcommand{\docauthor}{David K Kelly}
+
+\input{../shared/mkm_header}
+% T1 so the underscores in code identifiers print as underscores.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% The shared history table sets every column to its natural width; wrap the description.
+\renewcommand{\mkmhistorypage}[1]{%
+    \section{Document History}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{l|l|p{9cm}|l}
+            \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+            \hline
+            #1
+        \end{tabular}
+    \end{table}
+}
+
+\newcommand{\fpNearMaeLo}{0.0408}
+\newcommand{\fpNearMaeHi}{0.0658}
+\newcommand{\fpNearMaeMean}{0.0544}
+\newcommand{\fpNearBiasLo}{$-$0.034}
+\newcommand{\fpNearBiasHi}{0.025}
+\newcommand{\fpNearOverLo}{10}
+\newcommand{\fpNearOverHi}{21}
+\newcommand{\fpBelowMaeLo}{0.0064}
+\newcommand{\fpBelowMaeHi}{0.0203}
+\newcommand{\fpFitStates}{1{,}807{,}233}
+\newcommand{\fpTestStates}{1{,}807{,}896}
+\newcommand{\fpMinSlope}{0.0100}
+
+\begin{document}
+% Long code paths and identifiers cannot hyphenate; let the spacing stretch instead.
+\sloppy
+
+\mkmtitlepage
+\mkmlegalpage
+
+\tableofcontents
+\clearpage
+
+% ===================================================================
+\mkmexecsummary
+% ===================================================================
+
+The Flood Polynomial Model (MKM-FPO-001) gives the probability that a gauge goes on to
+flood, from its water level and the hour of the storm, in closed form. It stands in for
+the per-gauge gradient-boosted classifiers (MKM-FC-001) where a stress scenario needs
+$P(\text{flood})$ without loading a trained model for every gauge.
+
+This is version 2.0, a new model. Version 1.0 was benchmarked against an independent
+Wolfram calculation and against the classifiers it approximates, and it failed. At
+hour~24 it fell as the water rose between 52\% and 74\% of the severe level. At the
+severe level it gave 0.00 at hour~0 and 0.29 at hour~167, where its document printed
+0.42 and 0.97. Eight of the 54 cells of its printed table were reproduced by the code,
+and none of its accuracy figures held. It had been fitted to one gauge.
+
+Version 2.0 changes the model in four ways:
+\begin{itemize}[nosep]
+    \item \textbf{At or above severe, $P=1$.} Reaching the severe level is the flood
+          the classifiers are trained to predict. Below it, $P$ is a fitted logistic.
+    \item \textbf{Fitted to every gauge.} One kernel, cubic in the two features,
+          fitted to all 11 gauges' classifiers on \fpFitStates{} real storm states and
+          measured on \fpTestStates{} held-out ones.
+    \item \textbf{Rising water never lowers $P$.} The fit is constrained to make $P$
+          non-decreasing in the level at every hour.
+    \item \textbf{No extrapolation early in a storm.} No storm reaches 40\% of severe
+          before hour~4.7, or severe before hour~37.4. Earlier than that the
+          classifiers have never seen a state, so the model holds the hour at that
+          envelope instead of extrapolating.
+\end{itemize}
+
+On held-out storms near severe ($w/s\ge0.75$), the mean absolute difference from each
+gauge's classifier is \fpNearMaeLo{} to \fpNearMaeHi{} across the 11 gauges, and the
+bias is \fpNearBiasLo{} to \fpNearBiasHi{}. The difference exceeds 0.1 in
+\fpNearOverLo\% to \fpNearOverHi\% of those states. That is the price of a formula that
+sees only the level and the hour: the classifiers also see how fast the water is
+rising, and no function of level and hour can follow that.
+
+% ===================================================================
+\mkmpurpose
+% ===================================================================
+
+\subsection{Purpose}
+The model answers one question in closed form: given a gauge at water level $w$ in
+hour $n$ of a storm, how likely is it to reach its severe threshold $s$? The stress
+scenarios ask it hour by hour along a hydrograph, for many gauges, where loading a
+trained classifier per gauge is not practical.
+
+\subsection{Scope}
+\begin{itemize}[nosep]
+    \item \textbf{In scope:} $P(\text{flood})$ from $w/s$ and the storm hour, for any
+          gauge with a severe threshold; its slope in the level, for sensitivity.
+    \item \textbf{Out of scope:} the rate of rise and other features the classifiers
+          use; gauge-specific behaviour; spatial correlation between gauges.
+\end{itemize}
+
+\subsection{How Production Uses It}
+\begin{itemize}[nosep]
+    \item \textbf{Single-gauge stress scenario}
+          (\texttt{src/routes/trading/stress/scenario.py}) evaluates
+          \texttt{p\_flood\_poly} at each hour of the scenario hydrograph, and prints a
+          probability surface over levels and hours. Once the level has reached
+          severe, the scenario holds $P=1$ for the rest of the storm, even if the water
+          falls back: the flood has happened, and the swaps it triggers are knocked
+          out. That rule is the scenario's, not the model's.
+    \item \textbf{Portfolio stress screen}
+          (\texttt{src/static/js/trading/port\_stress/setup.js}) draws $P(\text{flood})$
+          hour by hour in the browser. It fetches the model from
+          \texttt{GET /api/v1/trading/stress/flood-poly} and evaluates it there. Until
+          v2.0 it carried its own copy of v1.0's coefficients.
+    \item \textbf{Portfolio stress P\&L}
+          (\texttt{src/routes/trading/port\_stress/\_compute.py}) uses
+          \texttt{p\_flood\_simple}, which is $\min(1, w/s)$. That is a proximity ratio,
+          not a probability (\S\ref{sec:simple}).
+    \item \textbf{Sensitivity} (\texttt{src/models/stress/sensitivity.py}) evaluates
+          the model and its slope over candidate errors in the severe threshold.
+\end{itemize}
+
+\subsection{Model Chain Position}
+\[
+\text{MKM-FC-001 (per-gauge classifiers)}
+\xrightarrow{\text{fitted to}}
+\textbf{MKM-FPO-001}
+\to \text{stress scenarios (MKM-ST-001)}
+\]
+
+% ===================================================================
+\mkmframework
+% ===================================================================
+
+\subsection{Features}
+Two gauge-independent features, as the classifiers use them:
+\begin{align}
+h &= \ln\!\left(\max\!\left(\frac{w}{s},\; \phi\right)\right), \qquad \phi = 0.2,
+    \label{eq:h} \\
+t &= \ln\!\left(\frac{n+1}{T}\right), \qquad T = 168, \quad n\in\{0,\dots,167\}.
+    \label{eq:t}
+\end{align}
+$h$ is zero at the severe level and negative below it. $t$ runs from
+$\ln(1/168)\approx-5.12$ at hour~0 to zero at hour~167. Below the level floor
+$\phi$, 20\% of severe, the level is held at the floor.
+
+\subsection{Model Equation}
+\begin{equation}
+\label{eq:model}
+P(\text{flood}) =
+\begin{cases}
+1 & w \ge s, \\[2pt]
+\sigma\big(z(h,\ \max(t,\ \tau(h)))\big) & w < s,
+\end{cases}
+\qquad
+z(h,t) = \sum_{k=1}^{10} c_k\, h^{i_k} t^{j_k},
+\end{equation}
+where $\sigma(z) = 1/(1+e^{-z})$ with $z$ clamped to $[-30, 30]$, the ten terms
+$(i_k, j_k)$ are every power of $h$ and $t$ up to total degree three, and
+$\tau(h)$ is the support envelope of \S\ref{sec:envelope}.
+
+\textbf{At or above severe.} A gauge at its severe level has flooded: that is the
+event the classifiers are trained to predict. So $P=1$ there, at every hour. Version
+1.0 had no such rule and fell back to 0.29 at the severe level late in a storm; the
+stress route had been setting $P=1$ there itself, without the document saying so.
+
+\textbf{Below severe.} The cubic kernel is fitted to the classifiers
+(\S\ref{sec:calibration}). From hour~16 on, at a fixed level, $P$ never rises as the
+storm goes on: a level reached late in a storm is one the water has been slow to reach,
+and it is less likely to go on to severe. That is what the classifiers say, and the
+reverse of what v1.0's document described. In the first 16 hours, just after the
+envelope, $P$ can rise with the hour before it falls, by at most 0.06.
+
+\subsection{The Support Envelope}\label{sec:envelope}
+The kernel is fitted where storms go. Storms rise at a finite rate, so a level is
+first reached some hours into a storm, and the classifiers have never been shown a
+state earlier than that. There, the polynomial is extrapolating, and a cubic
+extrapolates freely: refitted without a guard, it gave 0.998 at half of severe at
+hour~0, where no storm has ever been.
+
+$\tau(h)$ is the earliest log time at which any gauge's storms reached the level $h$,
+measured over 2,000 storms at each of the 11 gauges (Table~\ref{tab:envelope}), and
+interpolated linearly in $t$ between knots. Below the first knot, 32.6\% of severe,
+every hour is supported. Earlier than the envelope, the model holds the hour there:
+a level reached sooner than any storm reached it is priced as the earliest storm that
+did. The cells this affects are marked in Table~\ref{tab:grid}.
+
+\begin{table}[ht]\centering\begin{tabular}{rr|rr}
+$w/s$ & earliest hour & $w/s$ & earliest hour \\ \hline
+0.326 & 0.0 & 0.7 & 15.1 \\
+0.35 & 2.3 & 0.75 & 18.4 \\
+0.4 & 4.7 & 0.8 & 22.0 \\
+0.45 & 6.1 & 0.85 & 24.9 \\
+0.5 & 7.5 & 0.9 & 29.3 \\
+0.55 & 8.9 & 0.95 & 35.7 \\
+0.6 & 10.8 & 1 & 37.4 \\
+0.65 & 12.9 &  &  \\
+\end{tabular}\caption{The support envelope: the earliest storm hour at which any gauge's storms reached each fraction of severe. Earlier than this the hour is held here; between knots, linearly in $t$.}\label{tab:envelope}\end{table}
+
+\subsection{Monotonicity}
+Rising water never lowers $P$, at any hour. Three parts make that hold:
+\begin{itemize}[nosep]
+    \item Between the floor and severe, the fit holds $\partial z/\partial h \ge 0.01$
+          on a grid of 120 levels and all 168 hours.
+    \item Where the hour is held at the envelope, $P$ moves with the level along the
+          envelope, at rate
+          $\partial z/\partial h + \partial z/\partial t \cdot \tau'(h)$. The fit holds
+          that at least 0.01 too, at 20 points on each segment.
+    \item Below the floor $P$ is constant, and at severe it steps up to 1.
+\end{itemize}
+The smallest constrained slope in the fit is \fpMinSlope{}. The test suite checks $P$
+is non-decreasing over 2,000 levels at every one of the 168 hours.
+
+The hour is a whole number (Eq.~\eqref{eq:t}), and every caller passes one. That
+matters in one place. Between hour~0 and hour~1, where $t$ moves fastest, the kernel's
+slope in the level dips below zero near a third of severe (to about $-0.10$ at
+hour~0.4). No whole hour falls there, so the model never evaluates it, but the kernel
+is not monotone at fractional hours and should not be called with one.
+
+% ===================================================================
+\mkminputs
+% ===================================================================
+
+\subsection{Calibration Data}\label{sec:calibration}
+The target is each gauge's production classifier, read as production reads it, on the
+real storm states it is trained on: 2,000 storms per gauge, drawn once with seed~7 by
+the challenger's catalogue loader, for all 11 gauges with a classifier. Only states
+below severe are used, because at and above it $P=1$ by definition. Half of each
+gauge's storms are fitted and the other half measured. That gives \fpFitStates{}
+fitted and \fpTestStates{} held-out states.
+
+\subsection{Fitting}
+\texttt{python -m tools.flood\_poly\_fit} minimises the weighted squared difference
+between $\sigma(z)$ and the classifier's probability, pooled over every gauge, with
+the monotonicity penalty above. States at or above 75\% of severe weigh five times as
+much, because that is where a stress scenario's outcome is decided. The fitted states
+are evaluated as the model evaluates them, with the level floor and the envelope
+applied.
+
+The optimiser's tolerances matter. At SciPy's defaults ($10^{-8}$) the fit stopped on a
+plateau after 94 evaluations, and on synthetic data it failed to recover a kernel it
+had been shown. At $10^{-15}$ it recovers it exactly. The tolerances are in
+\texttt{config.models} and the test suite checks the recovery.
+
+\subsection{Coefficients}
+\begin{table}[ht]\centering\begin{tabular}{c|c|r}
+$k$ & Term $h^i t^j$ & $c_k$ \\ \hline
+1 & $h$ & $+32.871867$ \\
+2 & $t$ & $-12.801048$ \\
+3 & $h t$ & $-7.540193$ \\
+4 & $h^2$ & $+44.826451$ \\
+5 & $t^2$ & $-2.848226$ \\
+6 & $h^3$ & $+54.512653$ \\
+7 & $t^3$ & $-0.756589$ \\
+8 & $h^2 t$ & $-29.568283$ \\
+9 & $h t^2$ & $+6.254275$ \\
+10 & $1$ & $-1.293810$ \\
+\end{tabular}\caption{Fitted coefficients, as \texttt{config.models} holds them.}\label{tab:coeffs}\end{table}
+
+\subsection{Model Parameters}
+\begin{center}
+\begin{tabular}{llr}
+\toprule
+\textbf{Parameter} & \textbf{Config name} & \textbf{Value} \\
+\midrule
+Level floor $\phi$ & \texttt{flood\_poly\_level\_floor} & 0.2 \\
+Storm horizon $T$ & \texttt{flood\_poly\_storm\_hours} & 168 \\
+Exponent clamp & \texttt{flood\_poly\_exp\_clamp} & 30 \\
+Kernel terms & \texttt{flood\_poly\_terms} & 10 \\
+Support envelope & \texttt{flood\_poly\_envelope} & 15 knots \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ===================================================================
+\section{Fit Quality}
+% ===================================================================
+
+Measured on the held-out storms, against each gauge's own classifier:
+
+\begin{table}[ht]\centering\begin{tabular}{l|rrr|r}
+Gauge & Near MAE & Near bias & Near $>0.1$ & Below MAE \\ \hline
+\texttt{GAUGE-085522ee} & 0.0590 & $+0.0247$ & 20\% & 0.0125 \\
+\texttt{GAUGE-1aaf8b08} & 0.0408 & $-0.0070$ & 10\% & 0.0087 \\
+\texttt{GAUGE-9e5f3ef9} & 0.0542 & $+0.0128$ & 16\% & 0.0198 \\
+\texttt{GAUGE-9fffb377} & 0.0658 & $-0.0343$ & 21\% & 0.0203 \\
+\texttt{GAUGE-a6be4ee9} & 0.0465 & $+0.0171$ & 15\% & 0.0075 \\
+\texttt{GAUGE-b2dbe58b} & 0.0518 & $+0.0087$ & 17\% & 0.0100 \\
+\texttt{GAUGE-c0fbc443} & 0.0478 & $-0.0015$ & 15\% & 0.0064 \\
+\texttt{GAUGE-d208bf3d} & 0.0557 & $-0.0081$ & 16\% & 0.0179 \\
+\texttt{GAUGE-dc5e88fb} & 0.0578 & $+0.0246$ & 21\% & 0.0092 \\
+\texttt{GAUGE-ef53398c} & 0.0628 & $-0.0288$ & 20\% & 0.0166 \\
+\texttt{GAUGE-f8629444} & 0.0566 & $+0.0188$ & 18\% & 0.0174 \\
+\end{tabular}\caption{Agreement with each gauge's GBM on the held-out storms (\fpTestStates{} states). ``Near'' is $w/s\ge 0.75$; ``$>0.1$'' is the share of near states where $|P-\mathrm{GBM}|$ exceeds 0.1.}\label{tab:fit}\end{table}
+
+Below severe overall the mean absolute difference is \fpBelowMaeLo{} to
+\fpBelowMaeHi{}, because most states are far below severe and both models give
+nearly zero there. Near severe the difference is \fpNearMaeLo{} to \fpNearMaeHi{}. The
+bias near severe is \fpNearBiasLo{} to \fpNearBiasHi{}: the model is not conservative
+everywhere, and it under-predicts at some gauges.
+
+The difference that remains is mostly the rate of rise. The classifiers give
+different probabilities to two states at the same level and hour, one rising fast and
+one barely rising. A function of level and hour can at best give their average.
+
+% ===================================================================
+\mkmimplementation
+% ===================================================================
+
+\subsection{Source Code}
+\begin{itemize}[nosep]
+    \item \texttt{src/models/stress/flood\_poly.py}: \texttt{p\_flood\_poly},
+          \texttt{p\_flood\_series}, \texttt{p\_flood\_simple}, the features and
+          envelope, \texttt{model\_card}, \texttt{client\_params}.
+    \item \texttt{config/models/\_misc.py}: coefficients, terms, floor, envelope and
+          fit settings.
+    \item \texttt{src/routes/trading/stress/flood\_poly.py}: serves
+          \texttt{client\_params} to the browser.
+    \item \texttt{src/static/js/trading/port\_stress/setup.js}: the browser's
+          evaluation of the served model.
+    \item \texttt{tools/flood\_poly\_fit/}: the fit.
+\end{itemize}
+
+\subsection{Usage}
+\begin{lstlisting}[language=Python]
+from models.stress.flood_poly import p_flood_poly, p_flood_series
+
+p = p_flood_poly(water_level=5.2, hour=48, severe_level=6.58)
+ps = p_flood_series([4.0, 4.5, 5.2, 5.8, 5.5], severe_level=6.58)  # hour = position
+\end{lstlisting}
+
+\subsection{\texttt{p\_flood\_simple} Is Not a Probability}\label{sec:simple}
+\texttt{p\_flood\_simple(w, s)} returns $\min(1, w/s)$. It is a proximity measure:
+a gauge at half its severe level scores 0.5, where Table~\ref{tab:grid} gives a
+probability anywhere from nearly zero to 0.66 depending on the hour. Portfolio stress
+P\&L uses it where only a gauge's peak level is known. Its name and v1.0's document
+presented it as a time-independent $P(\text{flood})$; it is kept, under that name, as
+a ratio, and is documented as one.
+
+\subsection{Numerical Safeguards}
+\begin{itemize}[nosep]
+    \item The level floor keeps $\ln(w/s)$ finite at zero or negative water levels.
+    \item The exponent is clamped to $[-30, 30]$ before the logistic.
+    \item A severe threshold at or below zero gives $P = 0$.
+\end{itemize}
+
+\subsection{Dependencies}
+The model uses only the Python standard library at run time.
+
+% ===================================================================
+\mkmsensitivity
+% ===================================================================
+
+\subsection{Probability Surface}
+\begin{table}[ht]\centering\small\begin{tabular}{r|rrrrrrrr}
+$w/s$ & hr 0 & hr 6 & hr 12 & hr 24 & hr 48 & hr 84 & hr 120 & hr 167 \\ \hline
+0.20 & 0.001 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+0.30 & 0.046 & 0.029 & 0.001 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 \\
+0.40 & 0.334$^\dagger$ & 0.388 & 0.352 & 0.043 & 0.000 & 0.000 & 0.000 & 0.000 \\
+0.50 & 0.608$^\dagger$ & 0.608$^\dagger$ & 0.664 & 0.490 & 0.034 & 0.000 & 0.000 & 0.000 \\
+0.60 & 0.896$^\dagger$ & 0.896$^\dagger$ & 0.891 & 0.801 & 0.293 & 0.008 & 0.000 & 0.000 \\
+0.70 & 0.990$^\dagger$ & 0.990$^\dagger$ & 0.990$^\dagger$ & 0.969 & 0.733 & 0.079 & 0.003 & 0.000 \\
+0.80 & 0.999$^\dagger$ & 0.999$^\dagger$ & 0.999$^\dagger$ & 0.999 & 0.970 & 0.461 & 0.036 & 0.001 \\
+0.90 & 1.000$^\dagger$ & 1.000$^\dagger$ & 1.000$^\dagger$ & 1.000$^\dagger$ & 0.999 & 0.937 & 0.348 & 0.013 \\
+0.95 & 1.000$^\dagger$ & 1.000$^\dagger$ & 1.000$^\dagger$ & 1.000$^\dagger$ & 1.000 & 0.988 & 0.714 & 0.054 \\
+0.99 & 1.000$^\dagger$ & 1.000$^\dagger$ & 1.000$^\dagger$ & 1.000$^\dagger$ & 1.000 & 0.997 & 0.906 & 0.165 \\
+1.00 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 & 1.000 \\
+\end{tabular}\caption{$P(\mathrm{flood})$ by level and storm hour, from \texttt{p\_flood\_poly} ($s=6.58$\,m; the model depends on $w/s$ only). At $w/s=1$ a flood has happened. Below 0.20 the level is held at 0.20. $^\dagger$\,Earlier than any storm reached the level: the hour is held at the envelope (Table~\ref{tab:envelope}).}\label{tab:grid}\end{table}
+
+Three things to read from Table~\ref{tab:grid}. At a fixed level, $P$ falls as the
+storm goes on, after its first hours. Every row rises with the level. And at the severe level $P$ steps to~1:
+just below it, late in a storm, $P$ is well below 1, so an error in the severe
+threshold that moves $s$ across the water level moves $P$ by the whole of the
+remaining gap.
+
+\subsection{Severe-Threshold Error}
+The threshold $s$ is per-gauge and enters only through $h$, so a relative error $e$
+in $s$ shifts $h$ by about $-e$, and moves $P$ by about $-e\,\partial P/\partial h$.
+\texttt{stress.sensitivity.threshold\_sensitivity} reports this, using the model's own
+closed-form slope, including along the envelope where the hour is held.
+
+% ===================================================================
+\mkmvalidation
+% ===================================================================
+
+\subsection{What the v1.0 Benchmark Found}
+The Wolfram benchmark of v1.0 (MKM-FPO-001\_wolfram\_benchmark v0.1, 03-Nov-2026) found
+the code computed its document's equations exactly (worst relative error
+$1.8\times10^{-14}$), but the document's claims did not hold:
+\begin{itemize}[nosep]
+    \item $P$ fell as the water rose: at hour~24 it passed $\tfrac12$ at both 52\% and
+          74\% of severe.
+    \item 8 of Table~1's 54 cells and none of Table~2's six were reproduced.
+    \item At the severe level $P$ was 0.00 at hour~0 and 0.29 at hour~167, not 0.42
+          and 0.97.
+    \item The accuracy claim $|P-\text{GBM}|<0.05$ failed: near severe the 95th
+          percentile reached 0.26.
+    \item The stress route set $P=1$ at severe without the document saying so.
+    \item \texttt{p\_flood\_simple} is a ratio, not a probability.
+\end{itemize}
+Each of those is answered above: the step at severe in Eq.~\eqref{eq:model}, the
+constrained fit, the regenerated tables, the measured accuracy, and \S\ref{sec:simple}.
+
+\subsection{Implementation Benchmark}
+Version 2.0 is benchmarked in the same way (MKM-FPO-001\_wolfram\_benchmark v0.2):
+the code against an independent 50-digit reference written from this document, Wolfram
+against the reference, and this document's tables and claims against the code and the
+classifiers.
+
+% ===================================================================
+\mkmlimitations
+% ===================================================================
+
+\subsection{Assumptions}
+\begin{enumerate}[nosep]
+    \item \textbf{FPO-A1: One kernel for all gauges.} The features normalise each
+          gauge by its own severe threshold, and one kernel is fitted to all 11 gauges
+          together. Accuracy differs by gauge (Table~\ref{tab:fit}).
+    \item \textbf{FPO-A2: Level and hour suffice.} The rate of rise is left out. It is
+          the main source of the remaining difference from the classifiers.
+    \item \textbf{FPO-A3: The envelope is the support.} The envelope is measured on
+          the storm catalogue. A real storm that rises faster than any in the
+          catalogue is priced as the fastest one that did.
+\end{enumerate}
+
+\subsection{Limitations}
+\begin{enumerate}[nosep]
+    \item \textbf{FPO-L1: Accuracy near severe.} The difference from the classifiers
+          exceeds 0.1 in \fpNearOverLo\% to \fpNearOverHi\% of states near severe.
+    \item \textbf{FPO-L2: Not conservative everywhere.} The bias near severe is
+          negative at some gauges.
+    \item \textbf{FPO-L3: The step at severe.} $P$ jumps to 1 at the severe level, so
+          results near it are sensitive to the threshold (\S\ref{sec:simple} and the
+          sensitivity section).
+    \item \textbf{FPO-L4: Inherits the classifiers.} It approximates MKM-FC-001 and
+          carries whatever error the classifiers carry.
+\end{enumerate}
+
+% ===================================================================
+\mkmgovernance
+% ===================================================================
+
+\subsection{Q1 --- Ronseal Test}
+Yes, now. v1.0 did not do what its document said; v2.0 is documented from the code
+and its tables are generated from it.
+
+\subsection{Q2 --- Accuracy and Stability}
+Near-severe mean absolute difference \fpNearMaeLo{}--\fpNearMaeHi{} against the
+classifiers on held-out storms. The surface is monotone in the level by construction.
+
+\subsection{Q3 --- Resource Usage}
+Negligible: ten coefficients and the standard library.
+
+\subsection{Q4 --- Override Controls}
+None in the model. Coefficients and envelope are configuration, changed by refitting.
+
+\subsection{Q5 --- Output Consumption}
+Stress scenarios, the portfolio stress screen and the sensitivity diagnostic.
+
+\subsection{Q6 --- Model Chaining}
+Yes: it approximates MKM-FC-001 and feeds the stress pipeline (MKM-ST-001).
+
+\subsection{Q7 --- Weaknesses}
+Accuracy near severe, the omitted rate of rise, and the step at severe.
+
+\subsection{Q8 --- Monitoring}
+Refit and re-measure when the classifiers are retrained or the storm catalogue
+changes; re-run the implementation benchmark on any change to the model or its
+configuration.
+
+\subsection{Q9 --- Overall Risk}
+Acceptable for stress testing, where it gives a consistent monotone surface across
+gauges. It should not stand in for a gauge's classifier where that gauge's own
+probability is needed.
+
+% ===================================================================
+\mkmchangelog
+% ===================================================================
+
+\begin{itemize}[nosep]
+    \item \textbf{v2.0:} a new model after the v1.0 benchmark: $P=1$ at or above
+          severe; a cubic kernel fitted to all 11 gauges' classifiers on real storm
+          states, constrained monotone in the level; the level floor; the support
+          envelope; the browser served the model instead of a copy;
+          \texttt{p\_flood\_simple} documented as a ratio; tables generated from the
+          code.
+\end{itemize}
+
+\mkmhistorypage{28-Mar-2026 & 1.0 & Initial documentation: quadratic kernel fitted to GAUGE-dc5e88fb & D. Kelly \\
+03-Nov-2026 & 2.0 & New model after the Wolfram benchmark of v1.0; refitted to every gauge & David K Kelly \\}
+
+\end{document}

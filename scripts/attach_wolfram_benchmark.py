@@ -76,6 +76,8 @@ BENCHMARKS = {
                     "Wolfram oracle benchmark - Gauge Historical Daily Synthetic Generation Model"),
     "MKM-DD-001": ("docs/models/depth_damage_benchmark/MKM-DD-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark v0.2 - Depth-Damage Curve Model, against documentation v2.0"),
+    "MKM-FPO-001": ("docs/models/flood_poly_benchmark/MKM-FPO-001_wolfram_benchmark.pdf",
+                    "Wolfram oracle benchmark v0.2 - Flood Polynomial Model, against documentation v2.0"),
     "MKM-MP-001": ("docs/models/mortgage_pricing_benchmark/MKM-MP-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark v0.2 - Mortgage Pricing Model, after the fair-value fix",
                    "MKM-MP-001_wolfram_benchmark_v0.2.pdf"),
@@ -93,6 +95,11 @@ ORIGINALS = {
                    "MKM-DD-001_wolfram_benchmark_v0.1.pdf",
                    "Wolfram oracle benchmark v0.1 - Depth-Damage Curve Model, against the filed "
                    "documentation v1.1; found it no longer described the model (superseded by v0.2)"),
+    "MKM-FPO-001": ("fcd060afa5894f47efdeda35cc530b43a86de885",
+                    "docs/models/flood_poly_benchmark/MKM-FPO-001_wolfram_benchmark.pdf",
+                    "MKM-FPO-001_wolfram_benchmark_v0.1.pdf",
+                    "Wolfram oracle benchmark v0.1 - Flood Polynomial Model, against the filed "
+                    "documentation v1.0; found its evidence did not hold (superseded by v0.2)"),
 }
 
 
