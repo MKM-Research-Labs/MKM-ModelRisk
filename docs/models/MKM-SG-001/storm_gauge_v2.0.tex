@@ -1,0 +1,808 @@
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+%
+% MKM-SG-001 Storm-Gauge Forward Model -- model documentation v2.0, the document of record
+% filed on the model as Core Documentation. It supersedes v1.3 (11-Mar-2026). The Wolfram
+% benchmark of v1.3 (MKM-SG-001_wolfram_benchmark v0.1) found the code computed its
+% equations, but that a storm never reached the levels the calibration named, that the
+% response did not behave as described, and that nothing in production used the model.
+% v2.0 changes the model and describes it, and where it is used, as they are. Its tables
+% are inlined, generated from the code.
+%
+% Build: it inputs the house header, which lives in PhysicalRisk. Copy
+% PhysicalRisk/docs/models/shared beside this folder as ../shared, then run
+% pdflatex three times (the third settles "Page n of N").
+\documentclass[11pt,a4paper]{article}
+\newcommand{\doctitle}{Storm-Gauge Forward Model}
+\newcommand{\docsubtitle}{Spatial Decay and Intensity-to-Level Conversion}
+\newcommand{\docversion}{2.0}
+\newcommand{\docdate}{04-November-2026}
+\newcommand{\docauthor}{David K Kelly}
+\input{../shared/mkm_header}
+% T1 so the underscores in code identifiers print as underscores.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% The shared history table sets every column to its natural width; wrap the description.
+\renewcommand{\mkmhistorypage}[1]{%
+    \section{Document History}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{l|l|p{9cm}|l}
+            \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+            \hline
+            #1
+        \end{tabular}
+    \end{table}
+}
+\newcommand{\sgSteadyAlert}{38.7}
+\newcommand{\sgSteadyWarning}{64.7}
+\newcommand{\sgSteadySevere}{86.0}
+\newcommand{\sgStormAlert}{40.9}
+\newcommand{\sgStormWarning}{68.2}
+\newcommand{\sgStormSevere}{90.7}
+\newcommand{\sgLag}{2.5}
+\newcommand{\sgGaugeMs}{0.3}
+\newcommand{\sgAllMs}{8}
+\newcommand{\sgGammaUp}{14.9}
+\newcommand{\sgGammaDown}{12.9}
+\newcommand{\sgGammaLo}{10}
+\newcommand{\sgGammaHi}{20}
+\begin{document}
+\sloppy
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+% ===================================================================
+% 1. EXECUTIVE SUMMARY
+% ===================================================================
+\mkmexecsummary
+
+The Storm-Gauge Forward Model maps a storm's track, intensity profile and footprint to a
+water level time series at each river gauge. It has three stages:
+\begin{enumerate}[nosep]
+    \item \textbf{Spatial proximity:} the storm's position, interpolated linearly along
+          its track at each time step, and its Haversine distance from the gauge.
+    \item \textbf{Intensity attenuation:} a Gaussian, exponential or linear decay
+          kernel applied to the storm's intensity.
+    \item \textbf{Intensity-to-level conversion:} a power law gives each intensity a
+          target level, and the gauge approaches it after a lag, rising and falling
+          with separate time constants.
+\end{enumerate}
+
+\paragraph{This is version 2.0, a revised model.} The Wolfram benchmark of v1.3
+(MKM-SG-001\_wolfram\_benchmark v0.1, 04-Nov-2026) found that the code computed its
+documented equations exactly. What the document said about them did not hold. v2.0
+changes the model in three ways:
+\begin{itemize}[nosep]
+    \item \textbf{The rise has its own time constant,} $\tau_{\text{rise}}=1$\,h. In
+          v1.3 the rise rate was tied to the fall, at $3\Delta t/\tau_{\text{decay}}$,
+          a 4-hour rise. The gauge reached only three-quarters of its target before the
+          storm passed. A storm therefore needed a peak of 56 to reach the flood alert,
+          where the calibration said 40, and never reached severe. Doubling
+          $\tau_{\text{decay}}$ lowered the peak. Now a storm crossing the gauge reaches
+          alert at peak \sgStormAlert, warning at \sgStormWarning{} and severe at
+          \sgStormSevere{} (\S\ref{sec:intensity_to_level}). $\tau_{\text{decay}}$ governs
+          only the fall.
+    \item \textbf{The run includes the recession.} v1.3 stopped at the storm's end,
+          with the gauge still high, so durations and accumulation were cut short.
+          v2.0 runs five fall constants further, with no forcing.
+    \item \textbf{An unread input is removed.} \texttt{intensity\_to\_level\_scale} was
+          stored and never read. The constants move to \texttt{config.models} (R1).
+\end{itemize}
+
+\paragraph{Where the model is used.} v1.3 described the model as feeding
+\texttt{gaugets/}, the hazard curves and the flood risk model. It does not, and did not.
+Nothing in the platform imports it. \texttt{gaugets/} is written by a scripted flood wave
+(\texttt{port/rand/shared/gauge/gaugets\_random}). The model is a standalone forward
+model, used for analysis and as the reference for the gauge response that MKM-SS-001
+re-implements (\S\ref{sec:scope}).
+
+The model is implemented in Python with only the standard library's \texttt{math}
+module, so it is portable and easy to audit.
+
+% ===================================================================
+% 2. MODEL PURPOSE AND SCOPE
+% ===================================================================
+\mkmpurpose
+
+\subsection{Purpose}
+The model computes the water level response at each gauge in a catchment to a
+parameterised storm. It supports:
+\begin{itemize}[nosep]
+    \item analysis of how a gauge responds to storm characteristics: intensity, track
+          proximity, footprint width and kernel shape;
+    \item the spatial pattern of flooding across a catchment's gauges for one storm;
+    \item a reference for the lagged, asymmetric gauge response that other models
+          re-implement.
+\end{itemize}
+
+\subsection{Scope}
+\label{sec:scope}
+\begin{itemize}[nosep]
+    \item \textbf{In scope:} track interpolation; Haversine distance; the decay kernels;
+          the intensity-to-level transfer; the lagged rise and fall; and summary
+          statistics (peak level, durations above each stage, accumulation).
+    \item \textbf{Out of scope:} storm generation (\texttt{storm\_factory.py} builds
+          simple storms for the model's own use); hydrodynamic solvers; property
+          depth--damage; PRS pricing.
+    \item \textbf{Upstream:} \texttt{Storm} objects, from \texttt{create\_storm} or
+          built directly; \texttt{GaugeConfig} objects, from the gauge portfolio CDM
+          through \texttt{GaugeConfig.from\_gauge\_portfolio}.
+    \item \textbf{Downstream: none in production.} No module in \texttt{src},
+          \texttt{tools} or \texttt{scripts} imports the package. The gauge time series
+          in \texttt{gaugets/} come from \texttt{port/src/gauge/gaugets.py}, which
+          draws a scripted wave from \texttt{gaugets\_random}. MKM-SS-001's sequence
+          response (\texttt{storm\_multi/models/sequence\_response.py}) re-implements
+          a lagged, asymmetric rise and fall of the same kind; it does not call this
+          code.
+\end{itemize}
+
+\subsection{Model Classification}
+Under the firm's model risk management framework this is a \emph{Tier~2 quantitative
+model}. It is deterministic given its inputs. Because no production model consumes its
+output, an error in it cannot at present reach a price, a risk figure or a report. That
+would change if it were wired into \texttt{gaugets/}, and this document would have to
+change with it.
+
+% ===================================================================
+% 3. MATHEMATICAL FRAMEWORK
+% ===================================================================
+\mkmframework
+
+\subsection{Haversine Distance}
+\label{sec:haversine}
+
+The distance between a gauge at $(\phi_g, \lambda_g)$ and a storm position
+$(\phi_s, \lambda_s)$ is computed on a sphere of radius $R = 6{,}371$\,km:
+
+\begin{equation}
+    a = \sin^2\!\left(\frac{\Delta\phi}{2}\right)
+      + \cos\phi_g \,\cos\phi_s \,\sin^2\!\left(\frac{\Delta\lambda}{2}\right)
+    \label{eq:haversine_a}
+\end{equation}
+
+\begin{equation}
+    d = 2R \,\arctan\!\left(\frac{\sqrt{a}}{\sqrt{1-a}}\right)
+    \label{eq:haversine_d}
+\end{equation}
+
+\noindent where $\Delta\phi = \phi_s - \phi_g$ and $\Delta\lambda = \lambda_s - \lambda_g$,
+in radians. The code evaluates Eq.~\ref{eq:haversine_d} with \texttt{math.atan2}, which
+equals $\arcsin\sqrt{a}$ without its loss of accuracy as $a\to1$.
+
+\subsection{Storm Track Interpolation}
+\label{sec:track_interp}
+
+A storm is an ordered sequence of track points $\{(\lambda_i, \phi_i, t_i, I_i)\}_{i=1}^{N}$:
+longitude, latitude, hours since the storm started, and intensity on a $[0, 100]$ scale.
+At time $t$ the model finds the bracketing points with
+$t_{\text{prev}} \leq t < t_{\text{next}}$ and the fraction
+
+\begin{equation}
+    \alpha = \operatorname{clamp}\!\left(
+        \frac{t - t_{\text{prev}}}{t_{\text{next}} - t_{\text{prev}}},\; 0,\; 1
+    \right)
+    \label{eq:interp_frac}
+\end{equation}
+
+\noindent and interpolates linearly:
+
+\begin{align}
+    \lambda_s(t) &= \lambda_{\text{prev}} + \alpha\,(\lambda_{\text{next}} - \lambda_{\text{prev}}) \label{eq:interp_lon} \\
+    \phi_s(t) &= \phi_{\text{prev}} + \alpha\,(\phi_{\text{next}} - \phi_{\text{prev}}) \label{eq:interp_lat} \\
+    I_s(t) &= I_{\text{prev}} + \alpha\,(I_{\text{next}} - I_{\text{prev}}) \label{eq:interp_intensity}
+\end{align}
+
+\noindent Before the first track point the storm is at that point; after the last, at the
+last. After the storm's duration $T$ its intensity is zero (\S\ref{sec:temporal_dynamics}).
+
+\subsection{Spatial Decay Kernels}
+\label{sec:decay_kernels}
+
+The storm's footprint radius $F$ (km) normalises the distance,
+
+\begin{equation}
+    \tilde{d} = \frac{d}{F},
+    \label{eq:d_norm}
+\end{equation}
+
+\noindent and one of three kernels attenuates the intensity:
+
+\subsubsection{Gaussian Kernel}
+\begin{equation}
+    k_{\text{Gauss}}(\tilde{d}\,;\,\sigma) =
+        \exp\!\left(-\frac{\tilde{d}^{\,2}}{2\sigma^2}\right)
+    \label{eq:gaussian_kernel}
+\end{equation}
+
+\noindent with bandwidth $\sigma$ (default 0.5). It is the default kernel. At
+$\tilde{d} = \sigma$ the intensity is 60.7\% of its on-track value, and at $2\sigma$
+it is 13.5\%.
+
+\subsubsection{Exponential Kernel}
+\begin{equation}
+    k_{\text{Exp}}(\tilde{d}\,;\,\lambda) =
+        \exp\!\left(-\frac{\tilde{d}}{\lambda}\right)
+    \label{eq:exponential_kernel}
+\end{equation}
+
+\noindent with decay length $\lambda$ (default 0.5). It is sharper at the centre than
+the Gaussian, and has heavier tails.
+
+\subsubsection{Linear Kernel}
+\begin{equation}
+    k_{\text{Lin}}(\tilde{d}\,;\,r) =
+        \max\!\left(0,\; 1 - \frac{\tilde{d}}{r}\right)
+    \label{eq:linear_kernel}
+\end{equation}
+
+\noindent with cut-off $r$ (default 0.5). Intensity is zero at and beyond $\tilde{d}=r$.
+
+\paragraph{Boundary condition.} For every kernel $k(0) = 1$: a gauge on the track
+receives the full intensity. The Gaussian and exponential kernels tend to zero with
+distance; the linear kernel reaches it.
+
+\subsection{Intensity at Gauge}
+\label{sec:intensity_at_gauge}
+
+The intensity a gauge experiences at time $t$ is
+
+\begin{equation}
+    I_{\text{gauge}}(t) = I_s(t) \times k\!\left(\tilde{d}(t)\right),
+    \label{eq:intensity_at_gauge}
+\end{equation}
+
+\noindent with $I_s(t)$ from Eq.~\ref{eq:interp_intensity} and $\tilde{d}(t)$ the
+normalised distance to the storm's position at $t$. Intensity and footprint are assumed
+separable (\S8, item~3).
+
+\subsection{Intensity-to-Level Conversion}
+\label{sec:intensity_to_level}
+
+Each intensity has a target level. For a gauge with base level $L_{\text{base}}$,
+historical high $L_{\text{high}}$ (or $1.1 \times L_{\text{severe}}$ if it has none) and
+sensitivity $s$:
+
+\begin{equation}
+    L_{\text{range}} = L_{\text{high}} - L_{\text{base}}
+    \label{eq:level_range}
+\end{equation}
+
+\begin{equation}
+    \Delta L(I) = \left(\frac{I}{100}\right)^{\!\gamma} \times L_{\text{range}} \times s,
+    \qquad \Delta L(I) = 0 \text{ for } I \le 0,
+    \label{eq:power_law}
+\end{equation}
+
+\noindent with $\gamma = 0.8$. The sub-linear exponent gives moderate intensities a
+proportionally larger target than a linear map would.
+
+\paragraph{The calibration bands.} At Table~\ref{tab:gauge_params}'s default stages the
+target reaches each stage at a fixed intensity, whatever the alert level: flood alert at
+$I=\sgSteadyAlert$, flood warning at \sgSteadyWarning, severe at \sgSteadySevere{} and the
+historical high at 100. A target is only reached if the intensity is held for long
+enough. A storm passes, so it must peak higher. A default storm
+(Table~\ref{tab:storm_params}) crossing directly over the gauge reaches:
+\begin{itemize}[nosep]
+    \item flood alert at peak intensity \sgStormAlert;
+    \item flood warning at \sgStormWarning;
+    \item severe at \sgStormSevere.
+\end{itemize}
+These storm figures are the ones v2.0's rise constant was chosen to give. The design
+intent is alert near 40, warning in 60--70 and severe at 85 or above
+(Table~\ref{tab:storm_response}). A gauge with its own historical high has its own bands.
+
+\subsection{Temporal Response Dynamics}
+\label{sec:temporal_dynamics}
+
+The water level at step $i$ is
+
+\begin{equation}
+    L(t_i) = L_{\text{base}} + C(t_i),
+    \label{eq:gauge_level}
+\end{equation}
+
+\noindent where $C$ is the contribution. With time step $\Delta t$ (0.5\,h) and lag
+$\tau_{\text{lag}}$ (2\,h), the target at step $i$ is $\Delta L$ of the lagged intensity
+
+\begin{equation}
+    I_{\text{lag}}(t_i) = I_{\text{gauge}}\!\left(t_{\max(0,\; i - \lfloor \tau_{\text{lag}}/\Delta t \rfloor)}\right),
+    \label{eq:lagged_intensity}
+\end{equation}
+
+\noindent and the contribution approaches it with a rise constant $\tau_{\text{rise}}$
+(1\,h) and a fall constant $\tau_{\text{decay}}$ (12\,h):
+
+\begin{equation}
+    C(t_i) = C(t_{i-1}) + \bigl[\Delta L_{\text{target}} - C(t_{i-1})\bigr] \times
+    \begin{cases}
+        \min\!\left(1,\; \Delta t/\tau_{\text{rise}}\right) & \text{if } \Delta L_{\text{target}} > C(t_{i-1}) \\[0.5em]
+        \min\!\left(1,\; \Delta t/\tau_{\text{decay}}\right) & \text{otherwise,}
+    \end{cases}
+    \label{eq:contribution_update}
+\end{equation}
+
+\noindent from $C=0$. The gauge rises twelve times faster than it falls.
+
+\paragraph{The run.} The grid is $t_i = i\,\Delta t$ for
+$i = 0, \ldots, \lfloor (T + 5\tau_{\text{decay}})/\Delta t \rfloor$. After the storm's
+duration $T$ there is no forcing. The five fall constants that follow let the
+contribution fall to $e^{-5}$, under 1\%, of where it started falling.
+
+\paragraph{Lag between the peaks.} Peak level follows peak intensity by
+$\tau_{\text{lag}}$ plus the time the rising level takes to meet the falling target.
+For a default storm that is \sgLag\,h (Table~\ref{tab:storm_response}).
+
+\subsection{Summary Statistics}
+\label{sec:summary_stats}
+
+Over the whole run, recession included:
+
+\begin{itemize}[nosep]
+    \item \textbf{Peak level} $L_{\text{peak}} = \max_i L(t_i)$, and its time.
+    \item \textbf{Peak exceedance} $E_{\text{peak}} = L_{\text{peak}} - L_{\text{alert}}$,
+          negative if the gauge does not reach alert.
+    \item \textbf{Duration above each stage} $\theta$ (alert, warning, severe):
+          \begin{equation}
+              D_{\theta} = \sum_{i:\, L(t_i) \geq \theta} \Delta t
+              \label{eq:duration}
+          \end{equation}
+    \item \textbf{Accumulation} above the alert level, in metre-hours:
+          \begin{equation}
+              A = \sum_{i} \max\!\bigl(0,\; L(t_i) - L_{\text{alert}}\bigr)\,\Delta t
+              \label{eq:accumulation}
+          \end{equation}
+    \item \textbf{Peak intensity} $I_{\text{peak}} = \max_i I_{\text{gauge}}(t_i)$,
+          and its time.
+\end{itemize}
+
+% ===================================================================
+% 4. INPUT PARAMETERS AND CALIBRATION
+% ===================================================================
+\mkminputs
+
+\subsection{Storm Parameters}
+
+\begin{table}[H]
+    \centering
+    \caption{Storm input parameters (defaults of \texttt{create\_storm})}
+    \label{tab:storm_params}
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Units} & \textbf{Default} \\
+        \midrule
+        Track points & $\{(\lambda_i, \phi_i, t_i, I_i)\}$ & deg, h, --- & 25 points \\
+        Peak intensity & $I_{\text{peak}}$ & 0--100 & 50.0 \\
+        Footprint radius & $F$ & km & 40.0 \\
+        Duration & $T$ & hours & 24.0 \\
+        Decay kernel & --- & enum & Gaussian \\
+        Decay parameter & $\sigma$, $\lambda$ or $r$ & --- & 0.5 \\
+        Intensity profile & --- & enum & Triangular \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\noindent The peak intensity and profile shape the track's intensities when
+\texttt{create\_storm} builds it; the model reads only the track. A \texttt{Storm} also
+carries a speed, which the model does not read.
+
+\subsection{Gauge Configuration Parameters}
+
+\begin{table}[H]
+    \centering
+    \caption{Gauge configuration parameters (defaults of \texttt{from\_gauge\_portfolio})}
+    \label{tab:gauge_params}
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Units} & \textbf{Default} \\
+        \midrule
+        Base level & $L_{\text{base}}$ & m & $0.35 \times L_{\text{alert}}$ \\
+        Flood alert & $L_{\text{alert}}$ & m & 4.0 \\
+        Flood warning & $L_{\text{warn}}$ & m & $1.33 \times L_{\text{alert}}$ \\
+        Severe warning & $L_{\text{severe}}$ & m & $1.58 \times L_{\text{alert}}$ \\
+        Historical high & $L_{\text{high}}$ & m & optional \\
+        Sensitivity & $s$ & --- & 1.0 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Model Hyperparameters}
+
+\begin{table}[H]
+    \centering
+    \caption{Model hyperparameters (\texttt{config.models}, \texttt{\_stormgauge.py})}
+    \label{tab:model_params}
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Parameter} & \textbf{Symbol} & \textbf{Units} & \textbf{Default} \\
+        \midrule
+        Time resolution & $\Delta t$ & hours & 0.5 \\
+        Response lag & $\tau_{\text{lag}}$ & hours & 2.0 \\
+        Rise time constant & $\tau_{\text{rise}}$ & hours & 1.0 \\
+        Fall time constant & $\tau_{\text{decay}}$ & hours & 12.0 \\
+        Recession run-on & --- & $\tau_{\text{decay}}$ & 5 \\
+        Power-law exponent & $\gamma$ & --- & 0.8 \\
+        Historical high, where none & --- & $\times L_{\text{severe}}$ & 1.1 \\
+        Earth radius & $R$ & km & 6{,}371 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Calibration Approach}
+
+The parameters are design choices, not fitted values.
+\begin{itemize}[nosep]
+    \item $\gamma = 0.8$ and the stage multiples of Table~\ref{tab:gauge_params} set
+          the steady-state bands of \S\ref{sec:intensity_to_level}.
+    \item $\tau_{\text{rise}} = 1$\,h was chosen in v2.0 so that a storm crossing the
+          gauge reaches the bands those choices intend.
+    \item $\tau_{\text{lag}}=2$\,h and $\tau_{\text{decay}}=12$\,h are unchanged from
+          v1.3.
+\end{itemize}
+v1.3 described the parameters as calibrated against Environment Agency records for the
+Thames. No such calibration is held in the repository, and v2.0 does not repeat the
+claim. Calibrating them to observed hydrographs is the first item of \S8.
+
+The gauge sensitivity $s$ (default 1.0) can be set per gauge, for catchment
+characteristics such as urbanisation and soil.
+
+\subsection{Data Formats}
+
+\subsubsection{Storm Track Data}
+A storm's track is a list of \texttt{TrackPoint} objects:
+\begin{lstlisting}[language=Python]
+@dataclass
+class TrackPoint:
+    longitude: float    # Degrees (WGS84)
+    latitude: float     # Degrees (WGS84)
+    time_hours: float   # Hours since storm start
+    intensity: float    # 0-100 intensity scale
+\end{lstlisting}
+
+\subsubsection{Gauge Configuration}
+\texttt{GaugeConfig.from\_gauge\_portfolio()} reads a gauge's stages and coordinates from
+its gauge portfolio CDM entry, with the defaults of Table~\ref{tab:gauge_params} where a
+stage is missing.
+
+% ===================================================================
+% 5. IMPLEMENTATION DETAILS
+% ===================================================================
+\mkmimplementation
+
+\subsection{Software Architecture}
+
+The package \texttt{src/models/stormgauge/} holds:
+\begin{itemize}[nosep]
+    \item \texttt{data\_structures.py}: the enumerations \texttt{DecayKernel} and
+          \texttt{IntensityProfile}, and the dataclasses \texttt{TrackPoint},
+          \texttt{Storm}, \texttt{GaugeConfig} and \texttt{GaugeResponse};
+    \item \texttt{forward\_model/}: \texttt{StormGaugeModel} (\texttt{\_core.py}), with
+          distance, decay, interpolation and the power law in \texttt{\_intensity.py}
+          and the response in \texttt{\_response.py};
+    \item \texttt{storm\_factory.py}: \texttt{create\_storm} and
+          \texttt{load\_gauges\_from\_portfolio}.
+\end{itemize}
+Its parameters are in \texttt{config/models/\_stormgauge.py}.
+
+\subsection{Computational Flow}
+
+\texttt{StormGaugeModel.compute\_response(storm, gauge)}:
+\begin{enumerate}[nosep]
+    \item builds the grid of \S\ref{sec:temporal_dynamics}, from 0 to
+          $T + 5\tau_{\text{decay}}$;
+    \item computes the intensity at the gauge at each step (Eqs.~3--11), zero after $T$;
+    \item applies the lagged target and Eq.~\ref{eq:contribution_update};
+    \item extracts the statistics of \S\ref{sec:summary_stats};
+    \item returns a \texttt{GaugeResponse} with the series and the statistics.
+\end{enumerate}
+\texttt{compute\_all\_responses(storm, gauges)} runs each gauge in turn. The cost is
+$\mathcal{O}(N_t \cdot N_{\text{track}})$ per gauge.
+
+\subsection{Numerical Considerations}
+
+\begin{itemize}[nosep]
+    \item The Haversine uses \texttt{math.atan2} (\S\ref{sec:haversine}).
+    \item $\alpha$ is clamped to $[0, 1]$, so the storm never leaves its track.
+    \item Both smoothing rates are clamped by $\min(1,\cdot)$, so a large step cannot
+          overshoot its target.
+    \item Arithmetic is 64-bit floating point. A kernel value below the smallest
+          double, far outside the footprint, is zero.
+\end{itemize}
+
+\subsection{Dependencies}
+
+The Python standard library (\texttt{math}, \texttt{dataclasses}, \texttt{enum},
+\texttt{typing}) and \texttt{config.models}.
+
+% ===================================================================
+% 6. SENSITIVITY ANALYSIS
+% ===================================================================
+\mkmsensitivity
+
+\begin{table}[H]
+    \centering
+    \caption{Spatial decay factor by kernel type (footprint 100\,km, decay parameter 1.0).}
+    \label{tab:sens_decay_kernel}
+    \begin{tabular}{rrrr}
+        \toprule
+        \textbf{Distance (km)} & \textbf{Gaussian} & \textbf{Exponential} & \textbf{Linear} \\
+        \midrule
+        0 & 1.00 & 1.00 & 1.00 \\
+        25 & 0.9692 & 0.7788 & 0.7500 \\
+        50 & 0.8825 & 0.6065 & 0.5000 \\
+        75 & 0.7548 & 0.4724 & 0.2500 \\
+        100 & 0.6065 & 0.3679 & 0.0000 \\
+        150 & 0.3247 & 0.2231 & 0.0000 \\
+        200 & 0.1353 & 0.1353 & 0.0000 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{table}[H]
+    \centering
+    \caption{Target contribution $\Delta L$ (m, Eq.~\ref{eq:power_law}) by intensity and gauge sensitivity ($L_{\text{base}}=1.5$, $L_{\text{high}}=6.0$\,m).}
+    \label{tab:sens_intensity_level}
+    \begin{tabular}{rrrrrr}
+        \toprule
+        \textbf{$s$} & \textbf{$I=20$} & \textbf{$I=40$} & \textbf{$I=60$} & \textbf{$I=80$} & \textbf{$I=100$} \\
+        \midrule
+        0.8 & 0.9930 & 1.73 & 2.39 & 3.01 & 3.60 \\
+        1.0 & 1.24 & 2.16 & 2.99 & 3.76 & 4.50 \\
+        1.2 & 1.49 & 2.59 & 3.59 & 4.52 & 5.40 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Decay Kernel Selection}
+
+The kernel matters for storms that do not pass over the gauge. One footprint radius
+away ($\tilde{d} = 1.0$):
+
+\begin{table}[H]
+    \centering
+    \caption{Decay factor at $\tilde{d} = 1.0$ for each kernel (default parameters)}
+    \label{tab:decay_comparison}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Kernel} & \textbf{$k(1.0)$} & \textbf{Relative intensity} \\
+        \midrule
+        Gaussian ($\sigma = 0.5$) & $\exp(-2) \approx 0.135$ & 13.5\% \\
+        Exponential ($\lambda = 0.5$) & $\exp(-2) \approx 0.135$ & 13.5\% \\
+        Linear ($r = 0.5$) & $\max(0, 1-2) = 0.0$ & 0.0\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\noindent The Gaussian and exponential kernels coincide here for $\sigma = \lambda = 0.5$
+and nowhere else. The linear kernel gives nothing beyond $\tilde{d} = r = 0.5$.
+
+\subsection{Power-Law Exponent}
+
+\begin{table}[H]
+    \centering
+    \caption{Normalised level contribution $\Delta L / L_{\text{range}}$ at $I = 50$ for varying $\gamma$}
+    \label{tab:gamma_sensitivity}
+    \begin{tabular}{lc}
+        \toprule
+        \textbf{$\gamma$} & \textbf{$\Delta L / (s \cdot L_{\text{range}})$} \\
+        \midrule
+        0.5 & $(0.5)^{0.5} \approx 0.707$ \\
+        0.8 (default) & $(0.5)^{0.8} \approx 0.574$ \\
+        1.0 & $(0.5)^{1.0} = 0.500$ \\
+        1.5 & $(0.5)^{1.5} \approx 0.354$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\noindent A 25\% change in $\gamma$ moves the target at $I=50$ by $+\sgGammaUp$\% (down
+to 0.6) and $-\sgGammaDown$\% (up to 1.0). Across $I=40$--60 the change is
+\sgGammaLo--\sgGammaHi\%. The effect grows as the intensity falls.
+
+\subsection{Storm Response}
+
+\begin{table}[H]
+    \centering
+    \caption{Response of a default storm (Table~\ref{tab:storm_params}) crossing the Thames at 51.5$^\circ$N, at a gauge with Table~\ref{tab:gauge_params}'s default stages ($L_{\text{alert}}=4$\,m) on the track and 0.1 and 0.2$^\circ$ north of it. Lag is peak level less peak intensity, in hours; durations in hours; accumulation in metre-hours.}
+    \label{tab:storm_response}
+    \begin{tabular}{rrrrrrrrr}
+        \toprule
+        \textbf{Peak} & \textbf{North ($^\circ$)} & \textbf{$I_{\text{peak}}$} & \textbf{$L_{\text{peak}}$ (m)} & \textbf{Lag} & \textbf{$D_{\text{alert}}$} & \textbf{$D_{\text{warn}}$} & \textbf{$D_{\text{severe}}$} & \textbf{$A$} \\
+        \midrule
+        40 & 0.0 & 40.0 & 3.96 & 2.5 & 0.0 & 0.0 & 0.0 & 0.00 \\
+        40 & 0.1 & 34.3 & 3.66 & 2.5 & 0.0 & 0.0 & 0.0 & 0.00 \\
+        40 & 0.2 & 21.6 & 2.96 & 2.5 & 0.0 & 0.0 & 0.0 & 0.00 \\
+        60 & 0.0 & 60.0 & 4.94 & 2.5 & 10.5 & 0.0 & 0.0 & 6.20 \\
+        60 & 0.1 & 51.4 & 4.52 & 2.5 & 8.0 & 0.0 & 0.0 & 2.68 \\
+        60 & 0.2 & 32.3 & 3.56 & 2.5 & 0.0 & 0.0 & 0.0 & 0.00 \\
+        80 & 0.0 & 80.0 & 5.85 & 2.5 & 14.5 & 6.5 & 0.0 & 16.17 \\
+        80 & 0.1 & 68.5 & 5.33 & 2.5 & 12.5 & 1.0 & 0.0 & 10.24 \\
+        80 & 0.2 & 43.1 & 4.11 & 2.5 & 3.5 & 0.0 & 0.0 & 0.29 \\
+        100 & 0.0 & 100.0 & 6.72 & 2.5 & 17.5 & 10.5 & 5.0 & 27.36 \\
+        100 & 0.1 & 85.7 & 6.10 & 2.5 & 15.5 & 8.0 & 0.0 & 19.27 \\
+        100 & 0.2 & 53.9 & 4.65 & 2.5 & 8.5 & 0.0 & 0.0 & 3.63 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\noindent The lag between the peaks is the same in every case, \sgLag\,h: the storms
+share one profile, and the gauge's distance scales the forcing without reshaping it.
+Off the track the storm is weaker: 0.2$^\circ$ (22\,km) north, a peak-100 storm
+reaches alert but not warning.
+
+\subsection{Time Constants}
+
+\begin{table}[H]
+    \centering
+    \caption{Sensitivity to the time constants, on the peak-100 storm crossing the gauge; the others at their defaults.}
+    \label{tab:time_constants}
+    \begin{tabular}{lrrrrr}
+        \toprule
+        \textbf{Constant} & \textbf{Hours} & \textbf{$L_{\text{peak}}$ (m)} & \textbf{Lag (h)} & \textbf{$D_{\text{alert}}$ (h)} & \textbf{$A$ (m\,h)} \\
+        \midrule
+        $\tau_{\text{lag}}$ & 1 & 6.72 & 1.5 & 17.5 & 27.36 \\
+        $\tau_{\text{lag}}$ & 2 & 6.72 & 2.5 & 17.5 & 27.36 \\
+        $\tau_{\text{lag}}$ & 4 & 6.72 & 4.5 & 17.5 & 27.36 \\
+        $\tau_{\text{rise}}$ & 0.5 & 6.95 & 2.0 & 18.5 & 30.66 \\
+        $\tau_{\text{rise}}$ & 1 & 6.72 & 2.5 & 17.5 & 27.36 \\
+        $\tau_{\text{rise}}$ & 2 & 6.31 & 3.0 & 16.0 & 21.53 \\
+        $\tau_{\text{rise}}$ & 4 & 5.53 & 4.0 & 13.0 & 12.17 \\
+        $\tau_{\text{decay}}$ & 6 & 6.72 & 2.5 & 13.5 & 21.38 \\
+        $\tau_{\text{decay}}$ & 12 & 6.72 & 2.5 & 17.5 & 27.36 \\
+        $\tau_{\text{decay}}$ & 24 & 6.72 & 2.5 & 26.0 & 38.07 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{itemize}[nosep]
+    \item $\tau_{\text{lag}}$ moves the timing one for one and leaves the peak alone.
+    \item $\tau_{\text{decay}}$ leaves the peak alone and lengthens the recession:
+          doubling it from 12 to 24\,h takes the time above alert from 17.5 to
+          26\,h.
+    \item $\tau_{\text{rise}}$ sets how far the gauge gets before the storm passes.
+          At 4\,h, v1.3's effective value, the peak-100 storm's peak is 1.2\,m lower.
+\end{itemize}
+
+\subsection{Footprint Radius}
+
+The footprint $F$ scales the reach of the storm: doubling it doubles the distance at
+which a given decay is reached. It decides which gauges a storm affects, and so drives
+the spatial pattern of flooding across a catchment.
+
+% ===================================================================
+% 7. VALIDATION AND BACKTESTING
+% ===================================================================
+\mkmvalidation
+
+\subsection{Unit Testing}
+
+The package's tests (\texttt{tests/models/stormgauge/}) verify:
+\begin{itemize}[nosep]
+    \item the Haversine against known distances, and its symmetry;
+    \item the kernels' boundary conditions: $k(0) = 1$, and the linear kernel zero for
+          $\tilde{d} \geq r$;
+    \item that a higher intensity gives a higher target, and zero intensity none;
+    \item no forcing after the storm, and a completed recession;
+    \item that $\tau_{\text{decay}}$ does not slow the rise, and lengthens the time above
+          alert;
+    \item that a held intensity brings the level to its Eq.~\ref{eq:power_law} target.
+\end{itemize}
+
+\subsection{Benchmark}
+
+The Wolfram oracle benchmark (MKM-SG-001\_wolfram\_benchmark) checks the code against a
+50-digit implementation of this document's equations and against Wolfram's own. It also
+tests this document's figures and statements. Its v0.1, against v1.3, found the
+shortcomings this version corrects.
+
+\subsection{Backtesting}
+
+No backtest is on record. v1.3 reported peak errors within $\pm0.3$\,m and timing
+within $\pm1$\,h against Environment Agency records. It also reported cross-checks
+against GEV fits. Nothing in the repository runs the model against gauge records, so
+those figures cannot be reproduced, and v2.0 does not repeat them. A backtest against
+observed Thames hydrographs is the condition of Q9.
+
+% ===================================================================
+% 8. MODEL LIMITATIONS AND KNOWN WEAKNESSES
+% ===================================================================
+\mkmlimitations
+
+\begin{enumerate}[nosep]
+    \item \textbf{Uncalibrated.} $\gamma$, $\tau_{\text{lag}}$, $\tau_{\text{rise}}$ and
+          $\tau_{\text{decay}}$ are design choices. None has been fitted to observed
+          hydrographs.
+    \item \textbf{No antecedent conditions.} Soil moisture, groundwater and preceding
+          rain are ignored: a storm always produces the same response. MKM-SS-001
+          composites sequences of storms with partial recovery between them.
+    \item \textbf{Separable intensity and decay.} The footprint's shape does not vary
+          with intensity.
+    \item \textbf{Static sensitivity.} $s$ does not vary with level or season.
+    \item \textbf{Spherical Earth.} Against the WGS84 ellipsoid the sphere understates
+          distances in the UK by up to 0.32\%, east--west, and by 0.06\% north--south.
+    \item \textbf{One rise and one fall constant} for every gauge, whatever its
+          catchment.
+    \item \textbf{No tidal interaction} at estuarine or coastal gauges.
+    \item \textbf{One footprint per storm,} where real storms have several bands.
+    \item \textbf{Linear track interpolation} in latitude and longitude rather than
+          along great circles.
+\end{enumerate}
+
+% ===================================================================
+% 9. GOVERNANCE VALIDATION QUESTIONS
+% ===================================================================
+\mkmgovernance
+
+\mkmvqitem{1}{Ronseal Test}{Does the model do what it says on the tin?}
+Yes, as v2.0 describes it. It maps a storm to a water level series and summary statistics
+at each gauge, and the Wolfram benchmark confirms it computes this document's equations.
+v1.3 also said it supplied the platform's gauge time series, which it does not
+(\S\ref{sec:scope}).
+
+\mkmvqitem{2}{Accuracy and Stability}{Does the model provide timely, accurate and stable results?}
+It is deterministic and numerically exact to double precision. Its accuracy against real
+gauges is unknown: no backtest is on record (\S7.3).
+
+\mkmvqitem{3}{Resource Usage}{Does the model consume excessive computational resources?}
+No. A 48-hour storm with 25 track points takes \sgGaugeMs\,ms per gauge, recession
+included, and 25 gauges take \sgAllMs\,ms.
+
+\mkmvqitem{4}{Override Controls}{Are there controls over manual overrides?}
+The per-gauge sensitivity $s$ comes from gauge configuration data. The other parameters
+are in \texttt{config.models} under version control, and can be passed to
+\texttt{StormGaugeModel} for analysis.
+
+\mkmvqitem{5}{Output Consumption}{How is the output consumed for risk decision-making?}
+It is not. No production model, report or screen consumes the model's output. It is used
+for analysis, and as the reference shape for MKM-SS-001's sequence response.
+
+\mkmvqitem{6}{Model Chaining}{Is the model's output used as input to another model?}
+No. Its inputs are storms built by \texttt{create\_storm} or directly, and gauges from
+the gauge portfolio CDM. MKM-SS-001 re-implements a response of the same kind; it does
+not call this code.
+
+\mkmvqitem{7}{Weaknesses}{Does the model have weaknesses and limitations of use?}
+Yes, nine (\S8). The most material is that its parameters are uncalibrated.
+
+\mkmvqitem{8}{Monitoring}{What type of monitoring is required?}
+While nothing consumes its output, a re-run of the benchmark on any change to the package
+or its parameters. If it is wired into production, the backtest of Q9 and an annual
+comparison against Environment Agency records.
+
+\mkmvqitem{9}{Overall Risk}{Is the overall model risk acceptable?}
+Acceptable for its present use, which reaches no decision. Before its output is used in
+production it needs calibration and a backtest against observed Thames hydrographs, and
+this document must be revised to say where the output goes.
+
+\clearpage
+
+% ===================================================================
+% 10. CHANGE HISTORY
+% ===================================================================
+\mkmchangelog
+
+\textbf{v2.0 (04-Nov-2026).} After the Wolfram benchmark of v1.3:
+\begin{itemize}[nosep]
+    \item a rise time constant of its own, $\tau_{\text{rise}}=1$\,h, in place of
+          $3\Delta t/\tau_{\text{decay}}$;
+    \item the run continues $5\tau_{\text{decay}}$ past the storm's end, with no forcing,
+          so durations and accumulation include the recession;
+    \item \texttt{intensity\_to\_level\_scale}, never read, removed; the constants moved
+          to \texttt{config.models};
+    \item the scope, calibration, backtesting and governance answers corrected to what
+          the model is and where it is used;
+    \item the $\gamma$ sensitivity and the sphere's error restated as computed;
+    \item Table~5 now shows sensitivity, and Tables~8--9 the storm response and the time
+          constants.
+\end{itemize}
+
+% ===================================================================
+% DOCUMENT HISTORY
+% ===================================================================
+\mkmhistorypage{13-Feb-2026 & 1.0 & Initial documentation & D. Kelly \\
+18-Feb-2026 & 1.1 & Added Section 9: Governance Validation Questions (Chapter 5) & D. Kelly \\
+26-Feb-2026 & 1.2 & Added Delta Engine model to inventory; updated models in scope & D. Kelly \\
+11-Mar-2026 & 1.3 & Antecedent conditions partly addressed by MKM-SS-001 & D. Kelly \\
+04-Nov-2026 & 2.0 & Revised model after the Wolfram benchmark: own rise constant, recession, unread scale removed; scope and governance corrected & D. Kelly \\}
+
+\end{document}
