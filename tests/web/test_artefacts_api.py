@@ -94,5 +94,17 @@ def test_a_kind_outside_the_vocabulary_is_refused_and_the_options_listed(client)
     assert "kind must be one of" in response.get_json()["error"]
 
 
+def test_a_presentation_deck_can_be_filed_and_is_only_ever_downloaded(client):
+    """Presentation is an artefact kind, so a .pptx deck must be accepted. It is not
+    an inline-view format, so even ``?inline=1`` serves it as an attachment."""
+    shelf = _company_shelf(client)
+    response = _upload(client, shelf, filename="model_chain.pptx")
+    assert response.status_code == 201
+    item_id = response.get_json()[0]["item_id"]
+    inline = client.get(f"/api/artefacts/{shelf}/{item_id}/download?inline=1")
+    assert inline.status_code == 200
+    assert "attachment" in inline.headers["Content-Disposition"]
+
+
 def test_an_extension_the_platform_will_not_store_is_400(client):
     assert _upload(client, _company_shelf(client), filename="evil.exe").status_code == 400
