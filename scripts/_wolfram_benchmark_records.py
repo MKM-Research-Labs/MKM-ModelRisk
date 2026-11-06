@@ -179,6 +179,22 @@ VQ_RATIONALE = {
         "All 16 claims hold, including 169 printed figures and the storm bands 40.9, 68.2 "
         "and 90.7. Outstanding: the parameters are uncalibrated and there is no backtest "
         "against observed hydrographs (v2.0 Q9)."),
+    "MKM-SP-001": (
+        "Partially addressed. v1.0 was benchmarked on 2026-11-06 against Wolfram Engine 15.0 "
+        "(MKM-SP-001_wolfram_benchmark_v0.1.pdf, kept in History as evidence of the check). "
+        "The code computed its haversine and IDW exactly, but 10 of the document's 15 claims "
+        "did not hold: the spatial index measured degrees of latitude and longitude alike and "
+        "named the wrong nearest gauge in 176 of 1000 queries; the correlation was Euclidean "
+        "degrees at 111 km a degree, not the equation printed; the coordinate path fixed the "
+        "IDW power; nothing returned the nearest gauge; and nothing in the platform calls the "
+        "interpolation, the index or the correlation, while the tests, validation and kriging "
+        "comparison v1.0 cited do not exist. v2.0 indexes gauges on the unit sphere with a "
+        "nearest-gauge lookup, makes the power and threshold configurable, documents the "
+        "correlation as computed (as MKM-DD-001 v2.0 does) and states its use and evidence as "
+        "they are. Benchmark v0.2 (MKM-SP-001_wolfram_benchmark.pdf, Docs > Benchmark) passes "
+        "all 10 checks; Wolfram agrees to 2e-31. All 13 claims hold, including 1000 of 1000 "
+        "nearest-gauge queries and the sphere's 0.32% against WGS84. Outstanding: the "
+        "interpolation and correlation are unvalidated and unused (v2.0 Q5, Q7)."),
 }
 
 # Re-issued model documentation: for each model, the files under
@@ -213,4 +229,8 @@ REISSUES = {
         "files": (("storm_gauge_v2.0.pdf", "Storm-Gauge Forward Model v2.0 (04-Nov-2026)"),
                   ("storm_gauge_v2.0.tex", "Storm-Gauge Forward Model v2.0 (04-Nov-2026) - LaTeX source")),
         "superseded": "storm_gauge.pdf", "version": "v2.0"},
+    "MKM-SP-001": {
+        "files": (("spatial_model_v2.0.pdf", "Spatial Interpolation Model v2.0 (06-Nov-2026)"),
+                  ("spatial_model_v2.0.tex", "Spatial Interpolation Model v2.0 (06-Nov-2026) - LaTeX source")),
+        "superseded": "spatial_model.pdf", "version": "v2.0"},
 }
