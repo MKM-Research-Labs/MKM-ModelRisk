@@ -1,0 +1,321 @@
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+%
+% MKM-SP-001 Spatial Interpolation Model -- model documentation v2.0, the document of
+% record filed on the model as Core Documentation. It supersedes v1.0 (27-Mar-2026). The
+% Wolfram benchmark of v1.0 (MKM-SP-001_wolfram_benchmark v0.1) found that the code
+% computed its distance and IDW, but that the spatial index named the wrong gauge, the
+% correlation was not the equation printed, and nothing in production used the
+% interpolation. v2.0 corrects the index and describes the module, and where it is used,
+% as they are. Its tables are inlined, generated from the code.
+%
+% Build: it inputs the house header, which lives in PhysicalRisk. Copy
+% PhysicalRisk/docs/models/shared beside this folder as ../shared, then run
+% pdflatex three times (the third settles "Page n of N").
+\documentclass[11pt,a4paper]{article}
+\newcommand{\doctitle}{Spatial Interpolation Model}
+\newcommand{\docsubtitle}{Great-Circle Distance, Projection, Interpolation and Correlation}
+\newcommand{\docversion}{2.0}
+\newcommand{\docdate}{06-November-2026}
+\newcommand{\docauthor}{David K Kelly}
+\input{../shared/mkm_header}
+% T1 so the underscores in code identifiers print as underscores.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% The shared history table sets every column to its natural width; wrap the description.
+\renewcommand{\mkmhistorypage}[1]{%
+    \section{Document History}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{l|l|p{9cm}|l}
+            \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+            \hline
+            #1
+        \end{tabular}
+    \end{table}
+}
+
+\begin{document}
+\sloppy
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+% ===================================================================
+\mkmexecsummary
+% ===================================================================
+
+The Spatial Interpolation Model is the module \texttt{models/floodrisk/spatial.py}. It
+holds the platform's spatial functions:
+\begin{itemize}[nosep]
+    \item \textbf{The great-circle distance}: the haversine.
+    \item \textbf{The projection} of a point onto a river polyline.
+    \item \textbf{Inverse-distance-weighted (IDW) interpolation} of water surface elevation
+          (WSE) from gauges.
+    \item \textbf{A spatial index} of gauges that returns the nearest one.
+    \item \textbf{A spatial correlation matrix} between properties.
+\end{itemize}
+
+\textbf{What the platform uses is the distance and the projection.} The property, gauge and
+seismic code call them, for example to place a property on its river and to measure a
+site's distance to a fault. The interpolation, the index and the correlation have no
+production caller. Property flood levels come from the single nearest gauge, as MKM-DD-001
+v2.0 records.
+
+\textbf{v1.0 described a different model.} It presented the module as the platform's
+gauge-to-property interpolator, and cited validation, a kriging comparison and tests that
+do not exist. Its Wolfram benchmark (v0.1) found three faults in the code:
+\begin{itemize}[nosep]
+    \item The spatial index treated a degree of latitude and a degree of longitude as the
+          same length, and named the wrong nearest gauge in 176 of 1{,}000 queries over the
+          Thames basin.
+    \item The correlation was not the equation printed.
+    \item The coordinate path fixed the IDW power.
+\end{itemize}
+v2.0 indexes gauges as points on the unit sphere and adds a lookup that returns the nearest
+gauge and its distance. The coordinate path now takes the power and threshold. The
+correlation is documented as the code computes it, consistent with MKM-DD-001 v2.0. Every
+figure here is generated from the code. Wolfram benchmark v0.2 tests each claim
+(validation question Q8).
+
+\textbf{Key risk:} the module is small and exact, but it is easy to overstate. The
+interpolation and correlation are unvalidated and unused. Anyone reaching for them should
+read \S5 first.
+
+% ===================================================================
+\mkmpurpose
+% ===================================================================
+
+\subsection{Purpose}
+To compute distances and projections on the Earth's surface for the rest of the platform,
+and to hold the interpolation, index and correlation functions the flood suite may use.
+
+\subsection{Where it is used}
+Table~\ref{tab:users} lists the callers in \texttt{src} and \texttt{scripts}. Nothing
+calls \texttt{spatial\_interpolate\_wse}, \texttt{idw\_interpolate\_from\_gauges},
+\texttt{build\_spatial\_index}, \texttt{nearest\_gauge} or
+\texttt{build\_correlation\_matrix}.
+
+\begin{table}[H]
+\centering\small
+\caption{The module's callers.}\label{tab:users}
+\begin{tabular}{lp{95mm}}
+\toprule
+\textbf{Function} & \textbf{Called by} \\
+\midrule
+\texttt{haversine\_distance} & property locations, geometry and flood lookup; the synthetic
+gauge generator; seismic fault distance \\
+\texttt{nearest\_point\_on\_polyline} & property locations and geometry; seismic fault
+distance and rates \\
+\texttt{nearest\_point\_on\_segment} & property geometry \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ===================================================================
+\section{Methodology}
+% ===================================================================
+
+\subsection{Great-Circle Distance}
+Between $(\phi_1,\lambda_1)$ and $(\phi_2,\lambda_2)$, on a sphere of radius
+$R=6{,}371{,}000$\,m,
+\begin{equation}
+    d = 2R\,\operatorname{atan2}\!\left(\sqrt{a},\ \sqrt{1-a}\right),\qquad
+    a = \sin^2\frac{\Delta\phi}{2} + \cos\phi_1\cos\phi_2\sin^2\frac{\Delta\lambda}{2}.
+    \label{eq:haversine}
+\end{equation}
+
+\subsection{Inverse-Distance Weighting}
+Given gauges $i$ at distances $d_i$ with water surface elevations $z_i$,
+\begin{equation}
+    \hat z = \frac{\sum_i w_i z_i}{\sum_i w_i},\qquad w_i = d_i^{-p},
+    \label{eq:idw}
+\end{equation}
+with power $p=2$ by default. Taken in order, the first gauge closer than $d_{\min}=1$\,m
+returns its own $z_i$.
+\begin{itemize}[nosep]
+    \item \texttt{idw\_interpolate\_from\_gauges} takes $(d_i, z_i)$ pairs.
+    \item \texttt{spatial\_interpolate\_wse} takes a target's coordinates and each gauge's
+          depth, elevation and coordinates. It sets $z_i$ to the depth plus the elevation and
+          $d_i$ by Eq.~\eqref{eq:haversine}.
+\end{itemize}
+Both take $p$ and $d_{\min}$. With no gauges, or when no gauge has any weight, both return
+0. That is also a valid elevation, so a caller must check that it passed gauges.
+
+\subsection{Spatial Index}
+\texttt{build\_spatial\_index} stores each gauge as its unit vector
+$(\cos\phi\cos\lambda,\ \cos\phi\sin\lambda,\ \sin\phi)$ in a k-d tree
+(\texttt{scipy.spatial.cKDTree}). The straight-line (chord) distance $c$ between unit
+vectors orders points exactly as the great-circle distance does.
+\texttt{nearest\_gauge} returns the nearest gauge's row and its distance $2R\arcsin(c/2)$,
+which equals Eq.~\eqref{eq:haversine}.
+
+\subsection{Correlation Matrix}
+For properties at (longitude, latitude) in degrees, with Euclidean separation
+$d^{\deg}_{ij}$ converted at 111\,km a degree and a length scale $L$ in metres,
+\begin{equation}
+    \rho_{ij} = \rho_0 \exp\!\left(-\frac{111\, d^{\deg}_{ij}}{L/1000}\right),\quad i\ne j,
+    \qquad \rho_{ii}=1.
+    \label{eq:corr}
+\end{equation}
+This is MKM-DD-001 v2.0's Eq.~9. The conversion takes no account of latitude: at
+51.5$^\circ$N it overstates east--west separation by 61\%, so east--west pairs are less
+correlated than their distance warrants. The matrix is positive definite.
+
+\subsection{Projection onto a Polyline}
+\texttt{nearest\_point\_on\_segment} projects a point onto a segment drawn straight in
+latitude and longitude. It scales longitude by the cosine of the point's latitude, clamps
+the parameter $t$ to $[0,1]$, and returns the projected point, its haversine distance and
+$t$. \texttt{nearest\_point\_on\_polyline} returns the nearest such point over the
+polyline's segments, with the segment's index.
+
+% ===================================================================
+\section{Inputs and Outputs}
+% ===================================================================
+
+\subsection{Inputs}
+\begin{itemize}[nosep]
+    \item Coordinates in degrees; gauge depths and elevations in metres.
+    \item $p$ and $d_{\min}$ (config: \texttt{spatial\_idw\_power},
+          \texttt{spatial\_idw\_min\_distance\_m}).
+    \item $L$ and $\rho_0$ from the caller.
+    \item $R$ and the degree conversion (config: \texttt{spatial\_earth\_radius\_m},
+          \texttt{spatial\_km\_per\_degree}).
+\end{itemize}
+
+\subsection{Outputs}
+\begin{itemize}[nosep]
+    \item Distances in metres.
+    \item A projected point, its distance and its segment.
+    \item An interpolated WSE.
+    \item The nearest gauge's row and distance.
+    \item A correlation matrix.
+\end{itemize}
+
+% ===================================================================
+\section{Assumptions and Limitations}
+% ===================================================================
+
+\begin{enumerate}[nosep]
+    \item \textbf{A spherical Earth.} Against the WGS84 ellipsoid,
+          Eq.~\eqref{eq:haversine} errs by up to 0.32\% for UK pairs under 100\,km. The
+          error is worst east--west, where the sphere is too small.
+    \item \textbf{Flat-Earth projection.} The projection's distance error is under 1\,cm
+          within 10\,km of the line and 0.0012\% (0.6\,m) at 50\,km
+          (Table~\ref{tab:proj}). That is far below the sphere's own error. The segment is
+          straight in latitude and longitude, not a great circle; for river polylines,
+          whose segments are short, the difference is negligible.
+    \item \textbf{The degree conversion in Eq.~\eqref{eq:corr}} overstates east--west
+          separation (61\% at 51.5$^\circ$N).
+    \item \textbf{IDW is unvalidated.} It assumes a smooth, isotropic surface and cannot
+          represent embankments or follow a valley. Nothing compares it with observations
+          or with kriging. It is not used.
+    \item \textbf{The correlation is uncalibrated} and not used.
+\end{enumerate}
+
+% ===================================================================
+\mkmsensitivity
+% ===================================================================
+
+Tables~\ref{tab:sens_power}--\ref{tab:sens_ngauges} use three gauges at 500, 2{,}000 and
+5{,}000\,m with WSE 12.5, 11.8 and 10.2\,m. Table~\ref{tab:sens_distance} moves the first
+gauge; beyond 2{,}000\,m it is no longer the nearest. Table~\ref{tab:sens_ngauges} adds
+gauges at 1{,}200 and 3{,}500\,m (12.0 and 11.0\,m). WSE is printed to the millimetre, so
+the effect shows.
+
+\begin{table}[H]
+\centering\small
+\begin{minipage}[t]{0.3\textwidth}\centering
+\caption{WSE by power.}\label{tab:sens_power}
+\begin{tabular}{rr}
+\toprule
+$p$ & WSE (m) \\
+\midrule
+0.5 & 11.907 \\ 1.0 & 12.200 \\ 1.5 & 12.361 \\ 2.0 & 12.438 \\ 2.5 & 12.472 \\
+3.0 & 12.487 \\ 4.0 & 12.497 \\
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.32\textwidth}\centering
+\caption{WSE by the first gauge's distance ($p=2$).}\label{tab:sens_distance}
+\begin{tabular}{rr}
+\toprule
+$d_1$ (m) & WSE (m) \\
+\midrule
+100 & 12.497 \\ 250 & 12.484 \\ 500 & 12.438 \\ 1{,}000 & 12.293 \\ 2{,}000 & 12.006 \\
+5{,}000 & 11.691 \\ 10{,}000 & 11.610 \\
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.3\textwidth}\centering
+\caption{WSE by number of gauges ($p=2$).}\label{tab:sens_ngauges}
+\begin{tabular}{rr}
+\toprule
+Gauges & WSE (m) \\
+\midrule
+1 & 12.500 \\ 2 & 12.426 \\ 3 & 12.394 \\ 4 & 12.372 \\ 5 & 12.355 \\
+\bottomrule
+\end{tabular}
+\end{minipage}
+\end{table}
+
+\begin{table}[H]
+\centering\small
+\caption{The projection's worst distance error, over four segments (east--west,
+north--south, diagonal, 1\,km) and points north, east and north-west of their midpoints,
+against the true nearest point on the segment.}\label{tab:proj}
+\begin{tabular}{rrr}
+\toprule
+Distance from the line (km) & Worst error (\%) & Worst error (m) \\
+\midrule
+10 & 0.0000 & 0.005 \\ 50 & 0.0012 & 0.608 \\ 100 & 0.0049 & 4.868 \\ 200 & 0.0195 & 38.953 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ===================================================================
+\section{Validation Questions}
+% ===================================================================
+
+\mkmvqitem{1}{Purpose}{Is the model being used for its intended purpose?}
+Its distance and projection are used across the platform, as \S2.2 describes. Its
+interpolation, index and correlation are not used.
+
+\mkmvqitem{2}{Conceptual Soundness}{Is the model conceptually sound?}
+The haversine is exact on a sphere, which is within 0.32\% of the Earth here. The index is
+exact for nearest-neighbour search on the sphere. The projection's approximation is
+negligible (Table~\ref{tab:proj}). The correlation's degree conversion is a simplification
+that distorts east--west separation.
+
+\mkmvqitem{3}{Data Quality}{Is the data quality adequate?}
+The module takes coordinates and levels from its callers; their quality is theirs.
+
+\mkmvqitem{4}{Developmental Evidence}{Is there adequate developmental evidence?}
+Unit tests cover every function. They check the index's answers against the haversine on a
+random network, and the coordinate path's power and threshold.
+
+\mkmvqitem{5}{Outcomes Analysis}{Are outcomes reasonable?}
+Nothing validates the interpolation against gauge readings or flood observations; it has no
+production use to validate.
+
+\mkmvqitem{6}{Ongoing Monitoring}{What ongoing monitoring is required?}
+None while the interpolation and correlation are unused. Before either is used, it needs
+an outcomes analysis.
+
+\mkmvqitem{7}{Benchmarking}{Has the model been benchmarked?}
+Not against kriging or other interpolators. The implementation is benchmarked against
+Wolfram (Q8).
+
+\mkmvqitem{8}{Implementation}{Is the implementation verified?}
+Wolfram oracle benchmark v0.2 tests every equation and claim in this document.
+
+\mkmvqitem{9}{Overall Risk}{Is the overall model risk acceptable?}
+Low for the functions in use, which are exact to their stated accuracy. The interpolation
+and correlation should not be used without validation.
+
+\mkmhistorypage{27-Mar-2026 & 1.0 & First issue & David K Kelly \\
+06-Nov-2026 & 2.0 & Index on the unit sphere with a nearest-gauge lookup; power and
+threshold configurable from coordinates; correlation documented as computed; usage,
+evidence and accuracy stated as they are (Wolfram benchmark v0.1) & David K Kelly \\}
+
+\end{document}
