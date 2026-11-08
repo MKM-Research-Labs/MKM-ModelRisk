@@ -82,6 +82,8 @@ BENCHMARKS = {
                    "Wolfram oracle benchmark v0.2 - Storm-Gauge Forward Model, against documentation v2.0"),
     "MKM-SP-001": ("docs/models/spatial_benchmark/MKM-SP-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark v0.2 - Spatial Interpolation Model, against documentation v2.0"),
+    "MKM-SS-001": ("docs/models/storm_sequence_benchmark/MKM-SS-001_wolfram_benchmark.pdf",
+                   "Wolfram oracle benchmark v0.2 - Storm Sequence Generator, against documentation v3.0"),
     "MKM-MP-001": ("docs/models/mortgage_pricing_benchmark/MKM-MP-001_wolfram_benchmark.pdf",
                    "Wolfram oracle benchmark v0.2 - Mortgage Pricing Model, after the fair-value fix",
                    "MKM-MP-001_wolfram_benchmark_v0.2.pdf"),
@@ -114,6 +116,11 @@ ORIGINALS = {
                    "MKM-SP-001_wolfram_benchmark_v0.1.pdf",
                    "Wolfram oracle benchmark v0.1 - Spatial Interpolation Model, against the filed "
                    "documentation v1.0; found 10 of its 15 claims did not hold (superseded by v0.2)"),
+    "MKM-SS-001": ("65c6aaa74fe7b46d1b176bccc1f5b4c211766363",
+                   "docs/models/storm_sequence_benchmark/MKM-SS-001_wolfram_benchmark.pdf",
+                   "MKM-SS-001_wolfram_benchmark_v0.1.pdf",
+                   "Wolfram oracle benchmark v0.1 - Storm Sequence Generator, against the filed "
+                   "documentation v2.0; found 11 of its 17 claims did not hold (superseded by v0.2)"),
 }
 
 

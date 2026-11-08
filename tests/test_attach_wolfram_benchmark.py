@@ -139,6 +139,7 @@ def test_the_real_spec_points_at_the_generated_benchmarks():
         "docs/models/flood_poly_benchmark/MKM-FPO-001_wolfram_benchmark.pdf",
         "docs/models/storm_gauge_benchmark/MKM-SG-001_wolfram_benchmark.pdf",
         "docs/models/spatial_benchmark/MKM-SP-001_wolfram_benchmark.pdf",
+        "docs/models/storm_sequence_benchmark/MKM-SS-001_wolfram_benchmark.pdf",
     }
 
 
