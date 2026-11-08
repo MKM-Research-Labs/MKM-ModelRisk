@@ -1,0 +1,657 @@
+% Copyright (c) 2022-2026 MKM Research Labs. Licensed under the MIT License; see LICENSE.
+%
+% MKM-SS-001 Storm Sequence Generator -- model documentation v3.0, the document of record
+% filed on the model as Core Documentation. It supersedes v2.0 (11-Mar-2026). The Wolfram
+% benchmark of v2.0 (MKM-SS-001_wolfram_benchmark v0.1) found that the code computed its
+% equations, but that the duration cap left no room for gaps in 46% of multi-storm
+% sequences, the stated rates and Table 9 were wrong, the override control described as
+% absent existed and reached the generator only in part, and the cited paths and evidence
+% were stale. v3.0 reserves each gap's minimum before capping the storms, moves the tables
+% to config so an override reaches the generator, and states every figure as computed.
+%
+% Build: it inputs the house header, which lives in PhysicalRisk. Copy
+% PhysicalRisk/docs/models/shared beside this folder as ../shared, then run
+% pdflatex three times (the third settles "Page n of N").
+\documentclass[11pt,a4paper]{article}
+\newcommand{\doctitle}{Storm Sequence Generator}
+\newcommand{\docsubtitle}{Multi-Storm Sequence Model v3.0 (MKM-SS-001)}
+\newcommand{\docversion}{3.0}
+\newcommand{\docdate}{08-November-2026}
+\newcommand{\docauthor}{David K Kelly}
+\input{../shared/mkm_header}
+% T1 so the underscores in code identifiers print as underscores.
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+% The shared history table sets every column to its natural width; wrap the description.
+\renewcommand{\mkmhistorypage}[1]{%
+    \section{Document History}
+    \begin{table}[ht]
+        \centering
+        \begin{tabular}{l|l|p{9cm}|l}
+            \textbf{Date} & \textbf{Version} & \textbf{Description} & \textbf{Author} \\
+            \hline
+            #1
+        \end{tabular}
+    \end{table}
+}
+
+\begin{document}
+\sloppy
+\mkmtitlepage
+\mkmlegalpage
+\tableofcontents
+\clearpage
+
+% ===================================================================
+\mkmexecsummary
+% ===================================================================
+
+The Storm Sequence Generator draws the synthetic storm catalogue for the multi-storm
+stress test: by default 10{,}000 \texttt{StormSequence}s, each holding 1--5 storms within a
+168-hour event window. All rain ends by hour 156, which leaves at least 12 hours to watch
+the rivers drain. The window follows the hours clause in catastrophe reinsurance. The
+stress pipeline turns each sequence into a hydrograph at every gauge. Those hydrographs
+train the per-gauge flood classifiers (MKM-FC-001) and drive the Portfolio Stress scenarios.
+
+There are four sequence types:
+\begin{itemize}[nosep]
+    \item \textbf{isolated:} one storm;
+    \item \textbf{doublet:} two storms with a medium gap of 24--72\,h;
+    \item \textbf{cluster:} three or four storms with medium gaps;
+    \item \textbf{persistent:} four or five storms with short gaps of 6--36\,h.
+\end{itemize}
+The chance of a multi-storm sequence rises with the intensity category, from 5\% for
+minimal storms to 85\% for catastrophic ones.
+
+\textbf{v3.0 keeps a gap between every pair of storms.} v2.0 capped each storm at
+$156/n$\,h before drawing the gaps. Long storms then filled the window and left no time
+between them: in 46\% of multi-storm sequences the storms ran back to back, so the
+catchment recovery the gaps exist to model did not happen. v3.0 reserves each gap's
+minimum (6\,h short, 24\,h medium) before it caps the storms, and shortens a long gap
+only toward that minimum. Every multi-storm sequence now has a gap of at least its
+minimum, and every sequence still fits the window without retries.
+
+\textbf{v3.0 also corrects what v2.0 said.} The Wolfram benchmark of v2.0 (v0.1) found
+that the code computed v2.0's equations but that 11 of its 17 claims did not hold:
+\begin{itemize}[nosep]
+    \item its cap and scaling rates and its Table~9 were wrong;
+    \item its intensity correlation was misdescribed;
+    \item its base precipitations were for catchments the platform does not have;
+    \item it said no runtime override existed, but one does, and it reached the generator
+          only in part;
+    \item its paths, command line and classifier evidence were stale.
+\end{itemize}
+v3.0 moves every table to \texttt{config.port}, where an override reaches the generator.
+Every figure here is generated from the code. Wolfram benchmark v0.2 tests each claim
+(validation question Q8).
+
+\textbf{Key risk: the durations do not fit the window.} Table~3's storms are too long for
+three to five of them, with their gaps, to fit in 156\,h. The cap binds on 60.5\% of all
+duration draws (\S6.2), and in 63.4\% of multi-storm sequences every storm is capped. This
+exceeds the 50\% level at which this document asks for recalibration (Q6). Recalibrating
+Tables~1 and~3 is outstanding (Q9). The classifiers on file were trained on v2.0's
+sequences and must be retrained (\S7.3).
+
+% ===================================================================
+\mkmpurpose
+% ===================================================================
+
+\subsection{Purpose}
+\begin{enumerate}[nosep]
+    \item \textbf{Synthetic sequences.} A catalogue of storm sequences across the moderate
+          to catastrophic categories, each with 1--5 timed storms.
+    \item \textbf{Hydrograph timing.} Each storm's start, duration, intensity and peak
+          position, so the stress pipeline can compose multi-peak hydrographs that show a
+          catchment recovering between storms.
+    \item \textbf{Classifier training data.} Hydrographs with antecedent wetness: a gauge
+          that has only partly recovered from one storm is at greater risk from the next.
+\end{enumerate}
+
+\subsection{Where it is used}
+\begin{itemize}[nosep]
+    \item \texttt{app/commands/port/stages/storm.py}, the \texttt{-{}-stressm} stage of
+          \texttt{phys.py port}, calls the stress pipeline.
+    \item \texttt{src/port/src/stressm/pipeline/orchestrator/\_core.py} generates the
+          sequences, saves them, and computes each gauge's response.
+    \item \texttt{src/port/src/stressm/batch\_train.py} and
+          \texttt{src/routes/trading/stress/training.py} load the saved sequences to train
+          the classifiers (MKM-FC-001).
+    \item The Portfolio Stress screens read the sequences and the classifiers' outputs.
+\end{itemize}
+
+\subsection{Scope}
+In scope: sequence type, storm count, durations, gaps, intensities, precipitation, the
+window, and batch generation. Out of scope: the spatial footprint (MKM-SG-001), the
+gauge response and hydrology in the package's \texttt{models/} subpackage, hazard curves
+(MKM-GH-001), pricing (MKM-PR-001), climate projections and tides.
+
+\subsection{Tier}
+Tier 2. The generator produces no regulated output itself, but it is the main input to the
+stress classifiers, which feed the Portfolio Stress P\&L.
+
+% ===================================================================
+\mkmframework
+% ===================================================================
+
+\subsection{Event Window}
+The event window $W$ and the hour $W_P$ by which all precipitation must end are
+\begin{align}
+    W &= 168\text{ h}, \label{eq:w}\\
+    W_P &= W - W_{\text{drain}} = 168 - 12 = 156\text{ h}. \label{eq:wp}
+\end{align}
+A sequence's own drainage window runs from the end of its last storm to the end of the
+event window:
+\begin{equation}
+    W^{(\text{seq})}_{\text{drain}} = W - (t_{\text{start},n} + d_n) \;\ge\; W_{\text{drain}} = 12\text{ h}.
+    \label{eq:drain}
+\end{equation}
+
+\subsection{Sequence Types}
+The storm count for a cluster or persistent sequence is drawn uniformly from its range.
+\begin{table}[H]
+\centering\small
+\caption{Sequence types.}\label{tab:types}
+\begin{tabular}{llll}
+\toprule
+Type & Storms & Gap type & Physical analogue \\
+\midrule
+isolated & 1 & --- & a single frontal system \\
+doublet & 2 & medium & an Atlantic low followed by a secondary low \\
+cluster & 3--4 & medium & an active frontal passage \\
+persistent & 4--5 & short & a blocking pattern; near-continuous rain \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Sequence Type Selection}
+A storm becomes a multi-storm sequence with a probability that depends on its category:
+\begin{equation}
+P(\text{sequence}) = \begin{cases}
+0.05 & \text{minimal} \\ 0.15 & \text{baseline} \\ 0.30 & \text{moderate} \\
+0.50 & \text{severe} \\ 0.70 & \text{extreme} \\ 0.85 & \text{catastrophic}
+\end{cases} \label{eq:pseq}
+\end{equation}
+If it does, the type is drawn from Table~\ref{tab:typew}.
+\begin{table}[H]
+\centering\small
+\caption{Type weights for a multi-storm sequence, by category.}\label{tab:typew}
+\begin{tabular}{lrrr}
+\toprule
+Category & Doublet & Cluster & Persistent \\
+\midrule
+minimal, baseline & 0.60 & 0.30 & 0.10 \\
+moderate & 0.50 & 0.35 & 0.15 \\
+severe & 0.30 & 0.50 & 0.20 \\
+extreme & 0.20 & 0.45 & 0.35 \\
+catastrophic & 0.15 & 0.45 & 0.40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Storm Durations}
+Each storm's duration is a triangular draw on its category's parameters
+(Table~\ref{tab:dur}), rounded to the nearest whole hour:
+\begin{equation}
+    D = \operatorname{round}\big(\text{Triangular}(a_{\text{cat}}, c_{\text{cat}}, b_{\text{cat}})\big).
+    \label{eq:dur}
+\end{equation}
+\begin{table}[H]
+\centering\small
+\caption{Storm duration (hours), triangular, by category.}\label{tab:dur}
+\begin{tabular}{lrrr}
+\toprule
+Category & Min & Mode & Max \\
+\midrule
+minimal & 2 & 6 & 12 \\ baseline & 6 & 12 & 24 \\ moderate & 12 & 30 & 60 \\
+severe & 24 & 48 & 96 \\ extreme & 36 & 72 & 144 \\ catastrophic & 48 & 120 & 240 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Duration Cap}
+Each of the $n-1$ gaps is guaranteed at least its gap type's minimum $g_{\min}$ (6\,h short,
+24\,h medium; Table~\ref{tab:gap}). The window reserves that time first, and divides what
+is left equally between the storms:
+\begin{equation}
+    d_i = \min\!\left(D_i,\; \frac{W_P - (n-1)\,g_{\min}}{n}\right), \qquad i = 1, \dots, n.
+    \label{eq:cap}
+\end{equation}
+The cap is 156\,h for an isolated storm, 66\,h in a doublet, 36\,h and 21\,h in clusters of
+three and four, and 34.5\,h and 26.4\,h in persistent sequences of four and five. If the
+window cannot hold $n$ storms and their minimum gaps (cap $\le 0$, possible only under an
+override), generation stops with an error. A capped duration is not rounded.
+
+\subsection{Inter-Storm Gaps}
+Gaps are triangular draws on their gap type's parameters, rounded to the nearest whole hour.
+\begin{table}[H]
+\centering\small
+\caption{Inter-storm gap (hours), triangular, by gap type.}\label{tab:gap}
+\begin{tabular}{llrrrl}
+\toprule
+Gap type & Used by & Min & Mode & Max & Interpretation \\
+\midrule
+short & persistent & 6 & 18 & 36 & minimal drainage; high compounding \\
+medium & doublet, cluster & 24 & 48 & 72 & partial drainage (30--60\% recovery) \\
+long & --- & 48 & 96 & 144 & substantial drainage; unused \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Gap Shortening}
+Let $R = W_P - \sum_i d_i$ be the time the storms leave. Eq.~\eqref{eq:cap} guarantees
+$R \ge (n-1)\,g_{\min}$. If the raw gaps $G_1, \dots, G_{n-1}$ overflow it,
+\begin{equation}
+    \sum_{j=1}^{n-1} G_j > R, \label{eq:overflow}
+\end{equation}
+each gap keeps its minimum and the time above the minimum is scaled to fit:
+\begin{equation}
+    g_j = g_{\min} + (G_j - g_{\min})\,\frac{R - (n-1)\,g_{\min}}{\sum_{k=1}^{n-1} (G_k - g_{\min})},
+    \qquad j = 1, \dots, n-1. \label{eq:shorten}
+\end{equation}
+Otherwise the raw gaps are used. Either way $g_j \ge g_{\min}$ and
+$\sum d_i + \sum g_j \le W_P$. When every storm is capped, $R = (n-1)\,g_{\min}$ and every
+gap is held at its minimum.
+
+\subsection{Storm Placement}
+\begin{align}
+    t_{\text{start},1} &= 0, \label{eq:t1}\\
+    t_{\text{start},i} &= t_{\text{start},i-1} + d_{i-1} + g_{i-1}, \qquad i = 2, \dots, n. \label{eq:ti}
+\end{align}
+
+\subsection{Intensities}
+The sequence's base intensity is drawn per category (Table~\ref{tab:base}) and floored:
+\begin{equation}
+    F_0 = \max\!\big(0.1,\; \mathcal{N}(\mu_{\text{cat}}, \sigma^2_{\text{cat}})\big). \label{eq:f0}
+\end{equation}
+\begin{table}[H]
+\centering\small
+\caption{Base intensity, by category.}\label{tab:base}
+\begin{tabular}{lrr}
+\toprule
+Category & $\mu$ & $\sigma$ \\
+\midrule
+minimal & 0.30 & 0.10 \\ baseline & 0.60 & 0.15 \\ moderate & 1.00 & 0.20 \\
+severe & 1.80 & 0.30 \\ extreme & 3.00 & 0.50 \\ catastrophic & 5.00 & 0.80 \\
+\bottomrule
+\end{tabular}
+\end{table}
+Each storm varies around $F_0$ by $\delta$, within $\pm v = \pm 0.20$. The first storm
+varies downward:
+\begin{equation}
+    F^{(1)} = \max\!\big(0.1,\; F_0(1 + \delta_1)\big), \qquad \delta_1 \sim \text{Uniform}(-0.2, 0).
+    \label{eq:first}
+\end{equation}
+The code draws $\delta_1$ and then, with probability 0.70, draws it again from the same law.
+The redraw cannot change $\delta_1$'s law. Its configuration parameter,
+\texttt{FIRST\_STORM\_DOMINANT\_PROB} (0.30, shown on the Trading Control screen), therefore
+has no effect on the output distribution. It is kept only so the random stream is
+unchanged. Each later storm varies up with probability $p_{\text{corr}} = 0.70$:
+\begin{equation}
+    F^{(i)} = \max\!\big(0.1,\; F_0(1 + \delta_i)\big), \qquad
+    \delta_i \sim \begin{cases} \text{Uniform}(0, 0.2) & \text{with probability } 0.70, \\
+    \text{Uniform}(-0.2, 0) & \text{with probability } 0.30. \end{cases} \label{eq:later}
+\end{equation}
+A later storm is then at least as strong as the first with probability
+$p_{\text{corr}} + (1 - p_{\text{corr}})/2 = 0.85$ (above the floor): it is if it varies up,
+and half the time if both vary down. The model represents antecedent wetness this way: a
+catchment wet from one storm responds more to the next.
+
+\subsection{Precipitation}
+\begin{align}
+    P_i &= P_{\text{base}}\, F^{(i)}, \label{eq:precip}\\
+    \text{peak position} &\sim \text{Beta}(2, 2), \label{eq:peak}
+\end{align}
+where $P_{\text{base}}$ is the catchment's base precipitation (Table~\ref{tab:pbase}) and the
+peak position is the fraction of the storm's duration at which it peaks.
+
+\subsection{Aggregates}
+\begin{align}
+    P_{\text{total}} &= \textstyle\sum_i P_i, \label{eq:ptot}\\
+    F_{\max} &= \max_i F^{(i)}, \label{eq:fmax}\\
+    \bar F &= \tfrac{1}{n}\textstyle\sum_i F^{(i)}, \label{eq:fbar}\\
+    F_{\text{cum}} &= \textstyle\sum_i F^{(i)}, \label{eq:fcum}\\
+    D_{\text{total}} &= \textstyle\sum_i d_i + \sum_j g_j. \label{eq:dtot}
+\end{align}
+$F_{\text{cum}}$ carries the compounding of several storms into the stress test, where the
+peak alone would not.
+
+% ===================================================================
+\mkminputs
+% ===================================================================
+
+\subsection{Batch Generation}
+\texttt{generate\_event\_set(count, catchment\_id, intensity\_weights, force\_sequence\_type,
+seed)} draws each sequence's category from Table~\ref{tab:weights} (normalised, so custom
+weights need not sum to one). The default count is 10{,}000.
+\begin{table}[H]
+\centering\small
+\caption{Default category weights.}\label{tab:weights}
+\begin{tabular}{lr}
+\toprule
+Category & Weight \\
+\midrule
+moderate & 0.40 \\ severe & 0.35 \\ extreme & 0.20 \\ catastrophic & 0.05 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Catchment Base Precipitation}
+$P_{\text{base}}$ is \texttt{BASE\_PRECIPITATION\_MM} in the catchment's storm module,
+\texttt{catch/<catchment>/storm.py}. Three catchments have one (Table~\ref{tab:pbase}). A
+catchment without one (the single-module catchments under \texttt{catch/}, such as the
+Rhine) takes the Thames's 35\,mm.
+\begin{table}[H]
+\centering\small
+\caption{Base precipitation by catchment.}\label{tab:pbase}
+\begin{tabular}{lr}
+\toprule
+Catchment & $P_{\text{base}}$ (mm) \\
+\midrule
+thames & 35.0 \\ mekong & 90.0 \\ halong & 100.0 \\
+any other & 35.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Constants}
+\begin{table}[H]
+\centering\small
+\caption{Constants.}\label{tab:const}
+\begin{tabular}{llrl}
+\toprule
+Constant & Symbol & Value & Meaning \\
+\midrule
+Event window & $W$ & 168\,h & the hours clause \\
+Minimum drainage & $W_{\text{drain}}$ & 12\,h & watched after the last storm \\
+Precipitation window & $W_P$ & 156\,h & $W - W_{\text{drain}}$ \\
+Intensity variation & $v$ & 0.20 & each storm's range around $F_0$ \\
+Correlation probability & $p_{\text{corr}}$ & 0.70 & $P(\delta_i \ge 0)$ for a later storm \\
+Later storm $\ge$ first & & 0.85 & $p_{\text{corr}} + (1-p_{\text{corr}})/2$ \\
+Peak shape & $(\alpha,\beta)$ & (2, 2) & peak position \\
+Intensity floor & & 0.1 & on $F_0$ and every $F^{(i)}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Where the Parameters Live, and Overrides}
+Every parameter in Tables~2--8, except $P_{\text{base}}$, is in \texttt{config/port/\_storm.py}
+(\texttt{config.port}). The generators read them from there on every draw.
+\texttt{storm\_control.json}, in the catchment's input directory, overrides any of them:
+\begin{itemize}[nosep]
+    \item The Trading Control screen writes the file and applies it when it saves.
+    \item Importing \texttt{config} applies it too, so a command-line run uses it.
+\end{itemize}
+Because the generators read \texttt{config.port} on every draw, an override takes effect
+whether it was applied before or after the generator was imported. A file that sets some
+rows of a table changes those rows and keeps the others. Saving on the screen requires the
+trading write permission. \texttt{force\_sequence\_type} forces every sequence's type, for
+testing.
+
+% ===================================================================
+\mkmimplementation
+% ===================================================================
+
+\subsection{Software Architecture}
+The package is \texttt{src/port/src/storm\_multi/}:
+\begin{itemize}[nosep]
+    \item \texttt{core/data\_structures.py}: \texttt{SequenceStorm}, \texttt{StormSequence},
+          \texttt{SequenceType}, \texttt{GapType}, \texttt{make\_storm\_id},
+          \texttt{make\_sequence\_id}.
+    \item \texttt{generators/sequence\_generator.py}: \texttt{SequenceGenerator}, which
+          applies Eqs.~\eqref{eq:cap}--\eqref{eq:dtot}.
+    \item \texttt{generators/batch\_generator.py}: \texttt{generate\_event\_set}.
+    \item \texttt{generators/duration\_sampler.py}: \texttt{sample\_duration},
+          \texttt{get\_duration\_range}.
+    \item \texttt{generators/gap\_sampler.py}: \texttt{sample\_gap}, \texttt{get\_gap\_range},
+          \texttt{get\_min\_gap}.
+    \item \texttt{generators/intensity\_sampler.py}: \texttt{should\_generate\_sequence},
+          \texttt{sample\_sequence\_type}, \texttt{get\_storm\_count},
+          \texttt{sample\_storm\_intensity}.
+    \item \texttt{utils/validation.py}: \texttt{validate\_sequence},
+          \texttt{validate\_event\_set}, \texttt{fits\_in\_window}, \texttt{precip\_end\_hour},
+          \texttt{min\_gap\_hours}.
+    \item \texttt{utils/serialization.py}: \texttt{save\_sequences}, \texttt{save\_summary},
+          \texttt{load\_sequences}.
+\end{itemize}
+The \texttt{models/} subpackage (sequence response, hydrology, spatial correlation) is part
+of the gauge response, not of this model.
+
+\subsection{Generation Flow}
+For each of the $N$ sequences, \texttt{generate\_event\_set}:
+\begin{enumerate}[nosep]
+    \item draws the category (Table~\ref{tab:weights}) and $F_0$ (Eq.~\eqref{eq:f0});
+    \item draws the type (Eq.~\eqref{eq:pseq}, Table~\ref{tab:typew}) and the storm count;
+    \item draws each storm's duration and caps it (Eqs.~\eqref{eq:dur}--\eqref{eq:cap}), and
+          its intensity (Eqs.~\eqref{eq:first}--\eqref{eq:later});
+    \item draws the gaps and shortens them if they overflow
+          (Eqs.~\eqref{eq:overflow}--\eqref{eq:shorten});
+    \item places the storms (Eqs.~\eqref{eq:t1}--\eqref{eq:ti}), draws each peak position,
+          and computes the precipitation and aggregates.
+\end{enumerate}
+
+\subsection{Reproducibility}
+Two \texttt{numpy.random.RandomState} streams are seeded from the one seed: one draws the
+categories and base intensities, the other everything in a sequence. A fixed seed
+reproduces the batch exactly, apart from the identifiers and timestamps. Each sequence also
+carries a per-event seed for the storm--typhoon coupling, from a separate stream that does
+not disturb the storm draws.
+
+\subsection{Validation}
+\texttt{validate\_event\_set} checks every sequence:
+\begin{itemize}[nosep]
+    \item the type is one of the four, and the storm count is 1--5 and equals the storms held;
+    \item there are $n-1$ gaps, each at least its type's minimum;
+    \item each storm starts after the previous one ends;
+    \item the last storm ends by $W_P$, leaving at least $W_{\text{drain}}$;
+    \item every intensity category is valid;
+    \item the total duration matches the durations and gaps.
+\end{itemize}
+Times are compared to within $10^{-9}$\,h. Eqs.~\eqref{eq:cap} and~\eqref{eq:shorten} make
+the timing checks hold by construction; validation is a second line of defence.
+
+\subsection{Command Line and Outputs}
+\begin{verbatim}
+python phys.py port --stressm [--num-sims N] [--gauge-id GID] [--seed N]
+\end{verbatim}
+\texttt{-{}-num-sims} sets the count (default 10{,}000). The stage deletes the catchment's
+classifiers, which were trained on the previous catalogue, then runs the stress pipeline.
+That pipeline saves \texttt{storm\_sequences.json} (the catalogue) and
+\texttt{sequences\_summary.json} (batch statistics) for the catchment. The classifiers are
+then retrained per gauge from the Portfolio Stress screen.
+
+% ===================================================================
+\mkmsensitivity
+% ===================================================================
+
+Every figure in this section is exact. It is computed in rational arithmetic from the
+tables above, with durations and gaps rounded as the code rounds them.
+
+\subsection{Sequence Types}
+For the default weights (Table~\ref{tab:weights}), a sequence is isolated with
+probability $\sum_c w_c\,(1 - P_c(\text{sequence}))$. A multi-storm type has probability
+$\sum_c w_c\,P_c(\text{sequence})\,\pi_{c,t}$, where $\pi_{c,t}$ is its weight in
+Table~\ref{tab:typew}.
+\begin{table}[H]
+\centering\small
+\caption{Expected sequence types in a default batch of 10{,}000.}\label{tab:t9}
+\begin{tabular}{lrr}
+\toprule
+Type & Expected count & Share \\
+\midrule
+isolated & 5{,}225 & 52.25\% \\
+doublet & 1{,}469 & 14.69\% \\
+cluster & 2{,}116 & 21.16\% \\
+persistent & 1{,}190 & 11.90\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+The doublet and cluster counts are 1{,}468.75 and 2{,}116.25 exactly. By storm count, a batch
+of 10{,}000 holds 5{,}225 sequences of one storm, 1{,}468.75 of two, 1{,}058.13 of three,
+1{,}653.13 of four and 595 of five.
+
+\subsection{Duration Cap}
+The cap of Eq.~\eqref{eq:cap} binds on \textbf{60.5\%} of all duration draws in the default
+batch. It binds on every catastrophic duration in a five-storm sequence: the cap there is
+26.4\,h, and a catastrophic storm lasts at least 48\,h. Table~\ref{tab:cap} gives each
+configuration.
+\begin{table}[H]
+\centering\small
+\caption{Share of duration draws capped (\%), by configuration and category.}\label{tab:cap}
+\begin{tabular}{lrrrrrr}
+\toprule
+Type & $n$ & Cap (h) & Moderate & Severe & Extreme & Catastrophic \\
+\midrule
+isolated & 1 & 156.0 & 0.0 & 0.0 & 0.0 & 30.3 \\
+doublet & 2 & 66.0 & 0.0 & 25.2 & 76.1 & 97.5 \\
+cluster & 3 & 36.0 & 38.4 & 91.0 & 100.0 & 100.0 \\
+cluster & 4 & 21.0 & 89.6 & 100.0 & 100.0 & 100.0 \\
+persistent & 4 & 34.5 & 45.2 & 93.6 & 100.0 & 100.0 \\
+persistent & 5 & 26.4 & 75.7 & 99.6 & 100.0 & 100.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Gap Shortening}
+Gaps are shortened (Eq.~\eqref{eq:shorten}) in \textbf{81.1\%} of multi-storm sequences.
+That is 99.0\% of moderate-to-severe persistent sequences and 100.0\% of catastrophic ones
+(all but two in $10^{10}$). By type, the rate is 39.5\% of doublets, 99.6\% of clusters
+and 99.5\% of persistent sequences. In \textbf{63.4\%} of multi-storm sequences every storm
+is capped, which holds every gap at its minimum (Table~\ref{tab:gaps}). A shortened gap is
+never shorter than its minimum.
+\begin{table}[H]
+\centering\small
+\caption{Multi-storm sequences whose gaps are shortened, and (in brackets) whose every
+storm is capped (\%), by configuration and category. 100.0 is above 99.95.}\label{tab:gaps}
+\begin{tabular}{lrrrrr}
+\toprule
+Type & $n$ & Moderate & Severe & Extreme & Catastrophic \\
+\midrule
+doublet & 2 & 0.9 (0.0) & 47.9 (7.2) & 92.9 (60.2) & 99.7 (95.6) \\
+cluster & 3 & 96.4 (7.2) & 100.0 (78.8) & 100.0 (100.0) & 100.0 (100.0) \\
+cluster & 4 & 100.0 (70.5) & 100.0 (100.0) & 100.0 (100.0) & 100.0 (100.0) \\
+persistent & 4 & 93.9 (4.2) & 100.0 (76.8) & 100.0 (100.0) & 100.0 (100.0) \\
+persistent & 5 & 100.0 (24.8) & 100.0 (98.2) & 100.0 (100.0) & 100.0 (100.0) \\
+\bottomrule
+\end{tabular}
+\end{table}
+Most multi-storm sequences therefore take their gaps from the minimum of Table~\ref{tab:gap}
+rather than its full range. The gaps themselves are 6--36\,h and 24--72\,h only where the
+storms are short.
+
+% ===================================================================
+\mkmvalidation
+% ===================================================================
+
+\subsection{Structural Validation}
+\texttt{validate\_event\_set} finds no invalid sequence in a default batch, or in 400
+sequences of every category with every forced type. Each sequence ends by hour 156, and
+every gap is at least its minimum.
+
+\subsection{Type Distribution}
+Pooled over 100 seeds of 10{,}000 sequences, every type's count is within 1\% of
+Table~\ref{tab:t9}. A single batch varies more: its persistent count has a standard error
+of about 3\%.
+
+\subsection{Downstream Classifier}
+The classifiers' training summary on file (\texttt{training\_summary.json}, 31 October
+2026) covers 11 Thames gauges, with a mean AUC-ROC of 0.9935. Those classifiers were
+trained on v2.0's sequences, and so is the catalogue on file. Both predate v3.0, and its
+longer gaps change the hydrographs. The next \texttt{-{}-stressm} run regenerates the
+catalogue and deletes the classifiers, which must then be retrained. MKM-FC-001 owns that
+evidence. This document does not claim the classifiers' performance for v3.0's sequences.
+
+\subsection{An Example Gauge}
+GAUGE-1aaf8b08, in the same summary: AUC-ROC 0.9929, accuracy 0.9776, Brier score 0.0169;
+flood rate 8.6\% over 1{,}713{,}600 training vectors. The dominant features are
+\texttt{log\_h\_s} (76\%) and \texttt{log\_t\_end} (17\%).
+
+% ===================================================================
+\mkmlimitations
+% ===================================================================
+
+\begin{enumerate}[nosep]
+    \item \textbf{The durations do not fit the window.} With Table~\ref{tab:dur}'s
+          durations, three to five severe or worse storms and their minimum gaps cannot
+          fit in 156\,h. The cap binds on 60.5\% of draws and truncates the most extreme
+          multi-storm sequences, understating their duration. Recalibrating Tables~1
+          and~3 (fewer storms for long categories, or shorter storms in sequences) is
+          outstanding.
+    \item \textbf{Gaps are mostly at their minimum.} In 63.4\% of multi-storm sequences
+          every gap is held at $g_{\min}$, so recovery between storms is the least the
+          gap type allows rather than a draw from its range.
+    \item \textbf{Gap shortening is proportional, not physical.} The time above each
+          gap's minimum is scaled uniformly.
+    \item \textbf{Storms are independent within a sequence.} Durations and peak positions
+          carry no serial correlation, and a long first storm does not shorten the second.
+    \item \textbf{One footprint.} Every storm in a sequence has the same spatial footprint.
+    \item \textbf{$P_{\text{base}}$ is fixed per catchment.} It does not vary by season or
+          wetness, and a catchment without a storm module takes the Thames's value.
+    \item \textbf{The season is the generation date.} Each sequence's
+          \texttt{sequence\_start} is the time it was generated. The stress pipeline reads
+          that month as the season for each gauge's base level, so every sequence in a
+          batch uses the base levels of the month the batch was run.
+    \item \textbf{A control with no effect.} \texttt{FIRST\_STORM\_DOMINANT\_PROB} does not
+          change the output distribution (\S3.7).
+    \item \textbf{Stationarity.} No climate scenario changes the weights, persistence or
+          intensities.
+\end{enumerate}
+
+% ===================================================================
+\section{Validation Questions}
+% ===================================================================
+
+\mkmvqitem{1}{Purpose}{Is the model being used for its intended purpose?}
+Yes. It generates the stress catalogue that the stress pipeline turns into hydrographs for
+the classifiers and the Portfolio Stress scenarios (\S2.2).
+
+\mkmvqitem{2}{Conceptual Soundness}{Is the model conceptually sound?}
+The structure is sound: typed sequences in a fixed window, a guaranteed gap between storms,
+and correlated intensities. Its parameters are not mutually consistent, however, because
+the storms are too long for the window (\S6.2, \S8 item~1).
+
+\mkmvqitem{3}{Data Quality}{Is the data quality adequate?}
+The parameters are expert-set, not fitted to observed sequences. No observed sequence
+catalogue has been compared with them.
+
+\mkmvqitem{4}{Developmental Evidence}{Is there adequate developmental evidence?}
+Unit tests cover the samplers, the cap and gap minimum, the validator, the override path
+and reproducibility.
+
+\mkmvqitem{5}{Outcomes Analysis}{Are outcomes reasonable?}
+The sequences are valid by construction and the type mix is as stated. Whether sequences
+like these occur over the Thames is untested.
+
+\mkmvqitem{6}{Ongoing Monitoring}{What ongoing monitoring is required?}
+On each regenerated catalogue, monitor:
+\begin{itemize}[nosep]
+    \item the type counts against Table~\ref{tab:t9};
+    \item the cap rate: a rate above 50\% calls for recalibration of the durations, and the
+          baseline rate is 60.5\%;
+    \item the gap-shortening rate by type: a rate above 70\% says the gaps and durations
+          are inconsistent with the window, and the baseline is 99.6\% for clusters and
+          99.5\% for persistent sequences;
+    \item each retrained classifier's AUC-ROC, flagging a gauge below 0.95.
+\end{itemize}
+The cap and shortening thresholds are breached at the baseline, as \S8 records.
+
+\mkmvqitem{7}{Benchmarking}{Has the model been benchmarked?}
+Not against observed sequences or another generator. The implementation is benchmarked
+against Wolfram (Q8).
+
+\mkmvqitem{8}{Implementation}{Is the implementation verified?}
+Wolfram oracle benchmark v0.2 tests every equation and claim in this document. It replays
+19{,}600 sequences number for number, and checks the exact probabilities in Wolfram.
+
+\mkmvqitem{9}{Overall Risk}{Is the overall model risk acceptable?}
+Acceptable for its Tier 2 use, with two outstanding items: the durations must be
+recalibrated so that multi-storm sequences are not mostly capped (\S8 item~1), and the
+classifiers must be retrained on v3.0's catalogue (\S7.3). Until then, the stress
+scenarios understate the duration of the most extreme sequences.
+
+\mkmhistorypage{11-Mar-2026 & 2.0 & First issue: the multi-storm sequence generator & David K Kelly \\
+08-Nov-2026 & 3.0 & Gap minima reserved before the duration cap, so every multi-storm
+sequence keeps its gaps; tables moved to config so an override reaches the generator;
+figures, correlation, base precipitation, paths and evidence stated as computed (Wolfram
+benchmark v0.1) & David K Kelly \\}
+
+\end{document}

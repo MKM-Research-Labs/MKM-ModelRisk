@@ -195,6 +195,24 @@ VQ_RATIONALE = {
         "all 10 checks; Wolfram agrees to 2e-31. All 13 claims hold, including 1000 of 1000 "
         "nearest-gauge queries and the sphere's 0.32% against WGS84. Outstanding: the "
         "interpolation and correlation are unvalidated and unused (v2.0 Q5, Q7)."),
+    "MKM-SS-001": (
+        "Partially addressed. v2.0 was benchmarked on 2026-11-08 against Wolfram Engine 15.0 "
+        "(MKM-SS-001_wolfram_benchmark_v0.1.pdf, kept in History as evidence of the check). "
+        "The code replayed exactly, but 11 of the document's 17 claims did not hold: the "
+        "duration cap left no room for gaps, so 45.6% of multi-storm sequences had no gap at "
+        "all; Table 9's counts, the cap and gap-scaling shares, the 0.70 chance of a stronger "
+        "later storm and the per-catchment P_base were not what the code produced; the cited "
+        "consumers and command line do not exist; storm_control.json reached the generator "
+        "only if applied before import, and the duration table never; and the classifier "
+        "summary covers 11 gauges, not 52. v3.0 reserves each gap's minimum before Eq. 6's "
+        "cap and shortens gaps towards it (Eq. 8), moves the tables into config so an "
+        "override takes effect in either order, takes P_base from each catchment's storm "
+        "module, and restates the figures as computed. Benchmark v0.2 "
+        "(MKM-SS-001_wolfram_benchmark.pdf, Docs > Benchmark) passes all 8 checks; Wolfram "
+        "agrees to 5e-31. All 17 claims hold, including Table 9's 5,225 isolated sequences and "
+        "the cap binding on 60.5% of draws. Outstanding: durations are inconsistent with the "
+        "window, so both Q6 thresholds are breached at baseline and Tables 1 and 3 need "
+        "recalibrating; the classifiers on file were trained on v2.0 sequences (v3.0 Q9)."),
 }
 
 # Re-issued model documentation: for each model, the files under
@@ -233,4 +251,8 @@ REISSUES = {
         "files": (("spatial_model_v2.0.pdf", "Spatial Interpolation Model v2.0 (06-Nov-2026)"),
                   ("spatial_model_v2.0.tex", "Spatial Interpolation Model v2.0 (06-Nov-2026) - LaTeX source")),
         "superseded": "spatial_model.pdf", "version": "v2.0"},
+    "MKM-SS-001": {
+        "files": (("storm_multi_v3.0.pdf", "Storm Sequence Generator v3.0 (08-Nov-2026)"),
+                  ("storm_multi_v3.0.tex", "Storm Sequence Generator v3.0 (08-Nov-2026) - LaTeX source")),
+        "superseded": "storm_multi.pdf", "version": "v3.0"},
 }
