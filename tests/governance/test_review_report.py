@@ -110,3 +110,36 @@ def test_render_review_report_pdf(monkeypatch):
         lambda tex, assets=None: b"%PDF-stub")
     assert render_review_report_pdf(
         MODEL, {"fields": {}}, SIGNOFF, "2026-06-22", APPROVALS) == b"%PDF-stub"
+
+
+def test_stages_are_numbered_from_one():
+    """The first stage is "1.", not "0." -- the report is read by a committee, not
+    indexed by a program."""
+    tex = _tex()
+    assert "1. Preliminary documents" in tex
+    assert "0. Preliminary documents" not in tex
+
+
+def test_the_remediation_register_prints_the_fields_it_has():
+    """It printed an Action column from a key the register has never had, blank on
+    every report issued; it now carries priority and due date, which it does have."""
+    model = {"model_id": "M3", "data": {"name": "Gamma", "remediation_steps": [
+        {"description": "Recalibrate durations", "owner": "D. Kelly",
+         "priority": "High", "due_date": "2026-12-31", "status": "Open"}]}}
+    remediation = _tex(model, approvals={}).split("Remediation", 1)[1]
+    for cell in ("Recalibrate durations", "High", "2026-12-31", "Open"):
+        assert cell in remediation, cell
+    assert "{Action}" not in remediation and "Action &" not in remediation
+
+
+def test_the_challenge_is_counted_before_it_is_printed():
+    notes = [
+        {"item_id": "RN-1", "stage": "questions", "kind": "Challenge", "text": "Why?"},
+        {"item_id": "RN-2", "stage": "questions", "kind": "Note", "text": "Because.",
+         "resolves": "RN-1"},
+        {"item_id": "RN-3", "stage": "limitations", "kind": "Challenge", "text": "And?"},
+    ]
+    model = {"model_id": "M4", "data": {"name": "Delta", "review_notes": notes}}
+    tex = _tex(model, approvals={})
+    assert "2 challenges raised, 1 answered, 1 open." in tex
+    assert tex.index("Challenge in summary") < tex.index("1. Preliminary documents")

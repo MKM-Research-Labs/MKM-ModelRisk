@@ -105,6 +105,33 @@ def _challenge_record(data: dict, stage_key: str) -> str:
     return "".join(out)
 
 
+def _challenge_summary(data: dict, stages: tuple) -> str:
+    """How much challenge there was, stage by stage, ahead of the record itself.
+
+    The record is printed verbatim under each stage; this is the count a reader
+    wants first -- "four challenges, all answered" -- so that the verbatim record
+    is read as the substantiation of a stated number rather than mined for one.
+    Counted the way the record marks them: a challenge is answered when a note
+    under the same stage points back at it.
+    """
+    rows, raised, answered_total = [], 0, 0
+    for stage in stages:
+        notes = [n for n in (data.get("review_notes") or [])
+                 if n.get("stage") == stage["key"]]
+        answers = {n.get("resolves") for n in notes if n.get("resolves")}
+        challenges = [n for n in notes if n.get("kind") == NOTE_KIND_CHALLENGE]
+        answered = sum(1 for n in challenges if n.get("item_id") in answers)
+        raised += len(challenges)
+        answered_total += answered
+        rows.append([stage["label"], str(len(notes)), str(len(challenges)),
+                     str(answered), str(len(challenges) - answered)])
+    lead = (str(raised) + " challenge" + ("" if raised == 1 else "s") + " raised, "
+            + str(answered_total) + " answered, " + str(raised - answered_total)
+            + " " + CHALLENGE_OPEN.lower() + ".\\par\\medskip\n")
+    return lead + _para_table(["Stage", "Notes", "Challenges", "Answered", "Open"],
+                              rows, [0.40, 0.15, 0.15, 0.15, 0.15])
+
+
 def _stage_body(data: dict, stage: dict, approvals: dict,
                 questions_collection: str = "validation_questions") -> str:
     """One stage: what was agreed, the argument that got there, and who agreed it."""
@@ -133,10 +160,13 @@ def _stage_body(data: dict, stage: dict, approvals: dict,
         # report issued to date restated the monitoring paragraph instead of listing
         # what the review found outstanding. The stage exists precisely so the
         # committee sees that list before it signs anything off.
+        # The columns are the register's own fields. An "Action" column read a key
+        # ``remediation_steps`` has never had, so it printed blank on every report.
         body = _register(data.get("remediation_steps") or [],
-                         [("Finding", "description"), ("Action", "action"),
-                          ("Owner", "owner"), ("Status", "status")],
-                         [0.34, 0.34, 0.16, 0.16])
+                         [("Finding", "description"), ("Owner", "owner"),
+                          ("Priority", "priority"), ("Due", "due_date"),
+                          ("Status", "status")],
+                         [0.40, 0.18, 0.12, 0.14, 0.16])
     else:
         body = _prose(data.get("monitoring_approach"))
     approval = approvals.get(key) or {}
@@ -187,10 +217,11 @@ def build_review_report_tex(model: dict, settings: dict, signoff: dict, as_of: s
              ["Signed off by", signoff.get("signed_by") or ""],
              ["Signed off at", (signoff.get("signed_at") or "").replace("T", " ")[:16]]],
             [0.3, 0.7]))
+        + _section("Challenge in summary", _challenge_summary(data, stages))
         + "".join(
             _section(str(i) + ". " + stage["label"],
                      _stage_body(data, stage, approvals, questions_collection))
-            for i, stage in enumerate(stages))
+            for i, stage in enumerate(stages, start=1))
         + _section("Reviewer's final commentary", _prose(signoff.get("commentary")))
         + "\\end{document}\n"
     )
