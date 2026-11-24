@@ -140,19 +140,15 @@ const ReviewPanel = {
       return;
     }
     if (this._reviewStage === "monitoring") {
-      // The measured position is fetched and rendered above the approach: what the
-      // statistics say comes before what somebody said they would do about it. Fetched
-      // rather than computed here — the measures are one implementation with
-      // hand-checked arithmetic, and a second in JavaScript would be a second answer.
-      box.innerHTML = '<div class="section-header">Measured position</div>' +
-        '<div id="' + this._rvPfx() + 'measured" class="empty">Loading&hellip;</div>' +
-        '<div class="section-header" style="margin-top:var(--space-8)">Monitoring approach</div>' +
+      // No "Measured position" panel above the approach: no screen records the
+      // monitoring observations it is computed from, so it could only ever say "not
+      // measured". The /monitoring route stays for the day an intake exists.
+      box.innerHTML = '<div class="section-header">Monitoring approach</div>' +
         '<p class="muted" style="font-size:var(--size-sm)">How this model will be watched once it is in ' +
         "use, in your own words &mdash; what would be looked at, how often, and what would " +
         "prompt a second look.</p>" + this._rvRow("monitoring_approach", d) +
         this._thread("monitoring", d) + this._stageApproval("monitoring", d);
       this._rvBindEdits();
-      this._loadMeasured();
       this._bindThread("monitoring");
       this._bindStageApproval("monitoring");
       return;

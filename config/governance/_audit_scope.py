@@ -28,6 +28,13 @@ Convergence, Segment analysis) have never had a panel on a model's Docs tab. Sco
 a model on them anyway cost every model in the register points it could only win
 back by filing placeholders, which the audit itself counts as gaps.
 
+Monitoring observations are excluded on EVERY record type, from 2026-11-24, for the
+same reason: no screen -- model, ML Application or AI System -- has ever had a
+register to record one in, so "Document at least one Monitoring observation entry"
+was a finding its owner could not close, only watch go overdue. How a record is
+monitored is still asked, as the Monitoring approach field on its review. Should an
+intake for observations be built, take the collection out of this list with it.
+
 ML Applications and AI Systems are still scored on all of them: there, fairness,
 evaluation and training evidence are the point. The collections and categories stay
 in the model's schema too, so nothing already recorded is lost; they are only no
@@ -36,6 +43,7 @@ longer demanded of a model.
 
 from config.governance._documents import DOC_CATEGORIES, TRAINING_DOC_CATEGORIES
 
+AUDIT_EXCLUDED_COLLECTIONS = ("monitoring_observations",)
 MODEL_AUDIT_EXCLUDED_COLLECTIONS = ("fairness_assessments", "evaluations")
 MODEL_AUDIT_DOC_CATEGORIES = tuple(c for c in DOC_CATEGORIES
                                    if c not in TRAINING_DOC_CATEGORIES)

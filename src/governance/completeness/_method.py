@@ -57,7 +57,8 @@ from config.governance import (
     UNRATED_MULTIPLIER,
     UNTIERED_WEIGHT,
 )
-from config.governance._audit_scope import (MODEL_AUDIT_DOC_CATEGORIES,
+from config.governance._audit_scope import (AUDIT_EXCLUDED_COLLECTIONS,
+                                           MODEL_AUDIT_DOC_CATEGORIES,
                                            MODEL_AUDIT_EXCLUDED_COLLECTIONS)
 from config.governance._documents import DOC_CATEGORIES
 from src.governance.completeness._method_departures import departures_table
@@ -227,6 +228,9 @@ def appendix(rows=()) -> str:
             + [[name, f"Reported within the {covering} pack; a second upload "
                       "restating it would close no gap"]
                for name, covering in sorted(DOC_CATEGORY_SATISFIED_BY.items())]
+            + [[name, "Not scored on any record: no screen has a register to "
+                      "record it in"]
+               for name in sorted(AUDIT_EXCLUDED_COLLECTIONS)]
             + [[f"{name} (models)", "Not scored on a model, whose screen has no panel "
                                     "for it; still scored on ML Applications and AI Systems"]
                for name in sorted(MODEL_AUDIT_EXCLUDED_COLLECTIONS) + sorted(

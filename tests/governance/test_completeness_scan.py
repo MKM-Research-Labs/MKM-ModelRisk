@@ -125,6 +125,23 @@ def test_model_is_not_scored_on_what_its_screen_cannot_record(register):
     assert "validation_questions" in model_gaps, "the rest of the audit is unchanged"
 
 
+def test_no_record_type_is_scored_on_monitoring_observations(register):
+    """No screen records a monitoring observation, so no record type is asked for one:
+    it was a finding that could only go overdue. ML Applications and AI Systems hold
+    the collection, so the filter is checked against their own specs."""
+    from config.governance import (COLLECTION_SPECS, ML_APPLICATION_COLLECTION_SPECS,
+                                   PRODUCT_COLLECTION_SPECS)
+    from config.governance._ai_system import AI_SYSTEM_COLLECTION_SPECS
+    from config.governance._audit_scope import AUDIT_EXCLUDED_COLLECTIONS
+    from src.governance.completeness.scan import _scored
+    assert "monitoring_observations" in AI_SYSTEM_COLLECTION_SPECS
+    for specs in (COLLECTION_SPECS, PRODUCT_COLLECTION_SPECS,
+                  ML_APPLICATION_COLLECTION_SPECS, AI_SYSTEM_COLLECTION_SPECS):
+        assert not set(_scored(specs)) & set(AUDIT_EXCLUDED_COLLECTIONS)
+    for row in scan(AS_OF):
+        assert "monitoring_observations" not in {g["key"] for g in row["gaps"]}
+
+
 def test_product_scope_mirrors_the_model_one():
     assert product_scope("PRD-X") == "product/PRD-X"
 

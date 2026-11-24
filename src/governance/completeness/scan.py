@@ -31,7 +31,8 @@ from typing import Any
 
 from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
                                           AI_SYSTEM_FIELD_SPECS)
-from config.governance._audit_scope import (MODEL_AUDIT_DOC_CATEGORIES,
+from config.governance._audit_scope import (AUDIT_EXCLUDED_COLLECTIONS,
+                                           MODEL_AUDIT_DOC_CATEGORIES,
                                            MODEL_AUDIT_EXCLUDED_COLLECTIONS)
 from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS,
@@ -63,6 +64,13 @@ def product_scope(product_id: str) -> str:
     """Where a product's uploaded files live. Mirrors ``model_scope``; named here
     because the product API composes the same string inline."""
     return f"product/{product_id}"
+
+
+def _scored(specs: dict, also_excluded=()) -> dict:
+    """The collections a record is scored on: what it can hold, less what no screen
+    lets it record (config/_audit_scope)."""
+    skip = set(AUDIT_EXCLUDED_COLLECTIONS) | set(also_excluded)
+    return {k: v for k, v in specs.items() if k not in skip}
 
 
 def _retrievable(scope: str):
@@ -112,8 +120,7 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
     want_ai = None if ai_system_ids is None else set(ai_system_ids)
     rows = []
     # A model is scored only on what its screen lets it record (config/_audit_scope).
-    model_collections = {k: v for k, v in COLLECTION_SPECS.items()
-                         if k not in MODEL_AUDIT_EXCLUDED_COLLECTIONS}
+    model_collections = _scored(COLLECTION_SPECS, MODEL_AUDIT_EXCLUDED_COLLECTIONS)
     for model in list_models(config=config):
         if want_models is not None and model["model_id"] not in want_models:
             continue
@@ -129,7 +136,7 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
         data = product.get("data") or {}
         rows.append(_audit(
             PRODUCT_KIND, product["product_id"], data.get("product"), data,
-            PRODUCT_FIELD_SPECS, PRODUCT_COLLECTION_SPECS,
+            PRODUCT_FIELD_SPECS, _scored(PRODUCT_COLLECTION_SPECS),
             product_scope(product["product_id"]), as_of,
             doc_categories=PRODUCT_AUDIT_DOC_CATEGORIES))
     # ML Applications are audited on the same terms as everything else. An estate
@@ -144,7 +151,7 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
         data = record.get("data") or {}
         rows.append(_audit(
             ML_APPLICATION_KIND, record["ml_application_id"], data.get("name"), data,
-            ML_APPLICATION_FIELD_SPECS, ML_APPLICATION_COLLECTION_SPECS,
+            ML_APPLICATION_FIELD_SPECS, _scored(ML_APPLICATION_COLLECTION_SPECS),
             ml_application_scope(record["ml_application_id"]), as_of))
     # AI Systems, on the same terms again. They were absent until 2026-09-07, which
     # meant an AI System had no completeness findings at all -- no gaps, no score, no
@@ -158,7 +165,7 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
         data = record.get("data") or {}
         rows.append(_audit(
             AI_SYSTEM_KIND, record["ai_system_id"], data.get("name"), data,
-            AI_SYSTEM_FIELD_SPECS, AI_SYSTEM_COLLECTION_SPECS,
+            AI_SYSTEM_FIELD_SPECS, _scored(AI_SYSTEM_COLLECTION_SPECS),
             ai_system_scope(record["ai_system_id"]), as_of))
     rows.sort(key=lambda r: (r["completeness"], r["entity_id"]))
     return rows
