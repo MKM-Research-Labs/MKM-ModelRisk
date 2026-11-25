@@ -31,9 +31,12 @@ from typing import Any
 
 from config.governance._ai_system import (AI_SYSTEM_COLLECTION_SPECS,
                                           AI_SYSTEM_FIELD_SPECS)
-from config.governance._audit_scope import (AUDIT_EXCLUDED_COLLECTIONS,
+from config.governance._audit_scope import (AI_SYSTEM_AUDIT_DOC_CATEGORIES,
+                                           AUDIT_EXCLUDED_COLLECTIONS,
                                            MODEL_AUDIT_DOC_CATEGORIES,
                                            MODEL_AUDIT_EXCLUDED_COLLECTIONS)
+from config.governance._ml_training import (TRAINING_ARTEFACTS,
+                                            TRAINING_RUNS_COLLECTION)
 from config.governance import (ML_APPLICATION_COLLECTION_SPECS,
                                ML_APPLICATION_FIELD_SPECS,
     COLLECTION_SPECS,
@@ -51,6 +54,7 @@ from src.governance.model_inventory.projection import list_models
 from src.governance.model_inventory.risk import compute_risk_rating
 from src.governance.ai_system.projection import list_ai_systems
 from src.governance.ml_application.projection import list_ml_applications
+from src.governance.ml_application.training import applies
 from src.governance.product.projection import list_products
 from src.governance.risk_policy import load as load_policy
 
@@ -71,6 +75,23 @@ def _scored(specs: dict, also_excluded=()) -> dict:
     lets it record (config/_audit_scope)."""
     skip = set(AUDIT_EXCLUDED_COLLECTIONS) | set(also_excluded)
     return {k: v for k, v in specs.items() if k not in skip}
+
+
+def ml_application_doc_categories(data: dict) -> tuple:
+    """The documents an ML Application is asked for: every category, less each
+    training artefact whose field does not apply to its latest train.
+
+    The artefact's upload panel sits beside its field on the Training tab, and the
+    tab shows only the fields that apply -- so a Convergence document is asked of a
+    neural fit and of nothing else, as the screen asks it (config/_audit_scope).
+    With no train yet, the rule is read against an empty one: the tab then offers to
+    start a train, after which the panels appear.
+    """
+    runs = data.get(TRAINING_RUNS_COLLECTION) or []
+    train = runs[-1] if runs else {}
+    not_asked = {category for field, category in TRAINING_ARTEFACTS.items()
+                 if not applies(field, train)}
+    return tuple(c for c in DOC_CATEGORIES if c not in not_asked)
 
 
 def _retrievable(scope: str):
@@ -152,7 +173,8 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
         rows.append(_audit(
             ML_APPLICATION_KIND, record["ml_application_id"], data.get("name"), data,
             ML_APPLICATION_FIELD_SPECS, _scored(ML_APPLICATION_COLLECTION_SPECS),
-            ml_application_scope(record["ml_application_id"]), as_of))
+            ml_application_scope(record["ml_application_id"]), as_of,
+            doc_categories=ml_application_doc_categories(data)))
     # AI Systems, on the same terms again. They were absent until 2026-09-07, which
     # meant an AI System had no completeness findings at all -- no gaps, no score, no
     # row in the register -- while ``coverage_population`` below already counted it in
@@ -166,7 +188,8 @@ def scan(as_of: str, config=None, model_ids=None, product_ids=None,
         rows.append(_audit(
             AI_SYSTEM_KIND, record["ai_system_id"], data.get("name"), data,
             AI_SYSTEM_FIELD_SPECS, _scored(AI_SYSTEM_COLLECTION_SPECS),
-            ai_system_scope(record["ai_system_id"]), as_of))
+            ai_system_scope(record["ai_system_id"]), as_of,
+            doc_categories=AI_SYSTEM_AUDIT_DOC_CATEGORIES))
     rows.sort(key=lambda r: (r["completeness"], r["entity_id"]))
     return rows
 

@@ -35,10 +35,19 @@ was a finding its owner could not close, only watch go overdue. How a record is
 monitored is still asked, as the Monitoring approach field on its review. Should an
 intake for observations be built, take the collection out of this list with it.
 
-ML Applications and AI Systems are still scored on all of them: there, fairness,
-evaluation and training evidence are the point. The collections and categories stay
-in the model's schema too, so nothing already recorded is lost; they are only no
-longer demanded of a model.
+ML Applications and AI Systems are still scored on fairness and evaluations: there,
+they are the point. The collections and categories stay in the model's schema too, so
+nothing already recorded is lost; they are only no longer demanded of a model.
+
+The training documents follow the same rule, from 2026-11-25. Each one is uploaded
+in the panel beside the field it evidences on an ML Application's Training tab, and
+that panel is shown only where the field applies to the latest train: Convergence
+evidence is asked of a neural fit (Sequence, Image) and of nothing else. A binary
+classifier was being scored on a Convergence document that no screen would accept,
+and MKM-FC-001 went overdue on it. So an ML Application is asked for a training
+document only where its Training tab offers the panel (src/governance/completeness/
+scan.py works that out from the train), and an AI System -- which has no trains and
+no Training tab -- is not asked for them at all.
 """
 
 from config.governance._documents import DOC_CATEGORIES, TRAINING_DOC_CATEGORIES
@@ -47,3 +56,4 @@ AUDIT_EXCLUDED_COLLECTIONS = ("monitoring_observations",)
 MODEL_AUDIT_EXCLUDED_COLLECTIONS = ("fairness_assessments", "evaluations")
 MODEL_AUDIT_DOC_CATEGORIES = tuple(c for c in DOC_CATEGORIES
                                    if c not in TRAINING_DOC_CATEGORIES)
+AI_SYSTEM_AUDIT_DOC_CATEGORIES = MODEL_AUDIT_DOC_CATEGORIES
