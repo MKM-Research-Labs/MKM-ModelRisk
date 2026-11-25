@@ -163,11 +163,14 @@ REASON_FROM_REVIEW_STATUS = {
 # Where one completeness finding stands against its band's deadline, as the record's
 # Remediation stage and the dashboard row word it. Keyed by the status the deadline
 # arithmetic returns (src.governance.attention.deadlines); "unobserved" is a finding
-# the daily observation has not yet seen, so it has no first-seen date to count from.
+# the daily observation has not yet seen, so it has no first-seen date to count from;
+# "baseline" is one already open on the day tracking began, so its first-seen date is
+# that day and not the day it opened, and no deadline is counted from it.
 FINDING_DEADLINE_LABELS = {
     "overdue": "Overdue",
     "due_soon": "Due soon",
     "open": "Open",
+    "baseline": "Open when tracking began, no deadline",
     "unobserved": "Not yet observed",
 }
 

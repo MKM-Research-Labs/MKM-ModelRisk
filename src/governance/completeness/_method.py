@@ -233,8 +233,11 @@ def appendix(rows=()) -> str:
                for name in sorted(AUDIT_EXCLUDED_COLLECTIONS)]
             + [[f"{name} (models)", "Not scored on a model, whose screen has no panel "
                                     "for it; still scored on ML Applications and AI Systems"]
-               for name in sorted(MODEL_AUDIT_EXCLUDED_COLLECTIONS) + sorted(
-                   c for c in DOC_CATEGORIES if c not in MODEL_AUDIT_DOC_CATEGORIES)],
+               for name in sorted(MODEL_AUDIT_EXCLUDED_COLLECTIONS)]
+            + [[name, "Scored only on an ML Application, and only where the field it "
+                      "evidences applies to the latest train"]
+               for name in sorted(c for c in DOC_CATEGORIES
+                                  if c not in MODEL_AUDIT_DOC_CATEGORIES)],
             [0.35, 0.65], caption="Exclusions from scoring")),
         _subsection("Values treated as unrecorded", _para_table(
             ["Value", "Effect"],

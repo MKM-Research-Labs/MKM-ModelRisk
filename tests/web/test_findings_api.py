@@ -48,6 +48,7 @@ def test_before_the_first_observation_no_finding_has_a_date(client):
 
 
 def test_findings_are_dated_from_the_day_they_were_first_observed(client):
+    observe(as_of="2026-08-01")          # tracking began before the record existed
     _register(client)
     observe(as_of="2026-08-25")
     payload = _findings(client, as_of="2026-11-03")
@@ -55,6 +56,16 @@ def test_findings_are_dated_from_the_day_they_were_first_observed(client):
     assert {f["first_seen"] for f in payload["findings"]} == {"2026-08-25"}
     for f in payload["findings"]:
         assert f["due"] and f["status"] in ("overdue", "due_soon", "open")
+
+
+def test_a_finding_open_when_tracking_began_carries_no_deadline(client):
+    _register(client)
+    observe(as_of="2026-08-25")
+    payload = _findings(client, as_of="2026-11-25")
+    assert {f["status"] for f in payload["findings"]} == {"baseline"}
+    for f in payload["findings"]:
+        assert f["first_seen"] == "2026-08-25" and f["due"] is None
+        assert f["days_over"] is None
 
 
 def test_a_record_that_does_not_exist_has_nothing_open(client):
