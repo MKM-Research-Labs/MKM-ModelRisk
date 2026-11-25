@@ -96,6 +96,15 @@ def test_baseline_findings_sort_after_dated_ones_and_before_unseen():
     assert order == ["a", "b", "c"]
 
 
+def test_undated_findings_are_open_with_no_deadline():
+    late, unseen = _gap("a", "A"), _gap("b", "B")
+    out = deadlines.undated(deadlines.gap_deadlines([late, unseen],
+                                                    _ages((late, 400)), AS_OF))
+    assert [(f["key"], f["status"]) for f in out] == [("a", "open"), ("b", "unobserved")]
+    assert out[0]["due"] is None and out[0]["days_over"] is None
+    assert out[0]["first_seen"] and out[0]["status_label"] == FINDING_DEADLINE_LABELS["open"]
+
+
 def test_a_gap_without_a_band_deadline_is_left_undated():
     gap = {**_gap(), "sla_days": None}
     assert _one(gap, 90)["due"] is None

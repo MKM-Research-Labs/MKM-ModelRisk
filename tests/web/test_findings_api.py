@@ -20,7 +20,9 @@
 """Tests for the record findings API — what a Remediation stage lists, with dates."""
 from __future__ import annotations
 
-from src.governance.attention import observe
+import pytest
+
+from src.governance.attention import collect, dashboard, observe
 from tests.web.conftest import HEADERS
 
 
@@ -47,7 +49,14 @@ def test_before_the_first_observation_no_finding_has_a_date(client):
     assert {f["status"] for f in payload["findings"]} == {"unobserved"}
 
 
-def test_findings_are_dated_from_the_day_they_were_first_observed(client):
+@pytest.fixture
+def deadlines_on(monkeypatch):
+    """Deadlines are switched off for the estate (FINDING_DEADLINES_ENFORCED); the
+    arithmetic is still pinned, for the day they are switched back on."""
+    monkeypatch.setattr(collect, "FINDING_DEADLINES_ENFORCED", True)
+
+
+def test_findings_are_dated_from_the_day_they_were_first_observed(client, deadlines_on):
     observe(as_of="2026-08-01")          # tracking began before the record existed
     _register(client)
     observe(as_of="2026-08-25")
@@ -58,7 +67,7 @@ def test_findings_are_dated_from_the_day_they_were_first_observed(client):
         assert f["due"] and f["status"] in ("overdue", "due_soon", "open")
 
 
-def test_a_finding_open_when_tracking_began_carries_no_deadline(client):
+def test_a_finding_open_when_tracking_began_carries_no_deadline(client, deadlines_on):
     _register(client)
     observe(as_of="2026-08-25")
     payload = _findings(client, as_of="2026-11-25")
@@ -66,6 +75,22 @@ def test_a_finding_open_when_tracking_began_carries_no_deadline(client):
     for f in payload["findings"]:
         assert f["first_seen"] == "2026-08-25" and f["due"] is None
         assert f["days_over"] is None
+
+
+def test_with_deadlines_off_no_finding_is_dated_or_overdue(client, monkeypatch):
+    """Long past any band's deadline, and still only open: no due date, no days
+    over, and no row in the overdue queue."""
+    monkeypatch.setattr(collect, "FINDING_DEADLINES_ENFORCED", False)
+    observe(as_of="2026-01-01")
+    _register(client)
+    observe(as_of="2026-02-01")
+    payload = _findings(client, as_of="2026-11-25")
+    assert {f["status"] for f in payload["findings"]} == {"open"}
+    assert all(f["due"] is None and f["days_over"] is None
+               for f in payload["findings"])
+    assert {f["first_seen"] for f in payload["findings"]} == {"2026-02-01"}
+    reasons = {i["reason"] for i in dashboard(as_of="2026-11-25")["items"]}
+    assert "finding_past_sla" not in reasons
 
 
 def test_a_record_that_does_not_exist_has_nothing_open(client):

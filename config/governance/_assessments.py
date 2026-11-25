@@ -108,11 +108,9 @@ ASSESSMENT_COLLECTION_SPECS = {
         {"key": "finding", "label": "What it showed", "type": "textarea"},
         {"key": "verdict", "label": "Verdict", "type": "choice",
          "options": VALID_FAIRNESS_VERDICTS},
-        # Stacked under the verdict rather than given a column of its own: a date is
-        # narrow and a verdict is not, and the two read together anyway — "within
-        # tolerance, as at August".
-        {"key": "assessed_on", "label": "Assessed on", "type": "date", "stacked": True,
-         "default_today": True},
+        # No "Assessed on" box: removed 2026-11-25 at the owner's request. An entry's
+        # date is already its event's, in the record's Changes and Audit trail. Dates
+        # recorded before then stay on the rows; they are only no longer asked.
     ]},
     # One period's observation of one output field: the distribution then and now, and
     # what was predicted against what happened. The row the statistical measures are
