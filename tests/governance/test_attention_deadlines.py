@@ -75,6 +75,27 @@ def test_a_finding_never_observed_has_no_date_rather_than_an_invented_one():
     assert deadlines.gap_deadlines([_gap()], None, AS_OF)[0]["status"] == "unobserved"
 
 
+def test_a_finding_open_when_tracking_began_has_no_deadline():
+    """Its first-seen date is the day tracking began, so nothing is counted from it:
+    no due date, no days over, and never late -- however long ago that day was."""
+    gap = _gap()
+    f = deadlines.gap_deadlines([gap], {}, AS_OF,
+                                {_rules.finding_key(gap): "2026-08-25"})[0]
+    assert f["first_seen"] == "2026-08-25"
+    assert f["due"] is None and f["days_over"] is None
+    assert f["status"] == "baseline"
+    assert f["status_label"] == FINDING_DEADLINE_LABELS["baseline"]
+    assert deadlines.overdue_summary([gap], {}, AS_OF)["due"] is None
+
+
+def test_baseline_findings_sort_after_dated_ones_and_before_unseen():
+    dated, base, unseen = _gap("a", "A"), _gap("b", "B"), _gap("c", "C")
+    order = [f["key"] for f in deadlines.gap_deadlines(
+        [unseen, base, dated], _ages((dated, 1)), AS_OF,
+        {_rules.finding_key(base): "2026-08-25"})]
+    assert order == ["a", "b", "c"]
+
+
 def test_a_gap_without_a_band_deadline_is_left_undated():
     gap = {**_gap(), "sla_days": None}
     assert _one(gap, 90)["due"] is None

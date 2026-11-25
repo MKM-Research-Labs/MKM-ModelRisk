@@ -34,6 +34,13 @@ from src.governance.attention.history import _iso
 
 AS_OF = "2026-08-25"
 LATER = "2026-09-25"
+BEGAN = "2026-08-01"
+
+
+def _tracking_began_earlier():
+    """An observation before AS_OF, so a gap first seen on AS_OF is a new one and not
+    one that was already open when tracking began (those carry no age at all)."""
+    history.observe(BEGAN, [], {})
 
 
 def _gap(entity="M1", key="owner", *, band="High", severity=0.9, sla=60, kind="Model"):
@@ -126,6 +133,7 @@ def test_observing_twice_in_a_day_does_not_double_count():
 
 
 def test_a_finding_ages_from_when_it_was_first_seen_not_from_today():
+    _tracking_began_earlier()
     history.observe(AS_OF, _rows(_gap()), {})
     history.observe(LATER, _rows(_gap()), {})
     assert history.ages(LATER)["Model|M1|owner"] == 31
@@ -141,6 +149,7 @@ def test_a_finding_that_stops_appearing_is_closed_and_stops_ageing():
 
 def test_a_finding_that_comes_back_keeps_its_original_clock():
     """Otherwise a record escapes its deadline by being briefly fixed."""
+    _tracking_began_earlier()
     history.observe(AS_OF, _rows(_gap()), {})
     history.observe("2026-09-01", [{"entity_kind": "Model", "entity_id": "M1",
                                     "gaps": []}], {})
@@ -181,9 +190,48 @@ def test_a_finding_settled_years_ago_falls_off_the_history():
 def test_a_finding_whose_stored_date_is_unreadable_is_left_unaged(monkeypatch):
     """Reported as open rather than as aged: an age computed from a date nobody
     can parse is a number that looks like a measurement and is not one."""
+    _tracking_began_earlier()
     history.observe(AS_OF, _rows(_gap()), {})
     rows = [{**row, "first_seen": "not-a-date"}
             for row in history.read_view(history.FINDINGS, history.FINDING_COLUMNS)]
     monkeypatch.setattr(history, "read_view",
                         lambda view, columns, config=None: rows)
     assert history.ages(LATER) == {}
+
+
+# --- findings already open when tracking began ------------------------------
+
+def test_a_finding_open_on_the_first_day_has_no_age_and_is_baseline():
+    """Its first-seen date is the day tracking began, not the day it opened, so a
+    deadline counted from it would be invented -- the same date on every one."""
+    history.observe(AS_OF, _rows(_gap()), {})
+    history.observe(LATER, _rows(_gap()), {})
+    assert "Model|M1|owner" not in history.ages(LATER)
+    assert history.baseline() == {"Model|M1|owner": AS_OF}
+
+
+def test_a_first_day_that_found_nothing_does_not_make_later_findings_baseline():
+    _tracking_began_earlier()
+    history.observe(AS_OF, _rows(_gap()), {})
+    assert history.baseline() == {}
+    assert history.ages(LATER)["Model|M1|owner"] == 31
+
+
+def test_a_history_written_before_the_flag_reads_its_earliest_day_as_baseline(
+        monkeypatch):
+    """The live history predates the flag. Its earliest first-seen date is the day
+    tracking began; the next observation writes that reading down, so it does not
+    move when those findings close and the earliest date becomes a later one."""
+    _tracking_began_earlier()
+    history.observe(AS_OF, _rows(_gap(key="old")), {})
+    history.observe(LATER, _rows(_gap(key="old"), _gap(key="new")), {})
+    unflagged = [{**r, "data": {k: v for k, v in r["data"].items()
+                                if k != history.BASELINE}}
+                 for r in history.read_view(history.FINDINGS, history.FINDING_COLUMNS)]
+    history.replace_view(history.FINDINGS, history.FINDING_COLUMNS,
+                         [tuple(r[c] for c in history.FINDING_COLUMNS) for r in unflagged])
+    assert set(history.baseline()) == {"Model|M1|old"}
+
+    history.observe("2026-10-01", _rows(_gap(key="new")), {})   # "old" closes
+    assert history.baseline() == {}
+    assert history.ages("2026-10-01")["Model|M1|new"] == 6

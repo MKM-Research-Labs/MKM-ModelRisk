@@ -29,6 +29,11 @@ dates for the same finding.
 The clock is the history's: a finding's first-seen date is the first day the daily
 observation saw it, not the day the field went blank. A finding the observation has
 not seen yet has no date at all, and is reported as unobserved rather than given one.
+
+Nor has a finding that was already open when the history began (``history.baseline``).
+Its first-seen date is the day tracking started, so a deadline counted from it would
+be the same invented date on every such finding in the estate. It is reported as a
+baseline finding with no deadline, and stays with its owner rather than being late.
 """
 from __future__ import annotations
 
@@ -42,7 +47,8 @@ OVERDUE = "overdue"
 DUE_SOON = "due_soon"
 OPEN = "open"
 UNOBSERVED = "unobserved"
-_ORDER = {OVERDUE: 0, DUE_SOON: 1, OPEN: 2, UNOBSERVED: 3}
+BASELINE = "baseline"
+_ORDER = {OVERDUE: 0, DUE_SOON: 1, OPEN: 2, BASELINE: 3, UNOBSERVED: 4}
 
 
 def _status(days_over: int | None) -> str:
@@ -53,11 +59,14 @@ def _status(days_over: int | None) -> str:
     return DUE_SOON if -days_over <= COMING_DUE_DAYS else OPEN
 
 
-def gap_deadlines(gaps, ages: dict | None, as_of: str) -> list[dict[str, Any]]:
+def gap_deadlines(gaps, ages: dict | None, as_of: str,
+                  baseline: dict | None = None) -> list[dict[str, Any]]:
     """Every gap with its first-seen date, due date and days over, worst first.
 
     Days over is negative while a finding is still inside its deadline. Past is
     strictly past, as in ``past_sla``: a finding due today is not yet late.
+    ``baseline`` maps each finding open when tracking began to that date: shown as
+    its first-seen date, with no due date counted from it.
     """
     today = date.fromisoformat(as_of)
     out = []
@@ -71,6 +80,9 @@ def gap_deadlines(gaps, ages: dict | None, as_of: str) -> list[dict[str, Any]]:
             due = (first + timedelta(days=sla)).isoformat()
             days_over = age - sla
         status = _status(days_over)
+        since = (baseline or {}).get(finding_key(gap))
+        if since and age is None:
+            first_seen, status = since, BASELINE
         out.append({
             "key": gap.get("key"), "label": gap.get("label"), "band": gap.get("band"),
             "action": gap.get("action"), "sla_days": sla, "first_seen": first_seen,

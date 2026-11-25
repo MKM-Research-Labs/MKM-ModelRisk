@@ -30,7 +30,7 @@
 // cannot quote different deadlines for the same finding. Status labels arrive with
 // the payload, so an adopter's wording is never hardcoded in this file.
 const FINDING_STATUS_COLOUR = {
-  overdue: "red", due_soon: "amber", open: "green", unobserved: "grey",
+  overdue: "red", due_soon: "amber", open: "green", baseline: "grey", unobserved: "grey",
 };
 
 const FindingDeadlines = {
@@ -39,7 +39,8 @@ const FindingDeadlines = {
     return '<div class="section-header">Open findings</div>' +
       '<p class="muted" style="font-size:var(--size-sm)">What the completeness audit finds missing ' +
       "on this record, and the deadline its band sets for putting it right. The clock starts " +
-      "the first day the daily audit saw the gap.</p>" +
+      "the first day the daily audit saw the gap. A gap that was already open on the day " +
+      "tracking began has no deadline, because nobody knows how long it had been open.</p>" +
       '<div id="' + esc(elId) + '" class="empty">Loading&hellip;</div>';
   },
 

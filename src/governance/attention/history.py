@@ -92,9 +92,38 @@ def observe(as_of: str, audit_rows: list[dict], totals: dict, config=None) -> di
     }
 
 
+# Whether a finding was already open on the first day the history looked. Its
+# first-seen date is then the day tracking began, not the day the gap opened -- on
+# the live estate 71 of 73 overdue findings fell due on one date for that reason
+# alone -- so it is given no deadline rather than an invented one (see ``ages``).
+BASELINE = "baseline"
+
+
+def _baseline_marks(rows) -> dict[str, bool]:
+    """Each held finding's baseline flag, keyed by finding.
+
+    Flagged as it is written from the first observation on. A history written
+    before the flag existed carries none, and is read the only way it can be: the
+    findings first seen on its earliest day are the ones that were already open.
+    That reading is persisted by the next observation and never re-derived, so the
+    flag stays put after the baseline findings close and the earliest date moves.
+    """
+    rows = list(rows)
+    if any(BASELINE in (r["data"] or {}) for r in rows):
+        return {r["finding_key"]: bool((r["data"] or {}).get(BASELINE)) for r in rows}
+    start = min((_iso(r["first_seen"]) for r in rows), default=None)
+    return {r["finding_key"]: _iso(r["first_seen"]) == start for r in rows}
+
+
 def _observe_findings(as_of: str, audit_rows: list[dict], config=None) -> dict:
     open_now = _open_findings(audit_rows)
     held = {r["finding_key"]: r for r in read_view(FINDINGS, FINDING_COLUMNS, config=config)}
+    marks = _baseline_marks(held.values())
+    # The first day is the one no earlier day was observed before -- read off the
+    # trend, which records every day observed, rather than off an empty finding
+    # history: a first day may find nothing, and closed findings fall off later.
+    first_day = not any(_iso(r["as_of"]) < as_of
+                        for r in read_view(TREND, TREND_COLUMNS, config=config))
     cutoff = _iso(date.fromisoformat(as_of) - timedelta(days=CLOSED_FINDING_RETENTION_DAYS))
 
     rows, opened, closed = [], 0, 0
@@ -102,12 +131,13 @@ def _observe_findings(as_of: str, audit_rows: list[dict], config=None) -> dict:
         previous = held.get(key)
         if previous is None:
             opened += 1
-            rows.append((key, data, as_of, as_of, None))
+            rows.append((key, {**data, BASELINE: first_day}, as_of, as_of, None))
             continue
         # A finding that closed and came back keeps its ORIGINAL first_seen. It is
         # the same hole in the same record, and restarting its clock would let a
         # record escape an SLA by being fixed briefly.
-        rows.append((key, data, _iso(previous["first_seen"]), as_of, None))
+        rows.append((key, {**data, BASELINE: marks[key]},
+                     _iso(previous["first_seen"]), as_of, None))
     for key, previous in held.items():
         if key in open_now:
             continue
@@ -116,7 +146,8 @@ def _observe_findings(as_of: str, audit_rows: list[dict], config=None) -> dict:
             continue                     # long settled; let it fall off the history
         if not previous["closed_at"]:
             closed += 1
-        rows.append((key, previous["data"], _iso(previous["first_seen"]),
+        rows.append((key, {**(previous["data"] or {}), BASELINE: marks[key]},
+                     _iso(previous["first_seen"]),
                      _iso(previous["last_seen"]), closed_at))
 
     replace_view(FINDINGS, FINDING_COLUMNS, rows, config=config)
@@ -140,11 +171,18 @@ def ages(as_of: str, config=None) -> dict[str, int]:
     Absent from the map means never observed — a finding raised since the last
     observation. Those are reported as open rather than as aged, because "we have
     not looked yet" is not "it is new", and only one of those is a claim.
+
+    A baseline finding is absent too. It was open before the history began, so how
+    long it has been open is exactly what nobody measured; counting from the first
+    day of tracking would put a deadline on it that nobody set. ``baseline`` names
+    them, so a screen can say why they carry no date.
     """
     today = date.fromisoformat(as_of)
+    rows = read_view(FINDINGS, FINDING_COLUMNS, config=config)
+    marks = _baseline_marks(rows)
     result = {}
-    for row in read_view(FINDINGS, FINDING_COLUMNS, config=config):
-        if row["closed_at"]:
+    for row in rows:
+        if row["closed_at"] or marks.get(row["finding_key"]):
             continue
         try:
             result[row["finding_key"]] = (today - date.fromisoformat(
@@ -152,6 +190,14 @@ def ages(as_of: str, config=None) -> dict[str, int]:
         except ValueError:
             continue
     return result
+
+
+def baseline(config=None) -> dict[str, str]:
+    """Each open finding that was already open when tracking began, with that date."""
+    rows = read_view(FINDINGS, FINDING_COLUMNS, config=config)
+    marks = _baseline_marks(rows)
+    return {r["finding_key"]: _iso(r["first_seen"]) for r in rows
+            if not r["closed_at"] and marks.get(r["finding_key"])}
 
 
 def trend(config=None) -> list[dict[str, Any]] | None:

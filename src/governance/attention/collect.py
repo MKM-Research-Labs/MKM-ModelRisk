@@ -135,7 +135,7 @@ def record_findings(entity_id: str, as_of: str | None = None, config=None) -> di
     return {"as_of": as_of, "entity_id": entity_id,
             "observed": bool(history.trend(config=config)),
             "findings": deadlines.gap_deadlines(gaps, history.ages(as_of, config=config),
-                                                as_of)}
+                                                as_of, history.baseline(config=config))}
 
 
 def observe(as_of: str | None = None, config=None) -> dict:
