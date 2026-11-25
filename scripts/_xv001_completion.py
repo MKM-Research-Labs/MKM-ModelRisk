@@ -138,8 +138,7 @@ RACI_ROLES = [
 FAIRNESS = [
     {"attribute": "Not applicable: counterparties are institutions and the output "
                   "prices credit and funding risk, not decisions about individuals.",
-     "how_assessed": "Scope review of the model's inputs and outputs.",
-     "assessed_on": "2026-10-19"},
+     "how_assessed": "Scope review of the model's inputs and outputs."},
 ]
 
 # Validation questions, first-line assessment against the evidence. Data quality
