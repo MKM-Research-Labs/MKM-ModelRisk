@@ -94,6 +94,21 @@ def gap_deadlines(gaps, ages: dict | None, as_of: str,
     return out
 
 
+def undated(findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The same findings with no deadline: open, with only the day each was first seen.
+
+    What a record lists while deadlines are switched off
+    (``FINDING_DEADLINES_ENFORCED``). A finding not yet observed keeps saying so.
+    """
+    out = []
+    for f in findings:
+        status = UNOBSERVED if f["status"] == UNOBSERVED else OPEN
+        out.append({**f, "due": None, "days_over": None, "status": status,
+                    "status_label": FINDING_DEADLINE_LABELS[status]})
+    out.sort(key=lambda g: (_ORDER[g["status"]], g["label"] or ""))
+    return out
+
+
 def overdue_summary(gaps, ages: dict | None, as_of: str) -> dict[str, Any]:
     """What a record's past-deadline row says: the earliest due date among its late
     findings, the furthest any of them is over, and which they are."""

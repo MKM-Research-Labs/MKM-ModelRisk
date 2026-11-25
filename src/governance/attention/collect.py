@@ -34,6 +34,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
+from config.governance import FINDING_DEADLINES_ENFORCED
 from src.governance.attention import deadlines, history, position, queue, summary
 from src.governance.completeness.scan import (ML_APPLICATION_KIND, MODEL_KIND,
                                               PRODUCT_KIND, ratified_divisions, scan)
@@ -104,7 +105,8 @@ def dashboard(as_of: str | None = None, config=None) -> dict[str, Any]:
     audit_rows = scan(as_of, config=config)
     # The finding history, if anything has ever looked. Absent, every finding stays
     # with its owner rather than being called late on an age nobody measured.
-    ages = history.ages(as_of, config=config)
+    # With deadlines switched off no finding is aged, so none can be past one.
+    ages = history.ages(as_of, config=config) if FINDING_DEADLINES_ENFORCED else {}
     items = queue.build(
         as_of=as_of, records=live, audit_rows=audit_rows,
         committee_actions=outstanding_actions(config=config),
@@ -132,10 +134,13 @@ def record_findings(entity_id: str, as_of: str | None = None, config=None) -> di
     rows = scan(as_of, config=config, model_ids=only, product_ids=only,
                 ml_application_ids=only, ai_system_ids=only)
     gaps = [g for row in rows for g in row.get("gaps") or []]
+    findings = deadlines.gap_deadlines(gaps, history.ages(as_of, config=config),
+                                       as_of, history.baseline(config=config))
+    if not FINDING_DEADLINES_ENFORCED:
+        findings = deadlines.undated(findings)
     return {"as_of": as_of, "entity_id": entity_id,
             "observed": bool(history.trend(config=config)),
-            "findings": deadlines.gap_deadlines(gaps, history.ages(as_of, config=config),
-                                                as_of, history.baseline(config=config))}
+            "findings": findings}
 
 
 def observe(as_of: str | None = None, config=None) -> dict:

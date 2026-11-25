@@ -166,6 +166,13 @@ REASON_FROM_REVIEW_STATUS = {
 # the daily observation has not yet seen, so it has no first-seen date to count from;
 # "baseline" is one already open on the day tracking began, so its first-seen date is
 # that day and not the day it opened, and no deadline is counted from it.
+# Whether a completeness finding can fall due at all. Off from 2026-11-25, at the
+# owner's request: findings stay with their owners as open, with the day each was
+# first seen, and none is dated, aged against its band's deadline or called overdue
+# -- on the dashboard or on the record. The history keeps observing either way, so
+# turning this back on dates every finding from when it was actually first seen.
+FINDING_DEADLINES_ENFORCED = False
+
 FINDING_DEADLINE_LABELS = {
     "overdue": "Overdue",
     "due_soon": "Due soon",
@@ -177,7 +184,7 @@ FINDING_DEADLINE_LABELS = {
 __all__ = [
     "ATTENTION_PRECEDENCE", "ATTENTION_QUEUE_CAP", "ATTENTION_STATES", "ATTENTION_STATE_CARD", "ATTENTION_STATE_LABELS",
     "ATTENTION_STATE_RESPONSE",
-    "COMING_DUE_DAYS", "FINDING_DEADLINE_LABELS", "REASON_BELOW_STANDARD", "REASON_COMMITTEE_ACTION_OPEN",
+    "COMING_DUE_DAYS", "FINDING_DEADLINE_LABELS", "FINDING_DEADLINES_ENFORCED", "REASON_BELOW_STANDARD", "REASON_COMMITTEE_ACTION_OPEN",
     "REASON_EVIDENCE_MISSING", "REASON_FINDING_OPEN", "REASON_FINDING_PAST_SLA",
     "REASON_FROM_GAP_KEY",
     "REASON_FROM_GAP_KIND", "REASON_FROM_REVIEW_STATUS", "REASON_POLICY_UNRATIFIED",

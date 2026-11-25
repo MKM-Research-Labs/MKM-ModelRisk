@@ -38,9 +38,7 @@ const FindingDeadlines = {
   html(elId) {
     return '<div class="section-header">Open findings</div>' +
       '<p class="muted" style="font-size:var(--size-sm)">What the completeness audit finds missing ' +
-      "on this record, and the deadline its band sets for putting it right. The clock starts " +
-      "the first day the daily audit saw the gap. A gap that was already open on the day " +
-      "tracking began has no deadline, because nobody knows how long it had been open.</p>" +
+      "on this record, and the first day the daily audit saw each gap.</p>" +
       '<div id="' + esc(elId) + '" class="empty">Loading&hellip;</div>';
   },
 
@@ -54,12 +52,18 @@ const FindingDeadlines = {
         return;
       }
       box.className = "";
+      // Deadlines can be switched off (FINDING_DEADLINES_ENFORCED): then no finding
+      // carries a due date, and the Band, Due and Over columns are left out rather
+      // than printed as a column of dashes.
+      const dated = res.findings.some((f) => f.due);
+      const cols = dated ? [30, 12, 16, 16, 10, 16] : [50, 25, 25];
+      const heads = dated ? ["Finding", "Band", "First seen", "Due", "Over", "Status"]
+                          : ["Finding", "First seen", "Status"];
       box.innerHTML = '<table style="table-layout:fixed;width:100%"><colgroup>' +
-        '<col style="width:30%"><col style="width:12%"><col style="width:16%">' +
-        '<col style="width:16%"><col style="width:10%"><col style="width:16%"></colgroup>' +
-        "<thead><tr><th>Finding</th><th>Band</th><th>First seen</th><th>Due</th>" +
-        "<th>Over</th><th>Status</th></tr></thead><tbody>" +
-        res.findings.map((f) => this._row(f)).join("") + "</tbody></table>" +
+        cols.map((w) => '<col style="width:' + w + '%">').join("") + "</colgroup>" +
+        "<thead><tr>" + heads.map((h) => "<th>" + h + "</th>").join("") +
+        "</tr></thead><tbody>" +
+        res.findings.map((f) => this._row(f, dated)).join("") + "</tbody></table>" +
         (res.observed ? "" : '<p class="muted" style="font-size:var(--size-xs)">The daily ' +
           "audit has not run yet, so no finding has a first-seen date to count from.</p>");
     } catch (e) {
@@ -68,15 +72,15 @@ const FindingDeadlines = {
     }
   },
 
-  _row(f) {
+  _row(f, dated) {
     const colour = Theme.value(FINDING_STATUS_COLOUR[f.status] || "grey");
     const over = f.days_over > 0 ? esc(f.days_over) + " d" : "&mdash;";
     return "<tr><td>" + esc(f.label || f.key || "") +
       (f.action ? '<br><span class="muted" style="font-size:var(--size-xs)">' +
         esc(f.action) + "</span>" : "") + "</td>" +
-      "<td>" + esc(f.band || "") + " (" + esc(f.sla_days) + " d)</td>" +
-      "<td>" + esc(f.first_seen || "—") + "</td><td>" + esc(f.due || "—") + "</td>" +
-      "<td>" + over + "</td>" +
+      (dated ? "<td>" + esc(f.band || "") + " (" + esc(f.sla_days) + " d)</td>" : "") +
+      "<td>" + esc(f.first_seen || "—") + "</td>" +
+      (dated ? "<td>" + esc(f.due || "—") + "</td><td>" + over + "</td>" : "") +
       '<td><span class="badge" style="background:' + colour + '">' +
       esc(f.status_label) + "</span></td></tr>";
   },

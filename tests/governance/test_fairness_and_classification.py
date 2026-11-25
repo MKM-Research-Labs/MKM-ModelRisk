@@ -93,8 +93,7 @@ def test_an_assessment_names_the_attribute_and_what_it_showed():
     Blank remains a legitimate answer and means no verdict was reached.
     """
     fields = {f["key"] for f in COLLECTION_SPECS[FAIRNESS_COLLECTION]["fields"]}
-    assert {"attribute", "how_assessed", "metric", "finding", "verdict",
-            "assessed_on"} == fields
+    assert {"attribute", "how_assessed", "metric", "finding", "verdict"} == fields
     finding = next(f for f in COLLECTION_SPECS[FAIRNESS_COLLECTION]["fields"]
                    if f["key"] == "finding")
     assert finding["type"] == "textarea", "what was seen stays prose"
@@ -113,8 +112,8 @@ def test_a_model_records_one():
     register_model(model_id="M-FAIR", name="Retail scorecard", actor="admin")
     add_collection_item(model_id="M-FAIR", collection=FAIRNESS_COLLECTION,
                         fields={"attribute": "Age", "metric": "Demographic parity",
-                                "finding": "Within the 5pp threshold across bands.",
-                                "assessed_on": "2026-08-01"}, actor="admin")
+                                "finding": "Within the 5pp threshold across bands."},
+                        actor="admin")
     rebuild_inventory_view()
     rows = get_model("M-FAIR")["data"][FAIRNESS_COLLECTION]
     assert len(rows) == 1 and rows[0]["attribute"] == "Age"
